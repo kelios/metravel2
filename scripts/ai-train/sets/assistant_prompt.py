@@ -184,18 +184,21 @@ SAMPLE_CHARS_BUDGET = 2700
 SHORT_SNIPPETS = (200, 120, 60)
 
 
-def fit_sources(question: str, sources: list[dict], answer: str, locale: str, budget: int = SAMPLE_CHARS_BUDGET) -> str | None:
+def fit_sources(question: str, sources: list[dict], answer: str, locale: str, budget: int = SAMPLE_CHARS_BUDGET,
+                keep: frozenset[str] = frozenset()) -> str | None:
     """User message that fits the training budget: unrelated cards (their URL is not in the answer) are
     dropped first, then every snippet is shortened; the cards the answer names always stay. `None` when
     even that does not fit — the caller skips the sample. The screen sends up to eight cards with
-    320-character snippets — training sees fewer and shorter ones."""
+    320-character snippets — training sees fewer and shorter ones. `keep` (rag_answers edition 7) names
+    cards that stay although the answer does not link them: matching cards beyond the three picks,
+    without which the model never sees more matches than it names."""
     cards = [dict(source) for source in sources]
 
     def size() -> int:
         return len(system_prompt(locale)) + len(build_user_message(question, cards, locale)) + len(answer)
 
     while size() > budget:
-        spare = [card for card in cards if card["url"] not in answer]
+        spare = [card for card in cards if card["url"] not in answer and card["url"] not in keep]
         if len(spare) <= 1 or len(cards) <= 2:
             break
         cards.remove(spare[-1])

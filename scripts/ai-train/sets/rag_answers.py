@@ -37,6 +37,22 @@ Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
                 language from the site_translations cache (the screen's BE/UK/PL/EN cards
                 carry translated titles; v3 wrote «Квест po Krakowie»).
 
+Edition 7 (#2751 v7, 09.11.2026) — from the v6 acceptance (on13, BE ln02: four to six quests
+listed instead of three, on v4 and v6 alike):
+* card order  — which three of the matching cards an answer names used to follow the dump order
+                of the quests, which the model never sees: with four or more quests of a city in
+                the prompt the choice was unpredictable and the model listed them all. In
+                quests / kids answers (RU and the other languages) the picks now go in the order
+                of the cards in the prompt, the way retrieval ranks them («самый короткий» keeps
+                the visible duration order);
+* crowded     — a city with four or five of its quests among the cards (all the 1024-token
+                training budget holds; the screen sends up to eight), on five languages and
+                natural phrasings («Есть квест …?», «Якія квэсты ёсць …?»): the answer names
+                the first three in card order and leaves the rest to the sources list. The
+                matching cards the answer does not link stay in the prompt (`fit_sources(keep=)`)
+                — before, the fit dropped exactly them, so the model never saw more matching
+                cards than it named.
+
 Edition 6 (#2751 v6, 08.11.2026) — from the v5-rag acceptance misses (01.11.2026):
 * topic       — back (edition 5 dropped it for `boundary_*`): on the screen a borderline
                 question («какую крупу брать в поход») arrives with unrelated cards and v5-rag
@@ -56,7 +72,7 @@ Edition 6 (#2751 v6, 08.11.2026) — from the v5-rag acceptance misses (01.11.20
 Options (mixes/*.yaml → sets.rag_answers.options):
   per_place  — samples per place and kind (default 2);
   other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35, edition 3);
-  edition    — 3 (default), 4, 5 (compact locale-balanced #2751 continuation) or 6 (v6);
+  edition    — 3 (default), 4, 5 (compact locale-balanced #2751 continuation), 6 (v6) or 7 (v7);
   page_travels, page_quests — pages sampled for the `page` kind (edition 6; default 60 / 80).
 """
 from __future__ import annotations
@@ -73,6 +89,16 @@ from sets.site import html_to_text, load_raw
 NAME = "rag_answers"
 LICENSE = "metravel.by own content (articles and quests by Julia and Sergey); answers assembled from card fields"
 MAX_CARDS = 8
+# Edition 7 `crowded`: this many quests of one city among the cards (on13 had 4, BE ln02 had 6).
+# Five is what the training budget holds next to the system prompt (SAMPLE_CHARS_BUDGET ≈ 1024
+# tokens: four cards with full snippets, five with shortened ones), so no unrelated cards here.
+CROWDED_MIN, CROWDED_MAX = 4, 5
+CROWDED_VARIANTS = 3
+CROWDED_VARIANTS_L10N = 2
+# The character budget is a proxy for 1024 tokens (≈ 2,9 characters per token here); `crowded`
+# prompts are URL-heavy and stay under the limit at a larger budget, which keeps the durations in
+# the cards and the blurbs in the answer. prepare_training_data.py drops the few that still exceed.
+CROWDED_CHARS_BUDGET = 2950
 DIFFICULTY_RU = {"easy": "лёгкий", "medium": "средний", "hard": "сложный"}
 
 # name, «в X», «по X», title/city regex. «в мире» ambiguous — Мир left out.
@@ -507,7 +533,8 @@ def short_title(title: str) -> str:
     return title if len(title) <= 64 else title[:61].rsplit(" ", 1)[0] + "…"
 
 
-def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compact: bool = False, short: bool = False, outro: bool = True) -> str:
+def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compact: bool = False, short: bool = False, outro: bool = True,
+            rest: bool = False) -> str:
     def compact_line(card: dict) -> str:
         # Keep the source identity and URL; stop long translated titles from
         # consuming the app's 400-token generation budget. No unobserved meta text.
@@ -515,7 +542,8 @@ def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compac
     # Edition 6: short titles as in compact lines, but with the quest blurb in the answer
     # language — a title-only list of Russian titles reads as a Russian answer.
     lines = ([intro] if intro else []) + [(compact_line(c) if compact else item_line(c, lang, short)) for c in picks[:3]]
-    tail = rng.choice(OUTRO[lang]) if outro and not compact else ""
+    # `rest` (edition 7 `crowded`): more matching cards than picks — the answer always says where the rest is.
+    tail = rng.choice([o for o in OUTRO[lang] if o or not rest]) if outro and not compact else ""
     text = "\n".join(lines) + (f"\n\n{tail}" if tail else "")
     if len(text) > max_answer_chars():
         raise ValueError("answer longer than the prompt allows")
@@ -541,6 +569,17 @@ def mixed_cards(relevant: list[dict], pool: list[dict], rng: random.Random) -> l
         cards.remove(chosen[0])
         cards.insert(0, chosen[0])
     return cards
+
+
+def crowded_cards(relevant: list[dict], rng: random.Random) -> list[dict]:
+    """Edition 7: four or five matching cards of one city in a random order, nothing else."""
+    return rng.sample(relevant, min(len(relevant), rng.randint(CROWDED_MIN, CROWDED_MAX)))
+
+
+def in_card_order(cards: list[dict], relevant: list[dict]) -> list[dict]:
+    """The matching cards in the order of the prompt — the only order the model can see."""
+    urls = {c["url"] for c in relevant}
+    return [c for c in cards if c["url"] in urls]
 
 
 def load_quest_titles(sources: Path) -> dict[str, dict[str, str]]:
@@ -569,8 +608,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
     edition = int(options.get("edition", 3))
-    if edition not in (3, 4, 5, 6):
-        raise ValueError("rag_answers edition must be 3, 4, 5 or 6")
+    if edition not in (3, 4, 5, 6, 7):
+        raise ValueError("rag_answers edition must be 3, 4, 5, 6 or 7")
     titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
@@ -579,21 +618,28 @@ def build(ctx: dict, options: dict) -> list[dict]:
     out: list[dict] = []
 
     def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int,
-             key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None) -> None:
+             key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None,
+             keep: list[dict] | None = None) -> None:
         if is_contour_question(question):
             return
         # buildAssistantMessages sanitizes historical text, including newlines.
         history = [{**message, "content": sanitize_fragment(message["content"], 1200)} for message in history or []]
         # The training budget (assistant_prompt.fit_sources) drops unrelated cards and shortens snippets.
-        budget = SAMPLE_CHARS_BUDGET - sum(len(m["content"]) for m in history or [])
+        budget = (CROWDED_CHARS_BUDGET if kind == "crowded" else SAMPLE_CHARS_BUDGET) - sum(len(m["content"]) for m in history or [])
         sources = [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards]
-        user = fit_sources(question, sources, answer, lang, budget=budget)
+        # Edition 7: matching cards the answer leaves to the sources list stay in the prompt.
+        fit = {"budget": budget, "keep": frozenset(c["url"] for c in keep)} if keep else {"budget": budget}
+        user = fit_sources(question, sources, answer, lang, **fit)
+        if user is None and keep and kind != "crowded":
+            # The extra matching cards do not fit: the sample stays as before edition 7.
+            fit = {"budget": budget}
+            user = fit_sources(question, sources, answer, lang, **fit)
         if edition >= 6 and user is not None and not required_evidence:
             # Short snippets can lose «Длительность» or the article's first sentence; the answer
             # then names the item without a fact the model cannot see.
             seen = _observed_only(answer, user, cards)
             if seen != answer:
-                answer, user = seen, fit_sources(question, sources, seen, lang, budget=budget)
+                answer, user = seen, fit_sources(question, sources, seen, lang, **fit)
         if user is None or (required_evidence and sanitize_fragment(required_evidence) not in user):
             return
         item = record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
@@ -605,7 +651,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
     def render(intro: str, picks: list[dict], lang: str, kind: str = "") -> str:
         if edition >= 5 and kind == "kids":
             return compose(KIDS_INTRO[lang], picks[:2], lang, rng, compact=edition == 5, short=True, outro=False) + "\n" + KIDS_UNKNOWN[lang]
-        return compose(intro, picks, lang, rng, compact=edition == 5, short=edition >= 6)
+        return compose(intro, picks, lang, rng, compact=edition == 5, short=edition >= 6, rest=kind == "crowded")
 
     for name, loc, dat, pattern in PLACES_RU:
         rx = re.compile(pattern, re.I)
@@ -629,12 +675,14 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 shortest = "коротк" in template
                 ordered = sorted(rel_quests, key=lambda c: c["duration"] or 10**6) if shortest else rel_quests
                 cards = mixed_cards(ordered + rel_travels[:2], pool, rng)
-                picks = [c for c in ordered if c in cards][:3]
+                # Edition 7: the choice follows the cards as given; «самый короткий» — the visible durations.
+                picks = (in_card_order(cards, ordered) if edition >= 7 and not shortest else [c for c in ordered if c in cards])[:3]
                 intro = rng.choice(INTRO_RU["shortest" if shortest else "quests"]).format(**fill)
-                emit("quests", name, lang, template.format(**fill), cards, render(intro, picks, lang), n)
+                emit("quests", name, lang, template.format(**fill), cards, render(intro, picks, lang), n,
+                     keep=in_card_order(cards, ordered) if edition >= 7 else None)
                 kid = rel_quests if edition >= 5 else ([c for c in rel_quests if c["difficulty"] == "лёгкий"] or rel_quests)
                 cards = mixed_cards(kid + rel_travels[:2], pool, rng)
-                picks = ([c for c in kid if c in cards][:2] + [c for c in rel_travels[:1] if c in cards])[:3]
+                picks = ((in_card_order(cards, kid) if edition >= 7 else [c for c in kid if c in cards])[:2] + [c for c in rel_travels[:1] if c in cards])[:3]
                 emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
                      render(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, "kids"), n)
                 if edition >= 5 and n == 0:
@@ -668,7 +716,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 # «Какие квесты есть?» is not asked here: the three picks mix articles and quests.
                 q = rng.choice(ASK_RU["pick"]).format(days=rng.choice(DAYS), **fill)
                 emit("many", name, lang, q, cards, render(rng.choice(MANY_INTRO_RU).format(**fill), picks, lang), n)
-            if edition in (4, 6) and ranked:
+            if (edition == 4 or edition >= 6) and ranked:
                 template, about = rng.choice(CITY_TOPICS_RU)
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:2]
@@ -687,6 +735,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     cards = [localize(c, lang, titles) for c in mixed_cards(ordered + extra, pool, rng)]
                     urls = [c["url"] for c in ordered]
                     picks = sorted((c for c in cards if c["url"] in urls), key=lambda c: urls.index(c["url"]))[:3]
+                    if edition >= 7 and kind != "pick":
+                        picks = in_card_order(cards, ordered)[:3]
                     if picks:
                         l10n = {"loc": PLACES_L10N[name][lang]}
                         fix = be_fix if lang == "be" else (lambda text: text)
@@ -703,6 +753,24 @@ def build(ctx: dict, options: dict) -> list[dict]:
                             emit("many", name, lang, fix(COMPACT_ASK[lang][kind].format(**l10n)),
                                  many_cards, render(intro, many_cards[:3], lang), n)
 
+            if edition >= 7 and len(rel_quests) >= CROWDED_MIN:
+                # Four to six quests of the city among the cards: three in card order, the rest in sources.
+                templates = [t for t in ASK_RU["quests"] if "коротк" not in t]
+                for v in range(CROWDED_VARIANTS):
+                    cards = crowded_cards(rel_quests, rng)
+                    intro = rng.choice(INTRO_RU["quests"]).format(**fill)
+                    emit("crowded", name, "ru", rng.choice(templates).format(**fill), cards,
+                         render(intro, cards[:3], "ru", "crowded"), per_place * v + n, keep=cards)
+                if name in PLACES_L10N:
+                    for lang in ("be", "uk", "pl", "en"):
+                        l10n = {"loc": PLACES_L10N[name][lang]}
+                        fix = be_fix if lang == "be" else (lambda text: text)
+                        intro = fix(cap(INTRO_L10N[lang]["quests"].format(**l10n)))
+                        for v in range(CROWDED_VARIANTS_L10N):
+                            cards = [localize(c, lang, titles) for c in crowded_cards(rel_quests, rng)]
+                            emit("crowded", name, lang, fix(rng.choice(ASK_L10N6[lang]["quests"]).format(**l10n)), cards,
+                                 render(intro, cards[:3], lang, "crowded"), per_place * v + n, keep=cards)
+
     covered = " ".join(c["haystack"] for c in everything)
     for name, loc, about, pattern in ABSENT_RU:
         if re.search(pattern, covered, re.I):
@@ -718,7 +786,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 answer = rng.choice(NO_MATERIAL_RU).format(about=about, title=nearest["title"], url=nearest["url"], blurb=tail)
             emit("no_material", name, "ru", q, cards, answer, n)
 
-    if edition in (4, 6):
+    if edition == 4 or edition >= 6:
         outdoor = [c for c in everything if OUTDOOR_RE.search(c["title"])]
         topics_by_lang = {lang: tuple(TOPICS[lang]) + (tuple(TOPICS6.get(lang, ())) if edition >= 6 else ()) for lang in TOPICS}
         for lang, topics in topics_by_lang.items():

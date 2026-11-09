@@ -126,15 +126,31 @@ export const parseSse = (body) => {
 /**
  * Зацикливание: один и тот же пункт (≥ 6 знаков) повторяется три раза и больше —
  * «Ratusz; Ratusz; Ratusz…» (#2709). Возвращает повторяющийся пункт или `null`.
+ *
+ * Повтор — это цикл, только если пункт идёт три раза подряд либо повторяется вместе со
+ * следующим за ним (круг «A, B, C, A, B, C…»). Одинаковый факт у трёх разных пунктов —
+ * «близько 120 хв» у трёх квестов одной длительности (#2751, UK ln03 09.11.2026) — не цикл:
+ * между повторами стоят разные пункты.
  */
 export const detectLoop = (text) => {
-  const counts = new Map()
+  const keys = []
   for (const segment of String(text ?? '').toLowerCase().split(/[;\n]|,\s/)) {
     const key = segment.replace(BULLET_RE, '').replace(/[*_]/g, '').replace(/\s+/g, ' ').trim()
-    if (key.length < 6) continue
-    const next = (counts.get(key) ?? 0) + 1
-    counts.set(key, next)
-    if (next >= 3) return key.slice(0, 80)
+    if (key.length >= 6) keys.push(key)
+  }
+  const seenAt = new Map()
+  for (const [index, key] of keys.entries()) {
+    const at = seenAt.get(key) ?? []
+    at.push(index)
+    seenAt.set(key, at)
+    if (at.length < 3) continue
+    const [first, second] = at.slice(-3)
+    const inRow = second - first === 1 && index - second === 1
+    // The last segment may be cut by the token limit: there a prefix of the next circle item counts.
+    const after = keys[index + 1]
+    const continues = after === undefined || after === keys[first + 1] || (index + 2 === keys.length && keys[first + 1].startsWith(after))
+    const circle = second - first > 1 && keys[first + 1] === keys[second + 1] && continues
+    if (inRow || circle) return key.slice(0, 80)
   }
   return null
 }

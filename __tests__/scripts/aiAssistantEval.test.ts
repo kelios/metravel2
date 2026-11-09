@@ -147,6 +147,14 @@ describe('ai-assistant-eval checks', () => {
   it('finds a looping item and the site-card template, but not a normal list', () => {
     expect(detectLoop('Точки: Ratusz; Ratusz; Ratusz; Ratusz')).toBe('ratusz')
     expect(detectLoop('- Вавель\n- Рынок\n- Казимеж')).toBeNull()
+    // #2751 (UK ln03, 09.11.2026): три разных квеста одной длительности — общий факт, а не цикл.
+    const quest = (title: string, points: number) => `- [${title}](https://metravel.by/quests/krakow/${points}) — міський квест: точок — ${points}, близько 120 хв`
+    expect(detectLoop(['Ось головне у Кракові:', quest('Казімеж', 9), quest('Наказ № 1', 8), quest('Вавельський дракон', 10)].join('\n'))).toBeNull()
+    // Круг из нескольких пунктов и один пункт подряд остаются циклом.
+    expect(detectLoop('Вавель дракон, Казимеж квартал, Тынец аббатство, Вавель дракон, Казимеж квартал, Тынец аббатство, Вавель дракон')).toBe('вавель дракон')
+    // Ответ, обрезанный лимитом токенов посреди следующего пункта круга, — тоже цикл.
+    expect(detectLoop('Вавель дракон, Казимеж квартал, Тынец аббатство, Вавель дракон, Казимеж квартал, Тынец аббатство, Вавель дракон, Казимеж кв')).toBe('вавель дракон')
+    expect(detectLoop('гарадской квэст па Лошыцкім парку — https://metravel.by/a, гарадской квэст па Лошыцкім парку — https://metravel.by/a, гарадской квэст па Лошыцкім парку — https://metravel.by/a')).toContain('лошыцкім парку')
     expect(hasTemplate('Краков\n**Страна:** Польша\nКогда: весна')).toBe('Страна')
     expect(hasTemplate('Посмотрите Вавель — когда будете в Кракове.')).toBeNull()
   })

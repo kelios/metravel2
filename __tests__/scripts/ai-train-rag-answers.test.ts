@@ -472,3 +472,91 @@ describe('ai-train rag_answers edition 6 (#2751 v6)', () => {
     for (const r of kids) expect(r.messages[2].content).toMatch(/Karty nie podają|cards do not state|не пазначаны|не вказано/);
   });
 });
+
+describe('ai-train rag_answers edition 7 (#2751 v7)', () => {
+  let home: string;
+  let rows: Record<string, any>[];
+  let rows6: Record<string, any>[];
+  const lang = (r: Record<string, any>) => r.id.split(':').at(-2);
+  // адреса карточек подсказки по порядку и адреса ответа
+  const cardUrls = (r: Record<string, any>): string[] =>
+    [...(r.messages.at(-2).content as string).matchAll(/\n?\[\d\] (?:Квест|Статья) «[^»]*» — (https?:\/\/\S+)/g)].map((m) => m[1]);
+  const answerUrls = (r: Record<string, any>): string[] => (r.messages.at(-1).content as string).match(URL_RE) ?? [];
+
+  beforeAll(() => {
+    home = makeTempDir('ai-train-rag7-');
+    const raw = path.join(home, 'data', 'raw');
+    fs.mkdirSync(raw, { recursive: true });
+    writeJsonl(path.join(raw, 'travels.jsonl'), [
+      travel(1, 'Краков: путеводитель по местам', 'Краков', 'Польша'),
+      travel(2, 'Минск за выходные: путеводитель', 'Минск', 'Беларусь'),
+      travel(3, 'Татры: поход к Морскому оку', 'Закопане', 'Польша'),
+    ]);
+    writeJsonl(path.join(raw, 'quests.jsonl'), [
+      quest('krakow-dragon', 'Квест по Кракову: Вавельский дракон', 'Краков', 'krakow', 120),
+      quest('krakow-kazimierz', 'Квест по Кракову: Казимеж', 'Краков', 'krakow', 60, 'medium'),
+      quest('krakow-huta', 'Квест по Кракову: Нова-Хута', 'Краков', 'krakow', 90),
+      quest('krakow-szopka', 'Квест по Кракову: тропа шопкарей', 'Краков', 'krakow', 100),
+      quest('krakow-tyniec', 'Квест по Кракову: Тынец', 'Краков', 'krakow', 240),
+      quest('krakow-wanda', 'Квест по Кракову: курган Ванды', 'Краков', 'krakow', 300),
+      quest('minsk-cmok', 'Квест по Минску: цмок', 'Минск', 'minsk', 45),
+    ]);
+    const build = (edition: number) => {
+      const mixFile = path.join(home, `rag${edition}.json`);
+      fs.writeFileSync(mixFile, JSON.stringify({
+        name: `rag${edition}`, split: { by: 'key', valid_share: 0, test_share: 0 },
+        sets: { rag_answers: { options: { edition, per_place: 1, page_travels: 3, page_quests: 3 } } },
+      }));
+      const run = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', path.join(home, `out${edition}`)]);
+      expect(run.stderr).toContain(`"mix": "rag${edition}"`);
+      expect(run.status).toBe(0);
+      return readJsonl(path.join(home, 'data', 'sets', 'rag_answers', 'train.jsonl'));
+    };
+    rows6 = build(6);
+    rows = build(7);
+  });
+  afterAll(() => removeDir(home));
+
+  it('в городе с 4–5 квестами среди карточек ответ называет первые три по порядку карточек и отсылает к источникам', () => {
+    const crowded = rows.filter((r) => r.kind === 'crowded');
+    expect(new Set(crowded.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    expect(crowded.length).toBeGreaterThanOrEqual(8);
+    for (const r of crowded) {
+      const cards = cardUrls(r);
+      // только подходящие квесты (города или страны), лишние совпадения остаются в подсказке
+      expect(cards.length).toBeGreaterThanOrEqual(4);
+      expect(cards.length).toBeLessThanOrEqual(5);
+      expect(cards.every((url) => url.includes('/quests/'))).toBe(true);
+      if (r.id.includes(':Краков:')) expect(cards.every((url) => url.includes('/quests/krakow/'))).toBe(true);
+      expect(answerUrls(r)).toEqual(cards.slice(0, 3));
+      expect(r.messages.at(-1).content).toMatch(/списке источников|спісе крыніц|списку джерел|liście źródeł|sources list/);
+      expect((r.messages.at(-1).content as string).length).toBeLessThanOrEqual(PROMPT.max_answer_chars);
+    }
+    // вопросы контура в обучение не попадают
+    expect(rows.some((r) => /Есть квест по Вроцлаву\?|Якія квэсты ёсць у Мінску\?/.test(r.messages.at(-2).content))).toBe(false);
+  });
+
+  it('в списках квестов выбор идёт по порядку карточек, «самый короткий» — по длительности', () => {
+    const inCardOrder = (r: Record<string, any>) => {
+      const cards = cardUrls(r);
+      const named = answerUrls(r);
+      const matching = cards.filter((url) => url.includes('/quests/krakow/'));
+      return JSON.stringify(named.filter((url) => url.includes('/quests/'))) === JSON.stringify(matching.slice(0, named.filter((url) => url.includes('/quests/')).length));
+    };
+    const question = (r: Record<string, any>) => (r.messages.at(-2).content as string).split('Вопрос посетителя:')[1];
+    const lists = (set: Record<string, any>[]) => set.filter((r) => r.kind === 'quests' && r.id.includes(':Краков:') && !/коротк/.test(question(r)));
+    expect(lists(rows).length).toBeGreaterThan(2);
+    for (const r of lists(rows)) expect(inCardOrder(r)).toBe(true);
+    // в edition 6 выбор шёл по порядку выгрузки, который модель не видит
+    expect(lists(rows6).some((r) => !inCardOrder(r))).toBe(true);
+    for (const r of rows.filter((row) => row.kind === 'quests' && /коротк/.test(question(row)) && row.id.includes(':Краков:'))) {
+      const durations = [...(r.messages.at(-1).content as string).matchAll(/около (\d+) мин/g)].map((m) => Number(m[1]));
+      expect(durations).toEqual([...durations].sort((a, b) => a - b));
+    }
+  });
+
+  it('edition 6 не меняется: те же записи без вида crowded', () => {
+    expect(rows6.some((r) => r.kind === 'crowded')).toBe(false);
+    expect(rows.filter((r) => r.kind !== 'crowded').length).toBeGreaterThanOrEqual(rows6.length - 12);
+  });
+});

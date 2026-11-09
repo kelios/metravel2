@@ -555,3 +555,71 @@ sha256 `2bb809db8652a25ec7e7a9abae2ebe2e896f3274075848e88b6179f67caa60f6`. Од�
 рекомендации); пороги закрытых срезов (3) — решение владельца по #2751. Сырые ответы: `.codex-temp/ai-assistant-eval/{v4,v6}-targets-v6round`,
 `{v4,v6}-holdout-v6round`, `quality-{v4,v6}-s29-20261108`; срезы —
 `~/metravel-ai/logs/eval-v6-vs-v4-gguf/report.md`.
+
+## Кандидат v7: выбор по порядку карточек и город с 4–5 квестами (#2751, 09.11.2026)
+
+Владелец выбрал новый круг с пересмотренными порогами: `site`, `translations` и
+`wikivoyage` остаются в отчёте без порога, к целевым случаям добавлены on10, on13
+и on14 (списки, на которых v6 уступила v4). Правка пайплайна #3216 уже закрыла
+отказ на вопрос о поездке и длину показанного ответа, поэтому v7 чинит только то,
+что видно в сыром ответе модели: списки длиннее трёх.
+
+Что нашлось в edition 6 (и раньше):
+
+1. **Выбор трёх из многих был непредсказуем для модели.** `picks` брались в
+   порядке выгрузки квестов (`[c for c in ordered if c in cards]`), а карточки в
+   подсказке перемешаны. При трёх квестах города 48 из 67 ответов шли не в порядке
+   карточек, при четырёх и больше — 17 из 18. Правила «какие три» в подсказке нет,
+   и модель перечисляла все.
+2. **Подсказок, где подходящих карточек больше, чем названо, почти не было.**
+   `fit_sources` под бюджет 1024 токена первым выбрасывает карточки, которых нет
+   в ответе. Системный промпт занимает половину бюджета (1359 знаков из 2700), так
+   что в учебной подсказке оставались названные карточки и одна-две посторонние.
+   Экран шлёт до восьми карточек (≈ 1100 токенов подсказки) — длиннее всего, что
+   помещается в обучение на этой машине (`max_seq_length` 1024 — предел 24 ГБ).
+
+Edition 7 (`rag_answers.py`, опция `edition: 7`):
+
+- в видах `quests` и `kids` (RU и остальные языки) выбор идёт по порядку карточек
+  подсказки — `in_card_order`; «самый короткий» по-прежнему по длительности;
+- вид `crowded`: 4–5 квестов одного города и ничего больше (`crowded_cards`),
+  вопросы «Есть квест …?», «Якія квэсты ёсць …?» и т. п. на пяти языках; ответ —
+  первые три по порядку карточек и обязательная отсылка к списку источников;
+  неназванные квесты остаются в подсказке (`fit_sources(keep=)`), бюджет вида —
+  `CROWDED_CHARS_BUDGET` 2950 знаков (подсказки с адресами плотнее по токенам;
+  точная подготовка отбрасывает то, что всё же длиннее 1024 токенов);
+- editions 3–6 не меняются: хеши полной сборки edition 4/5/6 до и после правки
+  совпадают (`2c02e795…`, `f36d7d72…`, `66c741e3…`).
+
+Сборка и подготовка (venv, офлайн):
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 ~/metravel-ai/venv/bin/python -I scripts/ai-train/build_mix.py --ai-home ~/metravel-ai --mix scripts/ai-train/mixes/v7.yaml --out ~/metravel-ai/data/sft-v7
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 ~/metravel-ai/venv/bin/python -I scripts/ai-train/prepare_training_data.py --data ~/metravel-ai/data/sft-v7/s3 --model ~/metravel-ai/models/Qwen3.5-4B-MLX-4bit --out ~/metravel-ai/data/sft-v7/s3-fit --max-tokens 1024
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 ~/metravel-ai/venv/bin/python -I scripts/ai-train/prepare_training_data.py --config scripts/ai-train/lora-qwen3.5-4b-v7.yaml --ai-home ~/metravel-ai
+```
+
+Снимок 09.11.2026: s3 2292 → **2275 train** (17 длинных исключены: 12 rag_answers,
+4 translations, 1 site) / 40 valid / 31 test; train по наборам — rag_answers 1083
+(page 164, kids 145, quests 140, pick 134, topic 93, crowded 92, exact_one 87,
+followup 41, limit 38, injected 33, many 30, no_material 30, one_article 21,
+boundary 35), osm_intents 353, site 277, wikivoyage 248, toponyms 209,
+translations 82, offtopic 23; максимум 1024 токена. Конфиг
+`lora-qwen3.5-4b-v7.yaml`: продолжение `adapters/metravel-llm-v4`, 2275 шагов,
+lr 1.5e-5 cosine, `adapters/metravel-llm-v7` — гиперпараметры v6, отличается только
+набор ассистента. Запуск и экспорт — как у v6 (`RUN=v7-probe`, затем `RUN=v7`,
+`RUN=v7 export_gguf.sh`).
+
+Пороги приёмки (карточка #2751, пересмотрены 09.11.2026): экран ×3 — bd01, bd07,
+bd11, BE ln02, UK ln03, mt03#1, on10, on13, on14 каждый ≥ 2/3; `eval.py` —
+osm_intents ≥ 9, toponyms ≥ 8, rag_answers не ниже v4, «не по теме» 12/12;
+off_topic и injection контура — 100 %; quality и отложенные вопросы — не ниже v4;
+site, translations, wikivoyage — в отчёте без порога.
+
+В этом же круге исправлена проверка контура `detectLoop`
+(`scripts/ai-assistant-eval/checks.mjs`): повтор считается циклом, только если
+пункт идёт три раза подряд или повторяется вместе со следующим за ним. Раньше
+одинаковый факт у трёх разных пунктов («близько 120 хв» у трёх квестов) давал
+`loop` — 22 из 34 срабатываний на 1050 сохранённых ответах были такими; остальные
+шесть снятых случаев — общие факты («лёгкий уровень.», «Варшава») и повтор
+шаблона карточки, который ловит отдельная проверка `template`.

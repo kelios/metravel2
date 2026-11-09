@@ -1,0 +1,24 @@
+# metravel-llm v7 (#2751): the v6 recipe with rag_answers edition 7. Only the assistant set
+# changes, so the result is attributable: picks of quest lists follow the card order of the
+# prompt and `crowded` samples keep four or five quests of one city among the cards (v6 and v4
+# listed all of them — on13, BE ln02). Stage s3 holds rag_answers + offtopic + osm_intents +
+# wikivoyage, the replay pool (0.25) is toponyms / translations / site, as in v6.
+# Only s3 is trained (lora-qwen3.5-4b-v7.yaml resumes adapters/metravel-llm-v4);
+# s1 exists for the replay pool. v4, v5, v5-rag and v6 are never overwritten.
+name: v7
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 350000}
+  translations: {weight: 1.0, cap_tokens: 400000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
+  site:         {weight: 1.0, cap_tokens: 1200000, options: {chunk_chars: 2600, structured: true}}
+  # Intents over describe: the map filter slice and /ai/intent read constraints (dogs, camper),
+  # which v4 drops; descriptions stay for the POI voice.
+  osm_intents:  {weight: 1.0, cap_tokens: 100000, options: {intents: 2500, describe: 1200, centres: 250, lang_share: {be: 0.1, pl: 0.1}}}
+  wikivoyage:   {weight: 0.7, cap_tokens: 120000}
+  rag_answers:  {weight: 1.0, options: {per_place: 1, edition: 7}}
+  offtopic:     {weight: 1.0, cap_tokens: 18000, options: {variants: 1}}
+stages:
+  - {name: s1, sets: [toponyms, translations, site]}
+  - {name: s3, sets: [osm_intents, wikivoyage, rag_answers, offtopic]}
+replay: 0.25
