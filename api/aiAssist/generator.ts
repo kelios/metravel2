@@ -203,7 +203,9 @@ const LINK_IN_TEXT_RE = /\[[^\]\n]*\]\(\s*(https?:\/\/[^\s)\]>»"']+)|https?:\/\
 const URL_TRAILING_PUNCTUATION_RE = /[.,;:!?]+$/
 const LAST_LINE_RE = /\n([^\n]*)$/
 const LIST_INTRO_RE = /[:：][\s*_]*$/
-const CLAUSE_END_RE = /[.!?;](?=[^.!?;]*$)/
+// Граница фразы — знак, за которым пробел или конец текста: «2,5 км» и «4.5 km» фразу не заканчивают.
+const CLAUSE_END_RE = /[.!?;](?=\s|$)/g
+const CLAUSE_COMMA_RE = /,(?=\s|$)/g
 
 /** Текст без хвоста из разделителей и без подводки к отрезанным пунктам («День 3:», «Ещё варианты:»). */
 const trimCutTail = (text: string): string => {
@@ -221,10 +223,10 @@ const trimCutTail = (text: string): string => {
  */
 const clauseEndBefore = (text: string, keptLinkEnd: number, overflowStart: number): number => {
   const between = text.slice(keptLinkEnd, overflowStart)
-  const boundary = CLAUSE_END_RE.exec(between)
+  const boundary = [...between.matchAll(CLAUSE_END_RE)].at(-1)
   if (boundary) return keptLinkEnd + boundary.index + (boundary[0] === ';' ? 0 : 1)
-  const comma = between.lastIndexOf(',')
-  return comma >= 0 ? keptLinkEnd + comma : keptLinkEnd
+  const comma = [...between.matchAll(CLAUSE_COMMA_RE)].at(-1)
+  return comma ? keptLinkEnd + comma.index : keptLinkEnd
 }
 
 /**

@@ -184,6 +184,11 @@ describe('aiAssist generator (#2460)', () => {
     const inline = `У Мінску шэсць гарадскіх квэстаў: ${item('У пошуках цмока', 'minsk-cmok', 'каля 45 хв., лёгкі')}; ${item('Белая пані', 'minsk-loshitsa', 'каля 90 хв., лёгкі')}; ${item('Трактарны пасёлак', 'minsk-traktorny', 'каля 75 хв., лёгкі')}`
     expect(findRecommendationOverflowCut(inline, 3)).toBeNull()
     expect(cut(`${inline}; ${item('Дворыкі Мінска', 'minsk-dvoriki', 'каля 90 хв., лёгкі')}; [Праспект](${QUEST('minsk-cipher')})`)).toBe(inline)
+    // Десятичный разделитель фразу не заканчивает: «2,5 км» и «4.5 km» остаются целыми.
+    const km = (distance: string, joint: string) => `Маршруты: https://metravel.by/a, https://metravel.by/b и [Тынец](https://metravel.by/c) — ${distance} ${joint} [Величка](https://metravel.by/d)`
+    expect(cut(km('2,5 км', 'и'))).toBe('Маршруты: https://metravel.by/a, https://metravel.by/b и [Тынец](https://metravel.by/c)')
+    expect(cut(km('4.5 km', 'and'))).toBe('Маршруты: https://metravel.by/a, https://metravel.by/b и [Тынец](https://metravel.by/c)')
+    expect(cut(km('2,5 км, удобно с детьми,', 'а ещё'))).toBe('Маршруты: https://metravel.by/a, https://metravel.by/b и [Тынец](https://metravel.by/c) — 2,5 км, удобно с детьми')
     // Предложение после оставленных ссылок закрывается своей точкой, подводка к лишней ссылке уходит.
     expect(cut(`${inline}. Яшчэ ёсць: [Дворыкі Мінска](${QUEST('minsk-dvoriki')})`)).toBe(`${inline}.`)
     // На потоке лишняя ссылка режется, как только её адрес разошёлся с названными, а до того текст не трогается.
