@@ -18,6 +18,7 @@ import React, { memo, Suspense, useMemo, useRef, useState } from 'react';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform';
 import { groupInlinePhotoFlow } from '@/utils/richTextImageLayoutPhotoFlow';
+import { inertMarkup, toInertHtml } from '@/utils/inertHtml';
 import { useStableContentWebEffects } from '@/components/travel/stableContent/useWebEffects';
 import {
   getWebRichTextStyles,
@@ -63,13 +64,14 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
   const webRootRef = useRef<HTMLDivElement | null>(null);
   // Photo/text ownership and backward association are resolved together, only
   // for display. Editor persistence and PDF rendering retain canonical HTML.
+  // #3202: `toInertHtml` — последний шаг перед стоком, после всех строковых правок.
   const prepared = useMemo(
-    () => groupInlinePhotoFlow(prepareStableContentHtml(html, { serverSanitized, articleBodyMedia })),
+    () => toInertHtml(groupInlinePhotoFlow(prepareStableContentHtml(html, { serverSanitized, articleBodyMedia }))),
     [html, serverSanitized, articleBodyMedia],
   );
   // React compares this prop object by identity. Keep it stable when only the
   // lightbox changes so the image nodes, enrichment and focus trigger survive.
-  const preparedMarkup = useMemo(() => ({ __html: prepared }), [prepared]);
+  const preparedMarkup = useMemo(() => inertMarkup(prepared), [prepared]);
 
   const scrollToHashTarget = (hash: string) => {
     try {

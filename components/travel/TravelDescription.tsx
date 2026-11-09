@@ -17,7 +17,7 @@ import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
 import { useResponsive } from '@/hooks/useResponsive';
-import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
+import { toInertHtml } from '@/utils/inertHtml';
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings';
 import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
@@ -112,7 +112,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
     const canParseHtml = revealedHtml === htmlContent;
     const initialDescriptionHtml = useMemo(
         () => Platform.OS === 'web' && serverSanitized && hasLoaderTravel
-            ? demoteRichTextPageHeadings(guardServerSafeHtml(htmlContent))
+            ? toInertHtml(demoteRichTextPageHeadings(htmlContent))
             : null,
         [hasLoaderTravel, htmlContent, serverSanitized],
     );

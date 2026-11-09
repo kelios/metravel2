@@ -11,6 +11,7 @@ import PointList from '@/components/travel/PointList'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
+import { toInertHtml } from '@/utils/inertHtml'
 import { webTouchScrollStyle } from '@/utils'
 import { LoadError } from './TravelDetailsErrorStates'
 import { getTravelDetailsSeoMetadata } from './hooks/travelDetailsContainerViewModel'
@@ -35,9 +36,9 @@ export default function TravelOfflineReader() {
     heading: { color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.xl, fontWeight: '700' },
     subheading: { color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.lg, fontWeight: '600' },
   }), [bottomPadding, colors])
-  const html = useMemo(() => demoteRichTextPageHeadings(sanitizeRichText(
+  const html = useMemo(() => toInertHtml(demoteRichTextPageHeadings(sanitizeRichText(
     travel?.rich_text?.description?.safe_html ?? travel?.description ?? '',
-  )), [travel?.description, travel?.rich_text?.description?.safe_html])
+  ))), [travel?.description, travel?.rich_text?.description?.safe_html])
   const seo = travel ? getTravelDetailsSeoMetadata(travel, slug) : null
   const points = useMemo<ComponentProps<typeof PointList>['points']>(() =>
     (travel?.travelAddress ?? []).map((raw, index) => {

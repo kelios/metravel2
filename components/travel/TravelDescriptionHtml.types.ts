@@ -1,4 +1,6 @@
+import type { InertHtml } from '@/utils/inertHtml';
+
 export interface TravelDescriptionHtmlProps {
-  html: string;
+  html: InertHtml;
   fullWidth: boolean;
 }

@@ -9,6 +9,8 @@ import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils
 import { normalizeRichTextListFragments } from '@/utils/richTextLists';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
+import { getAttribute, rewriteStartTags } from '@/utils/htmlTokens';
+import { inertMarkup, toInertHtml } from '@/utils/inertHtml';
 import { getQuillRichTextStyles } from '@/utils/quillRichText';
 
 interface SafeHtmlProps {
@@ -26,21 +28,13 @@ interface SafeHtmlProps {
 const SAFE_HTML_RICH_TEXT_CLASS = 'safe-html-rich-text';
 const SAFE_HTML_RICH_TEXT_STYLES_ID = 'safe-html-rich-text-styles';
 
-const escapeHtmlAttribute = (value: string) =>
-    value
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+const escapeHtmlAttribute = (value: string) => value.replace(/&/g, '&amp;');
 
+// #3202: alt дописывается по разобранному тегу, а не регуляркой по его строке.
 export const addFallbackImageAlt = (html: string, imageAlt: string) => {
     const escapedAlt = escapeHtmlAttribute(imageAlt.trim());
-    return html.replace(/<img\b[^>]*>/gi, (tag) => {
-        if (/\s+alt\s*=/i.test(tag)) return tag;
-        if (/\s*\/>$/.test(tag)) {
-            return tag.replace(/\s*\/>$/, ` alt="${escapedAlt}" />`);
-        }
-        return tag.replace(/>$/, ` alt="${escapedAlt}">`);
+    return rewriteStartTags(html, ['img'], ({ attrs }) => {
+        if (getAttribute(attrs, 'alt') === undefined) attrs.push({ name: 'alt', value: escapedAlt });
     });
 };
 
@@ -54,13 +48,14 @@ export function SafeHtml({ html, serverSanitized = false, style, className, test
 
     // Санитизируем HTML
     const sanitized = useMemo(() => {
-        if (!trimmed) return '';
+        if (!trimmed) return toInertHtml('');
         const safeHtml = serverSanitized
             ? normalizeRichTextListFragments(replaceInstagramEmbedsWithCards(guardServerSafeHtml(html)))
             : normalizeRichTextListFragments(
                 sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)))
             );
-        return imageAlt !== undefined ? addFallbackImageAlt(safeHtml, imageAlt) : safeHtml;
+        // #3202: рубеж — последний шаг перед стоком.
+        return toInertHtml(imageAlt !== undefined ? addFallbackImageAlt(safeHtml, imageAlt) : safeHtml);
     }, [html, trimmed, serverSanitized, imageAlt]);
     const richTextStyles = useMemo(
         () => `
@@ -191,7 +186,7 @@ ${getQuillRichTextStyles(`.${SAFE_HTML_RICH_TEXT_CLASS}`)}
                 ref={(node) => {
                     webRootRef.current = node;
                 }}
-                dangerouslySetInnerHTML={{ __html: sanitized }}
+                dangerouslySetInnerHTML={inertMarkup(sanitized)}
                 data-testid={testID}
             />
         );

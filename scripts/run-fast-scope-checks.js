@@ -310,6 +310,13 @@ const main = () => {
       process.exit(guardStatus)
     }
 
+    // Безусловно (#3202): новый сток rich-text появляется в новом файле, а не в
+    // изменённом, и проверка «только изменённого» его бы не увидела.
+    const richTextSinksGuardStatus = runCommand('npm', ['run', 'guard:rich-text-sinks'])
+    if (richTextSinksGuardStatus !== 0) {
+      process.exit(richTextSinksGuardStatus)
+    }
+
     // Безусловно, как и остальные дешёвые гейты: новая отложенная загрузка
     // секции появляется в НОВОМ файле (#1475, #818, #2010), и проверка только
     // изменённых файлов не сверила бы её с реестром в RULES.md (#2012).

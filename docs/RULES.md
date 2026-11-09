@@ -986,6 +986,7 @@ not by the fastest patch that makes the symptom disappear.
   - Fallback cards are allowed only for Instagram URLs that cannot be reliably embedded, such as stories/highlights/profile links, invalid URLs, or contexts where iframes are not supported.
   - Sanitize and normalize iframe URLs through the existing rich-text pipeline; do not bypass sanitization to keep an embed.
   - When changing Instagram rich-text handling, add or update targeted tests; verify the changed web scenario in a real browser with no new console errors only after code review in `testing`.
+- Every web rich-text sink takes `inertMarkup(toInertHtml(...))` (`utils/inertHtml.ts`) as the LAST step, after all string transforms (#3202). Tag attributes in the body transforms are read and edited through `utils/htmlTokens.ts`, never by a regex over the tag string. Both are enforced by `npm run guard:rich-text-sinks`; regression net — `__tests__/security/richTextSink.xssInvariant.test.tsx`.
 
 ### Icons
 

@@ -15,7 +15,22 @@
  * `getGalleryLayout`, из-за чего книга всегда падала в `grid-default`.
  * Разметку той эпохи снимает `removeImageLayoutClasses` — описания
  * перекладываются на журнальную модель при первом же проходе.
+ *
+ * #3202: классы и размеры читаются и правятся по разобранному тегу
+ * (`utils/htmlTokens.ts`), а не регулярками по строке тега.
  */
+
+import {
+  editFirstStartTag,
+  findFirstStartTag,
+  getAttribute,
+  removeAttribute,
+  setAttribute,
+  tokenizeHtml,
+} from '@/utils/htmlTokens';
+
+const DIGITS_RE = /^\d+$/;
+const LAYOUT_WRAPPER_CLASS_RE = /\bimg-(?:jrow|row-2|grid)\b/i;
 
 function expandMultiImageOnlyParagraphs(html: string): string {
   if (!html || typeof html !== 'string') return html ?? '';
@@ -45,10 +60,11 @@ function expandMultiImageOnlyParagraphs(html: string): string {
  * Returns { width, height } or null if not found.
  */
 function extractImageDimensions(imgTag: string): { width: number; height: number } | null {
-  const widthMatch = imgTag.match(/\bwidth="(\d+)"/i);
-  const heightMatch = imgTag.match(/\bheight="(\d+)"/i);
-  if (widthMatch && heightMatch) {
-    return { width: parseInt(widthMatch[1], 10), height: parseInt(heightMatch[1], 10) };
+  const attrs = findFirstStartTag(imgTag, 'img')?.attrs ?? [];
+  const width = getAttribute(attrs, 'width') ?? '';
+  const height = getAttribute(attrs, 'height') ?? '';
+  if (DIGITS_RE.test(width) && DIGITS_RE.test(height)) {
+    return { width: parseInt(width, 10), height: parseInt(height, 10) };
   }
   // Try to extract from aspect-ratio in style
   const aspectMatch = imgTag.match(/aspect-ratio:\s*(\d+)\s*\/\s*(\d+)/i);
@@ -121,39 +137,39 @@ function analyzeImageGroup(images: string[]): { landscape: number; portrait: num
   return { landscape, portrait, square };
 }
 
+const paragraphClasses = (paragraphHtml: string): string[] =>
+  String(getAttribute(findFirstStartTag(paragraphHtml, 'p')?.attrs ?? [], 'class') ?? '')
+    .split(/\s+/)
+    .filter(Boolean);
+
 function appendClassToParagraph(paragraphHtml: string, className: string): string {
-  return paragraphHtml.replace(/<p([^>]*)>/i, (match, attrs = '') => {
-    if (/\bclass="/i.test(attrs)) {
-      return `<p${attrs.replace(/class="([^"]*)"/i, (_match: string, current: string) => {
-        const merged = `${current} ${className}`
-          .split(/\s+/)
-          .filter(Boolean)
-          .filter((value, index, values) => values.indexOf(value) === index)
-          .join(' ');
-        // `attrs` already contains the separator before `class`. Returning a
-        // second leading space here makes the transform drift on every path
-        // that preserves an authored single-image layout.
-        return `class="${merged}"`;
-      })}>`;
+  return editFirstStartTag(paragraphHtml, 'p', (attrs) => {
+    const current = getAttribute(attrs, 'class');
+    if (current === undefined) {
+      attrs.push({ name: 'class', value: className });
+      return;
     }
-    return `<p${attrs} class="${className}">`;
+    const merged = `${current ?? ''} ${className}`
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((value, index, values) => values.indexOf(value) === index)
+      .join(' ');
+    setAttribute(attrs, 'class', merged);
   });
 }
 
 function stripClassesFromParagraph(paragraphHtml: string, classesToStrip: string[]): string {
-  return paragraphHtml.replace(
-    /<p([^>]*)class="([^"]*)"([^>]*)>/i,
-    (_match, before = '', classValue = '', after = '') => {
-      const nextClasses = String(classValue)
-        .split(/\s+/)
-        .filter(Boolean)
-        .filter((className) => !classesToStrip.includes(className));
-      const beforeAttr = String(before).trim() ? ` ${String(before).trim()}` : '';
-      const afterAttr = String(after).trim() ? ` ${String(after).trim()}` : '';
-      const classAttr = nextClasses.length ? ` class="${nextClasses.join(' ')}"` : '';
-      return `<p${beforeAttr}${classAttr}${afterAttr}>`;
-    }
-  );
+  const attrs = findFirstStartTag(paragraphHtml, 'p')?.attrs ?? [];
+  const current = getAttribute(attrs, 'class');
+  if (current === undefined) return paragraphHtml;
+  return editFirstStartTag(paragraphHtml, 'p', (parsed) => {
+    const nextClasses = String(current ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((className) => !classesToStrip.includes(className));
+    if (nextClasses.length) setAttribute(parsed, 'class', nextClasses.join(' '));
+    else removeAttribute(parsed, 'class');
+  });
 }
 
 function wrapImageGroup(wrapperClassName: string, images: string[]): string {
@@ -165,12 +181,17 @@ function isSingleImageParagraph(paragraphHtml: string): boolean {
 }
 
 function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
-  if (/\bimg-single-wide\b/i.test(imgParagraph)) {
+  const classes = paragraphClasses(imgParagraph);
+  if (classes.includes('img-single-wide')) {
     result.push(appendClassToParagraph(imgParagraph, 'figure-landscape'));
     return floatDirection;
   }
 
-  const assignedFloat = imgParagraph.match(/\bimg-float-(right|left)\b/i)?.[1]?.toLowerCase();
+  const assignedFloat = classes.includes('img-float-right')
+    ? 'right'
+    : classes.includes('img-float-left')
+      ? 'left'
+      : undefined;
   if (assignedFloat === 'right' || assignedFloat === 'left') {
     result.push(appendClassToParagraph(imgParagraph, 'figure-portrait'));
     // `floatDirection` encodes the side of the next automatic portrait
@@ -371,6 +392,31 @@ export function groupConsecutiveImages(html: string): string {
 }
 
 /**
+ * Снимает обёртки групп (`.img-jrow`, `.img-row-2*`, `.img-grid*`), оставляя их
+ * содержимое. Пары открывающих/закрывающих `div` считаются по вложенности, поэтому
+ * сохранённые разметкой прошлых проходов вложенные обёртки снимаются за один обход.
+ */
+function unwrapLayoutWrappers(html: string): string {
+  const stack: boolean[] = [];
+  let out = '';
+  let cursor = 0;
+  for (const token of tokenizeHtml(html)) {
+    if (token.kind === 'start' && token.name === 'div') {
+      const isWrapper = LAYOUT_WRAPPER_CLASS_RE.test(String(getAttribute(token.attrs, 'class') ?? ''));
+      stack.push(isWrapper);
+      if (!isWrapper) continue;
+    } else if (token.kind === 'end' && token.name === 'div') {
+      if (!stack.pop()) continue;
+    } else {
+      continue;
+    }
+    out += html.slice(cursor, token.start);
+    cursor = token.end;
+  }
+  return cursor === 0 ? html : out + html.slice(cursor);
+}
+
+/**
  * Removes smart image layout classes from HTML.
  * Useful for re-processing or when raw HTML is needed.
  */
@@ -379,20 +425,7 @@ function removeImageLayoutClassesInternal(html: string, preserveSingleImageLayou
 
   let result = html;
 
-  result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid-mixed\b[^"]*\bimg-grid-mixed-reverse\b[^"]*"[^>]*><p>([\s\S]*?)<\/p><div\b[^>]*class="[^"]*\bimg-grid-mixed-stack\b[^"]*"[^>]*>([\s\S]*?)<\/div><\/div>/gi, '<p>$1</p>$2');
-  result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid-mixed\b[^"]*"[^>]*><div\b[^>]*class="[^"]*\bimg-grid-mixed-stack\b[^"]*"[^>]*>([\s\S]*?)<\/div><p>([\s\S]*?)<\/p><\/div>/gi, '$1<p>$2</p>');
-
-  // Remove wrapper divs for image groups, keeping inner content.
-  // Stored HTML may already contain nested smart-layout wrappers from a previous
-  // pass, and `.img-jrow` from the aspect-sum generation of this algorithm —
-  // снимаем и его, иначе описание навсегда осталось бы в той раскладке.
-  let previous = '';
-  while (result !== previous) {
-    previous = result;
-    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-jrow\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
-    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-row-2\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
-    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
-  }
+  result = unwrapLayoutWrappers(result);
 
   // Normalize surrounding whitespace while stripping classes so repeated passes
   // stay idempotent and do not surface a phantom draft.

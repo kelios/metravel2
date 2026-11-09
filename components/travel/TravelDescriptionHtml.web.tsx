@@ -7,6 +7,7 @@ import {
   WEB_RICH_TEXT_FULL_WIDTH_CLASS,
 } from './stableContent/webStyles';
 import { useThemedColors } from '@/hooks/useTheme';
+import { inertMarkup } from '@/utils/inertHtml';
 
 export type { TravelDescriptionHtmlProps } from './TravelDescriptionHtml.types';
 
@@ -24,7 +25,7 @@ export default function TravelDescriptionHtml({ html, fullWidth }: TravelDescrip
       <div
         data-ssr-html-island="description"
         className={className}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={inertMarkup(html)}
       />
     </>
   );

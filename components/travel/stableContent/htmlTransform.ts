@@ -17,6 +17,17 @@ import { normalizeRichTextListFragments } from '@/utils/richTextLists'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml'
+import {
+  appendClassAttribute,
+  editFirstStartTag,
+  findFirstStartTag,
+  getAttribute,
+  removeAttribute,
+  rewriteStartTags,
+  setAttribute,
+  tokenizeHtml,
+} from '@/utils/htmlTokens'
+import { decorateRichImageFrames } from '@/components/travel/stableContent/richImageFrames'
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
 import {
   familyRouteOfMediaUrl,
@@ -39,10 +50,8 @@ export const isYouTubeEmbedUrl = (src: string) => /youtube\.com|youtu\.be/i.test
 
 export const isInstagramEmbedUrl = (src: string) => /instagram\.com/i.test(src)
 
-export const extractFirstImgSrc = (html: string): string | null => {
-  const match = html.match(/<img\b[^>]*\bsrc="([^"]+)"/i)
-  return match?.[1] ?? null
-}
+export const extractFirstImgSrc = (html: string): string | null =>
+  getAttribute(findFirstStartTag(html, 'img')?.attrs ?? [], 'src') || null
 
 const stripOptimizationParams = (urlStr: string): string => {
   try {
@@ -474,29 +483,6 @@ export const buildStableContentPrefetchUrl = (
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
 
-const appendClass = (attrs: string, className: string) => {
-  if (!attrs) return ` class="${className}"`
-  if (/\bclass="/i.test(attrs)) {
-    return attrs.replace(/class="([^"]*)"/i, (_, current) => `class="${`${current} ${className}`.trim()}"`)
-  }
-  return `${attrs} class="${className}"`
-}
-
-const appendInlineStyle = (attrs: string, declaration: string) => {
-  if (!attrs) return ` style="${declaration}"`
-  const styleMatch = attrs.match(/\bstyle="([^"]*)"/i)
-  if (!styleMatch) {
-    return `${attrs} style="${declaration}"`
-  }
-  const current = styleMatch[1] || ''
-  if (current.includes(declaration)) {
-    return attrs
-  }
-  const nextStyle = current.trim().replace(/;$/, '')
-  const merged = nextStyle ? `${nextStyle};${declaration}` : declaration
-  return attrs.replace(styleMatch[0], `style="${merged}"`)
-}
-
 const escapeHtmlAttr = (value: string) =>
   String(value || '')
     .replace(/&/g, '&amp;')
@@ -505,23 +491,20 @@ const escapeHtmlAttr = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const buildRichImageAspectDeclaration = (imgMarkup: string) => {
-  const width = Number(imgMarkup.match(/\bwidth="(\d+)"/i)?.[1] ?? 0)
-  const height = Number(imgMarkup.match(/\bheight="(\d+)"/i)?.[1] ?? 0)
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return ''
-  }
-  return `--travel-rich-image-aspect:${width}/${height}`
-}
+const DIGITS_RE = /^\d+$/
+const declaredDimension = (value: string | null | undefined) => (value && DIGITS_RE.test(value) ? value : undefined)
 
+// #3202: атрибуты читаются и меняются по разобранному тегу. Раньше здесь стояли
+// регулярки по строке тега, и `src="` в хвосте значения `alt` принимался за `src`:
+// замена сдвигала кавычки, и текст из `class` становился атрибутом `onerror`.
 const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): string => {
   let imgIdx = 0
-  return html.replace(/<img\b[^>]*?>/gi, (tag) => {
-    const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? ''
+  return rewriteStartTags(html, ['img'], ({ attrs }) => {
+    const src = getAttribute(attrs, 'src') ?? ''
     const responsive = src ? buildMetravelResponsiveImage(src, media) : null
     const optimizedSrc = responsive?.src ?? (src ? buildExternalImageUrl(src) || src : src)
-    let width = tag.match(/\bwidth="(\d+)"/i)?.[1]
-    let height = tag.match(/\bheight="(\d+)"/i)?.[1]
+    let width = declaredDimension(getAttribute(attrs, 'width'))
+    let height = declaredDimension(getAttribute(attrs, 'height'))
 
     if (!width || !height) {
       const wh = src.match(/[-_](\d{2,5})x(\d{2,5})\.(?:jpe?g|png|webp|avif)(?:\?|$)/i)
@@ -540,67 +523,63 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
     const finalW = width || 800
     const finalH = height || 450
 
-    const styleMatch = tag.match(/\bstyle="([^"]*)"/i)
-    const style = styleMatch?.[1] ?? ''
-    const aspectRule = `aspect-ratio:${finalW}/${finalH}`
-    const ensured = ['display:block', 'height:auto', 'margin:0 auto', aspectRule]
-      .filter(Boolean)
+    const style = getAttribute(attrs, 'style') ?? ''
+    const ensured = ['display:block', 'height:auto', 'margin:0 auto', `aspect-ratio:${finalW}/${finalH}`]
       .reduce((acc, rule) => (acc.includes(rule) ? acc : acc ? `${acc};${rule}` : rule), style)
 
-    let out = tag.replace(styleMatch ? styleMatch[0] : '', '').replace(/>$/, ` style="${ensured}">`)
-    out = out
-      .replace(/\bsrc="[^"]*"/i, optimizedSrc ? `src="${escapeHtmlAttr(optimizedSrc)}"` : '')
-      .replace(/\bsrcset="[^"]*"/i, '')
-      .replace(/\bsizes="[^"]*"/i, '')
-      .replace(/\bwidth="[^"]*"/i, '')
-      .replace(/\bheight="[^"]*"/i, '')
+    removeAttribute(attrs, 'style')
+    attrs.push({ name: 'style', value: ensured })
+    if (optimizedSrc) setAttribute(attrs, 'src', escapeHtmlAttr(optimizedSrc))
+    else removeAttribute(attrs, 'src')
+    for (const name of ['srcset', 'sizes', 'width', 'height', 'data-aspect-fallback']) removeAttribute(attrs, name)
 
     // Пустой `srcSet` — это не «забыли построить», а класс без лестницы (#1233).
     // Атрибуты в таком случае не выводим: `srcset=""` браузер трактует как
     // кандидатов нет и в части движков гасит `src`.
     if (responsive?.srcSet) {
-      out = out.replace(
-        />$/,
-        ` srcset="${escapeHtmlAttr(responsive.srcSet)}" sizes="${escapeHtmlAttr(responsive.sizes)}">`
-      )
+      attrs.push({ name: 'srcset', value: escapeHtmlAttr(responsive.srcSet) })
+      attrs.push({ name: 'sizes', value: escapeHtmlAttr(responsive.sizes) })
     }
+    attrs.push({ name: 'width', value: String(finalW) }, { name: 'height', value: String(finalH) })
+    if (!hasDeclaredSize) attrs.push({ name: 'data-aspect-fallback', value: '1' })
+    for (const name of ['decoding', 'fetchpriority', 'loading']) removeAttribute(attrs, name)
 
-    out = out.replace(/\bdata-aspect-fallback="[^"]*"/i, '')
-    out = out.replace(
-      />$/,
-      ` width="${finalW}" height="${finalH}"${hasDeclaredSize ? '' : ' data-aspect-fallback="1"'}>`
-    )
-    out = out
-      .replace(/\bdecoding="[^"]*"/i, '')
-      .replace(/\bfetchpriority="[^"]*"/i, '')
-      .replace(/\bloading="[^"]*"/i, '')
+    const fallbackAlt = escapeHtmlAttr(i18nT('travel:components.travel.stableContent.htmlTransform.izobrazhenie_marshruta_value1_ae0fc919', { value1: imgIdx + 1 }))
+    if (!(getAttribute(attrs, 'alt') ?? '').trim()) setAttribute(attrs, 'alt', fallbackAlt)
 
-    const fallbackAlt = i18nT('travel:components.travel.stableContent.htmlTransform.izobrazhenie_marshruta_value1_ae0fc919', { value1: imgIdx + 1 })
-    const altMatch = out.match(/\balt="([^"]*)"/i)
-    if (!altMatch) {
-      out = out.replace(/>$/, ` alt="${fallbackAlt}">`)
-    } else if (!altMatch[1].trim()) {
-      out = out.replace(/\balt="[^"]*"/i, `alt="${fallbackAlt}"`)
-    }
-
-    out = out.replace(/>$/, ' loading="lazy" decoding="async" fetchpriority="low">')
+    attrs.push({ name: 'loading', value: 'lazy' }, { name: 'decoding', value: 'async' }, { name: 'fetchpriority', value: 'low' })
     imgIdx += 1
-    return out
   })
 }
 
-const replaceYouTubeIframes = (html: string): string =>
-  html.replace(/<iframe\b[^>]*src="([^"]+)"[^>]*><\/iframe>/gi, (full, src: string) => {
-    if (!isYouTubeEmbedUrl(src)) return full
-    // Канонический вид, в который `buildYoutubeEmbedHtmlFromUrl` приводит ЛЮБОЙ
-    // ролик, — `/embed/<id>` без query. Без этой ветки id не извлекался ни разу,
-    // и вместо лёгкого фасада на страницу вставал живой плеер (по одному на видео).
-    const id =
-      src.match(/\/embed\/([a-z0-9_-]{6,})/i)?.[1] ||
-      src.match(/[?&]v=([a-z0-9_-]{6,})/i)?.[1] ||
-      src.match(/youtu\.be\/([a-z0-9_-]{6,})/i)?.[1]
-    if (!id) return full
-    return `
+// Канонический вид, в который `buildYoutubeEmbedHtmlFromUrl` приводит ЛЮБОЙ
+// ролик, — `/embed/<id>` без query. Без этой ветки id не извлекался ни разу,
+// и вместо лёгкого фасада на страницу вставал живой плеер (по одному на видео).
+const youTubeVideoId = (src: string): string | undefined =>
+  src.match(/\/embed\/([a-z0-9_-]{6,})/i)?.[1] ||
+  src.match(/[?&]v=([a-z0-9_-]{6,})/i)?.[1] ||
+  src.match(/youtu\.be\/([a-z0-9_-]{6,})/i)?.[1]
+
+// Пустой `<iframe src="…youtube…"></iframe>` → лёгкий фасад. `src` читается из
+// разобранного тега (#3202), а не регуляркой по строке.
+const replaceYouTubeIframes = (html: string): string => {
+  if (!hasIframe(html)) return html
+  const tokens = tokenizeHtml(html)
+  let out = ''
+  let cursor = 0
+  tokens.forEach((token, index) => {
+    const closing = tokens[index + 1]
+    if (token.kind !== 'start' || token.name !== 'iframe' || closing?.kind !== 'end' || !closing.closesRawText) return
+    const src = getAttribute(token.attrs, 'src') ?? ''
+    const id = src && isYouTubeEmbedUrl(src) ? youTubeVideoId(src) : undefined
+    if (!id) return
+    out += html.slice(cursor, token.start) + buildYouTubeFacade(id)
+    cursor = closing.end
+  })
+  return cursor === 0 ? html : out + html.slice(cursor)
+}
+
+const buildYouTubeFacade = (id: string) => `
 <div class="yt-lite" data-yt="${id}"
      style="position:relative;aspect-ratio:16/9;background:var(--color-backgroundTertiary);border-radius:12px;overflow:hidden;margin:16px 0">
   <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg"
@@ -612,7 +591,6 @@ const replaceYouTubeIframes = (html: string): string =>
     <span style="width:68px;height:48px;background:var(--color-overlay);clip-path:polygon(20% 10%,20% 90%,85% 50%);"></span>
   </div>
 </div>`
-  })
 
 const stripTags = (value: string) => value.replace(/<[^>]+>/g, '')
 
@@ -634,18 +612,21 @@ const encodeEntities = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
+const HEADING_HASH_RE = /^#([^"'#?]+)$/
+
 const injectAutoHeadingAnchors = (html: string) => {
   if (!html) return html
 
-  const orderedHashIds = Array.from(
-    html.matchAll(/<a\b[^>]*href=(["'])#([^"'#?]+)\1[^>]*>/gi),
-    (match) => String(match[2] || '').trim()
-  ).filter(Boolean)
+  const orderedHashIds = tokenizeHtml(html).flatMap((token) => {
+    if (token.kind !== 'start' || token.name !== 'a') return []
+    const id = String(getAttribute(token.attrs, 'href') ?? '').match(HEADING_HASH_RE)?.[1]?.trim()
+    return id ? [id] : []
+  })
   const uniqueOrderedHashIds = orderedHashIds.filter((id, index) => orderedHashIds.indexOf(id) === index)
 
   return html.replace(/<h([1-3])([^>]*)>([\s\S]*?)<\/h\1>/gi, (full, level, rawAttrs, inner) => {
-    const attrs = String(rawAttrs || '')
-    if (/\bid\s*=\s*"[^"]+"/i.test(attrs)) return full
+    const openingTag = `<h${level}${rawAttrs}>`
+    if (getAttribute(findFirstStartTag(openingTag, `h${level}`)?.attrs ?? [], 'id')) return full
 
     const innerText = decodeEntities(String(inner || '').replace(/<[^>]+>/g, '').trim())
     const match = innerText.match(/^(\d{1,3})[.)]\s+/)
@@ -653,8 +634,7 @@ const injectAutoHeadingAnchors = (html: string) => {
 
     const orderedId = uniqueOrderedHashIds[Number(match[1]) - 1]
     const id = orderedId || `part${match[1]}`
-    const nextAttrs = attrs ? `${attrs} id="${id}"` : ` id="${id}"`
-    return `<h${level}${nextAttrs}>${inner}</h${level}>`
+    return `${editFirstStartTag(openingTag, `h${level}`, (attrs) => setAttribute(attrs, 'id', id))}${inner}</h${level}>`
   })
 }
 
@@ -690,119 +670,9 @@ const truncateInstagramCaptions = (html: string) => {
       nextInner = `${encodeEntities(text)}${truncated ? '…' : ''}`
     }
 
-    return `<p${appendClass(attrs, 'instagram-caption')}>${nextInner}</p>`
+    const openingTag = editFirstStartTag(`<p${attrs}>`, 'p', (parsed) => appendClassAttribute(parsed, 'instagram-caption'))
+    return `${openingTag}${nextInner}</p>`
   })
-}
-
-/** Теги без закрывающей пары — они не меняют глубину вложенности при обходе. */
-const VOID_HTML_TAGS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
-])
-
-/**
- * Диапазоны `<img>`, лежащих в КОРНЕ описания, а не внутри `<p>`/`<figure>`/строки
- * галереи.
- *
- * #1188: `decorateRichImageFrames` умел оборачивать только картинку внутри абзаца
- * или `<figure>`, а редакторская разметка сплошь и рядом кладёт `<img>` прямо между
- * заголовками — соседями `H2`/`H3`/`P`. Замер прода 2026-07-31 на статье о
- * заброшенных дворцах: 37 картинок тела, 0 в `.rich-image-frame`, то есть блюр-фона
- * не было ни у одной, и портрет 374×499 в зарезервированном слоте 16:9 оставлял
- * 59% площади пустой белой.
- *
- * Глубину считаем обходом тегов: обёртки (журнальные сетки и instagram-карточки)
- * поднимают её выше нуля, поэтому их содержимое сюда не попадает и раскладка не меняется.
- */
-const collectRootLevelImageRanges = (html: string): Array<[number, number]> => {
-  const ranges: Array<[number, number]> = []
-  const tagPattern = /<(\/?)([a-z][a-z0-9]*)\b[^>]*?(\/?)>/gi
-  let depth = 0
-  let match: RegExpExecArray | null
-
-  while ((match = tagPattern.exec(html)) !== null) {
-    const [tag, closing, rawName, selfClosing] = match
-    const name = rawName.toLowerCase()
-
-    if (name === 'img') {
-      if (!closing && depth === 0) ranges.push([match.index, match.index + tag.length])
-      continue
-    }
-    if (VOID_HTML_TAGS.has(name) || selfClosing === '/') continue
-
-    if (closing) depth = Math.max(0, depth - 1)
-    else depth += 1
-  }
-
-  return ranges
-}
-
-/**
- * #1265: `<img>`, оставленный редактором ВНУТРИ заголовка.
- *
- * `collectRootLevelImageRanges` считает такую картинку вложенной (глубина 1), а под
- * правила `<p>`/`<figure>` она не подходит — то есть рамки не получает вовсе.
- * Замер прода 2026-08-05, `/travels/reka-isloch-…`: разметка
- * `<h2 id="…"><img src="…0164614223…"></h2>`, у кадра нет ни заливки полей
- * (`rgba(0, 0, 0, 0)`), ни принятия натуральных пропорций после загрузки, тогда как
- * соседний кадр в `<p>` получает и то, и другое.
- *
- * Картинку выносим ПОСЛЕ заголовка, а сам заголовок оставляем на месте даже пустым:
- * его `id` — цель якоря и оглавления, и удаление ломало бы навигацию по статье.
- * Дальше вынесенный `<p>` проходит обычным правилом абзаца.
- */
-const liftHeadingImages = (html: string): string =>
-  html.replace(
-    /<(h[1-6])(\b[^>]*)>([\s\S]*?)<\/\1>/gi,
-    (match, tag: string, attrs = '', inner = '') => {
-      const images = inner.match(/<img\b[^>]*>/gi)
-      if (!images?.length) return match
-      // Картинку-ссылку не трогаем: вынос из заголовка оторвал бы её от `<a>`, то
-      // есть отнял бы переход. Такой кадр остаётся как был — без рамки, но кликабельным.
-      if (/<a\b/i.test(inner)) return match
-      const rest = inner.replace(/<img\b[^>]*>/gi, '')
-      const lifted = images.map((img: string) => `<p>${img}</p>`).join('')
-      return `<${tag}${attrs}>${rest}</${tag}>${lifted}`
-    },
-  )
-
-const decorateRichImageFrames = (html: string) => {
-  if (!html) return html
-
-  const decorateAttrs = (attrs: string, imgMarkup: string) => {
-    const nextClassAttrs = appendClass(attrs, 'rich-image-frame')
-    // Рамка несёт только геометрию: URL фотографии в inline-CSS сделал бы из неё
-    // второй растр слота и обошёл бы `loading="lazy"` у самого `<img>` (#1208/#1213).
-    const frameDeclaration = buildRichImageAspectDeclaration(imgMarkup)
-    return frameDeclaration
-      ? appendInlineStyle(nextClassAttrs, frameDeclaration)
-      : nextClassAttrs
-  }
-
-  const wrapRootLevelImages = (input: string) => {
-    const ranges = collectRootLevelImageRanges(input)
-    if (ranges.length === 0) return input
-
-    let out = ''
-    let cursor = 0
-    for (const [start, end] of ranges) {
-      const imgMarkup = input.slice(start, end)
-      out += `${input.slice(cursor, start)}<p${decorateAttrs('', imgMarkup)}>${imgMarkup}</p>`
-      cursor = end
-    }
-    return out + input.slice(cursor)
-  }
-
-  return wrapRootLevelImages(
-    liftHeadingImages(html)
-      .replace(
-        /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
-        (match, attrs = '', inner = '') => `<p${decorateAttrs(attrs, inner)}>${inner}</p>`
-      )
-      .replace(
-        /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
-        (match, attrs = '', inner = '') => `<figure${decorateAttrs(attrs, inner)}>${inner}</figure>`
-      )
-  )
 }
 
 export type PrepareStableContentHtmlOptions = {
