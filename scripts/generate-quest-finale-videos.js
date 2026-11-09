@@ -321,6 +321,11 @@ const QUESTS = [
     { questId: 'kyoto-gion-kiyomizu', dir: 'kyotoGionKiyomizu', finaleId: 337 },
     { questId: 'hanoi-returned-sword', dir: 'hanoiReturnedSword', finaleId: 338 },
     { questId: 'harbin-central-street-sofia', dir: 'harbinCentralStreetSofia', finaleId: 339 },
+    // Волна F1 (квесты 343–346) — finaleId сверен по тексту финала 2026-11-09 (#3182)
+    { questId: 'bobruisk-kids-beavers', dir: 'bobruiskKidsBeavers', finaleId: 340 },
+    { questId: 'baranovichi-kids-iron-horse', dir: 'baranovichiKidsIronHorse', finaleId: 341 },
+    { questId: 'pinsk-kids-river-capital', dir: 'pinskKidsRiverCapital', finaleId: 342 },
+    { questId: 'baranovichi-teens-two-stations', dir: 'baranovichiTeensTwoStations', finaleId: 343 },
     // Легенды, рождественская волна и Выборг (237–284, 289–290) — finaleId сверен по тексту финала 2026-11-08 (#3184)
     { questId: 'vitebsk-dark-chronicle', dir: 'vitebskDarkChronicle', finaleId: 237 },
     { questId: 'grodno-royal-shadows', dir: 'grodnoRoyalShadows', finaleId: 238 },
