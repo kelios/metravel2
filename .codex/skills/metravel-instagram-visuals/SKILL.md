@@ -61,7 +61,8 @@ as usable navigation; any route map must use verified coordinates and order.
 ## Validate and deliver
 
 Review every generated image visually before composing, then inspect every
-final slide and a contact sheet. Check identifiable city anchors against
+final slide and a contact sheet. Hand the full revised export and caption to
+independent QA under `docs/INSTAGRAM_CONTENT_SPEC.md` section 0.1. Check identifiable city anchors against
 references, image/text correspondence, coherent story, mobile text contrast,
 crop, numbering and footer. A fluent generated picture is not factual evidence.
 Regenerate the failing scene when geography or a required detail is wrong;

@@ -1027,6 +1027,16 @@
         "mkdir -p \"$PWD/.codex-temp/metro-tmp-8171\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8171\" NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --clear --port 8171"
       ],
       "port": 8171
+    },
+    {
+      "name": "Expo Web Heap12 8088",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --port 8088"
+      ],
+      "port": 8088,
+      "autoPort": false
     }
   ]
 }

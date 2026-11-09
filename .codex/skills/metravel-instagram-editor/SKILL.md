@@ -18,7 +18,8 @@ copy rules into this skill:
 | 5. Schedule, publish, metrics, follower cleanup | `.claude/agents/instagram-editor.md` + `docs/INSTAGRAM_OPERATIONS.md` | `published.md` |
 
 The package folder, its file contract and the QA round limits are in
-`docs/INSTAGRAM_CONTENT_SPEC.md` section 0; MeTravel C is in section 17; voice and form rules
+`docs/INSTAGRAM_CONTENT_SPEC.md` section 0. Use section 0.1 for independent 10-point
+reviews, weekly scorecards and re-review after fixes. MeTravel C is in section 17; voice and form rules
 are V1–V11 and F1–F13 in section 18. Select personal diary, quest adventure (section 3), or
 site-action mode (section 2) before drafting; owner hard rules are in section 25; references are
 section 26. For examples of scoped requests, read [references/prompts.md](references/prompts.md).
