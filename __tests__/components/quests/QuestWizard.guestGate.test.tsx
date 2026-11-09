@@ -133,12 +133,17 @@ describe('QuestWizard guest gate', () => {
     jest.restoreAllMocks()
   })
 
-  it.each([2, 3])('shows the actual guest limit %i before the web start action', async (limit) => {
+  it.each([2, 3])('offers the quest as free above the start and names the guest limit %i softly below it (#3219)', async (limit) => {
     jest.replaceProperty(Platform, 'OS', 'web')
     const view = await render(<QuestWizard title="Тест" steps={steps} finale={finale} intro={intro} questId="guest-intro" guestMode guestFreeSteps={limit} />)
-    expect(view.getByTestId('quest-intro-guest-limit')).toHaveTextContent(`Пробных заданий без аккаунта: ${limit}. Чтобы продолжить, войдите или зарегистрируйтесь.`)
+    const condition = view.getByTestId('quest-intro-guest-limit')
+    expect(condition).toHaveTextContent(`Без аккаунта можно пройти первые задания: ${limit}. Дальше понадобится бесплатный аккаунт — он сохранит ваш прогресс.`)
+    expect(condition).not.toHaveTextContent(/войдите|зарегистрируйтесь/i)
     const ids = collectRenderedTestIds(view.toJSON())
-    expect(ids.indexOf('quest-intro-guest-limit')).toBeLessThan(ids.indexOf('quest-intro-start'))
+    expect(ids.indexOf('quest-intro-offer')).toBeGreaterThan(-1)
+    expect(ids.indexOf('quest-intro-offer')).toBeLessThan(ids.indexOf('quest-intro-start'))
+    expect(ids.indexOf('quest-intro-guest-limit')).toBeGreaterThan(ids.indexOf('quest-intro-start'))
+    expect(view.getByTestId('quest-intro-offer')).toHaveTextContent(/^Бесплатно · без гида · /)
   })
 
   it('does not show the guest warning to a signed-in player', async () => {

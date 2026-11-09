@@ -320,4 +320,22 @@ describe('AppInstallBar', () => {
       expect(queryByTestId('app-install-bar')).toBeNull()
     }
   })
+  it('never covers a quest page: its step keeps the task and the answer field clear (#3220)', async () => {
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const { queryByTestId, rerender } = await render(
+      <MockRouterContext.Provider value={{ pathname: '/quests', searchParams: {} }}>
+        <AppInstallBar />
+      </MockRouterContext.Provider>
+    )
+    expect(queryByTestId('app-install-bar')).not.toBeNull()
+    for (const pathname of ['/quests/11/grodno-royal', '/en/quests/11/grodno-royal']) {
+      await rerender(
+        <MockRouterContext.Provider value={{ pathname, searchParams: {} }}>
+          <AppInstallBar />
+        </MockRouterContext.Provider>
+      )
+      expect(queryByTestId('app-install-bar')).toBeNull()
+      expect(getBottomChromeReserve()).toBe(0)
+    }
+  })
 })

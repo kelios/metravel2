@@ -6,7 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
 import QuestRouteStrip from './QuestRouteStrip'
 import QuestContentText from './QuestContentText'
-import { buildQuestRouteModel } from './questRouteModel'
+import { buildQuestRouteModel, isQuestIntroActive } from './questRouteModel'
 import { resolveQuestStepNavFlags } from './questStepVisualState'
 import { QuestCompactExcursions } from './questWizardSections'
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
@@ -653,6 +653,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   } = props
 
   const wideDesktop = screenW >= 1100
+  const introActive = isQuestIntroActive(allSteps, currentIndex, showFinaleOnly)
   // Модель содержит переведённые подписи: строим при рендере после смены языка,
   // только для телефонной ветки (< 600 px).
   const routeModel = !compactNav ? null : buildQuestRouteModel({
@@ -788,7 +789,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             stepsCount={stepsCount}
             countModel={countModel}
             isMobile={headerInScreenRow}
-            showBreakdown={!headerInScreenRow}
+            showCounter={!introActive} showBreakdown={!headerInScreenRow && !introActive}
           />
           <QuestStepsNavigation {...props} wideDesktop={!headerInScreenRow && wideDesktop} isMobile={headerInScreenRow} />
         </React.Fragment>

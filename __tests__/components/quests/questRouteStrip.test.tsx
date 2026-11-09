@@ -74,7 +74,9 @@ describe('buildQuestRouteModel (#2149)', () => {
   })
 
   it('старт и финал называются словами, а не номером', () => {
-    expect(build({ currentIndex: 0 }).stripText).toBe('Старт квеста · Задания: 10 / 11')
+    // #3219: до старта на странице один счёт — точки в строке предложения.
+    expect(build({ currentIndex: 0 }).stripText).toBe('Старт квеста')
+    expect(build({ currentIndex: 0 }).tasks).toBeNull()
     expect(build({ showFinaleOnly: true }).stripText).toBe('Финал · Задания: 10 / 11')
   })
 

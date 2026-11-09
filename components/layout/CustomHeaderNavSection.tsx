@@ -8,6 +8,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
 import NavigationIcon from './NavigationIcon';
 import { webDataSetProps } from '@/utils/webProps';
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref';
 
 type CustomHeaderNavSectionProps = {
   activePath: string;
@@ -20,10 +21,12 @@ export default function CustomHeaderNavSection({
 }: CustomHeaderNavSectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
+  const localizeHref = useLocalizedNavHref();
 
   const books = Platform.OS === 'web' ? DESKTOP_BAR_NAV_ITEMS.find(item => item.path === '/books') : undefined;
-  const renderItem = (item: HeaderNavItem) => {
-    const isActive = !item.external && activePath === item.path;
+  const renderItem = (navItem: HeaderNavItem) => {
+    const item = navItem.external ? navItem : { ...navItem, path: String(localizeHref(navItem.path as Href)) };
+    const isActive = !navItem.external && activePath === navItem.path;
     const navigate = () => handleHeaderNavPress(router, item.path, item.external);
     const children = (
       <>

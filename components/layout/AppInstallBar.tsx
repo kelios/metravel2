@@ -34,6 +34,7 @@ import { readConsent } from '@/utils/consent'
 import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff'
 import { openAppStoreListing } from '@/utils/openAppStoreListing'
 import { webViewStyle } from '@/utils/webProps'
+import { isQuestDetailHeaderPath } from '@/components/layout/questHeaderPresentation'
 
 const IS_WEB = Platform.OS === 'web'
 const RESERVE_OWNER = 'app-install-bar'
@@ -88,8 +89,10 @@ function AppInstallBar() {
   const bottomOffset = Math.max(anchorPx, lowerReserve) + DESIGN_TOKENS.spacing.xs
   const bottomPosition = webFloatingAnchor(DESIGN_TOKENS.spacing.xs, lowerReserve)
   // The home first screen stays clean even after a signal elsewhere (#2907).
+  // #3220: a quest page offers the app in its own flow (QuestAppOffer: before
+  // the start and on the finale); the floating bar covered the task and answer.
   const shown = IS_WEB && isMobile && signal !== null && storePlatform !== null && !closed && !footerOverlayOpen &&
-    keyboardInset === 0 && !criticalOwner && pathname !== '/app' && pathname !== '/'
+    keyboardInset === 0 && !criticalOwner && pathname !== '/app' && pathname !== '/' && !isQuestDetailHeaderPath(pathname)
 
   useEffect(() => {
     if (!IS_WEB || typeof window === 'undefined' || !signal) return

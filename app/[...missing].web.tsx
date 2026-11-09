@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import CustomHeader from '@/components/layout/CustomHeader'
 import FreezeWhenBlurred from '@/components/layout/FreezeWhenBlurred'
 import { useThemedColors } from '@/hooks/useTheme'
-import { parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleHubRoute, parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting'
 import { readSyncImport } from '@/utils/syncImport'
 import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 
@@ -13,7 +13,7 @@ import { useDocumentRouteRegistration } from '@/components/layout/documentView'
 // Нативный catch-all остаётся в том же web-чанке — `scripts/lib/expoStaticShell.js`
 // (`onlyChunk`) ждёт ровно один чанк `[...missing]` для boot-скриптов переводной детали.
 import NotFoundScreen from './[...missing].tsx'
-import { notFoundRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { notFoundRouteMetadata, staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 import type { ImmutableRequest } from 'expo-server'
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web'
 
@@ -44,6 +44,10 @@ if (typeof window !== 'undefined' && parseQuestLocaleRoute(window.location.pathn
   void loadQuestScreen()
 }
 
+// #3217: `/{locale}/quests` — the catalogue of quests published in that locale.
+// Lazy for the same reason as the detail: the catalogue stays out of this chunk.
+const LazyQuestCatalogScreen = React.lazy(() => import('@/screens/tabs/QuestsScreenRoute'))
+
 function QuestScreenFallback() {
   const colors = useThemedColors()
   return (
@@ -64,7 +68,20 @@ export default function QuestLocaleRouteScreen() {
   // One component type for the life of this mount: switching lazy → loaded
   // after a commit would remount the whole quest screen.
   const [QuestByIdScreen] = useState(() => loadedQuestScreen ?? LazyQuestByIdScreen)
+  const hub = useMemo(() => parseQuestLocaleHubRoute(ownPath), [ownPath])
   if (registrationOnly) return null
+  if (hub) {
+    return (
+      <FreezeWhenBlurred>
+        <View style={styles.root}>
+          <CustomHeader />
+          <Suspense fallback={<QuestScreenFallback />}>
+            <LazyQuestCatalogScreen key={hub.path} localeHub={hub.locale} />
+          </Suspense>
+        </View>
+      </FreezeWhenBlurred>
+    )
+  }
   if (!route) return <NotFoundScreen />
   const gameplay = (publicProjection?: QuestServingProjection) => <Suspense fallback={<QuestScreenFallback />}>
     <QuestByIdScreen key={route.path} route={route} publicProjection={publicProjection} />
@@ -96,6 +113,9 @@ export async function loader(request: ImmutableRequest | undefined, params: Reco
 }
 
 export async function generateMetadata(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
+  const hub = parseQuestLocaleHubRoute(`/${([] as string[]).concat(params.missing ?? []).join('/')}`)
+  // The request locale (middleware) already holds the hub's catalogue: same copy as /quests.
+  if (hub) return staticRouteMetadata('/quests', { canonical: hub.path })
   const { loadQuestPublicRoute } = await import('@/components/quests/runtime/questRouteLoader')
   const data = await loadQuestPublicRoute(request, params)
   if (!data) return notFoundRouteMetadata()

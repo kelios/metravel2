@@ -34,6 +34,7 @@ import { useAuth } from "@/context/AuthContext";
 import BottomDockMoreItem from './BottomDockMoreItem';
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref';
 
 
 let GorhomBottomSheet: any = null;
@@ -215,6 +216,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
   );
 
   const activePath = useMemo(() => normalizeBottomDockActivePath(pathname), [pathname]);
+  const localizeHref = useLocalizedNavHref();
 
   useEffect(() => {
     if (!showMore) {
@@ -291,12 +293,12 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
           key: def.key,
           label: def.label,
           accessibilityLabel: def.accessibilityLabel,
-          route: def.route,
+          route: localizeHref(def.route),
           icon: <NavigationIcon name={def.iconName} size={22} color={iconColor} />,
           isMore: def.isMore,
         };
       }),
-    [activePath, colors.primary, colors.textMuted]
+    [activePath, colors.primary, colors.textMuted, localizeHref]
   );
 
   const renderMoreMenuItem = useCallbackReact(

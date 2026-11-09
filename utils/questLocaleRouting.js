@@ -21,9 +21,28 @@ function parseQuestLocaleRoute(path) {
   return { locale: match[1], cityId, questSlug: match[3], path: `/${match[1]}/quests/${cityId}/${match[3]}` };
 }
 
+// #3217: the catalogue hub of a translated locale. Its list holds only quests
+// published in that locale, so it binds the UI to the URL like a detail does.
+function parseQuestLocaleHubRoute(path) {
+  if (typeof path !== 'string') return null;
+  const match = /^\/(be|uk|pl|en)\/quests\/?$/.exec(path.split(/[?#]/, 1)[0]);
+  return match ? { locale: match[1], path: `/${match[1]}/quests` } : null;
+}
+
+function buildQuestLocaleHubPath(locale) {
+  if (!QUEST_LOCALES.includes(locale)) return null;
+  return locale === 'ru' ? '/quests' : `/${locale}/quests`;
+}
+
+/** The one rule «which URL owns the interface language»: a translated detail or hub. */
+function parseQuestUrlLocale(path) {
+  return (parseQuestLocaleRoute(path) || parseQuestLocaleHubRoute(path))?.locale ?? null;
+}
+
 // The pre-bundle head bootstrap uses the same self-contained parser.
 function getQuestLocaleRouteParserScript() {
-  return `(${parseQuestLocaleRoute.toString()})`;
+  return `(function(path){var detail=(${parseQuestLocaleRoute.toString()})(path);if(detail)return detail;`
+    + `return (${parseQuestLocaleHubRoute.toString()})(path);})`;
 }
 
 /** Validate identity and every navigable path; never infer membership from gameplay. */
@@ -66,5 +85,6 @@ function questServingAlternates(projection) {
   ];
 }
 
-module.exports = { QUEST_LOCALES, buildQuestLocalePath, parseQuestLocaleRoute, getQuestLocaleRouteParserScript,
+module.exports = { QUEST_LOCALES, buildQuestLocalePath, parseQuestLocaleRoute, parseQuestLocaleHubRoute,
+  buildQuestLocaleHubPath, parseQuestUrlLocale, getQuestLocaleRouteParserScript,
   validateQuestServingProjection, questServingAlternates };

@@ -20,6 +20,7 @@ import QuestTrustBar from './QuestTrustBar';
 import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
 import { GUEST_QUEST_FREE_STEPS } from '@/utils/guestQuestLimits';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
+import QuestAppOffer from './QuestAppOffer';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
 import QuestFontScaleSheet from './QuestFontScaleSheet';
 import type { QuestScreenMeta } from './questScreenHeaderModel';
@@ -738,13 +739,16 @@ export function QuestWizard({ title, steps, finale, intro, countModel, durationM
     // Раскрытие об ИИ и метаданные маршрута — в футере стартовой карточки (#1480).
     // Гостевой гейт и финал стартовую карточку не показывают.
     const introTrustBar = useMemo(() => (
-        <QuestTrustBar
-            countModel={resolvedCountModel}
-            questTitle={title}
-            questId={questId}
-            cityId={cityId}
-            questNumericId={questNumericId}
-        />
+        <>
+            <QuestTrustBar
+                countModel={resolvedCountModel}
+                questTitle={title}
+                questId={questId}
+                cityId={cityId}
+                questNumericId={questNumericId}
+            />
+            <QuestAppOffer placement="quest_intro" />
+        </>
     ), [cityId, questId, questNumericId, resolvedCountModel, title]);
     const mainContent = (
         <View key="quest-main-content" ref={headerPlacement.mainContentRef} collapsable={false} testID="quest-main-content-anchor">
@@ -891,6 +895,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, durationM
                         headerInContentFlow={headerPlacement.headerInContentFlow}
                     />
                 )}
+                {showFinaleOnly && <QuestAppOffer placement="quest_finale" />}
             </View>
 
           </QuestExcursionsColumns>

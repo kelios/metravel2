@@ -66,6 +66,9 @@ import { useQuestCountrySelection } from './useQuestCountrySelection';
 import { useQuestCatalogSearchAnalytics } from './useQuestCatalogSearchAnalytics';
 import { useQuestCatalogSearchQuery } from './useQuestCatalogSearchQuery';
 import { translate as i18nT } from '@/i18n'
+import type { SupportedLocale } from '@/i18n/config'
+import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
+import { QuestCatalogLocaleContext } from './questCatalogLocale'
 
 const { spacing, radii } = DESIGN_TOKENS;
 
@@ -95,7 +98,13 @@ const QuestReviewPromptBanner = safeLazy(
 /** `/quests/<city>` (#2654): the catalog with the URL's slice, its own SEO and copy below the grid. */
 export type QuestsCatalogRoute = QuestCatalogRouteSelection & { seo: React.ReactNode; footer?: React.ReactNode };
 
-export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRoute | null } = {}) {
+type QuestsScreenProps = {
+    route?: QuestsCatalogRoute | null;
+    /** #3217: `/{locale}/quests` lists only quests published in that locale. */
+    localeHub?: Exclude<SupportedLocale, 'ru'> | null;
+};
+
+export default function QuestsScreen({ route = null, localeHub = null }: QuestsScreenProps = {}) {
     // #1484: заход в каталог после ранее завершённого квеста — это и есть
     // возврат, который меряет петля. Событие уходит один раз на прохождение.
     useQuestReturnVisit();
@@ -129,7 +138,12 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     const mapLocationAttemptedRef = useRef(false);
 
     // API data
-    const { quests: ALL_QUESTS, loading: questsLoading, error: questsError } = useQuestsList();
+    const { quests: listedQuests, loading: questsLoading, error: questsError } = useQuestsList();
+    const ALL_QUESTS = useMemo(
+        () => localeHub ? listedQuests.filter((quest) => quest.availableLocales.includes(localeHub)) : listedQuests,
+        [listedQuests, localeHub],
+    );
+    const catalogPath = (localeHub && buildQuestLocaleHubPath(localeHub)) || '/quests';
     // A server-rendered catalogue publishes its JSON-LD in the body: expo-router
     // Head never reaches the SSR HTML, so via Head crawlers would get none (#2817).
     const jsonLdInBody = Boolean(useQuestDiscovery());
@@ -633,7 +647,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         return i18nT('quests:screens.tabs.QuestsScreen.issleduyte_goroda_i_parki_s_oflayn_kvestami__76e12a53');
     }, [selectedCityId, selectedCityName, selectedCountry, selectedTheme, userLoc, activeMapAreaCenter]);
     const questsStructuredData = createQuestCatalogStructuredData({
-        canonical: buildCanonicalUrl('/quests'),
+        canonical: buildCanonicalUrl(catalogPath),
         title: titleText,
         description: descText,
         quests: ALL_QUESTS,
@@ -700,6 +714,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     };
 
     return (
+        <QuestCatalogLocaleContext.Provider value={localeHub}>
         <QuestSectionFrame drawerOpen={filterDrawerOpen} onCloseDrawer={closeFilterDrawer}
             sidebar={!usesFilterDrawer ? <Suspense fallback={null}><QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" /></Suspense> : null}
             drawerSidebar={<Suspense fallback={null}><QuestsSidebar {...sidebarProps} onCloseDrawer={closeFilterDrawer} /></Suspense>}>
@@ -709,7 +724,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                     headKey="quests-index"
                     title={titleText}
                     description={descText}
-                    canonical={buildCanonicalUrl('/quests')}
+                    canonical={buildCanonicalUrl(catalogPath)}
                     ogType="website"
                     image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
                     additionalTags={jsonLdInBody ? undefined : questsSeoTags}
@@ -762,5 +777,6 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 footerSlot={route?.footer}
             />
         </QuestSectionFrame>
+        </QuestCatalogLocaleContext.Provider>
     );
 }

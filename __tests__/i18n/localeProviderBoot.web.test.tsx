@@ -619,7 +619,8 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     await act(async () => { selection = select('en') })
     window.history.pushState(null, '', direction === 'leave' ? '/articles' : questPath)
     await act(async () => { root!.render(tree()) })
-    expect(i18n.resolvedLanguage).toBe(direction === 'leave' ? 'ru' : 'pl')
+    // #3217: leaving keeps the page language until the explicit choice lands.
+    expect(i18n.resolvedLanguage).toBe('pl')
 
     await act(async () => { catalogue.resolve(); await selection })
 
@@ -804,13 +805,18 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     } finally { jest.useRealTimers() }
   })
 
-  it('restores the saved preference after SPA exit and suspends entry until the URL catalogue commits', async () => {
+  it('keeps the URL locale after SPA exit until an explicit choice, without persisting it (#3217)', async () => {
     const preference = JSON.stringify({ version: 1, mode: 'explicit', locale: 'en' })
     const { Screen, mounts, hydrate } = setup(preference)
     const loaded = new Set(['ru'])
     isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
     loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
-    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    let selectLocale: (locale: 'en') => Promise<void> = async () => {}
+    const Capture = () => {
+      selectLocale = useLocale().setLocale
+      return null
+    }
+    await hydrate(<LocaleProvider><Capture /><Screen /></LocaleProvider>)
     expect(mounts).toEqual(['en'])
 
     const catalogue = createDeferred()
@@ -819,36 +825,65 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
       loaded.add(locale)
     })
     window.history.pushState(null, '', '/pl/quests/1/krakow-dragon')
-    await act(async () => { root!.render(<LocaleProvider><Screen key="quest-route" label="quest" /></LocaleProvider>) })
+    await act(async () => { root!.render(<LocaleProvider><Capture /><Screen key="quest-route" label="quest" /></LocaleProvider>) })
     expect(mounts).toEqual(['en'])
     await act(async () => catalogue.resolve())
     expect(mounts).toEqual(['en', 'pl'])
     expect(container.textContent).toBe('quest:pl')
 
+    // The tab/back target mounts once, directly in the page language: no switch
+    // (and no suspended navigator mount) while the route changes.
     window.history.pushState(null, '', '/articles')
-    await act(async () => { root!.render(<LocaleProvider><Screen key="articles-route" label="articles" /></LocaleProvider>) })
-    expect(mounts).toEqual(['en', 'pl', 'en'])
-    expect(container.textContent).toBe('articles:en')
+    await act(async () => { root!.render(<LocaleProvider><Capture /><Screen key="articles-route" label="articles" /></LocaleProvider>) })
+    expect(mounts).toEqual(['en', 'pl', 'pl'])
+    expect(container.textContent).toBe('articles:pl')
+    expect(document.documentElement.lang).toBe('pl')
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(preference)
+
+    await act(async () => selectLocale('en'))
+    expect(container.textContent).toBe('articles:en')
+    expect(mounts).toEqual(['en', 'pl', 'pl'])
   })
 
-  it('persists explicit selection on a prefixed quest without replacing its URL locale in place', async () => {
+  it('binds the interface to the locale hub /{locale}/quests like a translated detail (#3217)', async () => {
+    const { Screen, mounts, hydrate } = setup(null)
+    const loaded = new Set(['ru'])
+    isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
+    loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
+    await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+    expect(mounts).toEqual(['ru'])
+
+    window.history.pushState(null, '', '/en/quests')
+    await act(async () => { root!.render(<LocaleProvider><Screen key="hub-route" label="hub" /></LocaleProvider>) })
+    expect(mounts).toEqual(['ru', 'en'])
+    expect(container.textContent).toBe('hub:en')
+    expect(document.documentElement.lang).toBe('en')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+  })
+
+  it('switches the language before an explicit version link navigates, so the target mounts once in it (#3217)', async () => {
     const { Screen, mounts, hydrate } = setup(null, '/pl/quests/1/krakow-dragon')
     const loaded = new Set(['ru'])
     isWebLocaleLoaded.mockImplementation((locale: string) => loaded.has(locale))
     loadWebLocale.mockImplementation(async (locale: string) => { loaded.add(locale) })
     await prepareBootLocale()
-    let selectLocale: (locale: 'en') => Promise<void> = async () => {}
+    let selectLocale: (locale: 'en' | 'ru') => Promise<void> = async () => {}
     const Capture = () => {
       selectLocale = useLocale().setLocale
       return null
     }
     await hydrate(<LocaleProvider><Capture /><Screen /></LocaleProvider>)
-    await act(async () => selectLocale('en'))
     expect(mounts).toEqual(['pl'])
-    expect(container.textContent).toBe('screen:pl')
-    expect(i18n.resolvedLanguage).toBe('pl')
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'en' })
+
+    await act(async () => selectLocale('ru'))
+    expect(i18n.resolvedLanguage).toBe('ru')
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual({ version: 1, mode: 'explicit', locale: 'ru' })
+
+    window.history.pushState(null, '', '/quests/1/krakow-dragon')
+    await act(async () => { root!.render(<LocaleProvider><Capture /><Screen key="ru-route" label="quest" /></LocaleProvider>) })
+    expect(mounts).toEqual(['pl', 'ru'])
+    expect(container.textContent).toBe('quest:ru')
+    expect(document.documentElement.lang).toBe('ru')
   })
 
   it('can enter a URL-bound locale after abandoning a failed preference boot for RU', async () => {

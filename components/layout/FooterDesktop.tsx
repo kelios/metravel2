@@ -9,6 +9,7 @@ import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { translate as i18nT } from '@/i18n'
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref'
 import { SITE_OWNER_LEGAL_NAME } from '@/constants/legal'
 
 
@@ -34,6 +35,7 @@ const openURL = (url: string) =>
 
 function FooterDesktop({ testID }: FooterDesktopProps) {
   const colors = useThemedColors()
+  const localizeHref = useLocalizedNavHref()
   const iconColor = colors.primary
 
   const styles = useMemo(
@@ -295,7 +297,7 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
   }
 
   const utilityLinks: LinkItem[] = [
-    { key: 'quests', label: i18nT('navigation:components.layout.FooterDesktop.kvesty_a13429c0'), route: '/quests' as any },
+    { key: 'quests', label: i18nT('navigation:components.layout.FooterDesktop.kvesty_a13429c0'), route: localizeHref('/quests') },
     { key: 'app', label: i18nT('navigation:components.layout.FooterDesktop.prilozhenie_ac8200d5'), route: '/app' as any },
     { key: 'about', label: i18nT('navigation:components.layout.FooterDesktop.o_sayte_f17fcfd7'), route: '/about' as any },
     { key: 'privacy', label: i18nT('navigation:components.layout.FooterDesktop.politika_569007d9'), route: '/privacy' as any },

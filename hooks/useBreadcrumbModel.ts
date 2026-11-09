@@ -25,6 +25,8 @@ import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getFirstSearchParamValue, normalizeInternalReturnPath } from '@/utils/navigationReturnPath';
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting';
+import { localizeQuestCatalogHref } from '@/utils/questLocaleHubs';
+import type { SupportedLocale } from '@/i18n/config';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { pageTranslations, STANDALONE_NESTED_ROUTE_LABELS } from '@/hooks/breadcrumbRouteLabels';
@@ -769,8 +771,12 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       // never guessed from the slug («Minsk Cmok»), as on the city landing.
       const questTitle = truncateLabel(questApiTitle);
       const questsLabel = i18nT('shared:hooks.useBreadcrumbModel.kvesty_91edef10');
+      // #3217: «Quests» and «Back» of a translated detail lead to its locale hub.
+      const catalogPath = questDetailRoute.locale
+        ? localizeQuestCatalogHref('/quests', questDetailRoute.locale as SupportedLocale)
+        : '/quests';
       const items = [
-        { label: questsLabel, path: '/quests' },
+        { label: questsLabel, path: catalogPath },
         ...(questTitle ? [{ label: questTitle, path: questDetailRoute.path }] : []),
       ];
 
@@ -779,7 +785,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         depth: items.length + 1,
         currentTitle: questTitle || questsLabel,
         pageContextTitle: questsLabel,
-        backToPath: '/quests',
+        backToPath: catalogPath,
         showBreadcrumbs: true,
         // The quest screen's graph carries the page's one BreadcrumbList with
         // its canonical locale URL and replaces the SSG copy on hand-over.

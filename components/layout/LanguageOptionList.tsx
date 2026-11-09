@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useLocale } from '@/i18n/LocaleProvider'
+import type { SupportedLocale } from '@/i18n/config'
 import { showLocaleSelectionError } from '@/i18n/languageSelectionFeedback'
 import { getLocaleDisplayCode, getLocaleDisplayName } from '@/i18n/localeLabels'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -14,6 +15,8 @@ type LanguageOptionListProps = {
   onChosen?: () => void
   /** Префикс testID пунктов: шапка — `header-language-option`, «Ещё» — свой. */
   testIDPrefix?: string
+  /** После сохранённого выбора: хаб `/{locale}/quests` уходит в каталог выбранного языка (#3217). */
+  onLocaleSelected?: (locale: SupportedLocale) => void
 }
 
 /**
@@ -24,6 +27,7 @@ type LanguageOptionListProps = {
 export default function LanguageOptionList({
   onChosen,
   testIDPrefix = 'header-language-option',
+  onLocaleSelected,
 }: LanguageOptionListProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -31,7 +35,7 @@ export default function LanguageOptionList({
 
   const chooseLocale = (nextLocale: typeof locale) => {
     onChosen?.()
-    void setLocale(nextLocale).catch(showLocaleSelectionError)
+    void setLocale(nextLocale).then(() => onLocaleSelected?.(nextLocale), showLocaleSelectionError)
   }
 
   return (

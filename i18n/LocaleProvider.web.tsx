@@ -11,7 +11,7 @@ import React, {
   useState,
 } from 'react'
 import { usePathname } from 'expo-router'
-import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleRoute, parseQuestUrlLocale } from '@/utils/questLocaleRouting'
 
 import { BOOT_LOCALE_TIMEOUT_MS, normalizeActiveLocale, resolvePendingBootLocale } from './bootLocale'
 import { getLocaleDefinition, SUPPORTED_LOCALES, type SupportedLocale } from './config'
@@ -100,7 +100,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }
   const pathname = usePathname()
   const route = parseQuestLocaleRoute(pathname)
-  const routeLocale = route?.locale ?? null
+  const routeLocale = parseQuestUrlLocale(pathname)
   if (serverRendering && routeLocale && routeLocale !== serverLocale) {
     throw Object.assign(new Error('SSR locale context does not match the route'), { httpStatus: 503 })
   }
@@ -118,12 +118,23 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [bootRecovery, setBootRecovery] = useState<'loading' | 'slow' | 'failed'>('loading')
   const bootAbandoned = useRef(false)
   const selectionGeneration = useRef(0)
+  // #3217: leaving a URL-bound page keeps its language for the session (not
+  // persisted) until an explicit choice. Switching the locale in the same
+  // render the root Stack first mounts (tabs) suspended that mount and reset
+  // the navigator to «/» in Russian; a kept locale has nothing to switch.
+  const [sessionLocale, setSessionLocale] = useState<SupportedLocale | null>(routeLocale)
+  const [seenRouteLocale, setSeenRouteLocale] = useState(routeLocale)
+  if (routeLocale !== seenRouteLocale) {
+    setSeenRouteLocale(routeLocale)
+    if (routeLocale) setSessionLocale(routeLocale)
+  }
+  const boundLocale = routeLocale ?? sessionLocale
   const currentRouteLocale = useRef(routeLocale)
   currentRouteLocale.current = routeLocale
   // Navigation can change the route before an effect commits its language.
   // Suspend that render immediately, so new screens cannot request the old
   // locale. Entering/leaving a URL-bound page never persists a preference.
-  const targetLocale = routeLocale ?? (isHydrated ? resolveLocalePreference(preference) : bootLocale)
+  const targetLocale = boundLocale ?? (isHydrated ? resolveLocalePreference(preference) : bootLocale)
   const isRoutePending = targetLocale !== null && (
     locale !== targetLocale || (routeLocale !== null && !isWebLocaleLoaded(targetLocale))
   )
@@ -187,7 +198,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setBootRecovery('loading')
     void readLocalePreference().then(async (storedPreference) => {
       if (cancelled) return
-      const nextLocale = routeLocale ?? resolveLocalePreference(storedPreference)
+      const nextLocale = boundLocale ?? resolveLocalePreference(storedPreference)
       let failed = false
       try {
         if (nextLocale !== normalizeActiveLocale(i18n.resolvedLanguage) || !isWebLocaleLoaded(nextLocale)) {
@@ -210,7 +221,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       if (failed) return
       if (cancelled) return
       const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
-      syncDocumentLocale(routeLocale ?? activeLocale)
+      syncDocumentLocale(boundLocale ?? activeLocale)
       // #2899: обновление контекста над ещё не гидратированными Suspense-границами
       // с обычным приоритетом поднимает гидратацию всего дерева до sync-лейна —
       // одна задача 520–600 мс на mobile. В transition React гидратирует нарезкой.
@@ -224,20 +235,26 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       cancelled = true
       clearTimeout(recoveryTimeout)
     }
-  }, [routeLocale])
+  }, [boundLocale])
 
   const selectPreference = useCallback(async (nextPreference: LocalePreference) => {
     const generation = ++selectionGeneration.current
     const nextLocale = resolveLocalePreference(nextPreference)
+    const startRouteLocale = currentRouteLocale.current
     try {
       if (!isWebLocaleLoaded(nextLocale)) await loadWebLocale(nextLocale)
       if (generation !== selectionGeneration.current) return
       await writeLocalePreference(nextPreference)
       if (generation !== selectionGeneration.current) return
+      setSessionLocale(null)
       setPreference(nextPreference)
       // A language control persists an explicit choice, then navigates to its
-      // canonical link. Never replace a PL URL's content with EN in between.
-      if (!currentRouteLocale.current) await i18n.changeLanguage(nextLocale)
+      // canonical link. The language changes first: a URL-bound page then
+      // suspends (never shows PL content in EN) and the destination mounts
+      // already in its locale, without a switch during the navigation (#3217).
+      // A URL entered meanwhile keeps its own locale.
+      const routeNow = currentRouteLocale.current
+      if (!routeNow || routeNow === startRouteLocale) await i18n.changeLanguage(nextLocale)
     } catch (error) {
       if (generation === selectionGeneration.current) throw error
     }
@@ -266,11 +283,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   return (
     <LocaleContext.Provider value={value}>
       {pending && bootRecovery !== 'loading' && (
-        <div id="locale-boot-recovery" lang={recoveryLocale} data-url-locale={route ? 'true' : undefined}>
+        <div id="locale-boot-recovery" lang={recoveryLocale} data-url-locale={routeLocale ? 'true' : undefined}>
           <p role="status">{bootRecovery === 'failed' ? recoveryCopy.failed : recoveryCopy.slow}</p>
           <button type="button" onClick={() => window.location.reload()}>{recoveryCopy.retry}</button>
-          {route ? (
-            <a href={`/quests/${route.cityId}/${route.questSlug}`}>{recoveryCopy.fallback}</a>
+          {routeLocale ? (
+            <a href={route ? `/quests/${route.cityId}/${route.questSlug}` : '/quests'}>{recoveryCopy.fallback}</a>
           ) : <button type="button" onClick={() => {
             bootAbandoned.current = true
             void setLocale('ru').then(() => {

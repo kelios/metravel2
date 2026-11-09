@@ -8,6 +8,7 @@ const mockVersionLinks = jest.fn((_props: unknown) => null)
 const mockPush = jest.fn()
 const mockSetLocale = jest.fn(async () => {})
 let mockNavigation: unknown = null
+let mockPathname = '/'
 
 jest.mock('@/components/layout/LanguageOptionList.tsx', () => ({
   __esModule: true, default: (props: unknown) => mockPreferenceOptions(props),
@@ -24,19 +25,41 @@ jest.mock('@/hooks/useTheme', () => ({ useThemedColors: () => ({ border: '#ddd',
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
   router: { push: (...args: unknown[]) => mockPush(...args) },
+  usePathname: () => mockPathname,
 }))
 
 import LanguageOptionList from '@/components/layout/LanguageOptionList.web'
 const ActualVersionLinks = jest.requireActual<typeof import('@/components/quests/QuestVersionLinks')>('@/components/quests/QuestVersionLinks').default
 
 describe('quest version language control', () => {
-  beforeEach(() => { mockNavigation = null; mockPreferenceOptions.mockClear(); mockVersionLinks.mockClear() })
+  beforeEach(() => { mockNavigation = null; mockPathname = '/'; mockPreferenceOptions.mockClear(); mockVersionLinks.mockClear(); mockPush.mockClear() })
 
   it('delegates non-quest selection to the existing preference control', async () => {
     const onChosen = jest.fn()
     await render(<LanguageOptionList onChosen={onChosen} testIDPrefix="menu-language" />)
     expect(mockPreferenceOptions).toHaveBeenCalledWith({ onChosen, testIDPrefix: 'menu-language' })
     expect(mockVersionLinks).not.toHaveBeenCalled()
+  })
+
+  it('leaves a locale hub for the catalogue of the chosen language instead of staying suspended (#3217)', async () => {
+    const originalOs = Platform.OS
+    const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    try {
+      mockPathname = '/en/quests'
+      await render(<LanguageOptionList testIDPrefix="menu-language" />)
+      const { onLocaleSelected } = mockPreferenceOptions.mock.calls[0][0] as { onLocaleSelected: (locale: string) => void }
+      process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'true'
+      onLocaleSelected('ru')
+      onLocaleSelected('pl')
+      process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'false'
+      onLocaleSelected('pl')
+      expect(mockPush.mock.calls).toEqual([['/quests'], ['/pl/quests'], ['/quests']])
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+      else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag
+    }
   })
 
   it('keeps a bound pending or unavailable page from exposing preference-only choices', async () => {

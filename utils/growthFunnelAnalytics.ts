@@ -40,7 +40,7 @@ export type GrowthContentType = 'route' | 'article';
 export type GrowthAuthState = 'guest' | 'authenticated';
 export type GrowthRegistrationMethod = 'email' | 'google' | 'facebook' | 'apple';
 export type GrowthRegistrationErrorReason = 'api' | 'exception' | 'provider';
-export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page' | 'about_page';
+export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page' | 'about_page' | 'quest_intro' | 'quest_finale';
 
 type EventParams = Record<string, unknown>;
 

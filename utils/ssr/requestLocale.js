@@ -1,7 +1,7 @@
 /* global module, require, process */
 'use strict'
 
-const { QUEST_LOCALES, parseQuestLocaleRoute } = require('../questLocaleRouting')
+const { QUEST_LOCALES, parseQuestUrlLocale } = require('../questLocaleRouting')
 
 const REQUEST_LOCALE = Symbol.for('metravel.ssr.locale')
 const SERVER_CATALOGS = Symbol.for('metravel.ssr.localeCatalogs')
@@ -17,7 +17,7 @@ const URL_BASE = 'http://ssr.invalid'
 function resolveRequestLocale(url) {
   const pathname = new URL(url || '/', URL_BASE).pathname
   const routePath = pathname.startsWith('/_expo/loaders/') ? pathname.slice('/_expo/loaders'.length) : pathname
-  return parseQuestLocaleRoute(routePath)?.locale || 'ru'
+  return parseQuestUrlLocale(routePath) || 'ru'
 }
 
 function getRequestLocaleStore() {

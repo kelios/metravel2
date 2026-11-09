@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import { isCompactHeaderWidth } from './headerLayoutContract'
 import { isQuestDetailHeaderPath } from './questHeaderPresentation'
 import { isTopLevelSectionPath, needsGlobalBackAffordance } from './topLevelSections'
+import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
 
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
@@ -30,6 +31,8 @@ export const isTravelUpsertHeaderPath = (pathname: string) =>
 
 export const getHeaderActivePath = (pathname: string) => {
   if (pathname === '/' || pathname === '/index') return '/'
+  // #3217: a translated quest detail or hub belongs to the «Quests» section.
+  if (parseQuestUrlLocale(pathname)) return '/quests'
   if (pathname.startsWith('/travels/') || pathname.startsWith('/travel/')) return ''
   const match = ACTIVE_PATH_PREFIXES.find((p) => pathname.startsWith(p))
   return match ?? pathname

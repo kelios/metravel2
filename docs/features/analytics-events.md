@@ -115,6 +115,18 @@
 намерением, то провайдером, то константой `home` — данные до этой даты по
 `source` не группировать, провайдер теперь в `method`.
 
+### Приложение (mobile web)
+
+| Событие | Где | Параметры | Смысл |
+|---|---|---|---|
+| `AppInstallBar_Shown` / `_Click` / `_Dismiss` | `components/layout/AppInstallBar.tsx` | `platform`, `signal` | плавающая плашка после сигнала намерения (#2907); на странице квеста не показывается (#3220) |
+| `QuestAppOffer_Shown` / `QuestAppOffer_Click` | `components/quests/QuestAppOffer.tsx` | `platform`, `placement` (`quest_intro` / `quest_finale`) | карточка приложения в потоке страницы квеста: до старта и на финале (#3220); показ — один раз на монтирование, клик — по кнопке витрины |
+| `app_download_click` | `openAppStoreListing` (все поверхности) | `source` (`home_promo`, `install_bar`, `app_page`, `about_page`, `quest_intro`, `quest_finale`), `platform` | общая цель «Скачали приложение» |
+
+У карточки свои имена, а не `AppInstallBar_*` с параметром: `placement` не
+зарегистрирован измерением GA4, и общие имена смешали бы воронку плашки
+«показ → клик» с показами карточки. Согласие — по общему правилу выше.
+
 ## Как проверить
 
 - Unit: `__tests__/utils/growthFunnelAnalytics.test.ts`,

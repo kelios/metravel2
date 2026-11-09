@@ -57,7 +57,7 @@ export const getLocaleBootScript = (): string => `
       var retry=document.createElement('button');retry.type='button';retry.textContent=copy.retry;
       retry.onclick=function(){window.location.reload();};
       var fallback=document.createElement(route?'a':'button');fallback.textContent=copy.fallback;
-      if(route){fallback.href='/quests/'+route.cityId+'/'+route.questSlug;}
+      if(route){fallback.href=route.cityId?'/quests/'+route.cityId+'/'+route.questSlug:'/quests';}
       else{fallback.type='button';fallback.onclick=function(){
         try{window.localStorage.setItem(${JSON.stringify(LOCALE_PREFERENCE_STORAGE_KEY)},JSON.stringify({version:1,mode:'explicit',locale:'ru'}));}catch(_){}
         document.documentElement.classList.remove(${JSON.stringify(LOCALE_BOOT_PENDING_CLASS)});

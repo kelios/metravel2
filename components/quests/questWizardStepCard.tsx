@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler'
 import QuestContentText from './QuestContentText'
+import QuestStoryText from './QuestStoryText'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
@@ -568,11 +569,6 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       </View>
 
       {step.id === 'intro' && introSummarySlot}
-      {step.id === 'intro' && guestFreeSteps !== undefined && (
-        <Text style={[styles.section, styles.legNote]} testID="quest-intro-guest-limit">
-          {i18nT('quests:components.quests.questWizardStepCard.guestLimit', { count: formatInteger(guestFreeSteps) })}
-        </Text>
-      )}
       {step.id === 'intro' && (
         <Pressable
           style={[styles.startButton, styles.section]}
@@ -583,6 +579,12 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         >
           <Text style={styles.startButtonText}>{i18nT('quests:components.quests.questWizardStepCard.nachat_kvest_2847e749')}</Text>
         </Pressable>
+      )}
+      {/* #3219: the account condition follows the start button, softly worded. */}
+      {step.id === 'intro' && guestFreeSteps !== undefined && (
+        <Text style={styles.legNote} testID="quest-intro-guest-limit">
+          {i18nT('quests:components.quests.questWizardStepCard.guestLimit', { count: formatInteger(guestFreeSteps) })}
+        </Text>
       )}
 
       {showApproachNote && approachLeg && (
@@ -625,7 +627,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       )}
 
       <View style={styles.section} testID={step.id === 'intro' ? 'quest-intro-story' : undefined}>
-        <QuestContentText style={styles.storyText}>{step.story}</QuestContentText>
+        <QuestStoryText key={step.id} story={step.story} style={styles.storyText} collapsible={step.id !== 'intro'} />
       </View>
 
       {showVisitorInfo && (

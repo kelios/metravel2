@@ -9,7 +9,7 @@ import { isSupportedLocale, DEFAULT_LOCALE, type SupportedLocale } from './confi
 import i18n from './instance'
 import { readWebLocalePreferenceSync, resolveLocalePreference } from './localeStorage'
 import { isWebLocaleLoaded, loadWebLocale } from './translate'
-import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
+import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
 
 /**
  * Каталог сохранённой локали — до гидратации (#2239, `I18N-LOCALE-BOOT-REMOUNT-001`).
@@ -39,11 +39,11 @@ export const normalizeActiveLocale = (value: string | undefined): SupportedLocal
 
 /** URL-локаль детали либо сохранённая локаль, ожидающая boot commit. */
 export const resolvePendingBootLocale = (): SupportedLocale | null => {
-  // Only canonical, allowlisted quest details bind the UI to their URL. Other
+  // Only canonical, allowlisted quest details and hubs (#3217) bind the UI to their URL. Other
   // sections retain the established preference-driven boot lifecycle.
   const routeLocale = typeof window === 'undefined'
     ? null
-    : parseQuestLocaleRoute(window.location.pathname)?.locale
+    : parseQuestUrlLocale(window.location.pathname)
   if (routeLocale) {
     return routeLocale === normalizeActiveLocale(i18n.resolvedLanguage) && isWebLocaleLoaded(routeLocale)
       ? null
@@ -63,7 +63,7 @@ export const resolvePendingBootLocale = (): SupportedLocale | null => {
 export const prepareBootLocale = (): Promise<void> | null => {
   const routeLocale = typeof window === 'undefined'
     ? null
-    : parseQuestLocaleRoute(window.location.pathname)?.locale
+    : parseQuestUrlLocale(window.location.pathname)
   const target = resolvePendingBootLocale()
   if (!target) return null
   return new Promise<void>((resolve) => {
@@ -76,7 +76,7 @@ export const prepareBootLocale = (): Promise<void> | null => {
       // A prefix can receive the legacy RU 404 document while translated
       // serving is disabled. Only translated HTML may commit before hydration;
       // fallback HTML uses the pending boundary and commits after hydration.
-      if (routeLocale && parseQuestLocaleRoute(window.location.pathname)?.locale === routeLocale
+      if (routeLocale && parseQuestUrlLocale(window.location.pathname) === routeLocale
         && typeof document !== 'undefined' && document.documentElement.lang === routeLocale
         && normalizeActiveLocale(i18n.resolvedLanguage) !== routeLocale) {
         await i18n.changeLanguage(routeLocale)

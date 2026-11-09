@@ -160,9 +160,9 @@ describe('пометка языка рядом с маршрутом (#2198)', (
   })
 
   it.each([
-    [{ currentIndex: 0 }, 'Старт'],
-    [{ showFinaleOnly: true }, 'Финал'],
-  ] as const)('старт и финал остаются именованными состояниями: %s', async (position, label) => {
+    [{ currentIndex: 0 }, 'Старт', null],
+    [{ showFinaleOnly: true }, 'Финал', '1/2'],
+  ] as const)('старт и финал остаются именованными состояниями: %s', async (position, label, tasks) => {
     const screen = await renderHeader({
       isMobile: true,
       ...position,
@@ -170,7 +170,9 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     })
     expect(screen.getByText(label)).toBeTruthy()
     expect(screen.queryByText('0/1')).toBeNull()
-    expect(screen.getByText('1/2')).toBeTruthy()
+    // #3219: до старта счётчика заданий нет — на странице одно число точек.
+    if (tasks) expect(screen.getByText(tasks)).toBeTruthy()
+    else expect(screen.queryByText('1/2')).toBeNull()
   })
 
   it('без языкового слота сохраняет прежний ряд маршрута', async () => {
@@ -224,7 +226,7 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     expect(screen.queryByText('Старт')).toBeNull()
     expect(screen.getByText('Start')).toBeTruthy()
     expect(screen.getByTestId('quest-route-strip').props.accessibilityLabel).not.toBe(beforeLabel)
-    expect(screen.getByLabelText('Route: Quest start, tasks 1 of 2')).toBeTruthy()
+    expect(screen.getByLabelText('Route: Quest start')).toBeTruthy()
     expect(screen.getByTestId('quest-route-strip').props.accessibilityHint).toBe('Opens the list of all route points')
     await fireEvent.press(screen.getByTestId('quest-route-strip'))
     expect(screen.getByText('Quest start')).toBeTruthy()

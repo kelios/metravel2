@@ -21,6 +21,10 @@ export type QuestServingProjection = {
 export const QUEST_LOCALES: readonly SupportedLocale[];
 export function buildQuestLocalePath(cityId: number, questSlug: string, locale: SupportedLocale): string | null;
 export function parseQuestLocaleRoute(path: unknown): QuestLocaleRoute | null;
+export type QuestLocaleHubRoute = { locale: Exclude<SupportedLocale, 'ru'>; path: string };
+export function parseQuestLocaleHubRoute(path: unknown): QuestLocaleHubRoute | null;
+export function buildQuestLocaleHubPath(locale: SupportedLocale): string | null;
+export function parseQuestUrlLocale(path: unknown): Exclude<SupportedLocale, 'ru'> | null;
 export function getQuestLocaleRouteParserScript(): string;
 export function validateQuestServingProjection(raw: unknown, expected: QuestServingIdentity): QuestServingProjection | null;
 export function questServingAlternates(projection: QuestServingProjection | null): { locale: string; href: string }[];

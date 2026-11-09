@@ -3,6 +3,7 @@ import type { Href } from 'expo-router'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { BOTTOM_DOCK_ROUTES } from '@/constants/bottomDockRoutes'
 import { translate as i18nT } from '@/i18n'
+import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
 
 // Eager navigation owns only the five links; sheet/account data stays deferred.
 export const BOTTOM_DOCK_HEIGHT = 56
@@ -56,6 +57,8 @@ export const BOTTOM_DOCK_ITEM_DEFS: BottomDockItemDef[] = [
 
 export function normalizeBottomDockActivePath(pathname: string): string {
   const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/'
+  // #3217: a translated quest detail or hub belongs to the «Quests» tab.
+  if (parseQuestUrlLocale(normalized)) return '/quests'
 
   if (normalized === '/' || normalized === '/index') return ''
   if (normalized.startsWith('/travels/')) return ''

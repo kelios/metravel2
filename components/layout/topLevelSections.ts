@@ -1,5 +1,6 @@
 import { BOTTOM_DOCK_SECTION_PATHS } from '@/constants/bottomDockRoutes'
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { parseQuestLocaleHubRoute } from '@/utils/questLocaleRouting'
 
 /**
  * Разделы верхней навигации: их адресуют основное меню (desktop) и нижний док
@@ -108,7 +109,8 @@ export const isTopLevelSectionPath = (
   hasFilterQuery: boolean = false,
   isMobile: boolean = false,
 ): boolean =>
-  TOP_LEVEL_SECTION_PATHS.has(pathname) &&
+  // #3217: `/{locale}/quests` is the «Quests» section in its language.
+  (TOP_LEVEL_SECTION_PATHS.has(pathname) || Boolean(parseQuestLocaleHubRoute(pathname))) &&
   !(isMobile && MOBILE_NESTED_SECTION_PATHS.has(pathname)) &&
   !hasFilterQuery
 

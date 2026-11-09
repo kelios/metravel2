@@ -70,6 +70,15 @@ export type BuildQuestRouteModelInput = {
 
 const isIntroStep = (step: QuestRouteStep) => step.id === 'intro'
 
+/**
+ * #3219: before the start the page names one count — the points of the offer
+ * line, explained by the trust bar. The task counter («Tasks: 0 / 6») appears
+ * once the walk has begun.
+ */
+export function isQuestIntroActive(allSteps: readonly { id: string }[], currentIndex: number, showFinaleOnly: boolean): boolean {
+  return !showFinaleOnly && currentIndex === 0 && allSteps.length > 0 && allSteps[0].id === 'intro'
+}
+
 export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRouteModel {
   const { allSteps, answers, postponedStepIds, currentIndex, showFinaleOnly, colors } =
     input
@@ -85,7 +94,9 @@ export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRou
       : { kind: 'point', index: pointNumber(currentIndex), total }
 
   const tasks =
-    input.countModel.source === 'explicit' ? { completed: input.completedCount, total: input.stepsCount } : null
+    input.countModel.source === 'explicit' && position.kind !== 'intro'
+      ? { completed: input.completedCount, total: input.stepsCount }
+      : null
 
   const placeText = questStepPlaceLabel(position.kind, position.index, position.total)
   const stripText = tasks

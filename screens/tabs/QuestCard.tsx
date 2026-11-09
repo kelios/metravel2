@@ -1,5 +1,5 @@
 import QuestEditorialText from '@/components/quests/QuestEditorialText';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useContext, useMemo, useState } from 'react';
 import type {
     CSSProperties,
     KeyboardEvent as ReactKeyboardEvent,
@@ -26,6 +26,8 @@ import { getPrimaryQuestTheme } from '@/utils/questThemes';
 import { isBikeQuest } from './QuestsScreen.helpers';
 
 import { pluralizePoints, type QuestMeta } from './questsShared';
+import { QuestCatalogLocaleContext } from './questCatalogLocale';
+import { buildQuestLocalePath } from '@/utils/questLocaleRouting';
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { formatDistance } from '@/utils/distanceCalculator'
@@ -104,7 +106,8 @@ function QuestCard({
     // читалку живёт по своему правилу выше: количество отзывов — факт, а
     // усреднённая оценка по одному отзыву — вымысел.
     const showAggregateRating = hasPublicQuestRating(quest.ratingCount);
-    const questPath = buildQuestPath(cityId, quest.id);
+    const hubLocale = useContext(QuestCatalogLocaleContext);
+    const questPath = hubLocale ? buildQuestLocalePath(Number(cityId), quest.id, hubLocale) : buildQuestPath(cityId, quest.id);
     const questLinkLabel = i18nT('quests:screens.tabs.QuestCard.nachat_priklyuchenie_value1_43ad4b32', { value1: quest.title });
     const reviewsLabel = translatePlural('quests:app.tabs.quests.city.questId.reviewCount', quest.ratingCount);
 

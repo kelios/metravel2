@@ -31,6 +31,8 @@ type Props = {
   fullWidth?: boolean
   style?: StyleProp<ViewStyle>
   testID?: string
+  /** Surface-own click event before the store opens (the shared goal is sent by openAppStoreListing). */
+  onStorePress?: (platform: AppStorePlatform) => void
 }
 
 /**
@@ -38,7 +40,7 @@ type Props = {
  * первой и главной кнопкой, вторая остаётся доступной (iPad с Android-телефоном
  * в кармане, ссылка «для друга»). На десктопе обе кнопки равноправны.
  */
-function AppStoreButtons({ source, size = 'lg', fullWidth = false, style, testID = 'app-store-buttons' }: Props) {
+function AppStoreButtons({ source, size = 'lg', fullWidth = false, style, testID = 'app-store-buttons', onStorePress }: Props) {
   const colors = useThemedColors()
   const devicePlatform = useDeviceStorePlatform()
 
@@ -61,6 +63,7 @@ function AppStoreButtons({ source, size = 'lg', fullWidth = false, style, testID
             label={STORE_COPY[platform].label()}
             accessibilityLabel={STORE_COPY[platform].a11y()}
             onPress={() => {
+              onStorePress?.(platform)
               void openAppStoreListing({ platform, source })
             }}
             variant={primary ? 'primary' : 'outline'}
