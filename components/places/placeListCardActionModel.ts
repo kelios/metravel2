@@ -25,6 +25,24 @@ type ActionModelInput = {
   showTitleInContent: boolean
 }
 
+/** Пункт «Скопировать координаты» — общий для «⋯» карточки и строки места (#3142). */
+export const buildCopyCoordAction = (onPress: () => void): ActionChip => ({
+  key: 'copy-coord',
+  label: i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07'),
+  icon: 'copy',
+  onPress,
+})
+
+/** Пункт «Поделиться в Telegram» листа «⋯»; `label` короткий для плитки ряда. */
+export const buildTelegramShareAction = (onPress: () => void, label?: string): ActionChip => ({
+  key: 'share',
+  label: label ?? i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19'),
+  icon: SEMANTIC_ACTION_ICON.telegramShare,
+  onPress,
+  accessibilityLabel: i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19'),
+  title: i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19'),
+})
+
 /**
  * Плиток в ряду при `actionBudget` ВСЕГО — вместе со входом в лист «Навигация и
  * действия» (#2778, приёмка: четыре плитки на 320 резали подписи). «Сохранить»
@@ -70,26 +88,12 @@ function buildRowModel({
   const showTitleShare = !budgeted && popupAligned && hasCoord && Boolean(onShare)
   const shareOverflowAction: ActionChip | null =
     isCompactActionCard && !showTitleShare && hasCoord && onShare
-      ? {
-          key: 'share',
-          label: i18nT('map:components.places.PlaceListCard.telegram_5a2f6e04'),
-          icon: SEMANTIC_ACTION_ICON.telegramShare,
-          onPress: onShare,
-          accessibilityLabel: i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19'),
-          title: i18nT('map:components.places.PlaceListCard.podelitsya_v_telegram_a5cebf19'),
-        }
+      ? buildTelegramShareAction(onShare, i18nT('map:components.places.PlaceListCard.telegram_5a2f6e04'))
       : null
   const visibleMapActions = isCompactActionCard ? [] : mapActions
   const primaryActions = budgeted ? [...inlineActions, ...quickActions] : []
   const copyOverflowAction: ActionChip | null =
-    budgeted && hasCoord && onCopyCoord
-      ? {
-          key: 'copy-coord',
-          label: i18nT('map:components.places.PlaceListCard.skopirovat_koordinaty_6eaf9e07'),
-          icon: 'copy',
-          onPress: onCopyCoord,
-        }
-      : null
+    budgeted && hasCoord && onCopyCoord ? buildCopyCoordAction(onCopyCoord) : null
   // Всё, что живёт только в листе, — навигаторы, координаты, Telegram, правка.
   const sheetOnlyCount =
     mapActions.length + (copyOverflowAction ? 1 : 0) + (shareOverflowAction ? 1 : 0) + menuActions.length

@@ -50,6 +50,27 @@ jest.mock('@/api/userPoints', () => ({
   userPointsApi: { getPointsByIds: jest.fn(async () => []) },
 }));
 
+// #3142: строка телефона — свой мок, ловим пропсы и рисуем пункты «⋯».
+const mockPlaceListRow = jest.fn((props: any) => {
+  const { Text, View } = require('react-native');
+  return (
+    <View testID={props.testID ?? 'mock-place-list-row'}>
+      <Text>{props.title}</Text>
+      {props.subtitle ? <Text testID="row-subtitle">{props.subtitle}</Text> : null}
+      <Text accessibilityRole="button" accessibilityLabel="row-main" onPress={props.onPress}>main</Text>
+      {(props.actions ?? []).map((action: any) => (
+        <Text key={`row-${action.key}`} testID={`row-${action.key}`} onPress={action.onPress}>
+          {action.label}{action.destructive ? ' (destructive)' : ''}
+        </Text>
+      ))}
+    </View>
+  );
+});
+jest.mock('@/components/places/PlaceListRow', () => ({
+  __esModule: true,
+  default: (props: any) => mockPlaceListRow(props),
+}));
+
 jest.mock('@/components/places/PlaceListCard', () => ({
   __esModule: true,
   default: (props: any) => mockPlaceListCard(props),
@@ -90,6 +111,9 @@ describe('PointCard', () => {
 
   beforeEach(() => {
     mockPlaceListCard.mockClear();
+    mockPlaceListRow.mockClear();
+    mockUseDriveInfoQuery.mockReturnValue(null);
+    mockViewportWidth = 1280;
   });
 
   it('renders user point through the shared PlaceListCard template', async () => {
@@ -224,22 +248,60 @@ describe('PointCard', () => {
     expect(screen.queryByTestId('menu-delete')).toBeNull();
   });
 
-  it('телефон (#2101): правка и удаление уходят в «⋯», удаление последним и destructive, из ряда убраны', async () => {
+  it('телефон (#3142): компактная строка, все действия в «⋯», удаление последним и destructive', async () => {
     mockViewportWidth = 390;
     const onEdit = jest.fn();
     const onDelete = jest.fn();
-    await render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
+    const onPress = jest.fn();
+    await render(<PointCard point={{ ...mockPoint, tags: { articleUrl: '/travels/x' } } as any} onPress={onPress} onEdit={onEdit} onDelete={onDelete} />);
 
-    const props = mockPlaceListCard.mock.calls[mockPlaceListCard.mock.calls.length - 1][0];
-    expect(props.menuActions.map((a: any) => a.key)).toEqual(['edit', 'delete']);
-    expect(props.menuActions[1].destructive).toBe(true);
-    expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('edit');
-    expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('delete');
+    expect(mockPlaceListCard).not.toHaveBeenCalled();
+    const props = mockPlaceListRow.mock.calls.at(-1)[0];
+    expect(props.title).toBe('Test Restaurant');
+    expect(props.categoryLabel).toBe('Ресторан');
+    expect(props.subtitle).toBe('Main Street 123, Kyiv');
+    const keys = props.actions.map((a: any) => a.key);
+    expect(keys[0]).toBe('copy-coord');
+    expect(keys).toEqual(expect.arrayContaining(['google', 'share', 'article']));
+    expect(keys.slice(-2)).toEqual(['edit', 'delete']);
+    expect(props.actions.at(-1).destructive).toBe(true);
 
-    await fireEvent.press(screen.getByTestId('menu-delete'));
-    expect(onDelete).toHaveBeenCalledWith(mockPoint);
-    await fireEvent.press(screen.getByTestId('menu-edit'));
-    expect(onEdit).toHaveBeenCalledWith(mockPoint);
+    await fireEvent.press(screen.getByTestId('row-delete'));
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    await fireEvent.press(screen.getByTestId('row-edit'));
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    await fireEvent.press(screen.getByLabelText('row-main'));
+    expect(onPress).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  it('телефон (#3142): режим выбора — без «⋯», нажатие на строку переключает выбор', async () => {
+    mockViewportWidth = 390;
+    const onToggleSelect = jest.fn();
+    await render(<PointCard point={mockPoint} selectionMode selected onToggleSelect={onToggleSelect} />);
+    const props = mockPlaceListRow.mock.calls.at(-1)[0];
+    expect(props.actions).toEqual([]);
+    expect(props.selectionMode).toBe(true);
+    expect(props.selected).toBe(true);
+    await fireEvent.press(screen.getByLabelText('row-main'));
+    expect(onToggleSelect).toHaveBeenCalledWith(mockPoint);
+  });
+
+  it('телефон (#3142): у активной точки подзаголовок — время в пути', async () => {
+    mockViewportWidth = 390;
+    mockUseDriveInfoQuery.mockReturnValue({ status: 'ok', distanceKm: 12.5, durationMin: 20 });
+    await render(<PointCard point={mockPoint} active driveFrom={{ lat: 50, lng: 30 }} />);
+    expect(String(screen.getByTestId('row-subtitle').props.children)).toMatch(/12,5 км|12\.5 км/);
+  });
+
+  it('телефон (#3142): пин без карточки — каркас строки', async () => {
+    mockViewportWidth = 390;
+    const { userPointDetailsStore } = require('@/components/UserPoints/userPointDetailsStore');
+    userPointDetailsStore.setOwner('t-row');
+    userPointDetailsStore.clear();
+    const pin = { id: 778, latitude: 50.06, longitude: 19.94, color: 'blue', status: 'planning', category: 'other' } as any;
+    const utils = await render(<PointCard point={pin} />);
+    expect(utils.getByTestId('userpoints-point-card-skeleton-778', { includeHiddenElements: true })).toBeTruthy();
+    expect(mockPlaceListRow).not.toHaveBeenCalled();
   });
 
   it('passes selection action in selection mode', async () => {
@@ -296,5 +358,20 @@ describe('PointCard', () => {
       expect.objectContaining({ enabled: true, from: { lat: 50, lng: 19.9 }, to: { lat: mockPoint.latitude, lng: mockPoint.longitude } }),
     );
     expect(screen.getByText(/12,5 км|12\.5 км/)).toBeTruthy();
+  });
+
+  it('≥ 768 (#3142, #2253): каркас карточки в ячейке берёт вертикальный отступ карточки — без прыжка при загрузке', async () => {
+    mockViewportWidth = 1280;
+    const { PLACE_CARD_STYLE } = require('@/components/MapPage/AddressListItem/constants');
+    const { StyleSheet } = require('react-native');
+    const { userPointDetailsStore } = require('@/components/UserPoints/userPointDetailsStore');
+    userPointDetailsStore.setOwner('t-card');
+    userPointDetailsStore.clear();
+    const pin = { id: 779, latitude: 50.06, longitude: 19.94, color: 'blue', status: 'planning', category: 'other' } as any;
+    const utils = await render(<PointCard point={pin} />);
+    const skeleton = utils.getByTestId('userpoints-point-card-skeleton-779', { includeHiddenElements: true });
+    const flat = StyleSheet.flatten(skeleton.props.style);
+    expect(flat.marginVertical).toBe(PLACE_CARD_STYLE.margin);
+    expect(flat.marginBottom).toBeUndefined();
   });
 });

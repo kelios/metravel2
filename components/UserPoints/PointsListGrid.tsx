@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { Platform, View, ScrollView, Text as RNText } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 
-import { PHONE_LIST_IMAGE_HEIGHT } from '@/components/UserPoints/PointCard'
+import { isPhoneListWidth } from '@/components/UserPoints/pointListLayout'
 import { PointsListSkeleton, WIDE_LIST_SKELETON_IMAGE_HEIGHT } from '@/components/UserPoints/PointsListSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
@@ -320,16 +320,17 @@ export const PointsListGrid: React.FC<{
     ]
   )
 
-  // Пока первая страница не пришла — каркас карточек, не пустота и не «нет точек».
-  // Высота фото каркаса повторяет карточку (#2253: каркас ≠ карточка → прыжок при замене).
+  // Пока первая страница не пришла — каркас, не пустота и не «нет точек». Каркас
+  // повторяет то, что придёт (#2253): строки на телефоне (#3142), карточки шире.
+  const skeletonVariant = isPhoneListWidth(windowWidth) ? 'row' : 'card'
   const renderListEmpty = React.useCallback(
     () =>
       isLoading ? (
-        <PointsListSkeleton imageHeight={isWideScreen ? WIDE_LIST_SKELETON_IMAGE_HEIGHT : PHONE_LIST_IMAGE_HEIGHT} />
+        <PointsListSkeleton variant={skeletonVariant} imageHeight={WIDE_LIST_SKELETON_IMAGE_HEIGHT} />
       ) : (
         renderEmpty()
       ),
-    [isLoading, isWideScreen, renderEmpty]
+    [isLoading, renderEmpty, skeletonVariant]
   )
 
   // #3133: один виртуализированный список на web и native. Раньше web рисовал

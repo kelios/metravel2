@@ -4,6 +4,8 @@ import { Platform, StyleSheet } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import PlaceListCard from '@/components/places/PlaceListCard';
+import PlaceListRow from '@/components/places/PlaceListRow';
+import { buildCopyCoordAction, buildTelegramShareAction } from '@/components/places/placeListCardActionModel';
 import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
@@ -24,8 +26,8 @@ import { PLACE_CARD_STYLE } from '@/components/MapPage/AddressListItem/constants
 import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
-import { METRICS } from '@/constants/layout';
-import { PointSkeletonCard } from './PointsListSkeleton';
+import { PointSkeletonCard, PointSkeletonRow } from './PointsListSkeleton';
+import { isPhoneListWidth } from './pointListLayout';
 import { useUserPointDetail } from './userPointDetailsStore';
 import { useDriveInfoQuery } from './useDriveInfoQuery';
 import {
@@ -35,9 +37,6 @@ import {
   getPointSubtitle,
   getPointTitle,
 } from './userPointPresentation';
-
-/** Высота фото-полосы карточки точки в списке на телефоне (#3133). */
-export const PHONE_LIST_IMAGE_HEIGHT = 96;
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
@@ -65,6 +64,8 @@ interface PointCardProps {
 }
 
 const isWebPlatform = () => Platform.OS === 'web';
+
+const SKELETON_CARD_MARGIN = { marginVertical: PLACE_CARD_STYLE.margin };
 
 const openPointUrl = async (url: string) => {
   const opened = await openExternalUrlInNewTab(url, {
@@ -118,7 +119,9 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   // шапка и карточки рисуются в разных режимах.
   const viewportWidth = useResponsiveWidth({ clientOnly: true });
   // До гидратации ширина 0 — desktop-раскладка (как у родительского списка).
-  const isPhone = viewportWidth > 0 && viewportWidth < METRICS.breakpoints.tablet;
+  // #3142: на телефоне точка в списке — компактная строка, все действия в «⋯».
+  const isPhone = isPhoneListWidth(viewportWidth);
+  const isPhoneRow = layout === 'list' && isPhone;
 
   const title = React.useMemo(() => getPointTitle(point), [point]);
   const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title]);
@@ -141,14 +144,10 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   }, [layout, viewportWidth]);
   const imageHeight = React.useMemo(() => {
     if (layout === 'grid') return 220;
-    // #3133: на телефоне карточка в списке занимала половину экрана фотографией —
-    // одна точка на экран из 2656. Фото-полоса 96 px держит узнаваемость,
-    // а на экран помещаются 3–4 точки.
-    if (isPhone) return PHONE_LIST_IMAGE_HEIGHT;
     return isWebPlatform()
       ? Math.round(Math.max(128, Math.min(188, (cardWidth ?? getWebCardWidth(viewportWidth)) * 0.48)))
       : getNativeCardImageHeight(viewportWidth);
-  }, [cardWidth, isPhone, layout, viewportWidth]);
+  }, [cardWidth, layout, viewportWidth]);
 
   const copyCoords = React.useCallback(async () => {
     if (!coord) return;
@@ -307,11 +306,73 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     [isPhone, objectActions, selectionMode],
   );
 
+  // #3142: у строки нет ряда действий — всё в листе «⋯»: координаты, навигаторы,
+  // Telegram, страница, затем правка и удаление (destructive последним, #2101).
+  const rowActions = React.useMemo<ActionChip[]>(() => {
+    if (!isPhoneRow || selectionMode) return [];
+    const result: ActionChip[] = [];
+    if (coord) {
+      result.push(buildCopyCoordAction(() => void copyCoords()));
+      result.push(...mapActions);
+      result.push(buildTelegramShareAction(() => void openShareUrl(buildTelegramShareUrl(coord))));
+    }
+    if (relatedPageUrl) {
+      result.push({
+        key: 'article',
+        label: i18nT('map:components.UserPoints.PointCard.otkryt_stranitsu_78d815bb'),
+        icon: 'book-open',
+        onPress: () => void openPointUrl(relatedPageUrl),
+      });
+    }
+    result.push(...objectActions);
+    return result;
+  }, [coord, copyCoords, isPhoneRow, mapActions, objectActions, relatedPageUrl, selectionMode]);
+
+  // Подзаголовок строки: у активной точки — время в пути, иначе адрес.
+  const rowSubtitle = React.useMemo(() => {
+    if (driveInfo?.status === 'ok') {
+      return i18nT('map:components.UserPoints.PointCard.value1_km_value2_min_c446b117', {
+        value1: formatNumber(driveInfo.distanceKm, { maximumFractionDigits: 1 }),
+        value2: formatInteger(driveInfo.durationMin),
+      });
+    }
+    if (driveInfo?.status === 'loading') return i18nT('map:components.UserPoints.PointCard.schitayu_marshrut_7f9bef46');
+    return subtitle;
+  }, [driveInfo, subtitle]);
+
+  if (hydrating && isPhoneRow) {
+    return (
+      <PointSkeletonRow
+        testID={point?.id != null ? `userpoints-point-card-skeleton-${String(point.id)}` : undefined}
+      />
+    );
+  }
+
+  if (isPhoneRow) {
+    return (
+      <PlaceListRow
+        title={title}
+        subtitle={rowSubtitle}
+        categoryLabel={categoryLabel || undefined}
+        imageUrl={imageUrl}
+        onPress={handleCardPress}
+        actions={rowActions}
+        selectionMode={selectionMode}
+        selected={selected}
+        active={active}
+        testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
+      />
+    );
+  }
+
   if (hydrating) {
     return (
       <PointSkeletonCard
         imageHeight={imageHeight}
         width={cardWidth}
+        // Каркас заменяется карточкой в той же ячейке: внешний отступ тот же,
+        // что у карточки (`PLACE_CARD_STYLE`, горизонтальный снят `compactCard`), — без прыжка (#2253).
+        style={SKELETON_CARD_MARGIN}
         testID={point?.id != null ? `userpoints-point-card-skeleton-${String(point.id)}` : undefined}
       />
     );
