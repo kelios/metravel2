@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { QuestFinalePill, QuestStepPill } from './questWizardNavigation'
 import QuestRouteStrip from './QuestRouteStrip'
+import QuestProgressSummary from './QuestProgressSummary'
 import QuestContentText from './QuestContentText'
 import { buildQuestRouteModel, isQuestIntroActive } from './questRouteModel'
 import { resolveQuestStepNavFlags } from './questStepVisualState'
@@ -271,63 +272,6 @@ export function ActiveScrollNav({
   )
 }
 
-function QuestProgressSummary({
-  styles,
-  progress,
-  completedCount,
-  stepsCount,
-  countModel,
-  isMobile = false,
-  showBreakdown = true,
-  showCounter = true,
-}: {
-  styles: any
-  progress: number
-  completedCount: number
-  stepsCount: number
-  countModel: QuestCountModel
-  /**
-   * Включает горизонтальную компоновку; мобильный caller отдельно
-   * скрывает обе подписи флагами ниже.
-   */
-  isMobile?: boolean
-  /**
-   * #1669: на телефоне счётчик уехал в ряд действий — там после переезда редких
-   * кнопок в «Ещё» освободилось место, и полоса прогресса схлопывается до
-   * 3px-волосины вместо собственной строки в 16px текста.
-   */
-  showCounter?: boolean
-  /** Разбор «сколько обязательных/необязательных» — вторая строка текста, на телефоне лишняя. */
-  showBreakdown?: boolean
-}) {
-  return (
-    <View style={[styles.progressContainer, isMobile && styles.progressRowMobile]}>
-      <View style={[styles.progressBar, isMobile && styles.progressBarMobile]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-      </View>
-      {showCounter && (
-        <Text style={styles.progressText}>
-          {i18nT('quests:components.quests.questWizardShell.progressTasks', {
-            completed: completedCount,
-            total: stepsCount,
-          })}
-        </Text>
-      )}
-      {showBreakdown && countModel.source === 'explicit' && (
-        <Text style={styles.progressBreakdownText}>
-          {i18nT('quests:components.quests.questWizardShell.countBreakdown', {
-            total: countModel.total,
-            required: countModel.required,
-            optional: countModel.optional,
-            start: countModel.start,
-            final: countModel.final,
-          })}
-        </Text>
-      )}
-    </View>
-  )
-}
-
 export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
   const {
     colors,
@@ -449,6 +393,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         completedCount={completedCount}
         stepsCount={stepsCount}
         countModel={countModel}
+        introActive={isQuestIntroActive(allSteps, currentIndex, showFinaleOnly)}
       />
 
       <ScrollView
@@ -653,7 +598,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
   } = props
 
   const wideDesktop = screenW >= 1100
-  const introActive = isQuestIntroActive(allSteps, currentIndex, showFinaleOnly)
   // Модель содержит переведённые подписи: строим при рендере после смены языка,
   // только для телефонной ветки (< 600 px).
   const routeModel = !compactNav ? null : buildQuestRouteModel({
@@ -789,7 +733,8 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
             stepsCount={stepsCount}
             countModel={countModel}
             isMobile={headerInScreenRow}
-            showCounter={!introActive} showBreakdown={!headerInScreenRow && !introActive}
+            showBreakdown={!headerInScreenRow}
+            introActive={isQuestIntroActive(allSteps, currentIndex, showFinaleOnly)}
           />
           <QuestStepsNavigation {...props} wideDesktop={!headerInScreenRow && wideDesktop} isMobile={headerInScreenRow} />
         </React.Fragment>
