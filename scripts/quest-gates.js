@@ -20,7 +20,8 @@
  *   1. dry-run миграции (`migrate-quest-from-file.js --dry-run`);
  *   2. КАЖДЫЙ `scripts/scan-quest-*.js` с `--source=` и теми же baseline, что
  *      у `check:fast` (список берётся с диска: новый скан входит сам и падает
- *      красным, если не умеет `--source`);
+ *      красным, если не умеет `--source`); сканы прода из `PROD_ONLY_SCANS`
+ *      сюда не входят — их запускают после публикации;
  *   3. геометрия маршрута `quest-geocheck.js --route-only`: крюки (другой
  *      порядок точек между стартом и финалом короче) и бюджет длины по типу
  *      маршрута — пеший ≤4 км суммой перегонов, перегон ≤1,2 км; тропа
@@ -97,9 +98,21 @@ function scanExtraArgs() {
 /** Сканы, которым нужна сеть: с `--offline` они пропускаются, а не зеленеют молча. */
 const NETWORK_SCANS = new Set(['scan-quest-prod-drift.js'])
 
+/**
+ * Сканы опубликованного каталога, а не data-файла: читают прод, `--source` не
+ * принимают и в гейты черновика не входят — до публикации им проверять нечего.
+ * Значение — их место в конвейере. Скан попадает сюда только осознанно: без
+ * записи он идёт с `--source` и красит `quest:gates` у каждого черновика
+ * (так #3186 остановил заливку волн F3 и R3).
+ */
+const PROD_ONLY_SCANS = new Map([
+  ['scan-quest-media-gaps.js', 'после публикации партии: npm run quest:scan-media-gaps -- --quest-id=<ids>'],
+])
+
 /** Команды внешних гейтов в порядке прогона. */
 function buildCommands(source, { offline = false, routeArgs = [], scanFiles } = {}) {
-  const files = scanFiles || fs.readdirSync(SCRIPTS_DIR).filter((f) => /^scan-quest-.+\.js$/.test(f)).sort()
+  const files = (scanFiles || fs.readdirSync(SCRIPTS_DIR).filter((f) => /^scan-quest-.+\.js$/.test(f)).sort())
+    .filter((f) => !PROD_ONLY_SCANS.has(f))
   const extra = scanExtraArgs()
   const commands = [
     { name: 'migrate --dry-run', args: ['scripts/migrate-quest-from-file.js', `--source-file=${source}`, '--dry-run'] },
@@ -467,6 +480,7 @@ module.exports = {
   CLI_SPEC,
   MIN_CHECKABLE,
   MAX_FREE_TEXT,
+  PROD_ONLY_SCANS,
   answerVariants,
   buildCommands,
   checkCheckableShare,

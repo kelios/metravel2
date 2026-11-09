@@ -127,8 +127,9 @@ prose только после подтверждения») записаны в 
 3. Автор (Opus по `author-brief.md`) пишет
    `.codex-temp/quests-plan/<city>/<quest_id>-quest-data.js` и PROMPT.md обложки.
 4. `npm run quest:gates -- --source=<черновик>` — выход 0 (dry-run миграции,
-   все `scan-quest-*`, маршрут, источники РБ, самоутечка, доля проверяемых,
-   короткие ответы, alias города).
+   все `scan-quest-*` по черновику, маршрут, источники РБ, самоутечка, доля
+   проверяемых, короткие ответы, alias города; сканы прода из
+   `PROD_ONLY_SCANS` — шаг 10).
 5. `node scripts/quest-geocheck.js --source-file=<черновик> --quest-id=<id>` —
    разобрать WARN/FAIL (скилл `metravel-quest-geocheck`).
 6. Ревью оркестратора по `questions.md` и **итоговая оценка по

@@ -10,6 +10,7 @@ const fs = require('fs')
 const path = require('path')
 
 const {
+  PROD_ONLY_SCANS,
   answerVariants,
   buildCommands,
   checkCheckableShare,
@@ -237,12 +238,26 @@ describe('buildCommands — состав внешних гейтов', () => {
   const src = '.codex-temp/quests-plan/x/x-quest-data.js'
 
   it('каждый scan-quest-*.js с диска идёт с --source и тем же baseline, что у check:fast', () => {
-    const scans = fs.readdirSync(path.join(process.cwd(), 'scripts')).filter((f: string) => /^scan-quest-.+\.js$/.test(f))
+    const scriptsDir = path.join(process.cwd(), 'scripts')
+    const scans = fs.readdirSync(scriptsDir).filter((f: string) => /^scan-quest-.+\.js$/.test(f))
     const commands = buildCommands(src)
+    // Объявление флага в CLI_SPEC (`source: { type: 'string' }`), а не любое слово
+    // `source:` / `--source`: у media-gaps есть `source: args.apiUrl` в JSON-выводе.
+    const declaresSource = (file: string) =>
+      /['"]?source['"]?\s*:\s*\{\s*type\s*:/.test(fs.readFileSync(path.join(scriptsDir, file), 'utf8'))
     for (const file of scans) {
       const cmd = commands.find((c: { name: string }) => c.name === file.replace(/\.js$/, ''))
+      if (PROD_ONLY_SCANS.has(file)) {
+        expect(cmd).toBeUndefined()
+        // Научился `--source` — запись в карте устарела и прячет скан от гейта.
+        expect({ file, declaresSource: declaresSource(file) }).toEqual({ file, declaresSource: false })
+        continue
+      }
       expect(cmd?.args).toContain(`--source=${src}`)
+      // Гейт передаёт флаг — скан обязан его объявить, иначе exit 2 у каждого черновика (#3186).
+      expect({ file, declaresSource: declaresSource(file) }).toEqual({ file, declaresSource: true })
     }
+    for (const file of PROD_ONLY_SCANS.keys()) expect(scans).toContain(file)
     const hint = commands.find((c: { name: string }) => c.name === 'scan-quest-hint-leak')
     expect(hint.args).toContain('--baseline=scripts/quest-hint-leak-baseline.json')
     const names = commands.map((c: { name: string }) => c.name)
