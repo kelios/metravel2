@@ -336,3 +336,139 @@ describe('ai-train rag_answers edition 5 (#2751)', () => {
     }
   });
 });
+
+describe('ai-train rag_answers edition 6 (#2751 v6)', () => {
+  let home: string;
+  let rows: Record<string, any>[];
+  const lang = (r: Record<string, any>) => r.id.split(':').at(-2);
+
+  beforeAll(() => {
+    home = makeTempDir('ai-train-rag6-');
+    const raw = path.join(home, 'data', 'raw');
+    fs.mkdirSync(raw, { recursive: true });
+    writeJsonl(path.join(raw, 'travels.jsonl'), [
+      { ...travel(1, 'Краков: путеводитель по местам', 'Краков', 'Польша'), description: '<p>Привет! Мы — Юля и Сергей из metravel.by. Дальше про Краков.</p>' },
+      { ...travel(2, 'Окрестности Кракова за выходные', 'Величка', 'Польша'), description: '<p>Соляная шахта и замок за один день из Кракова. Второе предложение.</p>' },
+      travel(3, 'Татры: поход к Морскому оку', 'Закопане', 'Польша'),
+      travel(4, 'Минск за выходные: путеводитель', 'Минск', 'Беларусь'),
+    ]);
+    writeJsonl(path.join(raw, 'quests.jsonl'), [
+      quest('krakow-dragon', 'Квест по Кракову: Вавельский дракон', 'Краков', 'krakow', 120),
+      quest('krakow-kazimierz', 'Квест по Кракову: Казимеж', 'Краков', 'krakow', 60, 'medium'),
+      quest('krakow-huta', 'Квест по Кракову: Нова-Хута', 'Краков', 'krakow', 90),
+      quest('minsk-cmok', 'Квест по Минску: цмок', 'Минск', 'minsk', 45),
+    ]);
+    const tr = path.join(home, 'data', 'sources', 'site_translations');
+    fs.mkdirSync(tr, { recursive: true });
+    writeJsonl(path.join(tr, 'quests.jsonl'), [
+      { quest_id: 'krakow-dragon', content_locale: 'pl', title: 'Quest po Krakowie: Smok Wawelski' },
+      { quest_id: 'krakow-kazimierz', content_locale: 'pl', title: 'Quest po Krakowie: Kazimierz' },
+      { quest_id: 'krakow-huta', content_locale: 'pl', title: 'Quest po Krakowie: Nowa Huta' },
+    ]);
+    const mixFile = path.join(home, 'rag6.json');
+    fs.writeFileSync(mixFile, JSON.stringify({
+      name: 'rag6', split: { by: 'key', valid_share: 0, test_share: 0 },
+      sets: { rag_answers: { options: { edition: 6, per_place: 1, page_travels: 10, page_quests: 10 } } },
+    }));
+    const run = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', path.join(home, 'out')]);
+    expect(run.stderr).toContain('"mix": "rag6"');
+    expect(run.status).toBe(0);
+    rows = readJsonl(path.join(home, 'data', 'sets', 'rag_answers', 'train.jsonl'));
+  });
+  afterAll(() => removeDir(home));
+
+  it('ровно один квест до N минут — одна ссылка на единственную подходящую карточку с её длительностью, на языке вопроса', () => {
+    const one = rows.filter((r) => r.kind === 'exact_one');
+    expect(new Set(one.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    for (const r of one) {
+      const user: string = r.messages[1].content;
+      const answer: string = r.messages[2].content;
+      const limit = Number(user.split('Вопрос посетителя:')[1].match(/(\d+) (?:минут|хвілін|хвилин|minut|minutes)/)![1]);
+      const urls = answer.match(URL_RE)!;
+      expect(urls).toHaveLength(1);
+      const duration = Number(answer.match(/(\d+) (?:мин|хв|min)(?!\p{L})/u)![1]);
+      // «до / короче / under N минут»: strictly below the limit, so every phrasing holds
+      expect(duration).toBeLessThan(limit);
+      expect(user).toContain(`— ${urls[0]}\nГородской квест`);
+      expect(user).toContain(`Длительность: ${duration} мин`);
+      // the other quest cards of the same place are longer than the limit: only one card of the place fits
+      const place = r.id.split(':')[1];
+      const fitting = user.split('Вопрос посетителя:')[0].split('\n\n').filter((block) => {
+        const duration = block.match(/Длительность: (\d+) мин/);
+        // the place is a city («по городу Краков») or a country («(Польша)»)
+        return duration && Number(duration[1]) <= limit && (block.includes(`по городу ${place}`) || block.includes(`(${place})`));
+      });
+      expect(fitting).toHaveLength(1);
+      expect(answer).not.toMatch(/списке источников|liście źródeł|списку джерел|sources list|спісе крыніц/);
+      if (lang(r) === 'pl') expect(answer).toMatch(/quest miejski: punktów — \d+, ok\. \d+ min/);
+    }
+    const article = rows.filter((r) => r.kind === 'one_article');
+    expect(article.length).toBeGreaterThan(0);
+    for (const r of article) {
+      expect(r.messages[2].content.match(URL_RE)).toEqual([expect.stringContaining('/travels/')]);
+    }
+  });
+
+  it('вопрос о текущей странице — карточка страницы первой среди не более трёх, ответ только о ней и из её фрагмента', () => {
+    const pages = rows.filter((r) => r.kind === 'page');
+    expect(pages.length).toBeGreaterThan(5);
+    expect(pages.some((r) => r.messages[2].content.includes('/travels/'))).toBe(true);
+    expect(pages.some((r) => lang(r) !== 'ru')).toBe(true);
+    for (const r of pages) {
+      const user: string = r.messages[1].content;
+      const answer: string = r.messages[2].content;
+      const urls = answer.match(URL_RE)!;
+      expect(urls).toHaveLength(1);
+      expect(user).toContain(`[1] ${urls[0].includes('/quests/') ? 'Квест' : 'Статья'} «`);
+      expect(user.split('\n[1] ')[1].split('\n')[0]).toContain(`— ${urls[0]}`);
+      expect((user.match(/\n\[\d\] /g) ?? []).length).toBeLessThanOrEqual(3);
+      expect(r.key).toBe(`page:${urls[0]}`);
+      const duration = answer.match(/(\d+) (?:мин|хв|min)(?!\p{L})/u);
+      if (duration) expect(user).toContain(`Длительность: ${duration[1]} мин`);
+      // the authors' greeting is not a description of the trip
+      expect(answer).not.toMatch(/Привет|Юля и Сергей/);
+    }
+    const velichka = pages.find((r) => r.messages[2].content.includes('/travels/travel-2'));
+    expect(velichka?.messages[2].content).toContain('Соляная шахта и замок за один день из Кракова');
+  });
+
+  it('блёрб пункта — только то, что видно в его карточке после ужатия фрагментов', () => {
+    let tails = 0;
+    for (const r of rows.filter((row) => row.kind !== 'page')) {
+      const user: string = r.messages.at(-2).content;
+      for (const line of (r.messages.at(-1).content as string).split('\n')) {
+        const m = line.match(/\]\((https?:\/\/[^\s)]+)\) — (.+)$/);
+        if (!m) continue;
+        tails += 1;
+        const block = (user.split(`— ${m[1]}\n`)[1] ?? '').split('\n\n')[0];
+        if (m[1].includes('/quests/')) {
+          const [points, duration] = m[2].match(/\d+/g) ?? [];
+          if (points) expect(block).toContain(`Точек: ${points}`);
+          if (duration) expect(block).toContain(`Длительность: ${duration} мин`);
+        } else {
+          expect(block).toContain(m[2].replace(/\.$/, ''));
+        }
+      }
+    }
+    expect(tails).toBeGreaterThan(0);
+  });
+
+  it('пограничные темы поездки — «материала нет» с ближайшей карточкой, не отказ; естественные не-RU формулировки с блёрбом на языке ответа', () => {
+    const topics = rows.filter((r) => r.kind === 'topic');
+    expect(new Set(topics.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    expect(topics.length).toBeGreaterThan(40);
+    for (const r of topics) {
+      expect(r.messages[2].content).not.toBe(PROMPT.offtopic_reply[lang(r)]);
+      // a general topic → the one nearest card; a city topic («где поесть в X») → the city's cards, ≤ 2
+      expect(r.messages[2].content.match(URL_RE)!.length).toBeLessThanOrEqual(r.key.startsWith('topic:') ? 1 : 2);
+    }
+    expect(topics.filter((r) => r.key.startsWith('topic:')).length).toBeGreaterThan(30);
+    const natural = rows.filter((r) => r.kind === 'pick' && lang(r) === 'uk');
+    expect(natural.some((r) => /за два дні\?|за один день\?|на вихідних\?/.test(r.messages[1].content))).toBe(true);
+    const plQuests = rows.filter((r) => r.kind === 'quests' && lang(r) === 'pl');
+    expect(plQuests.length).toBeGreaterThan(0);
+    for (const r of plQuests) expect(r.messages[2].content).toMatch(/quest miejski: punktów — \d+, ok\. \d+ min/);
+    const kids = rows.filter((r) => r.kind === 'kids' && lang(r) !== 'ru');
+    for (const r of kids) expect(r.messages[2].content).toMatch(/Karty nie podają|cards do not state|не пазначаны|не вказано/);
+  });
+});

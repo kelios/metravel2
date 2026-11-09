@@ -126,6 +126,16 @@
       "autoPort": false
     },
     {
+      "name": "Assistant Eval LlamaCpp Web 8081",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_PROVIDER=llamacpp EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8081"
+      ],
+      "port": 8081,
+      "autoPort": false
+    },
+    {
       "name": "Assistant 2460 FlagOff Web 8082",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

@@ -37,10 +37,27 @@ Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
                 language from the site_translations cache (the screen's BE/UK/PL/EN cards
                 carry translated titles; v3 wrote «Квест po Krakowie»).
 
+Edition 6 (#2751 v6, 08.11.2026) — from the v5-rag acceptance misses (01.11.2026):
+* topic       — back (edition 5 dropped it for `boundary_*`): on the screen a borderline
+                question («какую крупу брать в поход») arrives with unrelated cards and v5-rag
+                refused it as off-topic; TOPICS6 adds natural RU/EN/BE/UK/PL phrasings
+                (food, gear, packing, budget, first aid, clothes, transport, kids on the road);
+* exact_one   — «ровно один / только один квест {loc} до N минут» → one item with its
+                duration from the card (v5-rag listed two for «ровно один» and skipped the
+                duration); one_article — «одна статья {dat}, без квестов» → one article;
+* page        — the question is about the page the visitor opened (#2897: that card comes
+                first among ≤ 3): «о чём эта статья», «сколько точек и сколько длится этот
+                квест», «подойдёт ли ребёнку» → the answer about card [1] only, facts from
+                its snippet, one link;
+* other languages — natural phrasings next to the compact ones («Што паглядзець {loc} за
+                два дні?»), and every item carries the quest blurb in the answer language
+                (compact title-only lists read as Russian when the titles are Russian).
+
 Options (mixes/*.yaml → sets.rag_answers.options):
   per_place  — samples per place and kind (default 2);
   other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35, edition 3);
-  edition    — 3 (default), 4, or 5 (compact locale-balanced #2751 continuation).
+  edition    — 3 (default), 4, 5 (compact locale-balanced #2751 continuation) or 6 (v6);
+  page_travels, page_quests — pages sampled for the `page` kind (edition 6; default 60 / 80).
 """
 from __future__ import annotations
 
@@ -297,6 +314,100 @@ COMPACT_ASK = {
     "en": {"pick": "Suggest a few materials for a visit {loc}.", "quests": "Choose up to three city quests {loc}.", "kids": "We are choosing a walk with a child {loc}. Which materials are available?"},
 }
 
+# ----------------------------------------------------------------------------- edition 6 (#2751 v6)
+# Natural phrasings the way visitors type them. Some share the contour's wording with another
+# city (as ASK_RU/ASK_L10N do); the contour's own questions are skipped by is_contour_question.
+ASK_L10N6 = {
+    "be": {"pick": ("Што паглядзець {loc} за два дні?", "Што паглядзець {loc} за адзін дзень?", "Куды схадзіць {loc} на выходныя?"),
+           "quests": ("Якія квэсты ёсць {loc}?", "Парай квэст {loc}."), "kids": ("Куды схадзіць з дзецьмі {loc}?", "Ці ёсць квэст {loc} для дзяцей?")},
+    "uk": {"pick": ("Що подивитися {loc} за два дні?", "Що подивитися {loc} за один день?", "Куди сходити {loc} на вихідних?"),
+           "quests": ("Які квести є {loc}?", "Порадь квест {loc}."), "kids": ("Куди піти з дітьми {loc}?", "Чи є квест {loc} для дітей?")},
+    "pl": {"pick": ("Co zobaczyć {loc} w dwa dni?", "Co zobaczyć {loc} w jeden dzień?", "Dokąd się wybrać {loc} na weekend?"),
+           "quests": ("Jakie questy są {loc}?", "Poleć quest {loc}."), "kids": ("Gdzie iść z dziećmi {loc}?", "Czy jest quest {loc} dla dzieci?")},
+    "en": {"pick": ("What to see {loc} in two days?", "What to see {loc} in one day?", "Where to go {loc} for a weekend?"),
+           "quests": ("What quests are there {loc}?", "Recommend a quest {loc}."), "kids": ("Where to go with kids {loc}?", "Are there any quests {loc} for kids?")},
+}
+# Borderline travel topics without an article: the screen hands these over with whatever
+# unrelated cards lexical search found, and the answer must stay «material is missing + the
+# nearest card», never the off-topic refusal. Topic is the split key, as in edition 4.
+TOPICS6 = {
+    "ru": (
+        ("hike-food", "Какие продукты брать в двухдневный поход?", "о походной еде"),
+        ("hike-food", "Что приготовить на костре в походе, чтобы было сытно?", "о еде в походе"),
+        ("hike-food", "Чем питаться на тропе, если идём с палаткой на три дня?", "о питании в походе"),
+        ("hike-gear", "Какие ботинки и рюкзак выбрать для похода в горы?", "о снаряжении для похода"),
+        ("hike-gear", "Что обязательно положить в рюкзак на однодневный трекинг?", "о снаряжении для трекинга"),
+        ("packing", "Как собрать чемодан на три дня, чтобы взять только нужное?", "о сборах в поездку"),
+        ("packing", "Что брать с собой в короткую поездку, чтобы ехать налегке?", "о сборах налегке"),
+        ("travel-hacks", "Какие хитрости помогают путешествовать дешевле?", "о лайфхаках для путешествий"),
+        ("travel-hacks", "Как спланировать поездку на пару дней без лишних трат?", "о планировании недорогой поездки"),
+        ("trip-budget", "Сколько денег закладывать на поездку по Беларуси на выходные?", "о бюджете поездки"),
+        ("trip-budget", "На чём можно сэкономить в автопутешествии?", "об экономии в автопутешествии"),
+        ("first-aid", "Что взять в дорожную аптечку на неделю?", "об аптечке в дорогу"),
+        ("clothes", "Какую одежду брать в поездку осенью?", "об одежде в поездку"),
+        ("transport", "Что удобнее для поездки по Польше — поезд или машина?", "о транспорте в поездке"),
+        ("sleep", "Где лучше ночевать в походе — в палатке или в агроусадьбе?", "о ночёвке в походе"),
+        ("kids-trip", "Как развлечь ребёнка в долгой дороге на машине?", "о долгой дороге с ребёнком"),
+    ),
+    "en": (
+        ("hike-food", "What food is worth carrying on a two-day hike?", "about hiking food"),
+        ("hike-food", "What should I eat on the trail when camping for a few nights?", "about trail food"),
+        ("hike-gear", "Which boots and backpack suit a mountain hike?", "about hiking gear"),
+        ("packing", "How do I fit everything for three days into a carry-on?", "about packing for a short trip"),
+        ("packing", "What is the minimum to bring for a two-day city trip?", "about travelling light"),
+        ("travel-hacks", "Which tricks make a short trip cheaper and smoother?", "about travel tips"),
+        ("travel-hacks", "How do I plan a two-day getaway without overspending?", "about planning a cheap getaway"),
+        ("trip-budget", "How much money should I budget for a weekend in Poland?", "about a trip budget"),
+        ("first-aid", "What belongs in a travel first-aid kit?", "about a travel first-aid kit"),
+        ("clothes", "What clothes should I pack for a spring trip to Belarus?", "about clothes for a trip"),
+    ),
+    "be": (("hike-food", "Якія прадукты браць у двухдзённы паход?", "пра ежу ў паход"), ("packing", "Як сабрацца ў кароткую паездку налегцы?", "пра зборы ў паездку")),
+    "uk": (("hike-food", "Які продукти брати у дводенний похід?", "про їжу в похід"), ("packing", "Як зібратися в коротку поїздку без зайвого багажу?", "про збори в поїздку")),
+    "pl": (("hike-food", "Jakie jedzenie zabrać na dwudniową wędrówkę?", "o jedzeniu na wędrówkę"), ("packing", "Jak spakować się na krótki wyjazd z małym plecakiem?", "o pakowaniu na krótki wyjazd")),
+}
+EXACT_ONE_ASK = {
+    "ru": ("Выбери один квест {loc} до {limit} минут — только один вариант, и скажи, сколько он идёт.",
+           "Посоветуй только один квест {loc}, чтобы уложиться в {limit} минут.",
+           "Какой один квест {loc} можно пройти за {limit} минут? Укажи его длительность.",
+           "Мне нужен единственный вариант квеста {loc} короче {limit} минут, с длительностью."),
+    "be": ("Патрэбны роўна адзін квэст {loc} не даўжэй за {limit} хвілін. Назаві яго і працягласць.",),
+    "uk": ("Потрібен рівно один квест {loc} до {limit} хвилин. Назви його і тривалість.",),
+    "pl": ("Potrzebuję dokładnie jednego questu {loc}, nie dłuższego niż {limit} minut. Podaj nazwę i czas.",),
+    "en": ("I need exactly one quest {loc} that takes under {limit} minutes. Name it and give its duration.",),
+}
+EXACT_ONE_INTRO = {"ru": ("Подойдёт ровно один вариант:", "Если нужен один квест — вот он:"), "be": ("Падыдзе адзін варыянт:",),
+                   "uk": ("Підійде один варіант:",), "pl": ("Pasuje jeden wariant:",), "en": ("One option fits:",)}
+DURATION_LIMITS = (45, 60, 90, 120, 150, 180, 240, 300)
+ONE_ARTICLE_ASK_RU = ("Дай одну статью {dat}, только статью, без квестов.", "Нужна ровно одна статья {dat} — какую выбрать?")
+PAGE_ASK_TRAVEL_RU = ("О чём эта статья?", "Расскажи коротко, про что этот маршрут.", "Где проходит эта поездка?", "Что это за поездка, в двух словах?")
+PAGE_ASK_QUEST = {
+    "ru": {"facts": ("Сколько точек в этом квесте и сколько он длится?", "Сколько времени занимает этот квест?", "Какой этот маршрут по точкам и времени?"),
+           "difficulty": ("Какая сложность у этого квеста?", "Этот квест сложный?"),
+           "kids": ("Этот квест подойдёт ребёнку?", "Можно ли пройти этот квест с детьми?")},
+    "be": {"facts": ("Колькі пунктаў у гэтым квэсце і колькі ён доўжыцца?",), "kids": ("Ці падыдзе гэты квэст дзіцяці?",)},
+    "uk": {"facts": ("Скільки точок у цьому квесті і скільки він триває?",), "kids": ("Чи підійде цей квест дитині?",)},
+    "pl": {"facts": ("Ile punktów ma ten quest i ile trwa?",), "kids": ("Czy ten quest nadaje się dla dziecka?",)},
+    "en": {"facts": ("How many stops does this quest have and how long does it take?",), "kids": ("Is this quest suitable for a child?",)},
+}
+PAGE_FACTS = {
+    "ru": "В квесте [{title}]({url}) {points} {points_word}, около {duration} мин.",
+    "be": "У квэсце [{title}]({url}) пунктаў — {points}, каля {duration} хв.",
+    "uk": "У квесті [{title}]({url}) точок — {points}, близько {duration} хв.",
+    "pl": "Quest [{title}]({url}) ma {points} punktów i trwa ok. {duration} min.",
+    "en": "The quest [{title}]({url}) has {points} stops and takes about {duration} min.",
+}
+PAGE_DIFFICULTY_RU = "Сложность квеста [{title}]({url}) по карточке — {difficulty}; {points} {points_word}, около {duration} мин."
+PAGE_KIDS = {
+    "ru": "Возрастные ограничения в карточке не указаны: [{title}]({url}) — городской квест, {points} {points_word}, около {duration} мин. Сколько лет ребёнку?",
+    "be": "У картцы не пазначаны ўзроставыя абмежаванні: [{title}]({url}) — гарадскі квэст, пунктаў — {points}, каля {duration} хв. Колькі гадоў дзіцяці?",
+    "uk": "У картці не вказано вікові обмеження: [{title}]({url}) — міський квест, точок — {points}, близько {duration} хв. Скільки років дитині?",
+    "pl": "Karta nie podaje ograniczeń wiekowych: [{title}]({url}) — quest miejski, punktów — {points}, ok. {duration} min. Ile lat ma dziecko?",
+    "en": "The card does not state age suitability: [{title}]({url}) is a city quest with {points} stops, about {duration} min. How old is the child?",
+}
+PAGE_TRAVEL_RU = ("Статья [{title}]({url}) — о поездке: {place}. {blurb}.", "Это [{title}]({url}): {place}. {blurb}.")
+PAGE_SKIP_RE = re.compile(r"привет|здравствуй|юля и сергей|metravel|подписыва", re.I)
+PAGE_TRAVEL_PLACE_RU = ("Статья [{title}]({url}) — о поездке: {place}.", "Это [{title}]({url}) — маршрут: {place}.")
+
 
 def ru_plural(n: int, one: str, few: str, many: str) -> str:
     if n % 10 == 1 and n % 100 != 11:
@@ -333,7 +444,9 @@ def travel_card(t: dict) -> dict:
     snippet = ". ".join(p for p in (place, body) if p)
     blurb = first_sentence(html_to_text(t.get("meta_description")) or body)
     title = (t.get("name") or t.get("title") or "").strip()
-    return {"type": "travel", "title": title, "url": f"{SITE}/travels/{t['slug']}", "snippet": snippet,
+    # `place` and `body` are what the card itself shows (edition 6 `page` answers use only them;
+    # `blurb` may come from meta_description, which the visitor's card does not carry).
+    return {"type": "travel", "title": title, "url": f"{SITE}/travels/{t['slug']}", "snippet": snippet, "place": place, "body": body,
             "blurb": blurb, "country": t.get("countryName") or "", "haystack": f"{title} {t.get('cityName') or ''} {t.get('countryName') or ''}".lower()}
 
 
@@ -375,9 +488,10 @@ def blurb(card: dict, lang: str) -> str:
     return card["blurb"] if lang == "ru" else ""
 
 
-def item_line(card: dict, lang: str) -> str:
+def item_line(card: dict, lang: str, short: bool = False) -> str:
     tail = blurb(card, lang)
-    return f"- [{card['title']}]({card['url']})" + (f" — {tail}" if tail else "")
+    title = short_title(card["title"]) if short else card["title"]
+    return f"- [{title}]({card['url']})" + (f" — {tail}" if tail else "")
 
 
 def cap(s: str) -> str:
@@ -393,14 +507,16 @@ def short_title(title: str) -> str:
     return title if len(title) <= 64 else title[:61].rsplit(" ", 1)[0] + "…"
 
 
-def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compact: bool = False) -> str:
+def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compact: bool = False, short: bool = False, outro: bool = True) -> str:
     def compact_line(card: dict) -> str:
         # Keep the source identity and URL; stop long translated titles from
         # consuming the app's 400-token generation budget. No unobserved meta text.
         return f"- [{short_title(card['title'])}]({card['url']})"
-    lines = [intro] + [(compact_line(c) if compact else item_line(c, lang)) for c in picks[:3]]
-    outro = "" if compact else rng.choice(OUTRO[lang])
-    text = "\n".join(lines) + (f"\n\n{outro}" if outro else "")
+    # Edition 6: short titles as in compact lines, but with the quest blurb in the answer
+    # language — a title-only list of Russian titles reads as a Russian answer.
+    lines = ([intro] if intro else []) + [(compact_line(c) if compact else item_line(c, lang, short)) for c in picks[:3]]
+    tail = rng.choice(OUTRO[lang]) if outro and not compact else ""
+    text = "\n".join(lines) + (f"\n\n{tail}" if tail else "")
     if len(text) > max_answer_chars():
         raise ValueError("answer longer than the prompt allows")
     return text
@@ -453,8 +569,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
     edition = int(options.get("edition", 3))
-    if edition not in (3, 4, 5):
-        raise ValueError("rag_answers edition must be 3, 4, or 5")
+    if edition not in (3, 4, 5, 6):
+        raise ValueError("rag_answers edition must be 3, 4, 5 or 6")
     titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
@@ -470,7 +586,14 @@ def build(ctx: dict, options: dict) -> list[dict]:
         history = [{**message, "content": sanitize_fragment(message["content"], 1200)} for message in history or []]
         # The training budget (assistant_prompt.fit_sources) drops unrelated cards and shortens snippets.
         budget = SAMPLE_CHARS_BUDGET - sum(len(m["content"]) for m in history or [])
-        user = fit_sources(question, [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards], answer, lang, budget=budget)
+        sources = [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards]
+        user = fit_sources(question, sources, answer, lang, budget=budget)
+        if edition >= 6 and user is not None and not required_evidence:
+            # Short snippets can lose «Длительность» or the article's first sentence; the answer
+            # then names the item without a fact the model cannot see.
+            seen = _observed_only(answer, user, cards)
+            if seen != answer:
+                answer, user = seen, fit_sources(question, sources, seen, lang, budget=budget)
         if user is None or (required_evidence and sanitize_fragment(required_evidence) not in user):
             return
         item = record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
@@ -481,8 +604,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
 
     def render(intro: str, picks: list[dict], lang: str, kind: str = "") -> str:
         if edition >= 5 and kind == "kids":
-            return compose(KIDS_INTRO[lang], picks[:2], lang, rng, compact=True) + "\n" + KIDS_UNKNOWN[lang]
-        return compose(intro, picks, lang, rng, compact=edition >= 5)
+            return compose(KIDS_INTRO[lang], picks[:2], lang, rng, compact=edition == 5, short=True, outro=False) + "\n" + KIDS_UNKNOWN[lang]
+        return compose(intro, picks, lang, rng, compact=edition == 5, short=edition >= 6)
 
     for name, loc, dat, pattern in PLACES_RU:
         rx = re.compile(pattern, re.I)
@@ -545,7 +668,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 # «Какие квесты есть?» is not asked here: the three picks mix articles and quests.
                 q = rng.choice(ASK_RU["pick"]).format(days=rng.choice(DAYS), **fill)
                 emit("many", name, lang, q, cards, render(rng.choice(MANY_INTRO_RU).format(**fill), picks, lang), n)
-            if edition == 4 and ranked:
+            if edition in (4, 6) and ranked:
                 template, about = rng.choice(CITY_TOPICS_RU)
                 cards = mixed_cards(ranked, pool, rng)
                 picks = [c for c in ranked if c in cards][:2]
@@ -570,6 +693,10 @@ def build(ctx: dict, options: dict) -> list[dict]:
                         intro = fix(cap(INTRO_L10N[lang][kind].format(**l10n)))
                         question = (COMPACT_ASK[lang][kind] if edition >= 5 else rng.choice(ASK_L10N[lang][kind])).format(**l10n)
                         emit(kind, name, lang, fix(question), cards, render(intro, picks, lang, kind), n)
+                        if edition >= 6:
+                            # The natural phrasing next to the compact one, same cards and picks.
+                            natural = rng.choice(ASK_L10N6[lang][kind]).format(**l10n)
+                            emit(kind, name, lang, fix(natural), cards, render(intro, picks, lang, kind), per_place + n)
                         if edition >= 5 and kind == "quests" and len(rel_quests) >= 5:
                             many_cards = [localize(c, lang, titles) for c in rel_quests[:MAX_CARDS]]
                             rng.shuffle(many_cards)
@@ -591,9 +718,10 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 answer = rng.choice(NO_MATERIAL_RU).format(about=about, title=nearest["title"], url=nearest["url"], blurb=tail)
             emit("no_material", name, "ru", q, cards, answer, n)
 
-    if edition == 4:
+    if edition in (4, 6):
         outdoor = [c for c in everything if OUTDOOR_RE.search(c["title"])]
-        for lang, topics in TOPICS.items():
+        topics_by_lang = {lang: tuple(TOPICS[lang]) + (tuple(TOPICS6.get(lang, ())) if edition >= 6 else ()) for lang in TOPICS}
+        for lang, topics in topics_by_lang.items():
             for i, (topic, question, about) in enumerate(topics):
                 for n in range(per_place):
                     cards = [localize(c, lang, titles) for c in rng.sample(everything, rng.randint(1, 4))]
@@ -607,7 +735,107 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     emit("topic", f"topic:{lang}:{i}", lang, question, cards, answer, n, key=f"topic:{topic}")
     if edition >= 5:
         _emit_boundary(emit, everything, titles, rng, per_place)
+    if edition >= 6:
+        _emit_exact_one(emit, travels, quests, titles, rng)
+        _emit_page(emit, travels, quests, titles, rng,
+                   int(options.get("page_travels", 60)), int(options.get("page_quests", 80)))
     return out
+
+
+def _observed_only(answer: str, user: str, cards: list[dict]) -> str:
+    """Edition 6: drop an item's « — blurb» when the fitted user message no longer shows it in that
+    card (quest points/duration, the article's sentence). A shorter answer only lengthens snippets
+    on the second fit_sources pass, so the kept blurbs stay visible."""
+    lines = answer.split("\n")
+    for i, line in enumerate(lines):
+        for card in cards:
+            marker = f"]({card['url']}) — "
+            if marker not in line:
+                continue
+            head, tail = line.split(marker, 1)
+            block = user.split(f"— {card['url']}\n", 1)[1].split("\n\n", 1)[0] if f"— {card['url']}\n" in user else ""
+            if card["type"] == "quest":
+                facts = (f"Точек: {card['points']}", f"Длительность: {card['duration']} мин") if re.search(r"\d", tail) else ()
+                visible = all(fact in block for fact in facts)
+            else:
+                visible = sanitize_fragment(tail.rstrip(".")) in block
+            if not visible:
+                lines[i] = f"{head}]({card['url']})" + ("." if tail.endswith(".") else "")
+            break
+    return "\n".join(lines)
+
+
+def _emit_exact_one(emit, travels: list[dict], quests: list[dict], titles: dict, rng: random.Random) -> None:
+    """«Ровно один квест {loc} до N минут» → the one card under the limit, with its duration;
+    «одна статья {dat}» → one article. v5-rag answered «ровно один» with two items and no
+    duration (quality q01/q03/q08/q09, 01.11.2026). The limit is the next step of
+    DURATION_LIMITS above the chosen quest; the other quest cards of the place are longer than
+    it, so exactly one card satisfies the question."""
+    for name, loc, dat, pattern in PLACES_RU:
+        rx = re.compile(pattern, re.I)
+        rel_quests = [c for c in quests if rx.search(c["haystack"]) and c["duration"] and c["points"]]
+        rel_travels = best_travels([c for c in travels if rx.search(c["haystack"])], rx)
+        others = [c for c in travels + quests if not rx.search(c["haystack"])]
+        if rel_quests:
+            chosen = rng.choice(rel_quests)
+            limit = next((step for step in DURATION_LIMITS if step > chosen["duration"]), None)
+            if limit is not None:
+                longer = [c for c in rel_quests if c["duration"] > limit]
+                languages = ("ru",) + (("be", "uk", "pl", "en") if name in PLACES_L10N else ())
+                for lang in languages:
+                    cards = [chosen] + rng.sample(longer, min(len(longer), 3)) + rng.sample(others, min(len(others), rng.randint(1, 2)))
+                    cards = [localize(c, lang, titles) for c in cards]
+                    rng.shuffle(cards)
+                    loc_l = loc if lang == "ru" else PLACES_L10N[name][lang]
+                    fix = be_fix if lang == "be" else (lambda text: text)
+                    question = fix(rng.choice(EXACT_ONE_ASK[lang]).format(loc=loc_l, limit=limit))
+                    answer = compose(rng.choice(EXACT_ONE_INTRO[lang]), [localize(chosen, lang, titles)], lang, rng, short=True, outro=False)
+                    emit("exact_one", name, lang, question, cards, answer, 0, required_evidence=f"Длительность: {chosen['duration']} мин")
+        if len(rel_travels) >= 2:
+            cards = rel_travels[:3] + [c for c in quests if rx.search(c["haystack"])][:2]
+            rng.shuffle(cards)
+            question = rng.choice(ONE_ARTICLE_ASK_RU).format(dat=dat)
+            emit("one_article", name, "ru", question, cards, compose("Если нужна одна статья — это:", rel_travels[:1], "ru", rng, short=True, outro=False), 0)
+
+
+def _emit_page(emit, travels: list[dict], quests: list[dict], titles: dict, rng: random.Random, n_travels: int, n_quests: int) -> None:
+    """The visitor opened an article or a quest and asks about *this* page (#2897): the page's card
+    comes first among at most three (sourceRef.pinSourceFirst, AI_SOURCES_LIMIT_PINNED). The answer
+    is about card [1] alone: its facts from the snippet, its link, nothing from the neighbours."""
+    def pin(card: dict, lang: str) -> list[dict]:
+        pool = [c for c in travels + quests if c["url"] != card["url"]]
+        return [localize(c, lang, titles) for c in [card] + rng.sample(pool, min(len(pool), rng.randint(0, 2)))]
+
+    for card in rng.sample(travels, min(n_travels, len(travels))):
+        if not card["place"]:
+            continue
+        sentence = first_sentence(card["body"])
+        fill = {"title": short_title(card["title"]), "url": card["url"], "place": card["place"], "blurb": sentence.rstrip("!?")}
+        if (sentence != TRAVEL_BLURB_FALLBACK and sentence in card["snippet"] and not PAGE_SKIP_RE.search(sentence)
+                and sentence.count("«") == sentence.count("»")):  # «О чём молчат храмы. → cut inside a quote
+            answer, evidence = rng.choice(PAGE_TRAVEL_RU).format(**fill), sentence
+        else:
+            answer, evidence = rng.choice(PAGE_TRAVEL_PLACE_RU).format(**fill), card["place"]
+        emit("page", card["url"].rsplit("/", 1)[-1], "ru", rng.choice(PAGE_ASK_TRAVEL_RU), pin(card, "ru"), answer, 0,
+             key=f"page:{card['url']}", required_evidence=evidence)
+    rotation = ("be", "uk", "pl", "en")
+    for index, card in enumerate(rng.sample(quests, min(n_quests, len(quests)))):
+        if not (card["duration"] and card["points"]):
+            continue
+        fill = {"title": short_title(card["title"]), "url": card["url"], "points": card["points"],
+                "points_word": ru_plural(card["points"], "точка", "точки", "точек"), "duration": card["duration"], "difficulty": card["difficulty"]}
+        kind = rng.choice(("facts", "facts", "kids") + (("difficulty",) if card["difficulty"] else ()))
+        answer = {"facts": PAGE_FACTS["ru"], "kids": PAGE_KIDS["ru"], "difficulty": PAGE_DIFFICULTY_RU}[kind].format(**fill)
+        evidence = f"Сложность: {card['difficulty']}" if kind == "difficulty" else f"Длительность: {card['duration']} мин"
+        emit("page", card["url"].rsplit("/", 1)[-1], "ru", rng.choice(PAGE_ASK_QUEST["ru"][kind]), pin(card, "ru"), answer, 0,
+             key=f"page:{card['url']}", required_evidence=evidence)
+        if index % 2 == 0:
+            lang = rotation[(index // 2) % len(rotation)]
+            kind = rng.choice(("facts", "kids"))
+            local = localize(card, lang, titles)
+            answer = {"facts": PAGE_FACTS, "kids": PAGE_KIDS}[kind][lang].format(**{**fill, "title": short_title(local["title"])})
+            emit("page", card["url"].rsplit("/", 1)[-1], lang, rng.choice(PAGE_ASK_QUEST[lang][kind]), pin(card, lang), answer, 1,
+                 key=f"page:{card['url']}", required_evidence=f"Длительность: {card['duration']} мин")
 
 
 def _emit_boundary(emit, everything: list[dict], titles: dict, rng: random.Random, per_place: int) -> None:

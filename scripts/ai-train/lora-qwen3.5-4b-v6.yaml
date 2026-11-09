@@ -1,0 +1,41 @@
+# metravel-llm v6 (#2751): the saved v4 adapter continues on data/sft-v6/s3-fit — rag_answers
+# edition 6 + offtopic + the rebuilt osm_intents and wikivoyage trained directly, 25 % replay of
+# toponyms/translations/site (mixes/v6.yaml). Separate adapter/log/GGUF paths: v4, v5 and
+# v5-rag are never overwritten. Train only after exact-token preparation
+# (prepare_training_data.py) and a finite-loss 12-step probe (RUN=v6-probe,
+# --adapter-path adapters/metravel-llm-v6-probe). iters = one epoch of the prepared train
+# split at batch 1 — take the number from s3-fit/stats.json after every rebuild.
+# lr 1.5e-5: between v4 (2e-5, S1 skills eroded) and v5-rag (1e-5, S1 recovered only partly
+# with 86/80 replay examples); here the S1 sets are in the stage itself.
+#   cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v6 \
+#     CONFIG=<repo>/scripts/ai-train/lora-qwen3.5-4b-v6.yaml <repo>/scripts/ai-train/train.sh &
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v6/s3-fit
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: 6
+batch_size: 1
+grad_accumulation_steps: 1
+iters: 2151
+resume_adapter_file: adapters/metravel-llm-v4/adapters.safetensors
+learning_rate: 1.5e-5
+max_seq_length: 1024
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 200
+val_batches: 20
+save_every: 200
+adapter_path: adapters/metravel-llm-v6
+seed: 20261108
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 50
+  warmup_init: 1.0e-6
+  arguments: [1.5e-5, 2151, 1.0e-6]
