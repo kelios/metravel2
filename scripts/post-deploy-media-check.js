@@ -32,6 +32,7 @@ const http = require('http')
 
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const { mapWithConcurrency } = require('./lib/concurrency')
+const { prodSafeConcurrency } = require('./lib/prodLoadBudget')
 const {
   collectArticleBodyMediaUrls,
   collectLegacyUploadCandidates,
@@ -938,7 +939,7 @@ const ARTICLE_BODY_SCAN_DEFAULT = 3
  * гейт своей же нагрузкой ронял собственную проверку. Четырёх хватает: 450
  * ступеней проходятся за ~40 с, и backpressure не воспроизводится.
  */
-const ARTICLE_BODY_SCAN_CONCURRENCY = 4
+const ARTICLE_BODY_SCAN_CONCURRENCY = prodSafeConcurrency(SITE, 4, 'api')
 
 /** Значение `--article-body-scan`: число статей, `all`, или `0` — не обходить. */
 function articleBodyScanLimit() {

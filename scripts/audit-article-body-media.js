@@ -43,6 +43,7 @@ const http = require('http')
 
 const { fetchJson } = require('./lib/fetchJson')
 const { mapWithConcurrency } = require('./lib/concurrency')
+const { prodSafeConcurrency } = require('./lib/prodLoadBudget')
 const {
   BUILD_FETCH_RATE_PER_SEC,
   BUILD_FETCH_MIN_INTERVAL_MS,
@@ -123,9 +124,11 @@ const PROBE_RETRY_DELAYS_MS = [5000, 30000]
 /** Столько строк списка печатаем человеку; полный список — в `--json`. */
 const MAX_PRINTED_ITEMS = 40
 
+/** `--concurrency`, но для прода не выше общего бюджета нагрузки (#3160). */
 function concurrency() {
   const parsed = Number(getArg('concurrency', String(DEFAULT_CONCURRENCY)))
-  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : DEFAULT_CONCURRENCY
+  const requested = Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : DEFAULT_CONCURRENCY
+  return prodSafeConcurrency(SITE, requested, 'api')
 }
 
 function travelLimit() {

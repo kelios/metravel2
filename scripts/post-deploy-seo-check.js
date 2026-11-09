@@ -27,6 +27,8 @@ const {
   requireNoBatchFailures,
   runCli,
 } = require('./lib/cli-contract')
+const { mapWithConcurrency } = require('./lib/concurrency')
+const { PROD_LOAD_CEILINGS, prodSafeConcurrency } = require('./lib/prodLoadBudget')
 
 const USAGE = `Post-deploy SEO check — metravel.by
 
@@ -38,7 +40,7 @@ Options:
   --verbose             also list passing pages and warning-only pages
   --json                print the full summary as JSON instead of a report
   --limit <n>           check only the first n queued URLs, 0 = all (default 0)
-  --concurrency <n>     parallel page fetches (default 12)
+  --concurrency <n>     parallel page fetches (default 3; production is capped at 3)
   --insecure            skip TLS certificate validation (same as SEO_TEST_INSECURE=1)
   --help, -h            print this help and exit
 
@@ -64,7 +66,7 @@ const CLI_SPEC = {
     verbose: { type: 'boolean' },
     json: { type: 'boolean' },
     limit: { type: 'int', min: 0, valueName: 'a non-negative integer', default: 0 },
-    concurrency: { type: 'int', min: 1, valueName: 'a positive integer', default: 12 },
+    concurrency: { type: 'int', min: 1, valueName: 'a positive integer', default: PROD_LOAD_CEILINGS.page },
     insecure: { type: 'boolean' },
   },
 }
@@ -78,7 +80,19 @@ let VERBOSE = false
 let JSON_OUTPUT = false
 let INSECURE_TLS = false
 let LIMIT = 0
-let CONCURRENCY = 12
+let CONCURRENCY = PROD_LOAD_CEILINGS.page
+
+// nginx gives an SSR render `proxy_read_timeout 15s` and then answers from its
+// static fallback (503 + Retry-After when there is none). The client waits a
+// little longer, so it sees nginx's verdict instead of cutting it off.
+const PAGE_FETCH_TIMEOUT_MS = 20000
+// A 5xx from the parallel pass is asked again alone; Retry-After is honoured
+// within this cap so a retry never stalls the deploy tail.
+const OVERLOAD_RETRY_MAX_DELAY_MS = 5000
+// Our own load overloads a few pages; a site that is down answers 5xx on all
+// of them, and retrying each alone (up to 5 s wait + 15 s nginx timeout) would
+// stretch the deploy tail by minutes. Pages past this cap keep their 5xx error.
+const OVERLOAD_RETRY_MAX_PAGES = 6
 
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.'
 const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel'])
@@ -87,7 +101,7 @@ function fetchUrl(url, redirectDepth = 0, originalUrl = url, retried = false) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
     const opts = {
-      timeout: 30000,
+      timeout: PAGE_FETCH_TIMEOUT_MS,
       headers: { 'User-Agent': 'MeTravelPostDeploySEOCheck/1.0' },
       ...(retried ? { agent: false } : {}),
     }
@@ -662,18 +676,64 @@ function parseSitemapUrls(xml) {
   return [...xml.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map((match) => match[1].trim())
 }
 
-async function mapLimit(items, limit, worker) {
-  const results = new Array(items.length)
-  let index = 0
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-  async function runWorker() {
-    while (index < items.length) {
-      const current = index++
-      results[current] = await worker(items[current], current)
-    }
+function fetchFailedResult(url, pageType, error) {
+  return {
+    url,
+    finalUrl: url,
+    pageType,
+    title: '',
+    issues: [{
+      severity: 'error',
+      code: 'fetch.failed',
+      message: error instanceof Error ? error.message : String(error),
+    }],
   }
+}
 
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runWorker))
+/** A 5xx may be our own parallel load (#3160) or a real failure; one answer cannot tell. */
+function isRetryableServerAnswer(response) {
+  return Boolean(response) && Number(response.status) >= 500
+}
+
+function overloadRetryDelayMs(response) {
+  const seconds = Number(response?.headers?.['retry-after'])
+  const ms = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 1000
+  return Math.min(ms, OVERLOAD_RETRY_MAX_DELAY_MS)
+}
+
+/**
+ * Checks pages with bounded parallelism, then asks every 5xx page once more
+ * ALONE, after the parallel pass has drained (#3160). The retry decides the
+ * verdict: a page that is still 5xx keeps its error, a page that recovers
+ * passes with an `http.overload-retried` warning, so the overload stays in
+ * the report instead of being hidden. At most `maxRetries` pages are asked
+ * again; the rest keep their first-pass 5xx error.
+ *
+ * @param {string[]} urls
+ * @param {{ concurrency: number, check: (url: string) => Promise<{ response: any, result: any }>, wait?: (ms: number) => Promise<void>, maxRetries?: number }} options
+ */
+async function checkPagesWithOverloadRetry(urls, { concurrency, check, wait = sleep, maxRetries = OVERLOAD_RETRY_MAX_PAGES }) {
+  const firstPass = await mapWithConcurrency(urls, concurrency, (url) => check(url))
+  const results = []
+  let retries = 0
+  for (const [index, pass] of firstPass.entries()) {
+    if (!isRetryableServerAnswer(pass.response) || retries >= maxRetries) {
+      results.push(pass.result)
+      continue
+    }
+    retries += 1
+    await wait(overloadRetryDelayMs(pass.response))
+    const retry = await check(urls[index])
+    const retriedStatus = retry.response ? retry.response.status : 'no answer'
+    retry.result.issues.push({
+      severity: 'warning',
+      code: 'http.overload-retried',
+      message: `Got ${pass.response.status} under ${concurrency} parallel fetches; asked alone: ${retriedStatus}`,
+    })
+    results.push(retry.result)
+  }
   return results
 }
 
@@ -782,7 +842,10 @@ async function main() {
   JSON_OUTPUT = args.json
   INSECURE_TLS = args.insecure || String(process.env.SEO_TEST_INSECURE || '0') === '1'
   LIMIT = args.limit
-  CONCURRENCY = args.concurrency
+  CONCURRENCY = prodSafeConcurrency(SITE, args.concurrency, 'page')
+  if (CONCURRENCY < args.concurrency && !JSON_OUTPUT) {
+    console.log(`ℹ️  --concurrency ${args.concurrency} capped at ${CONCURRENCY} for production (scripts/lib/prodLoadBudget.js)`)
+  }
 
   const { sitemapResponse, urls } = await loadTargetUrls()
   if (!JSON_OUTPUT) {
@@ -790,44 +853,27 @@ async function main() {
     console.log(`📄 Queue: ${urls.length + 1} pages`)
   }
 
-  const pageChecks = await mapLimit(urls, CONCURRENCY, async (url) => {
-    try {
-      const response = await fetchUrl(url)
-      const validated = validatePageResult(response)
-      if (VERBOSE && validated.issues.length === 0 && !JSON_OUTPUT) {
-        console.log(`✅ ${validated.finalUrl}`)
+  const pageChecks = await checkPagesWithOverloadRetry(urls, {
+    concurrency: CONCURRENCY,
+    check: async (url) => {
+      try {
+        const response = await fetchUrl(url)
+        const validated = validatePageResult(response)
+        if (VERBOSE && validated.issues.length === 0 && !JSON_OUTPUT) {
+          console.log(`✅ ${validated.finalUrl}`)
+        }
+        return { response, result: validated }
+      } catch (error) {
+        return { response: null, result: fetchFailedResult(url, detectPageType(url), error) }
       }
-      return validated
-    } catch (error) {
-      return {
-        url,
-        finalUrl: url,
-        pageType: detectPageType(url),
-        title: '',
-        issues: [{
-          severity: 'error',
-          code: 'fetch.failed',
-          message: error instanceof Error ? error.message : String(error),
-        }],
-      }
-    }
+    },
   })
-  const notFoundChecks = await mapLimit(NOT_FOUND_PROBE_PATHS, CONCURRENCY, async (probePath) => {
+  const notFoundChecks = await mapWithConcurrency(NOT_FOUND_PROBE_PATHS, CONCURRENCY, async (probePath) => {
     const url = `${SITE}${probePath}`
     try {
       return validateNotFoundProbe(await fetchUrl(url))
     } catch (error) {
-      return {
-        url,
-        finalUrl: url,
-        pageType: 'not-found-probe',
-        title: '',
-        issues: [{
-          severity: 'error',
-          code: 'fetch.failed',
-          message: error instanceof Error ? error.message : String(error),
-        }],
-      }
+      return fetchFailedResult(url, 'not-found-probe', error)
     }
   })
   const checked = [validateSitemapResponse(sitemapResponse), ...pageChecks, ...notFoundChecks]
@@ -852,6 +898,7 @@ async function main() {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLI_SPEC,
+    checkPagesWithOverloadRetry,
     fetchUrl,
     FALLBACK_DESC,
     USAGE,
