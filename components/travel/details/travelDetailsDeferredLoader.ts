@@ -1,8 +1,9 @@
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from './TravelDetailsTypes'
 
-// Web uses travelDetailsDeferredLoader.web.ts so this test-only require cannot
-// pin TravelDetailsDeferred (map/FlashList/GPX) onto the travel-detail graph.
+// Metro resolves travelDetailsDeferredLoader.web.ts / .native.ts and Jest (jest-expo,
+// platform ios) the .native.ts file; this unprefixed module is the type-checking
+// entry and mirrors the web contract without test-environment branches (#3214).
 
 type DeferredSectionsComponentType = React.ComponentType<{
   travel: Travel
@@ -15,15 +16,10 @@ type DeferredSectionsComponentType = React.ComponentType<{
   scrollToMapSection: () => void
 }>
 
-const isTestEnv =
-  typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
-
 let deferredSectionsLoader: Promise<DeferredSectionsComponentType> | null = null
 
-export function getInitialDeferredSectionsComponent() {
-  if (!isTestEnv) return null
-  const mod = require('@/components/travel/details/TravelDetailsDeferred')
-  return mod.TravelDeferredSections as DeferredSectionsComponentType
+export function getInitialDeferredSectionsComponent(): DeferredSectionsComponentType | null {
+  return null
 }
 
 export async function loadDeferredSectionsComponent(): Promise<DeferredSectionsComponentType> {

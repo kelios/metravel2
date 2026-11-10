@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import isEqual from 'fast-deep-equal';
 import type { TravelFormData } from '@/types/types';
 import { addPageHideListener, addVisibilityChangeListener } from '@/utils/beforeunloadGuard';
+import { normalizeTravelId } from '@/utils/travelFormUtils';
 
 function ownEnumerableDataEntries(value: object): Array<[string, unknown]> | null {
   try {
@@ -209,6 +210,55 @@ function areDraftsEquivalent(left: unknown, right: unknown): boolean {
 
 const DRAFT_STORAGE_KEY = 'metravel_travel_draft';
 const DRAFT_DEBOUNCE_MS = 2000;
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+interface TravelDraftKeyInput {
+  ownerId: string | null;
+  travelId: string | null;
+  isNew: boolean;
+  newDraftKind?: 'note';
+  newDraftScope?: string;
+}
+
+function draftKeySuffix({ travelId, isNew, newDraftKind, newDraftScope }: TravelDraftKeyInput): string | null {
+  if (isNew) return `new${newDraftScope ? `_${newDraftScope}` : newDraftKind ? `_${newDraftKind}` : ''}`;
+  // For an existing travel the id arrives asynchronously; until it resolves we
+  // must not build a `..._null` key (it would orphan the draft under a wrong key).
+  return travelId != null ? travelId : null;
+}
+
+/**
+ * Storage key of a wizard draft. The account is part of the key (#3212): on a
+ * shared device another account neither sees nor overwrites this draft.
+ */
+export function buildTravelDraftKey(input: TravelDraftKeyInput): string | null {
+  const suffix = draftKeySuffix(input);
+  if (suffix == null || !input.ownerId) return null;
+  return `${DRAFT_STORAGE_KEY}_u${encodeURIComponent(input.ownerId)}_${suffix}`;
+}
+
+/** Pre-#3212 key without an owner: never shown, only expired after 24 hours. */
+function buildLegacyDraftKey(input: TravelDraftKeyInput): string | null {
+  const suffix = draftKeySuffix(input);
+  return suffix == null ? null : `${DRAFT_STORAGE_KEY}_${suffix}`;
+}
+
+function dataTravelId(data: unknown): number | null {
+  if (!data || typeof data !== 'object') return null;
+  return normalizeTravelId((data as { id?: unknown }).id);
+}
+
+/** A snapshot of another article must not be written or compared under this key. */
+function belongsToOtherTravel(data: unknown, isNew: boolean, travelId: string | null): boolean {
+  if (isNew) return false;
+  const id = dataTravelId(data);
+  return id != null && id !== normalizeTravelId(travelId);
+}
+
+interface PendingDraft {
+  key: string;
+  data: TravelFormData;
+}
 
 interface DraftRecoveryState {
   hasPendingDraft: boolean;
@@ -218,6 +268,8 @@ interface DraftRecoveryState {
 }
 
 interface UseDraftRecoveryOptions {
+  /** Account the draft belongs to; without it no draft is read or written (#3212). */
+  ownerId: string | null;
   travelId: string | null;
   isNew: boolean;
   currentData?: TravelFormData | null;
@@ -253,7 +305,7 @@ interface UseDraftRecoveryReturn {
  * Automatically saves form data to storage and provides recovery options.
  */
 export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftRecoveryReturn {
-  const { travelId, isNew, currentData, enabled = true, newDraftKind, newDraftScope } = options;
+  const { ownerId, travelId, isNew, currentData, enabled = true, newDraftKind, newDraftScope } = options;
 
   const [state, setState] = useState<DraftRecoveryState>({
     hasPendingDraft: false,
@@ -267,15 +319,15 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
   const flushPromiseRef = useRef<Promise<boolean> | null>(null);
   const comparedDraftKeyRef = useRef<string | null>(null);
-  const prevDraftKeyRef = useRef<string | null>(null);
-  const pendingDraftDataRef = useRef<TravelFormData | null>(null);
-  // For an existing travel the id arrives asynchronously; until it resolves we
-  // must not build a `..._null` key (it would orphan the draft under a wrong key).
-  const draftKey = isNew
-    ? `${DRAFT_STORAGE_KEY}_new${newDraftScope ? `_${newDraftScope}` : newDraftKind ? `_${newDraftKind}` : ''}`
-    : travelId != null
-      ? `${DRAFT_STORAGE_KEY}_${travelId}`
-      : null;
+  const prevDraftKeyRef = useRef<{ key: string | null; isNew: boolean } | null>(null);
+  // Each snapshot remembers the key it was scheduled for: a timer, flush or
+  // unmount write that completes after the editor switched articles must not
+  // land under the next article's key (#3212).
+  const pendingDraftRef = useRef<PendingDraft | null>(null);
+  const currentDataRef = useRef(currentData);
+  const keyInput = { ownerId, travelId, isNew, newDraftKind, newDraftScope };
+  const draftKey = buildTravelDraftKey(keyInput);
+  const legacyDraftKey = buildLegacyDraftKey(keyInput);
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -284,11 +336,16 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     // Once we've performed the identity comparison against non-empty currentData
     // for this key, there's nothing left to re-check.
     if (comparedDraftKeyRef.current === draftKey) return;
+    // The first render after an article switch still carries the previous
+    // article's form; comparing against it would decide for the wrong data.
+    if (belongsToOtherTravel(currentData, isNew, travelId)) return;
 
     let cancelled = false;
 
     const checkForDraft = async () => {
       try {
+        if (legacyDraftKey) await expireLegacyDraft(legacyDraftKey);
+        if (cancelled) return;
         const storedDraft = await getStorageItem(draftKey);
         if (cancelled) return;
         if (!storedDraft) {
@@ -308,9 +365,8 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
           const parsed = JSON.parse(storedDraft);
           if (parsed && parsed.data && parsed.timestamp) {
             // Check if draft is not too old (24 hours)
-            const maxAge = 24 * 60 * 60 * 1000;
             const age = Date.now() - parsed.timestamp;
-            if (age < maxAge) {
+            if (age < DRAFT_MAX_AGE_MS) {
               // If the stored draft is identical to current data, it isn't a recoverable draft.
               // This can happen when we saved drafts during initial load in older versions.
               // This check is the initial storage scan for the key. A draft written later
@@ -351,10 +407,9 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     return () => {
       cancelled = true;
     };
-  }, [draftKey, enabled, currentData]);
+  }, [draftKey, legacyDraftKey, enabled, currentData, isNew, travelId]);
 
-  const persistDraft = useCallback((data: TravelFormData): Promise<boolean> => {
-    if (!enabled || !draftKey) return Promise.resolve(true);
+  const writeDraft = useCallback((key: string, data: TravelFormData): Promise<boolean> => {
     const draftData = {
       data: stripUndefinedDeep(data),
       timestamp: Date.now(),
@@ -362,7 +417,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
     const write = writeQueueRef.current.then(async () => {
       try {
-        await setStorageItem(draftKey, JSON.stringify(draftData));
+        await setStorageItem(key, JSON.stringify(draftData));
         if (mountedRef.current) {
           setState(prev => prev.storageError ? { ...prev, storageError: null } : prev);
         }
@@ -381,12 +436,14 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     // newer snapshot or clear the newer snapshot's error state.
     writeQueueRef.current = write.then(() => undefined);
     return write;
-  }, [draftKey, enabled]);
+  }, []);
 
   // Save draft with debouncing
   const saveDraft = useCallback((data: TravelFormData) => {
     if (!enabled || !draftKey) return;
-    pendingDraftDataRef.current = data;
+    if (belongsToOtherTravel(data, isNew, travelId)) return;
+    const pending: PendingDraft = { key: draftKey, data };
+    pendingDraftRef.current = pending;
 
     // The active flush loop will observe and persist this newer snapshot before
     // resolving its caller (for example, the expired-session login CTA).
@@ -399,13 +456,13 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
     debounceTimerRef.current = setTimeout(() => {
       debounceTimerRef.current = null;
-      void persistDraft(data).then((saved) => {
-        if (saved && pendingDraftDataRef.current === data) {
-          pendingDraftDataRef.current = null;
+      void writeDraft(pending.key, pending.data).then((saved) => {
+        if (saved && pendingDraftRef.current === pending) {
+          pendingDraftRef.current = null;
         }
       });
     }, DRAFT_DEBOUNCE_MS);
-  }, [draftKey, enabled, persistDraft]);
+  }, [draftKey, enabled, isNew, travelId, writeDraft]);
 
   const flushDraft = useCallback((): Promise<boolean> => {
     if (!enabled || !draftKey) return Promise.resolve(true);
@@ -418,17 +475,17 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
           debounceTimerRef.current = null;
         }
 
-        const pendingDraft = pendingDraftDataRef.current;
+        const pendingDraft = pendingDraftRef.current;
         if (!pendingDraft) {
           await writeQueueRef.current;
           return true;
         }
 
-        const saved = await persistDraft(pendingDraft);
+        const saved = await writeDraft(pendingDraft.key, pendingDraft.data);
         if (!saved) return false;
 
-        if (pendingDraftDataRef.current === pendingDraft) {
-          pendingDraftDataRef.current = null;
+        if (pendingDraftRef.current === pendingDraft) {
+          pendingDraftRef.current = null;
           return true;
         }
         // An edit arrived during the await; keep draining until the newest
@@ -441,7 +498,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       if (flushPromiseRef.current === drain) flushPromiseRef.current = null;
     });
     return drain;
-  }, [draftKey, enabled, persistDraft]);
+  }, [draftKey, enabled, writeDraft]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -521,7 +578,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
-    pendingDraftDataRef.current = null;
+    pendingDraftRef.current = null;
     if (!draftKey) return;
     try {
       await writeQueueRef.current;
@@ -537,43 +594,54 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     }
   }, [draftKey]);
 
-  // When the draft key changes (e.g. 'new' -> travelId after first save),
-  // flush the pending debounce timer for the old key so it doesn't write an
-  // orphaned draft under the previous '..._new' key, and drop any draft already
-  // stored under that old key. The id-sync only happens after the server has the
-  // data (F-09), so a draft left under the previous key would surface as a false
-  // recovery prompt on reload under the new '..._<id>' key.
+  // Declared before the key-flip effect so that effect reads this render's data.
   useEffect(() => {
-    const prevKey = prevDraftKeyRef.current;
-    if (prevKey !== null && prevKey !== draftKey) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
-      pendingDraftDataRef.current = null;
-      const pendingWrites = writeQueueRef.current;
-      void pendingWrites.then(() => removeStorageItem(prevKey));
-    }
-    prevDraftKeyRef.current = draftKey;
-  }, [draftKey]);
+    currentDataRef.current = currentData;
+  }, [currentData]);
 
-  // Keep the newest persist closure reachable from the unmount cleanup without
-  // making that cleanup depend on `draftKey`: it must run on a real unmount, not
-  // on every key flip.
-  const persistDraftRef = useRef(persistDraft);
+  // The key changes in two different situations, and only one of them retires
+  // the old draft:
+  // - a NEW travel got its server id (`_new` -> `_<id>`, F-09): the form on
+  //   screen already carries that id and the server has the data, so a draft
+  //   left under `_new` would resurface as a false prompt on the next
+  //   `/travel/new` — it is dropped;
+  // - the reused editor screen switched to another article or the account
+  //   changed: the previous draft may be the only copy of offline edits. Its
+  //   pending snapshot is written under its own key and the key is kept (#3212).
   useEffect(() => {
-    persistDraftRef.current = persistDraft;
-  }, [persistDraft]);
+    const prev = prevDraftKeyRef.current;
+    prevDraftKeyRef.current = { key: draftKey, isNew };
+    if (!prev?.key || prev.key === draftKey) return;
+    const prevKey = prev.key;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    const pending = pendingDraftRef.current;
+    pendingDraftRef.current = null;
+    setState(prevState => prevState.hasPendingDraft || prevState.draftTimestamp != null
+      ? { ...prevState, hasPendingDraft: false, draftTimestamp: null }
+      : prevState);
+
+    const newTravelGotItsId = prev.isNew && !isNew && travelId != null &&
+      dataTravelId(currentDataRef.current) === normalizeTravelId(travelId);
+    if (newTravelGotItsId) {
+      void writeQueueRef.current.then(() => removeStorageItem(prevKey));
+      return;
+    }
+    if (pending) void writeDraft(pending.key, pending.data);
+  }, [draftKey, isNew, travelId, writeDraft]);
 
   // Cleanup on unmount. The pending snapshot is written rather than dropped:
   // leaving the screen is exactly when the local draft is the only copy of edits
   // the server has not confirmed. Cancelling the debounce timer without
   // persisting lost everything typed since the last write - and because each
   // keystroke restarts the timer, an author typing continuously never reaches a
-  // write at all, so the whole burst was lost. `pendingDraftDataRef` is null once
+  // write at all, so the whole burst was lost. `pendingDraftRef` is null once
   // a save confirmed the data (clearDraft) or after a key flip, so a confirmed
   // form writes nothing here and cannot resurrect a recovery prompt.
-  // persistDraft guards its own setState with mountedRef, so a write completing
+  // writeDraft guards its own setState with mountedRef, so a write completing
   // after unmount is safe.
   useEffect(() => {
     return () => {
@@ -581,12 +649,12 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
-      const pending = pendingDraftDataRef.current;
-      pendingDraftDataRef.current = null;
+      const pending = pendingDraftRef.current;
+      pendingDraftRef.current = null;
       mountedRef.current = false;
-      if (pending) void persistDraftRef.current(pending);
+      if (pending) void writeDraft(pending.key, pending.data);
     };
-  }, []);
+  }, [writeDraft]);
 
   return useMemo(() => ({
     hasPendingDraft: state.hasPendingDraft,
@@ -599,6 +667,24 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     isRecovering: state.isRecovering,
     storageError: state.storageError,
   }), [state.hasPendingDraft, state.draftTimestamp, recoverDraft, dismissDraft, saveDraft, flushDraft, clearDraft, state.isRecovering, state.storageError]);
+}
+
+async function expireLegacyDraft(key: string): Promise<void> {
+  try {
+    const stored = await getStorageItem(key);
+    if (!stored) return;
+    let timestamp: unknown;
+    try {
+      timestamp = (JSON.parse(stored) as { timestamp?: unknown } | null)?.timestamp;
+    } catch {
+      timestamp = undefined;
+    }
+    if (typeof timestamp !== 'number' || Date.now() - timestamp >= DRAFT_MAX_AGE_MS) {
+      await removeStorageItem(key);
+    }
+  } catch {
+    // A legacy record is never shown; failing to expire it must not block the editor.
+  }
 }
 
 // Storage abstraction for cross-platform support

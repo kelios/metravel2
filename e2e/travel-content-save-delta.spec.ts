@@ -143,7 +143,7 @@ async function openWizardHydrated(
     } catch {
       // ignore
     }
-  }, `metravel_travel_draft_${TRAVEL_ID}`);
+  }, `metravel_travel_draft_u${String(apiCtx.userId || '').trim() || '1'}_${TRAVEL_ID}`);
 
   // Hard document contract: without these the test degrades silently — a
   // 301/404 shell still runs addInitScript, so the hydration wait below

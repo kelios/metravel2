@@ -17,6 +17,7 @@ import { downloadTravelRouteFile } from '@/utils/travelRouteDownload';
 import { parseRouteFilePreview } from '@/utils/routeFileParser';
 import { formatFileSize } from '@/utils/fileSize';
 import { translate as i18nT } from '@/i18n'
+import { confirmAction } from '@/utils/confirmAction';
 
 
 type Props = {
@@ -299,6 +300,15 @@ export default function TravelRouteFilesPanel({
   const handleDelete = useCallback(
     async (file: TravelRouteFile) => {
       if (!travelId || !canManage) return;
+      const confirmed = await confirmAction({
+        title: i18nT('travel:components.travel.TravelRouteFilesPanel.confirmDeleteTitle'),
+        message: i18nT('travel:components.travel.TravelRouteFilesPanel.confirmDeleteMessage', {
+          value1: file.original_name || `route-${file.id}`,
+        }),
+        confirmText: i18nT('common:action.delete'),
+        cancelText: i18nT('common:action.cancel'),
+      });
+      if (!confirmed) return;
       setError(null);
       try {
         await deleteTravelRouteFile(travelId, file.id);

@@ -5,7 +5,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
 
 
-const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -27,7 +26,7 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<
     return await fn()
   } catch (err) {
     if (__DEV__) console.error('[withLazy] import attempt failed:', err)
-    if (isTestEnv || tries <= 0) throw err
+    if (tries <= 0) throw err
     await new Promise((r) => setTimeout(r, delay))
     return retry(fn, tries - 1, delay)
   }

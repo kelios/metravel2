@@ -22,7 +22,8 @@ import { compressTravelPhoto } from '@/utils/imageCompressor';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import { GalleryCaptionEditor } from '@/components/travel/gallery/GalleryCaptionEditor';
-import { resolveUploadTravelId } from '@/components/travel/gallery/utils';
+import { extractBackendImageIdFromUrl, isBackendImageId as isServerImageId, resolveUploadTravelId } from '@/components/travel/gallery/utils';
+import { restoreGalleryOrder, useGalleryOrderPersistence } from '@/components/travel/gallery/useGalleryOrderPersistence';
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
 
@@ -92,6 +93,24 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const [uploadTotal, setUploadTotal] = useState(0);
 
   const lastReportedUrlsRef = useRef<string>('');
+  const imagesRef = useRef<GalleryItem[]>([]);
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  // #3215: порядок, выставленный в приложении, сохраняется тем же хуком, что на web.
+  const { scheduleOrderSave } = useGalleryOrderPersistence<GalleryItem>({
+    collection,
+    travelId: idTravel,
+    getItems: useCallback(() => imagesRef.current, []),
+    getBackendId: useCallback(
+      (img: GalleryItem) => (isServerImageId(img.id) ? img.id : extractBackendImageIdFromUrl(img.url)),
+      [],
+    ),
+    onRollback: useCallback((order: GalleryItem[]) => {
+      setImages((prev) => restoreGalleryOrder(prev, order, (img) => img.id));
+    }, []),
+  });
 
   const isBackendImageId = useCallback((value: string | null | undefined): boolean => {
     if (!value) return false;
@@ -400,19 +419,20 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   }, [performDeleteSelected, selectedIds.size]);
 
   const handleMoveImage = useCallback((imageId: string, direction: -1 | 1) => {
-    setImages((prev) => {
-      const fromIndex = prev.findIndex((img) => img.id === imageId);
-      if (fromIndex < 0) return prev;
+    const current = imagesRef.current;
+    const fromIndex = current.findIndex((img) => img.id === imageId);
+    if (fromIndex < 0) return;
 
-      const toIndex = fromIndex + direction;
-      if (toIndex < 0 || toIndex >= prev.length) return prev;
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= current.length) return;
 
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }, []);
+    const next = [...current];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    imagesRef.current = next;
+    setImages(next);
+    scheduleOrderSave(current);
+  }, [scheduleOrderSave]);
 
   const handleCaptionChange = useCallback((imageId: string, caption: string) => {
     setImages((prev) => prev.map((img) => (

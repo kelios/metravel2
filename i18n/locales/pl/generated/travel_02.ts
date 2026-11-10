@@ -289,6 +289,7 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.selectImagesFailed": "Nie udało się wybrać zdjęć",
   "components.travel.ImageGalleryComponent.takePhotoFailed": "Nie udało się zrobić zdjęcia",
   "components.travel.ImageGalleryComponent.deleteFailed": "Nie udało się usunąć zdjęcia",
+  "components.travel.ImageGalleryComponent.reorderFailed": "Nie udało się zapisać kolejności zdjęć. Przywrócono poprzednią kolejność.",
   "components.travel.ImageGalleryComponent.permissionTitle": "Uprawnienie",
   "components.travel.ImageGalleryComponent.galleryPermissionMessage": "Wymagany dostęp do galerii",
   "components.travel.ImageGalleryComponent.cameraPermissionMessage": "Wymagany dostęp do kamery",

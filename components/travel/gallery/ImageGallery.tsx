@@ -1,16 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, useContext, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react'
 import {
   View,
   Platform,
 } from 'react-native'
 import type { FileRejection } from 'react-dropzone'
-import { QueryClientContext } from '@tanstack/react-query'
 
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { uploadImage, deleteImage, reorderGallery } from '@/api/misc'
+import { uploadImage, deleteImage } from '@/api/misc'
 import { ApiError } from '@/api/client'
 import { devError } from '@/utils/logger'
-import { queryKeys } from '@/api/queryKeys'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { validateImageFile } from '@/utils/aiValidation'
@@ -22,6 +19,7 @@ import { GalleryControlsFallback } from './GalleryControlsFallback'
 import { GalleryGrid } from './GalleryGrid'
 import { DeleteAction } from './DeleteAction'
 import { createGalleryStyles } from './styles'
+import { restoreGalleryOrder, useGalleryOrderPersistence } from './useGalleryOrderPersistence'
 import {
   buildApiPrefixedUrl,
   canonicalizeUrlForDedupe,
@@ -34,6 +32,7 @@ import {
 } from './utils'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import { confirmAction } from '@/utils/confirmAction'
 
 
 interface UploadImageResponse {
@@ -130,7 +129,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 }) => {
   const colors = useThemedColors()
   const viewportWidth = useResponsiveWidth()
-  const queryClient = useContext(QueryClientContext)
   const isMobileWeb = Platform.OS === 'web' && viewportWidth <= 767
   const styles = useMemo(
     () => createGalleryStyles(colors, isMobileWeb),
@@ -139,21 +137,15 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
   const [images, setImages] = useState<GalleryItem[]>([])
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
-  const [dialogVisible, setDialogVisible] = useState(false)
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null)
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
-  const [batchDeleteVisible, setBatchDeleteVisible] = useState(false)
 
   const retryRef = useRef(new Set<string>())
   const lastReportedUrlsRef = useRef<string>('')
   const deletedKeysRef = useRef<Set<string>>(new Set())
   const deletedUrlsRef = useRef<Set<string>>(new Set())
-  const selectedImageIdRef = useRef<string | null>(null)
   const imagesRef = useRef<GalleryItem[]>([])
-  const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const reorderAbortRef = useRef<AbortController | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
@@ -210,52 +202,22 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     [onChange],
   )
 
-  const persistGalleryOrder = useCallback(() => {
-    if (collection !== 'gallery') return
-
-    const numericTravelId = Number(idTravel)
-    if (!Number.isInteger(numericTravelId) || numericTravelId <= 0) return
-
-    const orderedIds = imagesRef.current
-      .filter((img) => !img.isUploading && !img.error)
-      .map((img) =>
-        isBackendImageId(img.id) ? String(img.id) : extractBackendImageIdFromUrl(img.url),
-      )
-      .filter((id): id is string => Boolean(id))
-
-    if (orderedIds.length < 2) return
-
-    reorderAbortRef.current?.abort()
-    const controller = new AbortController()
-    reorderAbortRef.current = controller
-
-    void reorderGallery(numericTravelId, orderedIds, controller.signal)
-      .then(() => {
-        void queryClient?.invalidateQueries?.({ queryKey: queryKeys.travel(numericTravelId) })
-      })
-      .catch((error) => {
-        // Порядок также сохраняется при сохранении путешествия — игнорируем сбой запроса.
-        devError('Gallery reorder request failed:', error)
-      })
-  }, [collection, idTravel, queryClient])
-
-  const scheduleGalleryReorder = useCallback(() => {
-    if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current)
-    reorderTimerRef.current = setTimeout(() => {
-      reorderTimerRef.current = null
-      persistGalleryOrder()
-    }, 700)
-  }, [persistGalleryOrder])
-
-  useEffect(() => {
-    return () => {
-      if (reorderTimerRef.current) {
-        clearTimeout(reorderTimerRef.current)
-        reorderTimerRef.current = null
-        persistGalleryOrder()
-      }
-    }
-  }, [persistGalleryOrder])
+  const keyOfImage = useCallback((img: GalleryItem) => String(img.stableKey ?? img.id), [])
+  const { scheduleOrderSave } = useGalleryOrderPersistence<GalleryItem>({
+    collection,
+    travelId: idTravel,
+    getItems: useCallback(() => imagesRef.current, []),
+    getBackendId: useCallback((img: GalleryItem) => {
+      if (img.isUploading || img.error) return null
+      return isBackendImageId(img.id) ? String(img.id) : extractBackendImageIdFromUrl(img.url)
+    }, []),
+    onRollback: useCallback((order: GalleryItem[]) => {
+      const next = restoreGalleryOrder(imagesRef.current, order, keyOfImage)
+      imagesRef.current = next
+      reportGalleryItems(next)
+      setImages(next)
+    }, [keyOfImage, reportGalleryItems]),
+  })
 
   const validateUploadFile = useCallback((file: File): string | null => {
     if (!file) {
@@ -532,74 +494,62 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     [handleUploadImages],
   )
 
-  const deleteByStableKey = useCallback(async (stableKey: string) => {
+  // Плитка убирается сразу, но удаление не «оптимистичное навсегда»: если сервер
+  // фото не удалил (кроме 404 — его уже нет), плитка возвращается на своё место,
+  // иначе автор считал бы удалённым фото, которое осталось в статье (#3214).
+  const deleteByStableKey = useCallback(async (stableKey: string): Promise<boolean> => {
     const snapshot = imagesRef.current
-    const imageToDelete = snapshot.find((img) => (img.stableKey ?? img.id) === stableKey) ?? null
+    const index = snapshot.findIndex((img) => (img.stableKey ?? img.id) === stableKey)
+    const imageToDelete = index >= 0 ? snapshot[index] : null
+    if (!imageToDelete) return true
 
+    const canonicalUrl = imageToDelete.url ? canonicalizeUrlForDedupe(String(imageToDelete.url)) : ''
+    deletedKeysRef.current.add(String(stableKey))
+    if (canonicalUrl) deletedUrlsRef.current.add(canonicalUrl)
     setImages((prev) => prev.filter((img) => (img.stableKey ?? img.id) !== stableKey))
 
-    try {
-      deletedKeysRef.current.add(String(stableKey))
-      if (imageToDelete?.url) {
-        deletedUrlsRef.current.add(canonicalizeUrlForDedupe(String(imageToDelete.url)))
-      }
-    } catch {
-      void 0
-    }
+    const deleteId =
+      (isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
+      extractBackendImageIdFromUrl(imageToDelete.url)
+    if (!deleteId) return true
 
     try {
-      const deleteId =
-        (imageToDelete && isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
-        (imageToDelete ? extractBackendImageIdFromUrl(imageToDelete.url) : null)
-
-      if (deleteId) {
-        try {
-          await deleteImage(deleteId)
-        } catch (error) {
-          if (error instanceof ApiError && error.status === 404) {
-            void 0
-          } else {
-            // keep UI deletion; порядок/ссылки также сохраняются при сохранении путешествия
-            devError('Gallery delete request failed:', error)
-          }
-        }
-      }
-    } finally {
-      setDialogVisible(false)
-      setSelectedImageId(null)
-      selectedImageIdRef.current = null
+      await deleteImage(deleteId)
+      return true
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return true
+      devError('Gallery delete request failed:', error)
+      deletedKeysRef.current.delete(String(stableKey))
+      if (canonicalUrl) deletedUrlsRef.current.delete(canonicalUrl)
+      setImages((prev) => {
+        if (prev.some((img) => (img.stableKey ?? img.id) === stableKey)) return prev
+        const next = [...prev]
+        next.splice(Math.min(index, next.length), 0, imageToDelete)
+        return dedupeGalleryItems(next)
+      })
+      return false
     }
   }, [])
 
-  const handleDeleteImage = (stableKey: string) => {
-    const isJest = !!process.env.JEST_WORKER_ID
-    const shouldDeleteImmediatelyOnWeb = Platform.OS === 'web' && !isJest
+  const showDeleteFailed = useCallback(() => {
+    void showToast({
+      type: 'error',
+      text1: i18nT('travel:components.travel.ImageGalleryComponent.errorTitle'),
+      text2: i18nT('travel:components.travel.ImageGalleryComponent.deleteFailed'),
+      position: 'bottom',
+    })
+  }, [])
 
-    if (shouldDeleteImmediatelyOnWeb) {
-      try {
-        ;(globalThis as any).__e2e_last_gallery_delete = String(stableKey)
-      } catch {
-        void 0
-      }
-      try {
-        deletedKeysRef.current.add(String(stableKey))
-        const current = images.find((img) => (img.stableKey ?? img.id) === stableKey)
-        if (current?.url) {
-          deletedUrlsRef.current.add(canonicalizeUrlForDedupe(String(current.url)))
-        }
-      } catch {
-        void 0
-      }
-
-      setImages((prev) => prev.filter((img) => (img.stableKey ?? img.id) !== stableKey))
-      void deleteByStableKey(stableKey)
-      return
-    }
-
-    selectedImageIdRef.current = stableKey
-    setSelectedImageId(stableKey)
-    setDialogVisible(true)
-  }
+  const handleDeleteImage = useCallback(async (stableKey: string) => {
+    const confirmed = await confirmAction({
+      title: i18nT('travel:components.travel.gallery.ImageGallery.udalenie_izobrazheniya_f8f83382'),
+      message: i18nT('travel:components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae'),
+      confirmText: i18nT('common:action.delete'),
+      cancelText: i18nT('common:action.cancel'),
+    })
+    if (!confirmed) return
+    if (!(await deleteByStableKey(stableKey))) showDeleteFailed()
+  }, [deleteByStableKey, showDeleteFailed])
 
   const handleMoveImage = useCallback((stableKey: string, direction: -1 | 1) => {
     const current = imagesRef.current
@@ -616,8 +566,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     imagesRef.current = next
     reportGalleryItems(next)
     setImages(next)
-    scheduleGalleryReorder()
-  }, [reportGalleryItems, scheduleGalleryReorder])
+    scheduleOrderSave(current)
+  }, [reportGalleryItems, scheduleOrderSave])
 
   const handleCaptionChange = useCallback((stableKey: string, caption: string) => {
     const next = imagesRef.current.map((img) =>
@@ -716,25 +666,23 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
     }
   }, [])
 
-  const confirmDeleteImage = async () => {
-    const key = selectedImageIdRef.current || selectedImageId
-    if (!key) return
-    await deleteByStableKey(key)
-  }
-
-  const handleDeleteSelected = useCallback(() => {
-    if (selectedKeysRef.current.size === 0) return
-    setBatchDeleteVisible(true)
-  }, [])
-
-  const confirmDeleteSelected = useCallback(async () => {
+  const handleDeleteSelected = useCallback(async () => {
     const keys = Array.from(selectedKeysRef.current)
+    if (keys.length === 0) return
+    const confirmed = await confirmAction({
+      title: i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteTitle'),
+      message: i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteMessage', { value1: keys.length }),
+      confirmText: i18nT('common:action.delete'),
+      cancelText: i18nT('common:action.cancel'),
+    })
+    if (!confirmed) return
+    let failed = false
     for (const key of keys) {
-      await deleteByStableKey(key)
+      if (!(await deleteByStableKey(key))) failed = true
     }
     setSelectedKeys(new Set())
-    setBatchDeleteVisible(false)
-  }, [deleteByStableKey])
+    if (failed) showDeleteFailed()
+  }, [deleteByStableKey, showDeleteFailed])
 
   return (
     <View style={styles.container}>
@@ -809,33 +757,6 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         DeleteAction={DeleteActionComponent}
       />
 
-      <ConfirmDialog
-        visible={dialogVisible}
-        onClose={() => {
-          setDialogVisible(false)
-          setSelectedImageId(null)
-          selectedImageIdRef.current = null
-        }}
-        onConfirm={confirmDeleteImage}
-        title={i18nT('travel:components.travel.gallery.ImageGallery.udalenie_izobrazheniya_f8f83382')}
-        message={i18nT('travel:components.travel.gallery.ImageGallery.vy_uvereny_chto_hotite_udalit_eto_izobrazhen_6f7f41ae')}
-        confirmText={i18nT('common:action.delete')}
-        cancelText={i18nT('common:action.cancel')}
-        confirmTestID="confirm-delete"
-        cancelTestID="cancel-delete"
-      />
-
-      <ConfirmDialog
-        visible={batchDeleteVisible}
-        onClose={() => setBatchDeleteVisible(false)}
-        onConfirm={confirmDeleteSelected}
-        title={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteTitle')}
-        message={i18nT('travel:components.travel.gallery.ImageGallery.batchDeleteMessage', { value1: selectedKeys.size })}
-        confirmText={i18nT('common:action.delete')}
-        cancelText={i18nT('common:action.cancel')}
-        confirmTestID="confirm-batch-delete"
-        cancelTestID="cancel-batch-delete"
-      />
     </View>
   )
 }

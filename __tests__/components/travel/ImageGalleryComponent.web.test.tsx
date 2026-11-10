@@ -89,27 +89,11 @@ jest.mock('@/utils/webImageUpload', () => {
   };
 });
 
-jest.mock('@/components/ui/ConfirmDialog', () => {
-  const React = require('react');
-  const { View, TouchableOpacity, Text } = require('react-native');
-  return ({ visible, onConfirm, onClose }: any) =>
-    visible
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(
-            TouchableOpacity,
-            { testID: 'confirm-delete', onPress: onConfirm },
-            React.createElement(Text, null, 'confirm'),
-          ),
-          React.createElement(
-            TouchableOpacity,
-            { testID: 'cancel-delete', onPress: onClose },
-            React.createElement(Text, null, 'cancel'),
-          ),
-        )
-      : null;
-});
+jest.mock('@/utils/toast', () => ({
+  __esModule: true,
+  showToast: jest.fn(async () => undefined),
+  showToastMessage: jest.fn(async () => undefined),
+}));
 
 jest.mock('@/api/misc', () => {
   const uploadImageMock = jest.fn(async () => ({ id: 'uploaded-1', url: '/uploaded.jpg' }));
@@ -134,9 +118,33 @@ const updateGalleryCaptionMock = __mocks.updateGalleryCaptionMock as jest.Mock;
 const { __mocks: webImageUploadMocks } = jest.requireMock('@/utils/webImageUpload') as any;
 const prepareWebImageFileForUploadMock = webImageUploadMocks.prepareWebImageFileForUpload as jest.Mock;
 
+// #3214: удаление спрашивает через настоящий confirmAction → confirmDialogStore.
+// Хост ниже — тестовая замена ConfirmDialogHost (тот грузит диалог лениво), с теми
+// же testID, что прежний локальный ConfirmDialog галереи.
+const TestConfirmHost = ({ children }: { children?: React.ReactNode }) => {
+  const store = require('@/components/ui/confirmDialogStore');
+  const { View, TouchableOpacity, Text } = require('react-native');
+  const request = React.useSyncExternalStore(store.subscribeConfirmDialog, store.getConfirmDialogRequest);
+  return (
+    <>
+      {children}
+      {request ? (
+        <View>
+          <TouchableOpacity testID="confirm-delete" onPress={() => store.resolveConfirmDialog(true)}>
+            <Text>confirm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity testID="cancel-delete" onPress={() => store.resolveConfirmDialog(false)}>
+            <Text>cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </>
+  );
+};
+
 const renderSafe = async (ui: React.ReactElement) => {
   try {
-    return await render(ui);
+    return await render(ui, { wrapper: TestConfirmHost });
   } catch (e) {
     console.error('renderSafe error:', e);
     throw e;
@@ -641,6 +649,31 @@ describe('ImageGalleryComponent.web', () => {
     }, { timeout: 2000 });
   });
 
+  it('restores the previous order and shows an error when the reorder request fails (#3215)', async () => {
+    reorderGalleryMock.mockRejectedValueOnce(new Error('offline'));
+    const { showToast } = jest.requireMock('@/utils/toast') as { showToast: jest.Mock };
+    showToast.mockClear();
+    const onChange = jest.fn();
+    const { getAllByTestId } = await renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[
+          { id: '1', url: 'https://example.com/first.jpg' },
+          { id: '2', url: 'https://example.com/second.jpg' },
+        ]}
+        maxImages={10}
+        onChange={onChange}
+      />,
+    );
+
+    await fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+    expect(onChange.mock.calls.at(-1)?.[0].map((item: { id: string }) => item.id)).toEqual(['2', '1']);
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })), { timeout: 2000 });
+    expect(onChange.mock.calls.at(-1)?.[0].map((item: { id: string }) => item.id)).toEqual(['1', '2']);
+  });
+
   it('dedupes absolute and relative URLs that point to the same image path', async () => {
     uploadImageMock.mockResolvedValueOnce({ id: '999', url: 'http://localhost:8081/same.jpg' });
 
@@ -819,6 +852,73 @@ describe('ImageGalleryComponent.web', () => {
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(initialCount),
     );
+  });
+
+  describe('delete confirmation and failure (#3214)', () => {
+    const renderOne = () => renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[{ id: '123', url: 'https://example.com/pic.jpg' }]}
+      />,
+    );
+
+    it('does not call deleteImage when the author cancels the question', async () => {
+      const { getByTestId, getAllByTestId, queryAllByTestId } = await renderOne();
+      let initial = 0;
+      await waitFor(() => {
+        initial = queryAllByTestId('gallery-image').length;
+        expect(initial).toBeGreaterThan(0);
+      });
+
+      await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+      // The click alone deletes nothing: the question is open.
+      expect(deleteImageMock).not.toHaveBeenCalled();
+      await fireEvent.press(getByTestId('cancel-delete'));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(deleteImageMock).not.toHaveBeenCalled();
+      expect(queryAllByTestId('gallery-image').length).toBe(initial);
+    });
+
+    it('returns the tile and shows an error when the server does not delete the photo', async () => {
+      const { ApiError } = require('@/api/clientErrors');
+      const { showToast } = jest.requireMock('@/utils/toast') as { showToast: jest.Mock };
+      showToast.mockClear();
+      deleteImageMock.mockRejectedValueOnce(new ApiError(500, 'server error'));
+      const { getByTestId, getAllByTestId, queryAllByTestId } = await renderOne();
+      let initial = 0;
+      await waitFor(() => {
+        initial = queryAllByTestId('gallery-image').length;
+        expect(initial).toBeGreaterThan(0);
+      });
+
+      await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+      await fireEvent.press(getByTestId('confirm-delete'));
+
+      await waitFor(() => expect(deleteImageMock).toHaveBeenCalledWith('123'));
+      await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+      expect(queryAllByTestId('gallery-image').length).toBe(initial);
+    });
+
+    it('keeps the tile removed when the photo is already gone on the server (404)', async () => {
+      const { ApiError } = require('@/api/clientErrors');
+      deleteImageMock.mockRejectedValueOnce(new ApiError(404, 'not found'));
+      const { getByTestId, getAllByTestId, queryAllByTestId } = await renderOne();
+      let initial = 0;
+      await waitFor(() => {
+        initial = queryAllByTestId('gallery-image').length;
+        expect(initial).toBeGreaterThan(0);
+      });
+
+      await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+      await fireEvent.press(getByTestId('confirm-delete'));
+
+      await waitFor(() => expect(deleteImageMock).toHaveBeenCalledWith('123'));
+      await waitFor(() => expect(queryAllByTestId('gallery-image').length).toBeLessThan(initial));
+    });
   });
 
   it('removes legacy gallery items locally without calling delete API', async () => {

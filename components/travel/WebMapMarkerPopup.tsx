@@ -17,6 +17,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import { getTravelPointImageUrl } from '@/utils/travelPointImages';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { showToast } from '@/utils/toast';
+import { confirmRemoveRoutePoint } from '@/utils/confirmRemoveRoutePoint';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -148,10 +149,11 @@ export default function WebMapMarkerPopup({
         onEdit(markerIndex);
     }, [markerIndex, onClose, onEdit]);
 
-    const handleRemove = React.useCallback(() => {
+    const handleRemove = React.useCallback(async () => {
         onClose?.();
+        if (!(await confirmRemoveRoutePoint(marker?.address))) return;
         onRemove(markerIndex);
-    }, [markerIndex, onClose, onRemove]);
+    }, [marker?.address, markerIndex, onClose, onRemove]);
 
     const extraActions = React.useMemo<WizardPopupAction[]>(() => [
         {

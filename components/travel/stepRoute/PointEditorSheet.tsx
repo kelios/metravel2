@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Pressable,
@@ -65,6 +66,10 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
   const [image, setImage] = useState<string>('')
   const [extraCategories, setExtraCategories] = useState<{ id: string; name: string }[]>([])
   const [confirmingRemove, setConfirmingRemove] = useState(false)
+  // Пока фото точки загружается, адреса на сервере ещё нет: сохранение отдало бы
+  // прежнее значение, а пришедший позже файл сервер удалил бы как лишний (#3213).
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const cancelPhotoUploadRef = useRef<(() => void) | null>(null)
   const openPointRef = useRef<{ index: number; id: MarkerData['id'] } | null>(null)
 
   // Синхронизация с открытой точкой (в т.ч. при переключении между точками).
@@ -96,21 +101,27 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
     return idStr
   }, [])
 
+  const requestClose = useCallback(() => {
+    if (photoUploading) return
+    onClose()
+  }, [onClose, photoUploading])
+
   const handleSave = useCallback(() => {
+    if (photoUploading) return
     onSave(index, {
       address: address.trim().slice(0, MAX_ADDRESS_LENGTH),
       categories: categories.map((c) => Number(c)).filter((n) => Number.isFinite(n)),
       image: image || null,
     })
     onClose()
-  }, [address, categories, image, index, onClose, onSave])
+  }, [address, categories, image, index, onClose, onSave, photoUploading])
 
   if (!visible || !marker) return null
 
   const coordsLabel = `${Number(marker.lat).toFixed(5)}, ${Number(marker.lng).toFixed(5)}`
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" onRequestClose={requestClose} statusBarTranslucent>
       <ModalSafeArea testID="point-editor-safe-area">
         <KeyboardAvoidingView style={styles.flex} behavior={WIZARD_KEYBOARD_BEHAVIOR}>
           <View style={styles.header}>
@@ -119,10 +130,12 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
               {index + 1}
             </Text>
             <Pressable
-              onPress={onClose}
+              onPress={requestClose}
+              disabled={photoUploading}
               hitSlop={10}
-              style={styles.closeButton}
+              style={[styles.closeButton, photoUploading && styles.closeButtonDisabled]}
               accessibilityRole="button"
+              accessibilityState={{ disabled: photoUploading }}
               accessibilityLabel={i18nT('common:action.cancel')}
               testID="travel-wizard.point-editor.close"
             >
@@ -198,6 +211,8 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
                     idTravel={String(marker.id)}
                     oldImage={image}
                     onUpload={setImage}
+                    onUploadStateChange={setPhotoUploading}
+                    uploadCancelRef={cancelPhotoUploadRef}
                     placeholder={i18nT('map:components.map.EditMarkerModal.peretaschite_foto_tochki_marshruta_3a234cc4')}
                     maxSizeMB={10}
                   />
@@ -231,6 +246,8 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
                       variant="danger"
                       label={i18nT('map:components.map.EditMarkerModal.udalit_tochku_b058b974')}
                       onPress={() => {
+                        // Фото удаляемой точки не должно прийти в редактор следующей (#3213).
+                        cancelPhotoUploadRef.current?.()
                         onRemove(index)
                         onClose()
                       }}
@@ -253,10 +270,28 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
           </ScrollView>
 
           <View style={styles.footer}>
+            {photoUploading ? (
+              <View style={styles.uploadState} testID="travel-wizard.point-editor.photo-uploading">
+                <View style={styles.uploadStateRow}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.uploadStateText}>
+                    {i18nT('travel:components.travel.stepRoute.PointEditorSheet.photoUploading')}
+                  </Text>
+                </View>
+                <Button
+                  variant="ghost"
+                  label={i18nT('travel:components.travel.stepRoute.PointEditorSheet.cancelPhotoUpload')}
+                  onPress={() => cancelPhotoUploadRef.current?.()}
+                  fullWidth
+                  testID="travel-wizard.point-editor.cancel-photo-upload"
+                />
+              </View>
+            ) : null}
             <Button
               variant="primary"
               label={i18nT('map:components.map.EditMarkerModal.sohranit_4853bb8f')}
               onPress={handleSave}
+              disabled={photoUploading}
               fullWidth
               testID="travel-wizard.point-editor.save"
             />
@@ -293,6 +328,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    closeButtonDisabled: { opacity: 0.4 },
+    uploadState: { gap: DESIGN_TOKENS.spacing.xs, marginBottom: DESIGN_TOKENS.spacing.sm },
+    uploadStateRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
+    uploadStateText: {
+      flex: 1,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.text,
+      lineHeight: 20,
     },
     content: {
       padding: DESIGN_TOKENS.spacing.md,

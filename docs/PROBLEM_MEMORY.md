@@ -2008,7 +2008,14 @@ guard, падающий в CI на попытке обойти этот конт
   `#1037/#1039/#1043`.
 - **Подтверждённые причины:** `_new → _id` key migration, pending debounce vs
   clear, structural equality against noisy server fields, background/flush and
-  re-auth ordering.
+  re-auth ordering. `#3212` (2026-11-10): смена ключа на другую статью
+  (переиспользованный экран вкладки, A → B) удаляла черновик A как миграцию
+  `_new → _id`; первый рендер после перехода нёс форму A, и контроллер
+  планировал запись A под ключ B (подтверждено jest-кейсом); ключ `_new` не
+  содержал владельца — на общем устройстве другой аккаунт видел и стирал чужой
+  черновик. Контроль: владелец в ключе (`buildTravelDraftKey`), отложенная
+  запись помнит свой ключ, удаление старого ключа — только если id формы равен
+  новому id, снимок чужой статьи не пишется.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence.
 - **Решение для новой жалобы:** data-loss/phantom draft within documented state

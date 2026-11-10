@@ -289,6 +289,7 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.selectImagesFailed": "Не ўдалося выбраць выявы",
   "components.travel.ImageGalleryComponent.takePhotoFailed": "Не ўдалося зрабіць фота",
   "components.travel.ImageGalleryComponent.deleteFailed": "Не ўдалося выдаліць выяву",
+  "components.travel.ImageGalleryComponent.reorderFailed": "Не атрымалася захаваць парадак фота. Ранейшы парадак адноўлены.",
   "components.travel.ImageGalleryComponent.permissionTitle": "Доступ",
   "components.travel.ImageGalleryComponent.galleryPermissionMessage": "Патрэбны доступ да галерэі",
   "components.travel.ImageGalleryComponent.cameraPermissionMessage": "Патрэбны доступ да камеры",

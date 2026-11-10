@@ -21,6 +21,12 @@ export type NativeUploadFile = {
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
+// Фото точки маршрута принадлежит списку точек, а не окну редактора: результат,
+// пришедший после закрытия окна, всё равно доставляется владельцу (onUpload) —
+// одинаково на web и native (#3213). Обложка и прочие коллекции после закрытия
+// результат не получают.
+const deliversAfterUnmount = (collection: string) => collection === 'travelImageAddress';
+
 const buildApiPrefixedUrl = (url: string): string | null => {
   try {
     const baseRaw = process.env.EXPO_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
@@ -77,6 +83,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const prevOldImageRef = useRef<string | null | undefined>(undefined);
   const mountedRef = useRef(true);
   const uploadingRef = useRef(false);
+  // Номер текущей загрузки: отмена или новая загрузка делают прежний ответ чужим.
+  const uploadSeqRef = useRef(0);
 
   const hasValidImage = Boolean(previewUrl || imageUri);
   const currentDisplayUrl = previewUrl ?? imageUri ?? '';
@@ -144,7 +152,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
       if (!mountedRef.current) {
-        if (Platform.OS === 'web' && collection === 'travelImageAddress' && uploadedUrl) onUpload?.(uploadedUrl);
+        if (deliversAfterUnmount(collection) && uploadedUrl) onUpload?.(uploadedUrl);
         return;
       }
       if (uploadedUrl) {
@@ -239,8 +247,20 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     return null;
   }, [maxSizeMB]);
 
+  // Явная отмена (#3213): ответ сервера по этой загрузке больше никому не
+  // доставляется, на экране снова прежнее фото, кнопки сохранения свободны.
+  const cancelUpload = useCallback(() => {
+    uploadSeqRef.current += 1;
+    if (!mountedRef.current) return;
+    setLoading(false); setUploadProgress(0); setPreviewUrl(null); setUploadMessage(null); setError(null);
+    setIsManuallySelected(false);
+    setImageUri(oldImage ? normalizeImageUrl(oldImage) : null);
+  }, [oldImage]);
+
   const handleUploadImage = useCallback(async (file: File | NativeUploadFile) => {
     if (!mountedRef.current) return;
+    const seq = ++uploadSeqRef.current;
+    const isCurrent = () => seq === uploadSeqRef.current;
     try {
       setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
       const normalizedId = (idTravel ?? '').toString();
@@ -249,7 +269,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         Platform.OS === 'web' && typeof File !== 'undefined' && file instanceof File
           ? await prepareWebImageFileForUpload(file)
           : file;
-      if (!mountedRef.current && !(Platform.OS === 'web' && collection === 'travelImageAddress' && hasUploadId)) return;
+      if (!isCurrent()) return;
+      if (!mountedRef.current && !(deliversAfterUnmount(collection) && hasUploadId)) return;
 
       const validationError = validateFile(uploadableFile);
       if (validationError) {
@@ -290,13 +311,14 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       formData.append('id', normalizedId);
 
       const response = await uploadImage(formData, (percent) => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !isCurrent()) return;
         setUploadProgress(Math.min(99, Math.round(percent * 100)));
       }) as Record<string, unknown> & { data?: Record<string, unknown> };
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
+      if (!isCurrent()) return;
       if (!mountedRef.current) {
-        if (Platform.OS === 'web' && collection === 'travelImageAddress' && uploadedUrl) onUpload?.(uploadedUrl);
+        if (deliversAfterUnmount(collection) && uploadedUrl) onUpload?.(uploadedUrl);
         return;
       }
       setUploadProgress(100);
@@ -307,7 +329,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setHasTriedFallback(false);
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
         onUpload?.(uploadedUrl); setError(null);
-      } else if (Platform.OS === 'web' && collection === 'travelImageAddress') {
+      } else if (collection === 'travelImageAddress') {
         setImageUri(normalizeImageUrl(oldImage)); setPreviewUrl(null);
         reportClientError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b'));
       } else if (previewCandidate) {
@@ -318,6 +340,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         reportClientError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b')); setPreviewUrl(null);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       console.error('Ошибка при загрузке:', err);
       if (mountedRef.current) {
         reportClientError(
@@ -328,7 +351,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setPreviewUrl(null);
       }
     } finally {
-      if (mountedRef.current) { setLoading(false); setUploadProgress(0); }
+      if (mountedRef.current && isCurrent()) { setLoading(false); setUploadProgress(0); }
     }
   }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError]);
 
@@ -357,7 +380,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   return {
     imageUri, previewUrl, loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback,
-    handleUploadImage, handleRemovePress,
+    handleUploadImage, handleRemovePress, cancelUpload,
     handleImageLoadCheck, handleImageError, applyFallback,
     reportClientError,
     blobUrlsRef,

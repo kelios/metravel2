@@ -32,7 +32,8 @@ const AsyncStorage = require('@react-native-async-storage/async-storage').defaul
 
 describe('useDraftRecovery', () => {
   const travelId = '443';
-  const draftKey = `metravel_travel_draft_${travelId}`;
+  const ownerId = '7';
+  const draftKey = `metravel_travel_draft_u${ownerId}_${travelId}`;
   const originalPlatform = Platform.OS;
 
   const setPlatformOs = (os: string) => {
@@ -66,6 +67,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -89,6 +91,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -120,6 +123,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -179,6 +183,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -243,6 +248,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -273,6 +279,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -304,6 +311,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -329,6 +337,7 @@ describe('useDraftRecovery', () => {
     const { result, rerender } = await renderHook(
       (props: { currentData: any }) =>
         useDraftRecovery({
+          ownerId,
           travelId,
           isNew: false,
           enabled: true,
@@ -367,6 +376,7 @@ describe('useDraftRecovery', () => {
     const { result, rerender } = await renderHook(
       (props: { currentData: any }) =>
         useDraftRecovery({
+          ownerId,
           travelId,
           isNew: false,
           enabled: true,
@@ -422,6 +432,7 @@ describe('useDraftRecovery', () => {
 
     await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -440,6 +451,7 @@ describe('useDraftRecovery', () => {
     jest.useFakeTimers();
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId: null,
         isNew: true,
         enabled: true,
@@ -459,14 +471,15 @@ describe('useDraftRecovery', () => {
       await Promise.resolve();
     });
 
-    expect(await AsyncStorage.getItem('metravel_travel_draft_new_note')).toBeTruthy();
-    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_new_note')).toBeTruthy();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_new')).toBeNull();
   });
 
   it('uses a stable `_new` key for a new travel (never `_null`)', async () => {
     jest.useFakeTimers();
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId: null,
         isNew: true,
         enabled: true,
@@ -485,14 +498,15 @@ describe('useDraftRecovery', () => {
       await Promise.resolve();
     });
 
-    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeTruthy();
-    expect(await AsyncStorage.getItem('metravel_travel_draft_null')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_new')).toBeTruthy();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_null')).toBeNull();
   });
 
   it('does not write a draft while travelId is unresolved for an existing travel', async () => {
     jest.useFakeTimers();
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId: null,
         isNew: false,
         enabled: true,
@@ -512,13 +526,14 @@ describe('useDraftRecovery', () => {
     });
 
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-    expect(await AsyncStorage.getItem('metravel_travel_draft_null')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_null')).toBeNull();
   });
 
   it('clearDraft cancels a pending autosave debounce so no orphan draft is written', async () => {
     jest.useFakeTimers();
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -553,6 +568,7 @@ describe('useDraftRecovery', () => {
     // author typing continuously restarts the 2s timer so it never fires on its own.
     const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -578,6 +594,7 @@ describe('useDraftRecovery', () => {
     // resurrect a draft - and with it a false recovery prompt - on unmount.
     const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -609,17 +626,19 @@ describe('useDraftRecovery', () => {
     // Simulate a NEW travel that autosaved: a draft exists under `_new`, then the
     // server id is reflected in the URL so the key transitions to `_<id>`.
     await AsyncStorage.setItem(
-      'metravel_travel_draft_new',
+      'metravel_travel_draft_u7_new',
       JSON.stringify({ data: { name: 'draft-while-new' }, timestamp: Date.now() - 1_000 })
     );
 
     const { result, rerender } = await renderHook(
       (props: { travelId: string | null; isNew: boolean }) =>
         useDraftRecovery({
+          ownerId,
           travelId: props.travelId,
           isNew: props.isNew,
           enabled: true,
-          currentData: { name: 'server' } as any,
+          // The controller reflects the id in the URL only after the form got it.
+          currentData: { id: props.travelId ? 777 : null, name: 'server' } as any,
         }),
       {
         initialProps: { travelId: null as string | null, isNew: true },
@@ -631,16 +650,16 @@ describe('useDraftRecovery', () => {
 
     await waitFor(() => {
       // The old `_new` draft must be gone so it cannot resurface under `_777`.
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('metravel_travel_draft_new');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('metravel_travel_draft_u7_new');
     });
 
-    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_new')).toBeNull();
 
     // No false recovery prompt under the new key.
     await waitFor(() => {
       expect(result.current.hasPendingDraft).toBe(false);
     });
-    expect(await AsyncStorage.getItem('metravel_travel_draft_777')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_777')).toBeNull();
   });
 
   it('writes the unmount draft under the new key after a `_new` -> `_<id>` flip (#1511)', async () => {
@@ -651,6 +670,7 @@ describe('useDraftRecovery', () => {
     const { result, rerender, unmount } = await renderHook(
       (props: { travelId: string | null; isNew: boolean }) =>
         useDraftRecovery({
+          ownerId,
           travelId: props.travelId,
           isNew: props.isNew,
           enabled: true,
@@ -668,12 +688,12 @@ describe('useDraftRecovery', () => {
     await unmount();
 
     await waitFor(async () => {
-      const stored = await AsyncStorage.getItem('metravel_travel_draft_777');
+      const stored = await AsyncStorage.getItem('metravel_travel_draft_u7_777');
       expect(stored).toBeTruthy();
       expect(JSON.parse(stored as string).data).toEqual({ name: 'typed-after-flip' });
     });
 
-    expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toBeNull();
+    expect(await AsyncStorage.getItem('metravel_travel_draft_u7_new')).toBeNull();
   });
 
   it('still recovers a genuine draft saved under the post-transition `_<id>` key (legit recovery preserved)', async () => {
@@ -683,12 +703,13 @@ describe('useDraftRecovery', () => {
     // fix only suppresses the FALSE draft written during the id-transition, not a
     // genuine post-save edit.
     await AsyncStorage.setItem(
-      'metravel_travel_draft_888',
+      'metravel_travel_draft_u7_888',
       JSON.stringify({ data: { name: 'edited-after-save' }, timestamp: Date.now() - 1_000 })
     );
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId: '888',
         isNew: false,
         enabled: true,
@@ -710,6 +731,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -760,6 +782,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -800,6 +823,7 @@ describe('useDraftRecovery', () => {
 
     const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -828,6 +852,7 @@ describe('useDraftRecovery', () => {
     AsyncStorage.setItem.mockRejectedValueOnce(new Error('storage full'));
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -863,6 +888,7 @@ describe('useDraftRecovery', () => {
 
     const { result } = await renderHook(() =>
       useDraftRecovery({
+        ownerId,
         travelId,
         isNew: false,
         enabled: true,
@@ -888,5 +914,124 @@ describe('useDraftRecovery', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2);
     expect(AsyncStorage.setItem.mock.calls[0][1]).toContain('first pending edit');
     expect(AsyncStorage.setItem.mock.calls[1][1]).toContain('newest pending edit');
+  });
+
+  describe('switching articles and accounts (#3212)', () => {
+    const flushMicrotasks = async () => {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    };
+
+    const writesOf = (text: string) => AsyncStorage.setItem.mock.calls
+      .filter(([, value]) => String(value).includes(text))
+      .map(([key]) => String(key));
+
+    it('keeps the draft of article A when the editor switches to article B and offers it on return', async () => {
+      // The tab screen is reused: the hook sees `_A` -> `_B` as a key change, and
+      // the first render after the switch still carries A's form data (B loads
+      // asynchronously), so the controller calls saveDraft(A) under B's key.
+      const formA = { id: 101, name: 'A offline edit' };
+      const { result, rerender } = await renderHook(
+        (props: { travelId: string; currentData: any }) =>
+          useDraftRecovery({
+            ownerId: '7',
+            travelId: props.travelId,
+            isNew: false,
+            enabled: true,
+            currentData: props.currentData,
+          }),
+        { initialProps: { travelId: '101', currentData: { id: 101, name: 'A server' } } },
+      );
+      await flushMicrotasks();
+
+      await act(() => result.current.saveDraft(formA as any));
+
+      await rerender({ travelId: '202', currentData: formA });
+      await act(() => result.current.saveDraft(formA as any));
+      await rerender({ travelId: '202', currentData: { id: 202, name: 'B server' } });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 2_200));
+      });
+
+      // Item 3 of the card: A's text never lands under B's key.
+      expect(writesOf('A offline edit').some((key) => key.endsWith('_202'))).toBe(false);
+      expect(writesOf('A offline edit').some((key) => key.endsWith('_101'))).toBe(true);
+      expect(result.current.hasPendingDraft).toBe(false);
+
+      await rerender({ travelId: '101', currentData: { id: 101, name: 'A server' } });
+      await flushMicrotasks();
+
+      expect(result.current.hasPendingDraft).toBe(true);
+      await act(async () => {
+        expect(await result.current.recoverDraft()).toEqual(formA);
+      });
+    });
+
+    it('does not offer or delete another account’s new-article draft on a shared device', async () => {
+      const first = await renderHook(() =>
+        useDraftRecovery({ ownerId: '7', travelId: null, isNew: true, enabled: true, currentData: { name: '' } as any }),
+      );
+      await act(() => first.result.current.saveDraft({ name: 'Text of account A' } as any));
+      // Logout unmounts the editor; the pending snapshot is persisted for A.
+      await first.unmount();
+      await flushMicrotasks();
+      const keyOfA = writesOf('Text of account A')[0];
+      expect(keyOfA).toBeTruthy();
+
+      AsyncStorage.removeItem.mockClear();
+      const second = await renderHook(() =>
+        useDraftRecovery({ ownerId: '8', travelId: null, isNew: true, enabled: true, currentData: { name: '' } as any }),
+      );
+      await flushMicrotasks();
+      expect(second.result.current.hasPendingDraft).toBe(false);
+      await act(async () => {
+        await second.result.current.dismissDraft();
+        await second.result.current.clearDraft();
+      });
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalledWith(keyOfA);
+      expect(await AsyncStorage.getItem(keyOfA)).toContain('Text of account A');
+      await second.unmount();
+
+      const again = await renderHook(() =>
+        useDraftRecovery({ ownerId: '7', travelId: null, isNew: true, enabled: true, currentData: { name: '' } as any }),
+      );
+      await flushMicrotasks();
+      expect(again.result.current.hasPendingDraft).toBe(true);
+    });
+
+    it('keeps the `_new` draft when the editor moves from a new article to another existing one', async () => {
+      const { result, rerender } = await renderHook(
+        (props: { travelId: string | null; isNew: boolean; currentData: any }) =>
+          useDraftRecovery({ ownerId: '7', ...props, enabled: true }),
+        { initialProps: { travelId: null as string | null, isNew: true, currentData: { name: '' } } },
+      );
+      await act(() => result.current.saveDraft({ name: 'unsaved new article' } as any));
+      // Opening article 303 while the new article never got an id.
+      await rerender({ travelId: '303', isNew: false, currentData: { name: 'unsaved new article' } });
+      await flushMicrotasks();
+
+      const [newKey] = writesOf('unsaved new article');
+      expect(newKey).toMatch(/_new$/);
+      expect(await AsyncStorage.getItem(newKey)).toContain('unsaved new article');
+    });
+
+    it('does not show a legacy draft without an owner and expires it after 24 hours', async () => {
+      await AsyncStorage.setItem('metravel_travel_draft_new', JSON.stringify({ data: { name: 'whose?' }, timestamp: Date.now() - 60_000 }));
+      await AsyncStorage.setItem('metravel_travel_draft_404', JSON.stringify({ data: { name: 'old' }, timestamp: Date.now() - 25 * 3_600_000 }));
+
+      const fresh = await renderHook(() =>
+        useDraftRecovery({ ownerId: '7', travelId: null, isNew: true, enabled: true, currentData: { name: '' } as any }),
+      );
+      const expired = await renderHook(() =>
+        useDraftRecovery({ ownerId: '7', travelId: '404', isNew: false, enabled: true, currentData: { id: 404, name: 'server' } as any }),
+      );
+      await flushMicrotasks();
+
+      expect(fresh.result.current.hasPendingDraft).toBe(false);
+      expect(expired.result.current.hasPendingDraft).toBe(false);
+      expect(await AsyncStorage.getItem('metravel_travel_draft_new')).toContain('whose?');
+      expect(await AsyncStorage.getItem('metravel_travel_draft_404')).toBeNull();
+    });
   });
 });

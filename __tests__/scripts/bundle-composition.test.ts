@@ -349,11 +349,6 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
     specifier: './CustomHeaderMobileAccountSection',
     reason: 'открытый долг: тот же тест-фолбэк require в шапке',
   },
-  {
-    file: 'components/travel/details/travelDetailsDeferredLoader.ts',
-    specifier: '@/components/travel/details/TravelDetailsDeferred',
-    reason: '#1552: test-only require in the unprefixed file; web uses travelDetailsDeferredLoader.web.ts',
-  },
 ]
 
 /** Файлы, которых web-бандл не видит: там синхронный импорт — штатная native-ветка. */

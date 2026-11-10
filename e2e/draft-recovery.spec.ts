@@ -62,7 +62,9 @@ test.describe('Draft recovery popup', () => {
 
     const travelId = String(created?.id ?? '').trim();
     expect(travelId, 'Upsert did not return id').toBeTruthy();
-    const draftKey = `metravel_travel_draft_${travelId}`;
+    // #3212: the draft key carries the account id; without it the seed lands under `unull`.
+    expect(apiCtx.userId, 'E2E account id is required for the draft key').toBeTruthy();
+    const draftKey = `metravel_travel_draft_u${apiCtx.userId}_${travelId}`;
 
     // Pre-accept cookies and pre-seed a draft before page scripts run.
     await page.addInitScript((key: string) => {

@@ -234,6 +234,7 @@ export function useUpsertTravelController(placeRequestContext?: PlaceRequestEdit
   }, [form.autosave.lastSaved, form.autosave.phase]);
 
   const draft = useDraftRecovery({
+    ownerId: userId,
     travelId,
     isNew,
     currentData: form.formData,
@@ -362,7 +363,9 @@ export function useUpsertTravelController(placeRequestContext?: PlaceRequestEdit
   // Nothing to persist once the server has confirmed the current data, which is
   // what kept a NEW travel's id-sync (`_new` -> `_<id>`) from resurrecting a
   // false "unsaved changes" prompt on reload (F-09 / P2); the stale draft under
-  // the old key is dropped by the key-flip cleanup in useDraftRecovery.
+  // the old key is dropped by the key-flip cleanup in useDraftRecovery. On an
+  // article switch the first render still passes the previous article's form;
+  // useDraftRecovery ignores a snapshot whose id is not the current key's (#3212).
   useEffect(() => {
     if (!form.formData) return;
     if (!form.formState?.isDirty) return;

@@ -8,6 +8,7 @@ import { EXIF_IMAGE_INPUT_ACCEPT } from '@/utils/exifGps';
 import { useStyles } from './markersListStyles';
 import EditMarkerModal, { type MarkerEditPayload } from './EditMarkerModal';
 import { translate as i18nT } from '@/i18n'
+import { confirmRemoveRoutePoint } from '@/utils/confirmRemoveRoutePoint';
 
 // Кастомный MIME-тип, которым помечается drag-and-drop переупорядочивания точки.
 // Позволяет отличить reorder-перетаскивание строки от дропа фото-файла (EXIF→новая точка):
@@ -136,6 +137,11 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
     const dragDepthRef = useRef(0);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
+    // Кнопка в строке спрашивает сама; окно редактирования вызывает onRemove уже после своего вопроса.
+    const requestRemove = useCallback(async (index: number) => {
+        if (!(await confirmRemoveRoutePoint(markers[index]?.address))) return;
+        handleMarkerRemove(index);
+    }, [handleMarkerRemove, markers]);
     const onEdit = useCallback((index: number) => {
         setEditingIndex(index);
         setActiveIndex?.(index);
@@ -555,7 +561,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                     hoverColor={colors.dangerDark}
                                     style={styles.iconAction as React.CSSProperties}
                                     hoverStyle={styles.iconActionDangerHover as React.CSSProperties}
-                                    onClick={() => onRemove(index)}
+                                    onClick={() => void requestRemove(index)}
                                 />
                             </>
                         );

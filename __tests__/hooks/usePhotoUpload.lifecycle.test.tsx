@@ -73,3 +73,51 @@ it('preserves cover callback lifetime after the upload component unmounts', asyn
   await act(async () => { resolveUpload({ url: 'https://example.com/cover.jpg' }); await pending; });
   expect(onUpload).not.toHaveBeenCalled();
 });
+
+describe('native lifecycle (#3213)', () => {
+  const nativeFile = { uri: 'file:///photo.jpg', name: 'photo.jpg', type: 'image/jpeg' };
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+  });
+
+  it('delivers a point photo that finishes after the editor closed, as on web', async () => {
+    let resolveUpload!: (value: { url: string }) => void;
+    jest.mocked(uploadImage).mockImplementationOnce(() => new Promise((resolve) => { resolveUpload = resolve; }));
+    const onUpload = jest.fn();
+    const screen = await renderHook(() => usePhotoUpload({ collection: 'travelImageAddress', idTravel: '42', onUpload }));
+    let pending!: Promise<void>;
+    await act(async () => { pending = screen.result.current.handleUploadImage(nativeFile); });
+    await screen.unmount();
+    await act(async () => { resolveUpload({ url: 'https://example.com/point.jpg' }); await pending; });
+    expect(onUpload).toHaveBeenCalledTimes(1);
+    expect(onUpload).toHaveBeenCalledWith('https://example.com/point.jpg');
+  });
+
+  it('never writes the local file preview to a point when the server omits the url', async () => {
+    jest.mocked(uploadImage).mockResolvedValueOnce({ success: true } as never);
+    const onUpload = jest.fn();
+    const screen = await renderHook(() => usePhotoUpload({ collection: 'travelImageAddress', idTravel: '42', oldImage: 'https://example.com/old.jpg', onUpload }));
+    await act(async () => { await screen.result.current.handleUploadImage(nativeFile); });
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(screen.result.current.currentDisplayUrl).toBe('https://example.com/old.jpg');
+  });
+
+  it('drops the result of an explicitly cancelled upload and restores the previous photo', async () => {
+    let resolveUpload!: (value: { url: string }) => void;
+    jest.mocked(uploadImage).mockImplementationOnce(() => new Promise((resolve) => { resolveUpload = resolve; }));
+    const onUpload = jest.fn();
+    const screen = await renderHook(() => usePhotoUpload({ collection: 'travelImageAddress', idTravel: '42', oldImage: 'https://example.com/old.jpg', onUpload }));
+    let pending!: Promise<void>;
+    await act(async () => { pending = screen.result.current.handleUploadImage(nativeFile); });
+    expect(screen.result.current.loading).toBe(true);
+
+    await act(async () => { screen.result.current.cancelUpload(); });
+    expect(screen.result.current.loading).toBe(false);
+    expect(screen.result.current.currentDisplayUrl).toBe('https://example.com/old.jpg');
+
+    await act(async () => { resolveUpload({ url: 'https://example.com/late.jpg' }); await pending; });
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(screen.result.current.currentDisplayUrl).toBe('https://example.com/old.jpg');
+  });
+});

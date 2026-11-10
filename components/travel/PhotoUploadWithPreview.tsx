@@ -22,6 +22,8 @@ interface PhotoUploadWithPreviewProps {
   onPreviewChange?: (previewUrl: string | null) => void;
   onRequestRemove?: () => void;
   onUploadStateChange?: (isUploading: boolean) => void;
+  /** Владелец формы получает отмену текущей загрузки (#3213: редактор точки). */
+  uploadCancelRef?: React.MutableRefObject<(() => void) | null>;
   disabled?: boolean;
   placeholder?: string;
   maxSizeMB?: number;
@@ -44,7 +46,7 @@ const WebDropzoneView = safeLazy(async () => {
 
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
-  onUploadStateChange,
+  onUploadStateChange, uploadCancelRef,
   disabled = false, placeholder = i18nT('travel:components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b'), maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
@@ -59,7 +61,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   const {
     loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl,
-    handleUploadImage, handleRemovePress,
+    handleUploadImage, handleRemovePress, cancelUpload,
     handleImageLoadCheck, handleImageError, reportClientError,
   } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onError: notifyUploadError, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
 
@@ -69,6 +71,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
       if (loading) onUploadStateChange?.(false);
     };
   }, [loading, onUploadStateChange]);
+
+  useEffect(() => {
+    if (!uploadCancelRef) return;
+    uploadCancelRef.current = cancelUpload;
+    return () => {
+      if (uploadCancelRef.current === cancelUpload) uploadCancelRef.current = null;
+    };
+  }, [cancelUpload, uploadCancelRef]);
 
   const uploadPickedAsset = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
     if (!asset.uri) return;

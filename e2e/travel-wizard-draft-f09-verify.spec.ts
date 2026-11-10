@@ -190,7 +190,7 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
       const keysAfterReload = await lsKeys(page);
       // Tolerate a fresh draft only if the check did not surface a dialog; ideally none.
       expect(
-        keysAfterReload.filter((k) => k === `${DRAFT_PREFIX}_new`),
+        keysAfterReload.filter((k) => k === `${DRAFT_PREFIX}_u${userId}_new`),
         `No _new draft key should survive id-sync, got: ${JSON.stringify(keysAfterReload)}`
       ).toEqual([]);
 
@@ -235,7 +235,7 @@ test.describe('F-09 wizard draft recovery — false prompt after autosave id-syn
       throw new Error('could not seed travel via API');
     }
     const travelId = String(created.id);
-    const draftKey = `${DRAFT_PREFIX}_${travelId}`;
+    const draftKey = `${DRAFT_PREFIX}_u${userId}_${travelId}`;
 
     await seedAuth(page, token, userId);
     // Seed a genuinely DIFFERENT local draft (a real unsaved edit) before scripts run.

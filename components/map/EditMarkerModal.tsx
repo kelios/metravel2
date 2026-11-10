@@ -9,7 +9,7 @@ import MultiSelectField from '@/components/forms/MultiSelectField';
 import { isPointCategoryCreateEnabled } from '@/config/featureFlags';
 import { createPointCategory } from '@/api/misc';
 import { requestPointCategoryDictionaryRefresh } from '@/utils/pointCategoryDictionaryQuery';
-import { confirmAction } from '@/utils/confirmAction';
+import { confirmRemoveRoutePoint } from '@/utils/confirmRemoveRoutePoint';
 import type { useThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n'
 
@@ -139,11 +139,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     // #1556: подтверждение через дизайн-системный диалог. Нативный `window.confirm`
     // синхронно морозил вкладку вместе с картой под модалкой.
     const handleDelete = async () => {
-        const shortAddr = address || marker.address || i18nT('map:components.map.EditMarkerModal.etu_tochku_054e1134');
-        const confirmed = await confirmAction({
-            title: i18nT('map:components.map.EditMarkerModal.udalit_tochku_b058b974'),
-            message: i18nT('map:components.map.EditMarkerModal.udalit_tochku_value1_iz_marshruta_eto_deystv_229ad7bd', { value1: shortAddr }),
-        });
+        const confirmed = await confirmRemoveRoutePoint(address || marker.address);
         if (!confirmed) return;
         onRemove(index);
         onClose();

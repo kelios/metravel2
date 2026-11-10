@@ -94,6 +94,84 @@ function scanRender(rel, source, { surface, types: declared }, hideable) {
   return findings
 }
 
+// #3214: необратимое удаление пользовательских данных в мастере статьи и на карте
+// спрашивает подтверждение. Вопрос — `confirmAction` (web: ConfirmDialogHost,
+// native: системный Alert) или обёртка над ним из CONFIRM_HELPERS; поведение по
+// `JEST_WORKER_ID` не ветвится, иначе тесты проверяют защиту, которой нет на сайте.
+const DESTRUCTIVE_SCOPE = ['components/travel', 'components/map']
+const CONFIRM_HELPERS = {
+  'utils/confirmRemoveRoutePoint.ts': 'confirmRemoveRoutePoint',
+}
+// Компонент сам не спрашивает, а передаёт нажатие владельцу, который спрашивает.
+// Владелец обязан звать вопрос — это проверяется, запись без него не спасает.
+const DELEGATED_REMOVALS = {
+  'components/travel/gallery/GalleryGrid.tsx': {
+    owner: 'components/travel/gallery/ImageGallery.tsx',
+    reason: 'onDelete плитки — ImageGallery.handleDeleteImage с confirmAction',
+  },
+  'components/travel/InstagramPublishPanel.tsx': {
+    reason: 'onRemoveImage исключает фото из подборки публикации; фото и статья не удаляются',
+  },
+}
+const JEST_BRANCH = /\bJEST_WORKER_ID\b/
+const API_DELETE_IMPORT = /import\s*\{([^}]*)\}\s*from\s*['"]@\/api\/[^'"]+['"]/g
+const DIRECT_REMOVAL_EVENT = /\bon(?:Press|Click|Activate|LongPress)=\{\s*\(\)\s*=>\s*((?:on|handle)\w*(?:Remove|Delete)\w*)\s*\(/g
+
+function asksConfirmation(source) {
+  const names = ['confirmAction', ...Object.values(CONFIRM_HELPERS)]
+  return names.some((name) => new RegExp(`\\b${name}\\s*\\(`).test(source)) || /<ConfirmDialog\b/.test(source)
+}
+
+function apiDeleteCalls(source) {
+  const names = []
+  for (const match of source.matchAll(API_DELETE_IMPORT)) {
+    for (const part of match[1].split(',')) {
+      const local = part.replace(/\btype\s+/, '').split(/\s+as\s+/).pop().trim()
+      if (/^(?:delete|remove)[A-Z]\w*$/.test(local) && new RegExp(`\\b${local}\\s*\\(`).test(source)) names.push(local)
+    }
+  }
+  return names
+}
+
+function scanDestructiveActions(rootDir) {
+  const findings = []
+  for (const [rel, name] of Object.entries(CONFIRM_HELPERS)) {
+    const file = path.join(rootDir, rel)
+    if (!fs.existsSync(file)) continue
+    const source = fs.readFileSync(file, 'utf8')
+    if (!new RegExp(`export\\s+(?:async\\s+)?function\\s+${name}\\b`).test(source) || !/\bconfirmAction\s*\(/.test(source)) {
+      findings.push(`${rel}: ${name} обязан вызывать confirmAction`)
+    }
+  }
+  for (const dir of DESTRUCTIVE_SCOPE) {
+    for (const rel of listSourceFiles(rootDir, dir)) {
+      const source = fs.readFileSync(path.join(rootDir, rel), 'utf8')
+      if (JEST_BRANCH.test(source)) {
+        findings.push(`${rel}: ветвление по JEST_WORKER_ID в коде приложения — тесты должны идти тем же путём, что сайт`)
+      }
+      const asks = asksConfirmation(source)
+      for (const name of apiDeleteCalls(source)) {
+        if (!asks) findings.push(`${rel}: ${name}(…) удаляет данные на сервере без confirmAction`)
+      }
+      const delegated = DELEGATED_REMOVALS[rel]
+      for (const match of source.matchAll(DIRECT_REMOVAL_EVENT)) {
+        if (asks) continue
+        if (!delegated) {
+          findings.push(`${rel}: нажатие сразу вызывает ${match[1]}(…) без confirmAction — спроси или опиши владельца в DELEGATED_REMOVALS`)
+          continue
+        }
+        if (!String(delegated.reason || '').trim()) findings.push(`${rel}: DELEGATED_REMOVALS без причины`)
+        const ownerFile = delegated.owner && path.join(rootDir, delegated.owner)
+        if (delegated.owner && (!fs.existsSync(ownerFile) || !asksConfirmation(fs.readFileSync(ownerFile, 'utf8')))) {
+          findings.push(`${rel}: владелец ${delegated.owner} не спрашивает подтверждение`)
+        }
+        break
+      }
+    }
+  }
+  return findings
+}
+
 function scanUgcActions(rootDir) {
   const findings = []
   const typesPath = path.join(rootDir, TYPES_FILE)
@@ -141,10 +219,19 @@ function scanUgcActions(rootDir) {
       }
     }
   }
+  findings.push(...scanDestructiveActions(rootDir))
   return findings
 }
 
-module.exports = { UGC_RENDERS, EXEMPT_TYPES, readContentTypes, scanRender, scanUgcActions }
+module.exports = {
+  UGC_RENDERS,
+  EXEMPT_TYPES,
+  DELEGATED_REMOVALS,
+  readContentTypes,
+  scanRender,
+  scanDestructiveActions,
+  scanUgcActions,
+}
 
 if (require.main === module) {
   const rootIdx = process.argv.indexOf('--root')

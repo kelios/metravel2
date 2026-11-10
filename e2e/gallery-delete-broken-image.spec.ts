@@ -48,7 +48,7 @@ test.describe('Gallery: delete broken image (404)', () => {
           window.localStorage.setItem('isSuperuser', 'false');
 
           window.localStorage.setItem(
-            'metravel_travel_draft_new',
+            'metravel_travel_draft_u1_new',
             JSON.stringify({
               data: {
                 name: 'E2E draft with broken gallery',
@@ -371,7 +371,9 @@ test.describe('Gallery: delete broken image (404)', () => {
         (deleteButtons[0] as HTMLElement).click();
       }
     });
-    
+    // #3214: deletion asks first on the site too (ConfirmDialogHost).
+    await page.getByTestId('confirm-dialog-accept').click();
+
     // Wait for the delete to process
     await page.waitForLoadState('networkidle').catch(() => null);
 

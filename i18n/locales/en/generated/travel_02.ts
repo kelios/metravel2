@@ -289,6 +289,7 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.selectImagesFailed": "Failed to select images",
   "components.travel.ImageGalleryComponent.takePhotoFailed": "Failed to take photo",
   "components.travel.ImageGalleryComponent.deleteFailed": "Failed to delete image",
+  "components.travel.ImageGalleryComponent.reorderFailed": "Couldn't save the photo order. The previous order has been restored.",
   "components.travel.ImageGalleryComponent.permissionTitle": "Permission",
   "components.travel.ImageGalleryComponent.galleryPermissionMessage": "Access to gallery is required",
   "components.travel.ImageGalleryComponent.cameraPermissionMessage": "Access to camera is required",

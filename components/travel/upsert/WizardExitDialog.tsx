@@ -154,8 +154,7 @@ function WizardExitDialog({
       </View>
     );
 
-    const isJest = !!process.env.JEST_WORKER_ID;
-    if (portal && body && !isJest) {
+    if (portal && body) {
       return portal(content, body);
     }
     return <View style={styles.webPortalRoot}>{content}</View>;
