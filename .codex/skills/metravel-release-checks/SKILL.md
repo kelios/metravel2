@@ -58,7 +58,7 @@ Keep release and performance validation aligned with repo policy:
 - Resolve workstation-specific transport through `docs/RELEASE.md` →
   `Deploy transport depends on the machine: check rsync first`; never assume
   a historical Windows wrapper exists on the current host.
-- Use `scripts/fix-prod.sh` only as a documented emergency frontend recovery path through `$metravel-devops-agent`, after recording why the normal deploy path is unavailable or unsafe.
+- Emergency frontend recovery has no separate script (`scripts/fix-prod.sh` was removed in #3209): route it to `$metravel-devops-agent` and the runbook in `docs/WORKFLOW_OPERATIONS.md` → «Аварийный возврат прошлой версии» (`rollback-code`, forward fix, explicit `ALLOW_DOWNGRADE=1` rollback).
 - Run Lighthouse against a production build or the real production URL, never against a dev server.
 - Use post-deploy checks against the real site after release, for example `npm run test:seo:postdeploy`.
 - Do not reintroduce service worker runtime/static caching or any user-facing "clear cache" workaround.

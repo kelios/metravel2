@@ -12,6 +12,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
+import { liveOriginEnv } from './remote-deploy-test-utils'
 
 const { resolveLockRoot } = require('@/scripts/build-lock')
 
@@ -97,7 +98,8 @@ function makeFixture(): Fixture {
   git(repo, ['checkout', '-q', '-b', 'main'])
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true })
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
-  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
+  // assert-deployable-source.js is the shipped live-revision gate (#3207).
+  for (const script of ['assert-deployable-source.js', 'lib/buildStamp.js', 'guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
     'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })
@@ -136,6 +138,25 @@ function runDeploy(fixture: Fixture, args: string[], env: Record<string, string>
       ...env,
     },
   })
+}
+
+// What a real rollout touches besides the build: the production checkout over
+// ssh, the backend SSR capability and the final live check. Committed and
+// pushed, so the deployed commit is a descendant of the fixture's first one.
+const SSR_CAPABILITY = '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}'
+
+function addDeployStubs(fixture: Fixture): Record<string, string> {
+  const bin = path.join(fixture.root, 'bin')
+  writeFile(path.join(bin, 'ssh'), '#!/bin/bash\nprintf \'%s\' "$STUB_SSH_STATUS"', 0o755)
+  writeFile(path.join(fixture.repo, 'scripts/deploy-target.sh'),
+    'PROD_SSH_TARGET=stub@host\nPROD_REMOTE_DIR=/srv/stub\nrequire_deploy_target() { :; }')
+  writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), 'printf \'%s\\n\' "$STUB_CAPABILITY"')
+  writeFile(path.join(fixture.repo, 'scripts/verify-live-release.sh'), 'echo "✅ stub live check $1"')
+  fs.copyFileSync(path.join(process.cwd(), 'scripts/lib/webOutput.js'), path.join(fixture.repo, 'scripts/lib/webOutput.js'))
+  git(fixture.repo, ['add', 'scripts'])
+  git(fixture.repo, ['commit', '-q', '-m', 'deploy guards'])
+  git(fixture.repo, ['push', '-q', 'origin', 'main'])
+  return { DEPLOY: '1', PATH: `${bin}:${process.env.PATH}`, STUB_SSH_STATUS: '', STUB_CAPABILITY: SSR_CAPABILITY }
 }
 
 function readStubOut(fixture: Fixture): Record<string, string> {
@@ -263,24 +284,15 @@ describe('scripts/deploy-prod.sh', () => {
   // The pre-build guards now run inside `| tee -a "$LOG"` pipelines (#2942):
   // pipefail, not the guard's own exit, is what still stops the rollout.
   it.each([
-    { guard: 'dirty prod checkout', sshStatus: ' M app/models.py', capability: '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}', reason: '❌ Прод-чекаут бэкенда грязный' },
+    { guard: 'dirty prod checkout', sshStatus: ' M app/models.py', capability: SSR_CAPABILITY, reason: '❌ Прод-чекаут бэкенда грязный' },
     { guard: 'capability without quest SSR', sshStatus: '', capability: '{"schema_version":1,"available":true,"enabled":true}', reason: 'Production deploy publishes only SSR' },
   ])('refuses a $guard before the build and keeps the refusal in the log', ({ sshStatus, capability, reason }) => {
     const fixture = makeFixture()
     try {
-      const bin = path.join(fixture.root, 'bin')
-      writeFile(path.join(bin, 'ssh'), '#!/bin/bash\nprintf \'%s\' "$STUB_SSH_STATUS"', 0o755)
-      writeFile(path.join(fixture.repo, 'scripts/deploy-target.sh'),
-        'PROD_SSH_TARGET=stub@host\nPROD_REMOTE_DIR=/srv/stub\nrequire_deploy_target() { :; }')
-      writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), 'printf \'%s\\n\' "$STUB_CAPABILITY"')
-      fs.copyFileSync(path.join(process.cwd(), 'scripts/lib/webOutput.js'), path.join(fixture.repo, 'scripts/lib/webOutput.js'))
-      git(fixture.repo, ['add', 'scripts'])
-      git(fixture.repo, ['commit', '-q', '-m', 'deploy guards'])
-      git(fixture.repo, ['push', '-q', 'origin', 'main'])
-
+      const live = git(fixture.repo, ['rev-parse', 'HEAD'])
       const result = runDeploy(fixture, [], {
-        DEPLOY: '1',
-        PATH: `${bin}:${process.env.PATH}`,
+        ...addDeployStubs(fixture),
+        ...liveOriginEnv(fixture.root, live),
         STUB_SSH_STATUS: sshStatus,
         STUB_CAPABILITY: capability,
       })
@@ -296,6 +308,80 @@ describe('scripts/deploy-prod.sh', () => {
     } finally {
       removeDir(fixture.root)
     }
+  })
+
+  // #3207: a session that waited on the lock while another one published a
+  // descendant used to put production back on its own older commit.
+  describe('live revision', () => {
+    const lastLogLine = (fixture: Fixture): string => {
+      const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy')).filter((name) => name.endsWith('.log'))
+      return fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', log), 'utf8').trimEnd().split('\n').at(-1)!
+    }
+
+    it('refuses a commit older than the live one before the worktree, ssh and the build', () => {
+      const fixture = makeFixture()
+      try {
+        const older = git(fixture.repo, ['rev-parse', 'HEAD'])
+        const env = addDeployStubs(fixture)
+        const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+
+        const result = runDeploy(fixture, [older], { ...env, ...liveOriginEnv(fixture.root, live), STUB_SSH_STATUS: ' M never-read' })
+
+        expect(result.status).toBe(1)
+        expect(result.stdout).toContain(`Ревизия ${older.slice(0, 9)} старше живой ${live.slice(0, 9)}`)
+        expect(result.stdout).toContain(`❌ Выкат ${older.slice(0, 9)} отклонён до сборки — прод не менялся`)
+        expect(result.stdout).not.toContain('Прод-чекаут бэкенда')
+        expect(fs.existsSync(fixture.stubOut)).toBe(false)
+        expect(fs.existsSync(fixture.worktree)).toBe(false)
+        expect(lastLogLine(fixture)).toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 1$/)
+      } finally {
+        removeDir(fixture.root)
+      }
+    })
+
+    it('reports the live commit as already deployed and builds nothing', () => {
+      const fixture = makeFixture()
+      try {
+        const env = addDeployStubs(fixture)
+        const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+
+        const result = runDeploy(fixture, [], { ...env, ...liveOriginEnv(fixture.root, live) })
+
+        expect(result.status).toBe(0)
+        expect(result.stdout).toContain(`Ревизия ${live.slice(0, 9)} уже выкачена`)
+        expect(fs.existsSync(fixture.stubOut)).toBe(false)
+        expect(lastLogLine(fixture)).toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 0$/)
+      } finally {
+        removeDir(fixture.root)
+      }
+    })
+
+    it('rolls out a newer commit as before, and an older one only with ALLOW_DOWNGRADE=1', () => {
+      const fixture = makeFixture()
+      try {
+        const env = addDeployStubs(fixture)
+        const base = git(fixture.repo, ['rev-parse', 'HEAD'])
+        writeFile(path.join(fixture.repo, 'later.txt'), 'later')
+        git(fixture.repo, ['add', 'later.txt'])
+        git(fixture.repo, ['commit', '-q', '-m', 'later'])
+        git(fixture.repo, ['push', '-q', 'origin', 'main'])
+        const later = git(fixture.repo, ['rev-parse', 'HEAD'])
+
+        const forward = runDeploy(fixture, [], { ...env, ...liveOriginEnv(fixture.root, base) })
+        expect(forward.status).toBe(0)
+        expect(forward.stdout).toContain(`Живая ревизия прода ${base.slice(0, 9)} — предок выкатываемой ${later.slice(0, 9)}`)
+        expect(readStubOut(fixture)).toMatchObject({ head: later, deploy: '1', web_output: 'server' })
+
+        fs.rmSync(fixture.stubOut)
+        const rollback = runDeploy(fixture, [base], { ...env, ...liveOriginEnv(fixture.root, later), ALLOW_DOWNGRADE: '1', DEPLOY_QUIET: '1' })
+        expect(rollback.status).toBe(0)
+        // The explicit rollback is named in the report even in quiet mode.
+        expect(rollback.stdout).toContain('⚠️  ALLOW_DOWNGRADE=1')
+        expect(readStubOut(fixture).head).toBe(base)
+      } finally {
+        removeDir(fixture.root)
+      }
+    })
   })
 
   it.each([{ max: '1', status: 0, verdict: 'pass' }, { max: '0.1', status: 1, verdict: 'fail' }])(

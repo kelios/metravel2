@@ -5,7 +5,7 @@
 # --------------------
 # Репозиторий публичный (github.com/kelios/metravel2), поэтому логин и IP
 # боевого сервера в нём не хранятся: раньше пара «пользователь@адрес» была
-# зашита дефолтом в `build-prod.sh`, `scripts/fix-prod.sh` и
+# зашита дефолтом в `build-prod.sh`, `scripts/fix-prod.sh` (удалён в #3209) и
 # `scripts/fix-missing-chunk.sh`, то есть лежала в открытом виде вместе с
 # путём деплоя. Теперь реквизиты живут только в локальном `.env.deploy`
 # (он под `.gitignore`) или в переменных окружения CI.
@@ -70,8 +70,9 @@ require_deploy_target() {
   return 0
 }
 
-# Both frontend publication paths share these limits. Preserve explicit overrides,
-# including zero; empty values use the default, never disable a bound accidentally.
+# Limits of the frontend publication (scripts/web-ssr-publication.sh). Explicit
+# overrides are kept; empty values use the default, never disable a bound
+# accidentally. The overlay values must stay inside the backend bounds below.
 metravel_deploy_defaults() {
   EXPO_OVERLAY_RETENTION_DAYS="${EXPO_OVERLAY_RETENTION_DAYS:-14}"
   EXPO_OVERLAY_MAX_MB="${EXPO_OVERLAY_MAX_MB:-256}"
@@ -85,6 +86,18 @@ metravel_deploy_defaults() {
       return 1
     fi
   done
+  # The backend seals the release only inside these bounds
+  # (metravel-backend: deploy/prod/web_ssr_release.py, overlay_candidate). A
+  # value outside them used to be refused on the host after the whole release
+  # had been uploaded (#3209), so the same bounds stop the deploy here.
+  if ((10#$EXPO_OVERLAY_RETENTION_DAYS < 1 || 10#$EXPO_OVERLAY_RETENTION_DAYS > 90)); then
+    echo "ERROR: EXPO_OVERLAY_RETENTION_DAYS must be between 1 and 90 (backend release bounds)" >&2
+    return 1
+  fi
+  if ((10#$EXPO_OVERLAY_MAX_MB < 1 || 10#$EXPO_OVERLAY_MAX_MB > 4096)); then
+    echo "ERROR: EXPO_OVERLAY_MAX_MB must be between 1 and 4096 (backend release bounds)" >&2
+    return 1
+  fi
 }
 
 # ---------------------------------------------------------------------------

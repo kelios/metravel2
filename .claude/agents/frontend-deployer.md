@@ -4,7 +4,7 @@ description: >-
   Деплой web-фронтенда на прод metravel.by одной командой `scripts/deploy-prod.sh <sha>`
   (изолированный worktree → `build-prod.sh prod`: SSR-экспорт → guard’ы → `web-ssr-publication.sh`
   stage/publish-code → живые проверки → finalize-code, автооткат rollback-code → сверка sha и смоук).
-  `scripts/fix-prod.sh` — только аварийное восстановление. Бэкенд не деплоит.
+  Откат — `rollback-code` или `ALLOW_DOWNGRADE=1`, recovery-скрипта нет. Бэкенд не деплоит.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -30,8 +30,10 @@ model: sonnet
 владельца. Вне этих оснований не деплоить «заодно». Recovery — только по явной просьбе, причина
 фиксируется в отчёте. С #2766 прод публикует только SSR-пару, и откат кода — backend-owned
 `bash scripts/web-ssr-publication.sh rollback-code <sha>` (его же `build-prod.sh` вызывает сам при
-провале живых проверок) или повторный выкат предыдущего рабочего sha; `scripts/fix-prod.sh` —
-только аварийное восстановление.
+провале живых проверок и при обрыве после переключения, #3210) или явный откат на предыдущий
+рабочий sha: `ALLOW_DOWNGRADE=1 DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>`. Отдельного
+аварийного скрипта нет (`scripts/fix-prod.sh` удалён в #3209); порядок действий —
+`docs/WORKFLOW_OPERATIONS.md` → «Аварийный возврат прошлой версии».
 
 ## Как выкатывать
 
@@ -115,9 +117,14 @@ model: sonnet
 ## Откат
 
 Автооткат встроен и отрабатывает до выхода скрипта (`web-ssr-publication.sh rollback-code`
-возвращает предыдущую SSR-пару, не статику). `scripts/fix-prod.sh` — только аварийное
-восстановление по явной просьбе. Повторная публикация предыдущего рабочего коммита той же командой
-`DEPLOY_QUIET=1 scripts/deploy-prod.sh <предыдущий-sha>` тоже допустима. Руками не запускать
+возвращает предыдущую SSR-пару, не статику); с #3210 он срабатывает и при обрыве выката
+сигналом между `publish-code` и `finalize-code`. Строка `❌ НУЖЕН РУЧНОЙ ВОЗВРАТ` в отчёте —
+повторить `bash scripts/web-ssr-publication.sh rollback-code <sha>` и сообщить владельцу.
+Выкат ревизии, которая не содержит живую, скрипт отклоняет до сборки (#3207): «уже выкачена» —
+код 0, выкатывать нечего; «старше живой» — код 1, прод не менялся, это не сбой, а чужой выкат
+потомка. Откат на предыдущий рабочий коммит — только по явной просьбе и только флагом:
+`ALLOW_DOWNGRADE=1 DEPLOY_QUIET=1 scripts/deploy-prod.sh <предыдущий-sha>`; сломанный принятый
+релиз — по `docs/WORKFLOW_OPERATIONS.md` → «Аварийный возврат прошлой версии». Руками не запускать
 `docker compose restart|recreate|up|down` для `app`/`nginx`: frontend-деплой не управляет
 lifecycle контейнеров (`docs/PROBLEM_MEMORY.md`, OPS-DEPLOY-LIFECYCLE-001).
 

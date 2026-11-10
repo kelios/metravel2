@@ -1,13 +1,15 @@
 /**
- * Shared source+config gate must sit on every prod ship path (#1883).
- * Pattern matches #1427: read the three entry points as text so dropping the
- * call from any one file turns this suite red.
+ * Shared source+config gate must sit on every prod build path (#1883).
+ * Pattern matches #1427: read the entry points as text so dropping the call
+ * from any one file turns this suite red. The third entry point, the emergency
+ * scripts/fix-prod.sh, was removed in #3209 together with the artifact-marker
+ * check that existed only for it.
  */
 import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli, runNodeCli } from './cli-test-utils'
-import { readCanonicalDeploy, readRecoveryDeploy } from './remote-deploy-test-utils'
+import { readCanonicalDeploy } from './remote-deploy-test-utils'
 
 const SOURCE_GATE = 'assert-deployable-source.js'
 const SOURCE_GATE_SCRIPT = 'scripts/assert-deployable-source.js'
@@ -30,19 +32,16 @@ function readWebProd(): string {
 describe('prod ship paths share the source and config gates (#1883)', () => {
   it('calls the shared source gate from every entry point', () => {
     expect(readCanonicalDeploy()).toContain(SOURCE_GATE)
-    expect(readRecoveryDeploy()).toContain(SOURCE_GATE)
     expect(readWebProd()).toContain(SOURCE_GATE)
   })
 
   it('calls verify-prod-config.js from every entry point', () => {
     expect(readCanonicalDeploy()).toContain(CONFIG_GATE)
-    expect(readRecoveryDeploy()).toContain(CONFIG_GATE)
     expect(readWebProd()).toContain(CONFIG_GATE)
   })
 
-  it('writes and checks the artifact provenance marker', () => {
+  it('writes the artifact provenance marker', () => {
     expect(readCanonicalDeploy()).toContain(`--copy-marker "dist/$ENV/${MARKER}"`)
-    expect(readRecoveryDeploy()).toContain(`--check-marker "dist/$ENV/${MARKER}"`)
     expect(readWebProd()).toContain(MARKER)
   })
 })
@@ -87,35 +86,5 @@ describe('assert-deployable-source.js', () => {
     expect(result.status).not.toBe(0)
     expect(result.stdout).toContain('Рабочее дерево грязное')
     expect(result.stdout).toContain('stray.ts')
-  })
-
-  it('refuses a build-only dirty marker on fix-prod check', () => {
-    const marker = path.join(work, 'dist', 'prod', MARKER)
-    fs.mkdirSync(path.dirname(marker), { recursive: true })
-    fs.writeFileSync(
-      marker,
-      JSON.stringify({ sha: 'abc', dirty: true, deploy: false, ok: true }),
-    )
-    const result = runNodeCli(
-      [script, '--check-marker', marker, '--allow-dirty', '0', '--cwd', work],
-      GIT_ENV,
-    )
-    expect(result.status).not.toBe(0)
-    expect(result.stdout).toContain('грязного дерева')
-  })
-
-  it('lets --allow-dirty through a dirty marker with a loud warning', () => {
-    const marker = path.join(work, 'dist', 'prod', MARKER)
-    fs.mkdirSync(path.dirname(marker), { recursive: true })
-    fs.writeFileSync(
-      marker,
-      JSON.stringify({ sha: 'abc', dirty: true, deploy: false, ok: true }),
-    )
-    const result = runNodeCli(
-      [script, '--check-marker', marker, '--allow-dirty', '1', '--cwd', work],
-      GIT_ENV,
-    )
-    expect(result.status).toBe(0)
-    expect(result.stdout).toContain('--allow-dirty')
   })
 })

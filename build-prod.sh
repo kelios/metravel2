@@ -33,6 +33,11 @@ EXPORT_LOG=''
 ENV_BACKUP=''
 ENV_BACKUP_PRESENT=0
 BUILD_SOURCE_SHA=''
+SOURCE_ALREADY_LIVE=0
+# #3210: sha релиза, который уже переключён на проде (publish-code), но ещё не
+# подтверждён живыми проверками и finalize-code. Пока он не пуст, любой выход —
+# ошибка, сигнал, обрыв обёртки — обязан вернуть предыдущую пару.
+PUBLISH_UNCONFIRMED_SHA=''
 MEDIA_CHECKS_PID=''
 MEDIA_CHECKS_LOG=''
 STAGE_NAME=''
@@ -154,6 +159,28 @@ close_planned_load_window() {
     echo "⚠️ Окно плановой нагрузки на проде не снято — истечёт само"
 }
 
+# Возврат переключённого, но не подтверждённого релиза (#3210). Вызывается из
+# ветки провала живых проверок и из on_exit: до #3210 возврат стоял только в
+# ветке ошибки, поэтому SIGTERM между publish-code и концом проверок (тайм-аут
+# обёртки, остановка сессии) оставлял на проде непроверенную версию. Отметка
+# снимается до вызова — второй раз тот же релиз не возвращается.
+rollback_unconfirmed_release() {
+  local sha="$PUBLISH_UNCONFIRMED_SHA"
+
+  [[ -n "$sha" ]] || return 0
+  PUBLISH_UNCONFIRMED_SHA=''
+  echo "⚠️  Релиз ${sha:0:9} переключён, но не подтверждён — возвращаю связанную серверную и клиентскую версию"
+  if bash scripts/web-ssr-publication.sh rollback-code "$sha"; then
+    echo "✅ Возврат выполнен: прод снова отдаёт предыдущий релиз"
+    return 0
+  fi
+  echo "❌ НУЖЕН РУЧНОЙ ВОЗВРАТ: rollback-code $sha не прошёл."
+  echo "   Сверь https://metravel.by/.build-source.json и повтори: bash scripts/web-ssr-publication.sh rollback-code $sha"
+  echo "   Если finalize-code успел завершиться, релиз уже принят и проверен: бэкенд его не возвращает, прод цел."
+  echo "   (docs/WORKFLOW_OPERATIONS.md → «Аварийный возврат прошлой версии»)"
+  return 1
+}
+
 on_exit() {
   local status=$?
 
@@ -162,6 +189,12 @@ on_exit() {
   # restore_env_file, иначе бросил бы общий .env прод-копией — ENV_BACKUP к
   # этому моменту уже обнулён, и повторной попытки не будет.
   trap '' INT TERM HUP
+  if [[ -n "$PUBLISH_UNCONFIRMED_SHA" ]]; then
+    # Первым делом: сайт важнее уборки. Выход с неподтверждённым релизом
+    # успехом не бывает, даже если возврат прошёл.
+    rollback_unconfirmed_release || true
+    [[ "$status" != "0" ]] || status=1
+  fi
   print_stage_report || true
   stop_prod_media_checks
   close_planned_load_window || true
@@ -198,7 +231,16 @@ assert_deployable_source() {
     here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     gate_js="$here/scripts/assert-deployable-source.js"
   fi
-  node "$gate_js" --env "$env_name" --allow-dirty "$allow_dirty" --deploy "$deploying" --cwd "$(pwd)" || return 1
+  # #3207: выкат дополнительно сверяется с живой ревизией прода. Код 3 —
+  # «эта ревизия уже выкачена»: не ошибка, но собирать и публиковать нечего.
+  local gate_status=0
+  node "$gate_js" --env "$env_name" --allow-dirty "$allow_dirty" --deploy "$deploying" \
+    --live-check "$deploying" --cwd "$(pwd)" || gate_status=$?
+  if [[ "$gate_status" == "3" ]]; then
+    SOURCE_ALREADY_LIVE=1
+  elif [[ "$gate_status" != "0" ]]; then
+    return 1
+  fi
   BUILD_SOURCE_SHA="$(git rev-parse HEAD)"
 }
 
@@ -242,7 +284,19 @@ install_deps() {
     rm -rf node_modules package-lock.json
   fi
   echo "📦 Устанавливаю зависимости..."
-  yarn install --frozen-lockfile || yarn install
+  if yarn install --frozen-lockfile; then
+    return 0
+  fi
+  # #3210: раньше здесь стояло `|| yarn install` — при расхождении package.json
+  # с yarn.lock или сбое сети версии подбирались заново, уже после гейта
+  # источника, и на прод уезжал код, которого нет ни в одном коммите.
+  if [[ "${DEPLOY:-1}" == "1" ]]; then
+    echo "❌ Строгая установка (yarn install --frozen-lockfile) не прошла — выкат остановлен, прод не менялся."
+    echo "   На прод уходят только версии из yarn.lock собираемого коммита: расхождение с package.json чинится коммитом, сбой сети — повтором выката."
+    return 1
+  fi
+  echo "⚠️  Строгая установка не прошла; это сборка без выката (DEPLOY=${DEPLOY:-}) — ставлю зависимости без yarn.lock, деплоить такой артефакт нельзя"
+  yarn install
 }
 
 create_export_log() {
@@ -383,14 +437,18 @@ deploy_prod() {
   # what to shorten; the sub-stages split the upload and the seal, the backend
   # swap with the live checks, and the finalize with the disk report.
   stage "выкат: переключение и живые проверки"
+  # Отметка ставится ДО переключения: receipt публикации бэкенд пишет раньше
+  # смены указателя, и оборванный publish-code тоже возвращается rollback-code.
+  PUBLISH_UNCONFIRMED_SHA="$BUILD_SOURCE_SHA"
   if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
          verify_deployment_runtime; }; then
-    echo "❌ Рендер не прошёл проверку — возвращаю связанную серверную и клиентскую версию"
-    bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
+    echo "❌ Рендер не прошёл проверку"
+    rollback_unconfirmed_release || true
     return 1
   fi
   stage "выкат: финализация и диск"
   bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
+  PUBLISH_UNCONFIRMED_SHA=''
 }
 
 ENV=''
@@ -429,6 +487,10 @@ if [[ "$DEPLOY" == "1" && "$SSR_CODE_RELEASE" != "1" ]]; then
   exit 1
 fi
 assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"
+if [[ "$SOURCE_ALREADY_LIVE" == "1" ]]; then
+  echo "🎉 Ревизия $BUILD_SOURCE_SHA уже на проде — сборка и публикация пропущены"
+  exit 0
+fi
 open_planned_load_window
 
 echo "🔁 Старт сборки..."

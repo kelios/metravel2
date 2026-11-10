@@ -1672,8 +1672,10 @@ guard, падающий в CI на попытке обойти этот конт
   Nginx и делать graceful reload существующего master process. Она не выполняет
   `restart`, `recreate`, `down`, `up`, `stop` или `rm` для app, Nginx, Redis,
   Redis Images, Postgres либо full-stack Compose.
-- **Surface/owner:** frontend release/recovery scripts (`build-prod.sh`,
-  `scripts/fix-prod.sh`); backend/infra lifecycle остаётся у backend owner.
+- **Surface/owner:** frontend release scripts (`build-prod.sh`,
+  `scripts/deploy-prod.sh`, `scripts/web-ssr-publication.sh`; аварийный
+  `scripts/fix-prod.sh` удалён в #3209); backend/infra lifecycle остаётся у
+  backend owner.
 - **Цепочка:** `#1365` — основной production deploy; linked follow-up `#1427` —
   аварийный recovery path; backend context `#1368`.
 - **Подтверждённые причины:** основной и аварийный пути развивались отдельно.
@@ -1681,8 +1683,9 @@ guard, падающий в CI на попытке обойти этот конт
   test только для remote payload `build-prod.sh`; `scripts/fix-prod.sh` остался
   вне этого guard и продолжал выполнять `docker restart "$nginx_ctr"` после
   atomic static swap.
-- **Controls:** общий source-contract test читает реальные `build-prod.sh` и
-  `scripts/fix-prod.sh`, запрещает Docker/Compose lifecycle commands и содержит
+- **Controls:** общий source-contract test читает реальные `build-prod.sh`,
+  `scripts/deploy-prod.sh` и `scripts/web-ssr-publication.sh` (до #3209 — и
+  `scripts/fix-prod.sh`), запрещает Docker/Compose lifecycle commands и содержит
   negative fixtures; оба пути используют Nginx config validation + graceful
   reload без изменения container identity/restart count.
 - **Решение для новой жалобы:** lifecycle-команда вернулась в одном из этих двух
@@ -8015,3 +8018,62 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Повторная проверка:** изменение выбранного источника/фото/географической
   привязки, формы маршрутов, геометрии печати или группировки стилей требует
   затронутых source/placement/PDF и production-проб заново.
+
+### DEPLOY-SECOND-PUBLISHER-DRIFT-001 — аварийный скрипт выкладки отставал от штатного
+
+- **Каноническая задача:** #3209; цепочка #733, #653, #1883, #2226 (и #1427).
+- **Механизм:** `scripts/fix-prod.sh` был второй реализацией публикации со своими
+  `rsync` в прод-чекаут бэкенда. Каждое изменение штатного пути (имена
+  контейнеров, владелец `static/`, гейты источника, пределы overlay, SSR-релизы
+  #2766) приходилось повторять в нём, и пять раз этого не сделали. После #2766
+  он отказывал на `legacy-check` уже после заливки `dist/`, `icons/`, `images/`
+  и этим останавливал следующий штатный выкат («прод-чекаут грязный»).
+- **Инвариант:** на прод пишет один издатель — `scripts/web-ssr-publication.sh`
+  (`stage` → `web-ssr/incoming/<sha>`). Аварийный возврат — те же операции:
+  `rollback-code`, исправление вперёд, backend `rollback-code --accepted`,
+  явный `ALLOW_DOWNGRADE=1`. Значения overlay проверяются в границах бэкенда до
+  заливки (`metravel_deploy_defaults`).
+- **Постоянный контроль:** `__tests__/scripts/emergency-recovery-contract.test.ts`
+  — единственный удалённый `rsync` в shell-скриптах репозитория, существование
+  каждой команды из раздела «Аварийный возврат прошлой версии», значения overlay
+  из документов в границах бэкенда.
+- **Решение для новой жалобы:** появился скрипт со своей заливкой на прод-хост —
+  `reopen #3209`, а не правка скрипта под текущий прод. Остаток статической эры
+  (`scripts/fix-missing-chunk.sh`, `scripts/quest-seo-legacy-operation.sh`) на
+  управляемом SSR-корне отказывает на `legacy-check` без записи.
+
+### DEPLOY-MONOTONIC-LIVE-REVISION-001 — выкат ревизии старше живой тихо откатывал прод
+
+- **Каноническая задача:** #3207 (семейство гейта источника #1883; #2930, #2819).
+- **Механизм:** гейт проверял только «ревизия достижима из `origin/main`».
+  Сессия, ждавшая лок, пока другая выкатывала потомка, публиковала своего
+  предка; итоговая сверка сравнивала прод с запрошенным sha и печатала успех.
+- **Инвариант:** выкат содержит живую ревизию (`git merge-base --is-ancestor
+  <живая> <цель>`). Совпадение — «уже выкачена», код 0 (гейт — 3). Предок,
+  разошедшаяся ревизия, нечитаемый `/.build-source.json`, неизвестный sha —
+  отказ до сборки. Обход — только `ALLOW_DOWNGRADE=1`, строка в отчёте.
+- **Постоянный контроль:** `scripts/assert-deployable-source.js`
+  (`checkLiveRevision`) вызывается из `scripts/deploy-prod.sh` до worktree и из
+  гейта `build-prod.sh`; `__tests__/scripts/deploy-live-revision-gate.test.ts`,
+  сценарии «live revision» в `deploy-prod.test.ts` и `build-prod-source-gate.test.ts`.
+- **Решение для новой жалобы:** прод оказался на предке без `ALLOW_DOWNGRADE=1`
+  в логе выката — `reopen #3207`; откат через backend `rollback-code` сюда не
+  относится (он не идёт через гейт фронта).
+
+### DEPLOY-FAIL-OPEN-001 — выкат обходил сбой вместо остановки
+
+- **Каноническая задача:** #3210 (операция возврата — #2819).
+- **Механизм:** `yarn install --frozen-lockfile || yarn install` подбирал версии
+  заново после гейта источника; возврат релиза стоял только в ветке ошибки, и
+  сигнал между `publish-code` и концом живых проверок оставлял на проде
+  непроверенную версию (`trap 'exit 143' TERM` выходил мимо `rollback-code`).
+- **Инвариант:** при `DEPLOY=1` зависимости ставятся только по `yarn.lock`;
+  релиз между `publish-code` и `finalize-code` помечен `PUBLISH_UNCONFIRMED_SHA`,
+  и единственный EXIT-обработчик возвращает его при любом выходе, печатая
+  `✅ Возврат выполнен` или `❌ НУЖЕН РУЧНОЙ ВОЗВРАТ` с ненулевым кодом.
+- **Постоянный контроль:** `__tests__/scripts/build-prod-fail-closed.test.ts` на
+  реальных функциях `build-prod.sh` (подменены только `yarn` и хелпер
+  публикации): строгая установка, SIGTERM после и во время переключения,
+  провал проверок и финализации, неудачный возврат.
+- **Решение для новой жалобы:** непроверенный релиз остался живым после обрыва —
+  `reopen #3210`; `kill -9` обработчик не переживает и поводом не является.

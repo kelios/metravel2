@@ -83,7 +83,8 @@ testers и countries защищены.
 - [ ] Deploy выполняется только project-owned release path:
   - `./build-prod.sh <target>` на машине с рабочим GNU `rsync` (обычный путь на macOS);
   - ops-wrapper из `docs/RELEASE.md` — только на историческом Windows/Codex-чекауте, на macOS его нет;
-  - `scripts/fix-prod.sh` только для явно запрошенного emergency recovery.
+  - аварийный возврат — только штатными операциями из `docs/WORKFLOW_OPERATIONS.md` →
+    «Аварийный возврат прошлой версии»; отдельного recovery-скрипта нет (#3209).
 - [ ] Custom `rsync`/`scp`/SSH deploy sequence не используется.
 - [ ] Server writes ограничены документированными untracked frontend targets
       (`static/dist*`); tracked backend source/config не изменяется, не

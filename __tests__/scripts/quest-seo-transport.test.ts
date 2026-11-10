@@ -1,8 +1,8 @@
 /** @jest-environment node */
 // The private archive transport and the legacy static-root lock of
-// scripts/quest-seo-transport.py stay live for the owner recovery scripts
-// (scripts/fix-prod.sh, scripts/fix-missing-chunk.sh via
-// scripts/quest-seo-legacy-operation.sh). These cases moved here from the
+// scripts/quest-seo-transport.py stay live for the owner recovery script
+// (scripts/fix-missing-chunk.sh via scripts/quest-seo-legacy-operation.sh;
+// scripts/fix-prod.sh was removed in #3209). These cases moved here from the
 // retired quest-seo-operation.test.ts when the static quest publication
 // pipeline was removed (#2766).
 import path from 'path'

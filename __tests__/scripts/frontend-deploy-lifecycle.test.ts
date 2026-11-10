@@ -1,15 +1,20 @@
 import {
   findFrontendDeployLifecycleViolations,
 } from './frontend-deploy-lifecycle-contract'
-import {
-  readCanonicalDeploy,
-  readRecoveryDeploy,
-} from './remote-deploy-test-utils'
+import fs from 'fs'
+import path from 'path'
+
+import { readCanonicalDeploy } from './remote-deploy-test-utils'
+
+const readScript = (name: string) => () => fs.readFileSync(path.resolve(process.cwd(), name), 'utf8')
 
 describe('frontend deploy container lifecycle contract', () => {
   it.each([
     ['build-prod.sh', readCanonicalDeploy],
-    ['scripts/fix-prod.sh', readRecoveryDeploy],
+    // The emergency path is the same publication protocol (#3209): the wrapper
+    // and the publisher are the only scripts that reach the production host.
+    ['scripts/deploy-prod.sh', readScript('scripts/deploy-prod.sh')],
+    ['scripts/web-ssr-publication.sh', readScript('scripts/web-ssr-publication.sh')],
   ])('keeps %s free of container lifecycle commands', (_path, readSource) => {
     expect(findFrontendDeployLifecycleViolations(readSource())).toEqual([])
   })
@@ -66,25 +71,5 @@ describe('frontend deploy container lifecycle contract', () => {
     ].join('\n')
 
     expect(findFrontendDeployLifecycleViolations(safeCommands)).toEqual([])
-  })
-
-  it('validates and gracefully reloads recovery Nginx after the static swap', () => {
-    const source = readRecoveryDeploy()
-    const remote = source.match(/<<'REMOTE_FIX_SCRIPT'[^\n]*\n([\s\S]*?)\nREMOTE_FIX_SCRIPT/)?.[1] || ''
-    expect(remote).not.toBe('')
-    const swapIndex = remote.indexOf('quest_seo_legacy_operation legacy-commit')
-    const swapEnd = remote.indexOf('\n', swapIndex)
-    const validationIndex = remote.indexOf(
-      'docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -t -c /etc/nginx/conf/nginx.conf',
-    )
-    const reloadIndex = remote.indexOf(
-      'docker exec "$nginx_ctr" /etc/nginx/sbin/nginx -s reload -c /etc/nginx/conf/nginx.conf',
-    )
-
-    expect(swapIndex).toBeGreaterThan(-1)
-    expect(swapEnd).toBeGreaterThan(swapIndex)
-    expect(remote.slice(swapIndex, swapEnd)).toContain('legacy-commit')
-    expect(validationIndex).toBeGreaterThan(swapEnd)
-    expect(reloadIndex).toBeGreaterThan(validationIndex)
   })
 })

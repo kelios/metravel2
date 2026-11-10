@@ -20,7 +20,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
-import { readCanonicalDeploy } from './remote-deploy-test-utils'
+import { liveOriginEnv, readCanonicalDeploy } from './remote-deploy-test-utils'
 
 // The globals, the restore/exit traps, the source gate and apply_env form one
 // contiguous region between the deploy-target source and install_deps. Taking
@@ -76,9 +76,20 @@ const GIT_ENV = {
   METRAVEL_SOURCE_GATE_JS: path.resolve(process.cwd(), 'scripts/assert-deployable-source.js'),
 }
 
+// #3207: a deploy run of the gate also compares HEAD with the live revision.
+// Every fixture repository starts with an empty `live` commit that production
+// "serves", so each later commit is an ordinary rollout ahead of it.
+let liveEnv: Record<string, string> = {}
+
+function useLiveFixture(root: string, work: string): void {
+  const first = runCli('git', ['rev-list', '--max-parents=0', 'HEAD'], { cwd: work, env: GIT_ENV })
+  expect(first.status).toBe(0)
+  liveEnv = liveOriginEnv(root, first.stdout.trim())
+}
+
 function runHarness(cwd: string, body: string, env: Record<string, string> = {}) {
   const script = ['set -Eeuo pipefail', "IFS=$'\\n\\t'", PRELUDE, body].join('\n')
-  return runCli('bash', ['-c', script], { cwd, env: { ...GIT_ENV, ...env } })
+  return runCli('bash', ['-c', script], { cwd, env: { ...GIT_ENV, ...liveEnv, ...env } })
 }
 
 // `bash -c script name args…` puts args into "$@" exactly as the shipped script
@@ -95,7 +106,7 @@ function runEntryPoint(cwd: string, args: string[], env: Record<string, string> 
   // harness env is what scripts/deploy-prod.sh exports for it.
   return runCli('bash', ['-c', script, 'build-prod.sh', ...args], {
     cwd,
-    env: { DEPLOY: '1', ...SSR_DEPLOY_ENV, ...GIT_ENV, ...env },
+    env: { DEPLOY: '1', ...SSR_DEPLOY_ENV, ...GIT_ENV, ...liveEnv, ...env },
   })
 }
 
@@ -116,6 +127,7 @@ describe('build-prod.sh source gate', () => {
           'git init -q work',
           'cd work',
           'git symbolic-ref HEAD refs/heads/main',
+          'git commit -q --allow-empty -m live',
           'echo one > file.txt',
           'git add file.txt',
           'git commit -qm one',
@@ -126,6 +138,7 @@ describe('build-prod.sh source gate', () => {
       { cwd: root, env: GIT_ENV },
     )
     expect(setup.status).toBe(0)
+    useLiveFixture(root, work)
   })
 
   afterEach(() => {
@@ -238,6 +251,7 @@ describe('build-prod.sh entry point', () => {
           'git init -q work',
           'cd work',
           'git symbolic-ref HEAD refs/heads/main',
+          'git commit -q --allow-empty -m live',
           'echo one > file.txt',
           'git add file.txt scripts/lib/webOutput.js',
           'git commit -qm one',
@@ -248,6 +262,7 @@ describe('build-prod.sh entry point', () => {
       { cwd: root, env: GIT_ENV },
     )
     expect(setup.status).toBe(0)
+    useLiveFixture(root, work)
   })
 
   afterEach(() => {
@@ -312,6 +327,44 @@ describe('build-prod.sh entry point', () => {
       expect(result.status).toBe(0)
       expect(result.stdout).toContain(`GATE-PASSED env=${env} deploy=0`)
     }
+  })
+
+  // #3207: the direct `./build-prod.sh prod` run gets the same live-revision
+  // check as scripts/deploy-prod.sh — the gate is shared, not copied.
+  it('skips the build for the live revision and refuses one that is older than it', () => {
+    // Several gate runs in one tree: its marker directory is ignored, as in the real checkout.
+    fs.appendFileSync(path.join(work, '.git/info/exclude'), '.codex-temp/\n')
+    const head = runCli('git', ['rev-parse', 'HEAD'], { cwd: work, env: GIT_ENV }).stdout.trim()
+    liveEnv = liveOriginEnv(root, head)
+
+    const same = runEntryPoint(work, ['prod'])
+    expect(same.status).toBe(0)
+    expect(same.stdout).toContain('уже выкачена')
+    expect(same.stdout).toContain('сборка и публикация пропущены')
+    expect(same.stdout).not.toContain('GATE-PASSED')
+
+    const newer = runCli(
+      'bash',
+      ['-c', 'set -euo pipefail\necho two > file.txt\ngit commit -qam two\ngit push -q origin main\ngit rev-parse HEAD\ngit checkout -q --detach HEAD~1'],
+      { cwd: work, env: GIT_ENV },
+    )
+    expect(newer.status).toBe(0)
+    liveEnv = liveOriginEnv(root, newer.stdout.trim())
+
+    const behind = runEntryPoint(work, ['prod'])
+    expect(behind.status).not.toBe(0)
+    expect(behind.stdout).toContain('старше живой')
+    expect(behind.stdout).not.toContain('GATE-PASSED')
+
+    const rollback = runEntryPoint(work, ['prod'], { ALLOW_DOWNGRADE: '1' })
+    expect(rollback.status).toBe(0)
+    expect(rollback.stdout).toContain('ALLOW_DOWNGRADE=1')
+    expect(rollback.stdout).toContain('GATE-PASSED env=prod deploy=1')
+
+    // A build-only preview never asks production what it serves.
+    const preview = runEntryPoint(work, ['prod'], { DEPLOY: '0', ...STATIC_BUILD_ENV, VERIFY_LIVE_ORIGIN: 'file:///nonexistent' })
+    expect(preview.status).toBe(0)
+    expect(preview.stdout).toContain('GATE-PASSED env=prod deploy=0')
   })
 
   it('rejects an unknown flag and a second environment name', () => {

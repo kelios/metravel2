@@ -84,7 +84,8 @@ describe('paired static HTML storage', () => {
     } finally { removeDir(root) }
   })
 
-  it('preserves paired-page links through the recovery transport', () => {
-    expect(fs.readFileSync(path.resolve('scripts/fix-prod.sh'), 'utf8')).toContain('rsync -avzHhe "ssh"')
+  it('preserves paired-page links through the release transport', () => {
+    expect(fs.readFileSync(path.resolve('build-prod.sh'), 'utf8')).toContain('rsync -aH "dist/$ENV/" "$SSR_RELEASE_DIR/client/"')
+    expect(fs.readFileSync(path.resolve('scripts/web-ssr-publication.sh'), 'utf8')).toContain('rsync -azHhe ssh')
   })
 })

@@ -11,6 +11,9 @@
 #   DEPLOY=0 scripts/deploy-prod.sh     build-only прогон в том же worktree
 #   DEPLOY_QUIET=1 …                    в консоль — только этапы, итоги и ошибки;
 #                                       полный лог всегда в .codex-temp/deploy/
+#   ALLOW_DOWNGRADE=1 …                 явный откат: выкатить ревизию, которая не
+#                                       содержит живую (#3207); без флага такой
+#                                       выкат отклоняется до сборки
 set -Eeuo pipefail
 IFS=$'\n\t'
 
@@ -111,6 +114,27 @@ SHORT="${SHA:0:9}"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/prod-$SHORT-$(date -u +%Y%m%dT%H%M%SZ).log"
 
+# Проверки до сборки и финальная сверка пишутся в тот же лог, что и сборка:
+# раньше отказ грязного чекаута или capability оставлял только консоль (#2942).
+echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)" | tee "$LOG"
+
+# #3207: выкат обязан содержать живую ревизию. Сессия, дождавшаяся лока после
+# чужого выката потомка, иначе тихо возвращала прод на своего предка, а итоговая
+# сверка печатала успех — она сверяет прод с тем, что просили, а не с тем, что
+# было. Сверка идёт до worktree и SSH: отказ и «уже выкачено» ничего не стоят.
+# Ту же проверку повторяет гейт build-prod.sh — для его прямого запуска.
+if [[ "$DEPLOY" == "1" ]]; then
+  live_status=0
+  node "$SCRIPT_DIR/assert-deployable-source.js" --live-check-only "$SHA" --cwd "$MT" 2>&1 | tee -a "$LOG" || live_status=$?
+  if [[ "$live_status" == "3" ]]; then
+    exit 0
+  fi
+  if [[ "$live_status" != "0" ]]; then
+    echo "❌ Выкат $SHORT отклонён до сборки — прод не менялся" | tee -a "$LOG"
+    exit 1
+  fi
+fi
+
 # Лок у нас, значит оставшийся worktree — след прерванного выката.
 remove_worktree
 mkdir -p "$(dirname "$WT")"
@@ -123,9 +147,6 @@ for env_file in .env.prod .env.deploy; do
   ln -sfn "$MT/$env_file" "$WT/$env_file"
 done
 
-# Проверки до сборки и финальная сверка пишутся в тот же лог, что и сборка:
-# раньше отказ грязного чекаута или capability оставлял только консоль (#2942).
-echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)" | tee "$LOG"
 if [[ "$DEPLOY" == "1" ]]; then
   check_prod_checkout_clean 2>&1 | tee -a "$LOG"
   # Production publishes only the SSR release pair (#2766). The installed
