@@ -572,7 +572,7 @@ def mixed_cards(relevant: list[dict], pool: list[dict], rng: random.Random) -> l
 
 
 def crowded_cards(relevant: list[dict], rng: random.Random) -> list[dict]:
-    """Edition 7: four or five matching cards of one city in a random order, nothing else."""
+    """Edition 7: four or five matching cards of one place (a city or a country) in a random order, nothing else."""
     return rng.sample(relevant, min(len(relevant), rng.randint(CROWDED_MIN, CROWDED_MAX)))
 
 
@@ -754,7 +754,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                                  many_cards, render(intro, many_cards[:3], lang), n)
 
             if edition >= 7 and len(rel_quests) >= CROWDED_MIN:
-                # Four to six quests of the city among the cards: three in card order, the rest in sources.
+                # Four or five quests of the place among the cards: three in card order, the rest in sources.
                 templates = [t for t in ASK_RU["quests"] if "коротк" not in t]
                 for v in range(CROWDED_VARIANTS):
                     cards = crowded_cards(rel_quests, rng)

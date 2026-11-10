@@ -1000,6 +1000,28 @@
       "autoPort": false
     },
     {
+      "name": "Llama Server v7 GPU 8090 (sprint29)",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v7-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8090",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8090,
+      "autoPort": false
+    },
+    {
       "name": "AI Sprint29 Web 8093",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
