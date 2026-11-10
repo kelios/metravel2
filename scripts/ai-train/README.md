@@ -678,3 +678,10 @@ v7) — между ними менялся только `checks.mjs`, отчёт
 `v7-offtopic`, `quality-{v4,v7}-v7round`, базовые `v4-targets-3216-final`,
 `v4-holdout-3216`, `v4-offtopic-3216` (в папках целевых прогонов — `judge.jsonl`);
 срезы — `~/metravel-ai/logs/eval-v7-vs-v4-gguf/report.md`.
+
+**Решение владельца 10.11.2026: v7 принята моделью ассистента по умолчанию** вместо
+v4, с известными остатками — `constraints.camper` в одном запросе фильтра карты
+(osm_intents 8/10) и выбор детского квеста в уточнении mt03#1 (судья 1/3). Файл и
+sha256 — `services/metravel-llm/README.md`; локальный запуск — конфигурация
+«Llama Server v7 GPU 8080 (default)» в `.claude/launch.json`. v4 остаётся рядом
+(`gguf/metravel-llm-v4-Q4_K_M.gguf`) как откат: вернуть имя файла.

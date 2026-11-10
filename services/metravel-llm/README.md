@@ -11,7 +11,7 @@
 | что | где |
 | --- | --- |
 | образ | `services/metravel-llm/Dockerfile` — `ghcr.io/ggml-org/llama.cpp:server-b11669` по digest, модель не запекается |
-| модель | `metravel-llm-v1-Q4_K_M.gguf`, 2 783 446 880 байт (2,6 ГиБ), sha256 `b31d18c7d9ade88df7450b3f5dd18ded059ab791f76db489091bafa1a7157d64`; на проде — том `/srv/metravel/models` → `/models:ro` (#2457), на Mac — `~/metravel-ai/gguf/` |
+| модель | `metravel-llm-v7-Q4_K_M.gguf` — модель ассистента по умолчанию с 10.11.2026 (решение владельца по #2751; до этого v4, первая выкладка — v1), 2 783 446 880 байт (2,6 ГиБ), sha256 `b60f7f15f89f4b3cd7992fc2479e2b5897004a2c9b028d40f665d34353245e36`; на проде — том `/srv/metravel/models` → `/models:ro` (#2457), на Mac — `~/metravel-ai/gguf/` |
 | экспорт | `scripts/ai-train/export_gguf.sh` (слияние LoRA → bf16 GGUF → Q4_K_M), `scripts/ai-train/merge_lora.py` |
 | оценка и замеры | `scripts/ai-train/eval.py --server`, `scripts/ai-train/bench_server.py`; числа — `scripts/ai-train/README.md` → «Экспорт в GGUF» |
 
@@ -20,7 +20,7 @@
 ```bash
 docker build -t metravel-llm services/metravel-llm
 docker run --rm -p 127.0.0.1:8080:8080 --cpus 4 -m 6g \
-  -v ~/metravel-ai/gguf:/models:ro -e LLM_MODEL=metravel-llm-v1-Q4_K_M.gguf -e LLM_THREADS=3 \
+  -v ~/metravel-ai/gguf:/models:ro -e LLM_MODEL=metravel-llm-v7-Q4_K_M.gguf -e LLM_THREADS=3 \
   metravel-llm
 curl -s http://127.0.0.1:8080/health          # {"status":"ok"} после загрузки (503 — ещё грузится)
 ```

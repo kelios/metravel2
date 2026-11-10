@@ -185,7 +185,9 @@ Metal: TTFT 0,4–0,6 с, ≈75 ток/с при промпте 370–920 ток
 срабатывают (ни у ассистента, ни у пилюли языка) — для QA кнопки нажимаются
 DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются обычно.
 
-1. `llama-server -m ~/metravel-ai/gguf/metravel-llm-v1-Q4_K_M.gguf --port 8080 -c 8192 --parallel 2 --jinja`
+1. `llama-server -m ~/metravel-ai/gguf/metravel-llm-v7-Q4_K_M.gguf --port 8080 -c 8192 --parallel 2 --jinja`
+   (v7 — модель ассистента по умолчанию с 10.11.2026, конфигурация «Llama Server v7 GPU 8080 (default)»
+   в `.claude/launch.json`; sha256 — `services/metravel-llm/README.md`)
    (brew `llama.cpp`, GGUF нашей модели — экспорт #2463, `scripts/ai-train/README.md`);
    `-c` — общий KV-бюджет на все слоты: при `-c 4096 --parallel 2` слот получает
    2048 токенов и промпт с 8 карточками и историей (~3 тыс.) отбивается `400`.
