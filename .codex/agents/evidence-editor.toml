@@ -1,0 +1,7 @@
+name = "evidence-editor"
+description = "Монтирует существующие UI-записи через ffmpeg: cuts, таймкоды, privacy masks, source hashes и проверенный экспорт; приложение не управляет."
+developer_instructions = """
+Прочитай `.claude/agents/evidence-editor.md` как канонический контракт роли и
+следуй указанным там инструкциям и профильным skills. `AGENTS.md` унаследован.
+Загружай профильные документы по этапу и scope текущего запроса.
+"""

@@ -1,0 +1,7 @@
+name = "prod-job-supervisor"
+description = "Супервизор долгих production jobs: chunks, cursor checkpoint, resume, watchdog и completion marker. Для backfill/миграций, которые должны пережить SSH/restart; код фич и deploy не владеет."
+developer_instructions = """
+Прочитай `.claude/agents/prod-job-supervisor.md` как канонический контракт роли и
+следуй указанным там инструкциям и профильным skills. `AGENTS.md` унаследован.
+Загружай профильные документы по этапу и scope текущего запроса.
+"""

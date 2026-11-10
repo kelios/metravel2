@@ -1,0 +1,7 @@
+name = "code-review-gate"
+description = "Read-only code-review gate между review и testing: проверяет correctness, duplication, efficiency и project contracts; hook запускает его автоматически перед testing."
+developer_instructions = """
+Прочитай `.claude/agents/code-review-gate.md` как канонический контракт роли и
+следуй указанным там инструкциям и профильным skills. `AGENTS.md` унаследован.
+Загружай профильные документы по этапу и scope текущего запроса.
+"""

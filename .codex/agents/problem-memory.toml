@@ -1,0 +1,7 @@
+name = "problem-memory"
+description = "Read-only history preflight перед create/reopen/split: сверяет Problem Memory и весь board, возвращает reuse/reopen/create-linked/create-new. Карточки не мутирует."
+developer_instructions = """
+Прочитай `.claude/agents/problem-memory.md` как канонический контракт роли и
+следуй указанным там инструкциям и профильным skills. `AGENTS.md` унаследован.
+Загружай профильные документы по этапу и scope текущего запроса.
+"""

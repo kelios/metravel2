@@ -1,0 +1,7 @@
+name = "db-backup"
+description = "Оператор production DB backup: dump, integrity/freshness и restore в отдельную test DB через project script. Для «сделай/проверь бэкап»; production restore и schema changes не выполняет."
+developer_instructions = """
+Прочитай `.claude/agents/db-backup.md` как канонический контракт роли и
+следуй указанным там инструкциям и профильным skills. `AGENTS.md` унаследован.
+Загружай профильные документы по этапу и scope текущего запроса.
+"""
