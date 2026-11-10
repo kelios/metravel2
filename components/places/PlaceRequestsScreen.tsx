@@ -98,8 +98,9 @@ export default function PlaceRequestsScreen() {
       />
       <ResponsiveContainer maxWidth="xl" style={styles.page}>
         <View style={styles.hero} {...SCREEN_CONTENT_FIRST_PROPS}>
-          <View style={[styles.heroIcon, { backgroundColor: colors.primarySoft }]}>
-            <Feather name="heart" color={colors.primaryText} size={24} />
+          <View style={styles.kicker}>
+            <Feather name="heart" color={colors.primaryDark} size={16} />
+            <Body variant="small" color={colors.primaryText}>{t('places:contributions.statusOpen')}</Body>
           </View>
           <Heading level={1}>{t('places:contributions.title')}</Heading>
           <Body variant="large" muted>{t('places:contributions.intro')}</Body>
@@ -108,7 +109,12 @@ export default function PlaceRequestsScreen() {
         <View style={styles.collection}>
           <Heading level={2}>{t('places:contributions.placesTitle')}</Heading>
           {isDetail ? (
-            <Button label={t('places:contributions.backToRequests')} onPress={clearDetail} variant="secondary" />
+            <Button
+              label={t('places:contributions.backToRequests')}
+              onPress={clearDetail}
+              variant="secondary"
+              style={styles.backButton}
+            />
           ) : (
             <View style={styles.filters}>
               <Chip label={t('places:contributions.allRegions')} selected={!selectedRegion} onPress={() => router.setParams({ region: undefined })} />
@@ -124,7 +130,10 @@ export default function PlaceRequestsScreen() {
           )}
 
           {isUnavailable || isPending || showError || !invitationCards.length ? (
-            <View accessibilityLiveRegion="polite" style={styles.state}>
+            <View
+              accessibilityLiveRegion="polite"
+              style={[styles.state, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
               {isPending ? <ActivityIndicator color={colors.primary} /> : null}
               <Body muted>
                 {isUnavailable ? t('places:contributions.unavailable')
@@ -138,15 +147,26 @@ export default function PlaceRequestsScreen() {
                 <Button label={t('places:contributions.resetFilter')} onPress={() => router.setParams({ region: undefined })} variant="secondary" />
               ) : null}
             </View>
+          ) : isDetail ? (
+            <View style={styles.detailSlot}>
+              {invitationCards.map((request) => (
+                <PlaceRequestCard
+                  key={request.id}
+                  request={request}
+                  regionLabel={getRegionLabel(request.region)}
+                  source={source}
+                />
+              ))}
+            </View>
           ) : (
             <View style={styles.grid}>
               {invitationCards.map((request) => (
-                <View key={request.id} style={{ width: gridItemWidth }}>
+                <View key={request.id} style={[styles.gridItem, { width: gridItemWidth }]}>
                   <PlaceRequestCard
                     request={request}
                     regionLabel={getRegionLabel(request.region)}
                     source={source}
-                    onReadMore={isDetail ? undefined : () => openDetail(request.id)}
+                    onReadMore={() => openDetail(request.id)}
                   />
                 </View>
               ))}
@@ -154,14 +174,18 @@ export default function PlaceRequestsScreen() {
           )}
         </View>
 
-        <View style={styles.steps}>
+        <View style={[styles.steps, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Heading level={2}>{t('places:contributions.stepsTitle')}</Heading>
-          {STEPS.map((step, index) => (
-            <View key={step} style={styles.step}>
-              <Body variant="strong" color={colors.primaryText}>{formatNumber(index + 1)}.</Body>
-              <Body style={styles.stepText}>{t(step)}</Body>
-            </View>
-          ))}
+          <View style={styles.stepsGrid}>
+            {STEPS.map((step, index) => (
+              <View key={step} style={[styles.step, { width: isMobile ? '100%' : '49%' }]}>
+                <View style={[styles.stepIndex, { backgroundColor: colors.primarySoft }]}>
+                  <Body variant="strong" color={colors.primaryText}>{formatNumber(index + 1)}</Body>
+                </View>
+                <Body style={styles.stepText}>{t(step)}</Body>
+              </View>
+            ))}
+          </View>
         </View>
       </ResponsiveContainer>
     </ScrollView>
@@ -169,20 +193,47 @@ export default function PlaceRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { gap: DESIGN_TOKENS.spacing.lg },
-  hero: { maxWidth: 740, gap: DESIGN_TOKENS.spacing.sm },
-  heroIcon: {
-    width: DESIGN_TOKENS.touchTarget.minHeight,
-    height: DESIGN_TOKENS.touchTarget.minHeight,
+  page: { gap: DESIGN_TOKENS.spacing.xl, paddingBottom: DESIGN_TOKENS.spacing.lg },
+  hero: { maxWidth: 760, gap: DESIGN_TOKENS.spacing.sm },
+  kicker: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+  collection: { gap: DESIGN_TOKENS.spacing.md },
+  backButton: { alignSelf: 'flex-start' },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm },
+  state: {
+    gap: DESIGN_TOKENS.spacing.sm,
+    alignItems: 'flex-start',
+    padding: DESIGN_TOKENS.spacing.lg,
+    borderWidth: 1,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    columnGap: '2%',
+    rowGap: DESIGN_TOKENS.spacing.lg,
+  },
+  gridItem: { alignSelf: 'stretch' },
+  detailSlot: { width: '100%', maxWidth: 760 },
+  steps: {
+    gap: DESIGN_TOKENS.spacing.md,
+    borderWidth: 1,
+    borderRadius: DESIGN_TOKENS.radii.xl,
+    padding: DESIGN_TOKENS.spacing.lg,
+  },
+  stepsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: '2%',
+    rowGap: DESIGN_TOKENS.spacing.md,
+  },
+  step: { flexDirection: 'row', alignItems: 'flex-start', gap: DESIGN_TOKENS.spacing.sm },
+  stepIndex: {
+    width: 32,
+    height: 32,
+    borderRadius: DESIGN_TOKENS.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: DESIGN_TOKENS.radii.full,
   },
-  collection: { gap: DESIGN_TOKENS.spacing.md },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm },
-  state: { gap: DESIGN_TOKENS.spacing.sm, alignItems: 'flex-start', paddingVertical: DESIGN_TOKENS.spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: '2%', rowGap: DESIGN_TOKENS.spacing.md },
-  steps: { gap: DESIGN_TOKENS.spacing.sm, maxWidth: 740 },
-  step: { flexDirection: 'row', gap: DESIGN_TOKENS.spacing.sm },
   stepText: { flex: 1 },
 })

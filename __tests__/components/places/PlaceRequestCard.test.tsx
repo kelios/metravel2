@@ -46,11 +46,11 @@ it('shows the full history in the place view and leads with the full trip story'
   const view = await render(<PlaceRequestCard request={request} regionLabel="Жиличи" source="map" />)
   expect(view.getByText(request.description).props.numberOfLines).toBeUndefined()
   expect(view.queryByTestId(`place-request-read-more-${request.id}`)).toBeNull()
+  expect(view.queryByText('Что нам интересно узнать')).toBeNull()
+  expect(view.queryByText(request.prompt)).toBeNull()
+  expect(view.queryByText('Короткая заметка с фото')).toBeNull()
   await fireEvent.press(view.getByText('Рассказать о поездке'))
-  // The full article is the editor's default format; only the note carries `mode=note`.
   expect(mockPush).toHaveBeenCalledWith(`/travel/new?place_request_id=${request.id}&contribution_source=map`)
-  await fireEvent.press(view.getByText('Короткая заметка с фото'))
-  expect(mockPush).toHaveBeenLastCalledWith(expect.stringContaining('mode=note'))
 })
 
 it('keeps the invitation usable before the history is filled in', async () => {
@@ -58,6 +58,8 @@ it('keeps the invitation usable before the history is filled in', async () => {
     <PlaceRequestCard request={{ ...request, description: '' }} regionLabel="Жиличи" source="places" onReadMore={jest.fn()} />,
   )
   expect(view.queryByText('О месте')).toBeNull()
-  expect(view.getByText(request.prompt)).toBeTruthy()
-  expect(view.getByText('Короткая заметка с фото')).toBeTruthy()
+  expect(view.queryByText('Что нам интересно узнать')).toBeNull()
+  expect(view.queryByText(request.prompt)).toBeNull()
+  expect(view.queryByText('Короткая заметка с фото')).toBeNull()
+  expect(view.getByText('Рассказать о поездке')).toBeTruthy()
 })
