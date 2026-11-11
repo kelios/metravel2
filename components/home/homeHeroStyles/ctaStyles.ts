@@ -80,51 +80,6 @@ export const createCtaStyles = (ctx: HeroStyleContext) => {
       letterSpacing: 0.1,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
-    secondaryButton: {
-      paddingHorizontal: isMobile
-        ? 20
-        : showSideSlider
-          ? isCompactBookLayout
-            ? 20
-            : 24
-          : 24,
-      paddingVertical: isMobile
-        ? 12
-        : showSideSlider
-          ? isCompactBookLayout
-            ? 8
-            : 10
-          : 12,
-      minHeight: isMobile ? 46 : 44,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: 'transparent',
-      borderWidth: 1.5,
-      borderColor: colors.border,
-      width: stackHeroButtons ? '100%' : undefined,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: 'none',
-        } as any,
-      }),
-    },
-    secondaryButtonHover: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primaryAlpha30,
-      ...Platform.select({
-        web: {
-          transform: 'translateY(-1px)',
-        } as any,
-      }),
-    },
-    secondaryButtonText: {
-      fontSize: isCompactBookLayout ? 14 : 15,
-      fontWeight: '600',
-      color: colors.text,
-      ...Platform.select({
-        web: { fontFamily: editorialSerif, letterSpacing: '0.01em' } as any,
-      }),
-    },
     singleCtaButton: {
       width: stackHeroButtons ? '100%' : undefined,
       alignSelf: stackHeroButtons ? 'stretch' : 'flex-start',

@@ -56,11 +56,6 @@ interface HomeHeroProps {
   travelsCountLoading?: boolean
 }
 
-export { BOOK_IMAGES as BOOK_IMAGES_FOR_TEST, MOOD_CARDS as MOOD_CARDS_FOR_TEST } from './homeHeroContent'
-export {
-  buildHomeHeroSlidePreloadUrl,
-  shouldDisableHomeHeroSliderBlur,
-} from './useHomeHeroSlider'
 
 function detectDisableHeroSliderBlur() {
   if (!IS_WEB || typeof navigator === 'undefined') return false

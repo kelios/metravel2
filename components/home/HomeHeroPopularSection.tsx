@@ -39,29 +39,19 @@ type PopularCardProps = {
   useGridLayout?: boolean
 }
 
-const webHorizontalScrollStyle =
-  Platform.OS === 'web'
-    ? ({
-        touchAction: 'pan-x pan-y',
-        WebkitOverflowScrolling: 'touch',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        overscrollBehaviorX: 'contain',
-      } as const)
-    : undefined
-
 const POPULAR_CARD_GAP = 16
 
 function getBundledWebAssetUri(source: BookImage['source'] | undefined) {
   return source && typeof source === 'object' ? source.uri : undefined
 }
 
-type CardInteractionState = { pressed: boolean; hovered: boolean; focused: boolean }
-
 type HomeCardLinkProps = Omit<PressableProps, 'style' | 'onPress' | 'children'> & {
   href?: string | null
   onOpenArticle: (href?: string | null) => void
-  getStyle: (state: CardInteractionState) => StyleProp<ViewStyle>
+  style: StyleProp<ViewStyle>
+  hoverStyle?: StyleProp<ViewStyle>
+  /** Цвет обводки клавиатурного фокуса (web); без него обводки нет. */
+  focusColor?: string
   children: ReactNode
 }
 
@@ -71,10 +61,17 @@ type HomeCardLinkProps = Omit<PressableProps, 'style' | 'onPress' | 'children'> 
  * а обычный клик остаётся SPA-переходом через `onOpenArticle`. На native и для
  * внешнего адреса поведение прежнее: решение принимает `onOpenArticle`.
  */
-function HomeCardLink({ href, onOpenArticle, getStyle, children, ...rest }: HomeCardLinkProps) {
+function HomeCardLink({ href, onOpenArticle, style, hoverStyle, focusColor, children, ...rest }: HomeCardLinkProps) {
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const sitePath = Platform.OS === 'web' ? resolveSitePath(href) : null
+  const cardStyle = (active: boolean, isFocused: boolean): StyleProp<ViewStyle> => [
+    style,
+    active && hoverStyle,
+    Platform.OS === 'web' && isFocused && focusColor
+      ? ({ outlineWidth: 2, outlineStyle: 'solid', outlineColor: focusColor, outlineOffset: 2 } as ViewStyle)
+      : null,
+  ]
 
   if (!sitePath) {
     return (
@@ -82,7 +79,7 @@ function HomeCardLink({ href, onOpenArticle, getStyle, children, ...rest }: Home
         {...rest}
         onPress={() => onOpenArticle(href)}
         style={({ pressed, hovered: isHovered, focused: isFocused }: any) =>
-          getStyle({ pressed, hovered: Boolean(isHovered), focused: Boolean(isFocused) })}
+          cardStyle(Boolean(pressed || isHovered), Boolean(isFocused))}
         accessibilityRole="link"
       >
         {children}
@@ -104,7 +101,7 @@ function HomeCardLink({ href, onOpenArticle, getStyle, children, ...rest }: Home
       onHoverOut={() => setHovered(false)}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      style={getStyle({ pressed: false, hovered, focused })}
+      style={cardStyle(hovered, focused)}
     >
       {children}
     </LinkPressable>
@@ -128,17 +125,9 @@ function FeaturedRouteCard({
     <HomeCardLink
       href={image.href}
       onOpenArticle={onOpenArticle}
-      getStyle={({ pressed, hovered, focused }) => [
-        styles.featuredCard,
-        (pressed || hovered) && styles.featuredCardHover,
-        Platform.OS === 'web' && focused && {
-          outlineWidth: 2,
-          outlineStyle: 'solid',
-          outlineColor: colors.primary,
-          outlineOffset: 2,
-        },
-      ]}
-      accessibilityRole="link"
+      style={styles.featuredCard}
+      hoverStyle={styles.featuredCardHover}
+      focusColor={colors.primary}
       accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.otkryt_marshrut_nedeli_value1_value2_2f601bf8', { value1: image.title, value2: image.subtitle })}
     >
       <ImageCardMedia
@@ -201,22 +190,15 @@ function PopularRouteCard({
   return (
     <HomeCardLink
       {...(responsiveWeb ? webDataSetProps({ homePopularCard: true }) : {})}
-      key={image.title}
       href={image.href}
       onOpenArticle={onOpenArticle}
-      getStyle={({ pressed, hovered, focused }) => [
+      style={[
         styles.imageCard,
         useGridLayout && styles.imageCardGrid,
         useGridLayout && width ? { width } : null,
-        (pressed || hovered) && styles.imageCardHover,
-        Platform.OS === 'web' && focused && {
-          outlineWidth: 2,
-          outlineStyle: 'solid',
-          outlineColor: colors.primary,
-          outlineOffset: 2,
-        },
       ]}
-      accessibilityRole="link"
+      hoverStyle={styles.imageCardHover}
+      focusColor={colors.primary}
       accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.otkryt_marshrut_value1_value2_e989c06b', { value1: image.title, value2: image.subtitle })}
     >
       <ImageCardMedia
@@ -294,7 +276,7 @@ export default function HomeHeroPopularSection({
             {...(responsiveWeb ? webDataSetProps({ homePopularSeeAll: true }) : {})}
             href="/search"
             onOpenArticle={onOpenArticle}
-            getStyle={() => styles.popularSeeAll}
+            style={styles.popularSeeAll}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.smotret_vse_populyarnye_marshruty_f17aa35c')}
           >
@@ -337,7 +319,6 @@ export default function HomeHeroPopularSection({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={isWeb ? webHorizontalScrollStyle : undefined}
           contentContainerStyle={styles.popularScrollContent}
           directionalLockEnabled={Platform.OS === 'ios'}
           nestedScrollEnabled={Platform.OS === 'android'}

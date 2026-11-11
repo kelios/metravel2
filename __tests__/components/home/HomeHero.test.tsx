@@ -262,7 +262,7 @@ describe('HomeHero Component', () => {
   describe('book cover links (#2144)', () => {
     it('every metravel book cover href has an app screen, so native opens it in the app', () => {
       const { resolveAppRouteForSiteUrl } = require('@/utils/siteLinks')
-      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
+      const { BOOK_IMAGES: BOOK_IMAGES_FOR_TEST } = require('@/components/home/homeHeroContent')
       const hrefs = BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href).map((img: any) => img.href)
       expect(hrefs.length).toBeGreaterThan(0)
       hrefs.forEach((href: string) => {
@@ -275,7 +275,7 @@ describe('HomeHero Component', () => {
 
   describe('MOOD_CARDS filterParams — navigation logic', () => {
     it('MOOD_CARDS array has correct filterParams for each card', () => {
-      const { MOOD_CARDS_FOR_TEST } = require('@/components/home/HomeHero')
+      const { MOOD_CARDS: MOOD_CARDS_FOR_TEST } = require('@/components/home/homeHeroContent')
       if (!MOOD_CARDS_FOR_TEST) {
         return
       }
@@ -299,7 +299,7 @@ describe('HomeHero Component', () => {
 
     // #2903: «в эти выходные» — ближние маршруты первыми, порядок считает сервер.
     it('weekend mood chips open search with the server distance sort', () => {
-      const { MOOD_CARDS_FOR_TEST } = require('@/components/home/HomeHero')
+      const { MOOD_CARDS: MOOD_CARDS_FOR_TEST } = require('@/components/home/homeHeroContent')
       const { buildFilterPath } = require('@/components/home/homeHeroContent')
       const searchCards = MOOD_CARDS_FOR_TEST.filter((card: { route: string }) => card.route === '/search')
       expect(searchCards).toHaveLength(4)
@@ -317,7 +317,7 @@ describe('HomeHero Component', () => {
 
   describe('Book cover BOOK_IMAGES — data integrity', () => {
     it('first image (Тропа ведьм) has valid href/title/subtitle', () => {
-      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
+      const { BOOK_IMAGES: BOOK_IMAGES_FOR_TEST } = require('@/components/home/homeHeroContent')
       if (!BOOK_IMAGES_FOR_TEST) return
       expect(BOOK_IMAGES_FOR_TEST[0].href).toMatch(/^\/travels\/[a-z0-9-]+$/)
       expect(BOOK_IMAGES_FOR_TEST[0].title).toBeTruthy()
@@ -325,7 +325,7 @@ describe('HomeHero Component', () => {
     })
 
     it('remaining images have a relative canonical article href', () => {
-      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
+      const { BOOK_IMAGES: BOOK_IMAGES_FOR_TEST } = require('@/components/home/homeHeroContent')
       if (!BOOK_IMAGES_FOR_TEST) return
       const withHref = BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href)
       expect(withHref.length).toBeGreaterThan(0)
@@ -337,7 +337,8 @@ describe('HomeHero Component', () => {
     })
 
     it('builds the same optimized slide preload url shape used by the slider media', () => {
-      const { BOOK_IMAGES_FOR_TEST, buildHomeHeroSlidePreloadUrl } = require('@/components/home/HomeHero')
+      const { BOOK_IMAGES: BOOK_IMAGES_FOR_TEST } = require('@/components/home/homeHeroContent')
+      const { buildHomeHeroSlidePreloadUrl } = require('@/components/home/useHomeHeroSlider')
       const remoteSlide = BOOK_IMAGES_FOR_TEST.find((image: any) => {
         return buildHomeHeroSlidePreloadUrl(image.source, 480)
       })
@@ -359,7 +360,7 @@ describe('HomeHero Component', () => {
     })
 
     it('disables home slider blur only for iPhone Safari', () => {
-      const { shouldDisableHomeHeroSliderBlur } = require('@/components/home/HomeHero')
+      const { shouldDisableHomeHeroSliderBlur } = require('@/components/home/useHomeHeroSlider')
 
       expect(
         shouldDisableHomeHeroSliderBlur(
