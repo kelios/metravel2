@@ -15,6 +15,8 @@ import {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable';
+import { normalizeExternalUrl } from '@/utils/externalLinks';
 
 // soft = tonal (primarySoft bg + primaryText); danger-outline = красная рамка+текст, прозрачный фон
 // tonal = нейтральный серый фон (backgroundTertiary) + primaryText, для второстепенных pill-кнопок
@@ -24,6 +26,21 @@ type ButtonSize = 'sm' | 'md' | 'lg';
 export interface ButtonProps {
   label: string;
   onPress?: (event: GestureResponderEvent) => void;
+  /**
+   * Web: внешний абсолютный http(s)-адрес, проверенный `normalizeExternalUrl`
+   * (константа вызывающего) — кнопка становится настоящей ссылкой `<a href>`
+   * (видна в серверном HTML без JS, работают «открыть в новой вкладке» и
+   * «копировать адрес»). Обычный клик по-прежнему идёт в `onPress` (переход —
+   * через helpers `utils/externalLinks.ts`), клик с модификатором остаётся
+   * браузеру. На native не используется.
+   */
+  href?: string;
+  /**
+   * Web, только вместе с `href`: клик с модификатором (новая вкладка/окно), который
+   * `onPress` не получает, — переход делает браузер, вызывающий лишь учитывает его
+   * (цель аналитики), сам ничего не открывает.
+   */
+  onHrefFollow?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: React.ReactNode;
@@ -57,6 +74,8 @@ const getBoxShadows = (colors: ThemedColors) => {
 const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   label,
   onPress,
+  href,
+  onHrefFollow,
   variant = 'primary',
   size = 'md',
   icon,
@@ -81,6 +100,20 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   const variantHoverStyles = useMemo(() => getVariantHoverStyles(colors), [colors]);
   const variantPressedStyles = useMemo(() => getVariantPressedStyles(colors), [colors]);
   const isDisabled = disabled || loading;
+  const linkHref = Platform.OS === 'web' && href && !isDisabled && normalizeExternalUrl(href) || '';
+  const handlePress = linkHref && onPress
+    ? (event: GestureResponderEvent) => {
+        if (event && !shouldHandleLinkClick(event as unknown as LinkPressEvent, true)) {
+          onHrefFollow?.();
+          return;
+        }
+        event?.preventDefault?.();
+        onPress(event);
+      }
+    : onPress;
+  const anchorProps = linkHref
+    ? ({ href: linkHref, hrefAttrs: { target: '_blank', rel: 'noopener' } } as object)
+    : null;
 
   // Цвет текста/иконки-спиннера по варианту (единый источник для label и ActivityIndicator)
   const foreground = getForegroundColor(variant, colors);
@@ -88,13 +121,14 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   return (
     <Pressable
       ref={ref}
-      accessibilityRole="button"
+      {...anchorProps}
+      accessibilityRole={linkHref ? 'link' : 'button'}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityLabel={accessibilityLabel || label}
       accessibilityHint={accessibilityHint}
       testID={testID}
       disabled={isDisabled}
-      onPress={onPress}
+      onPress={handlePress}
       android_ripple={!isDisabled ? { color: 'rgba(0,0,0,0.12)', borderless: false } : undefined}
       style={({ pressed, hovered }) => [
         styles.base,

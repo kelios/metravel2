@@ -15,6 +15,7 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/uti
 import { webTouchScrollStyle } from '@/utils'
 import { translate as i18nT } from '@/i18n'
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import AppDownloadJsonLd from '@/components/appDownload/AppDownloadJsonLd'
 
 // 320×320 WebP (3,6 КБ) вместо мастера иконки для сторов 1024×1024 PNG (303 КБ):
 // здесь она рисуется в 96 px. Мастер остаётся только для сборки приложения (app.json).
@@ -66,6 +67,7 @@ function AppDownloadScreen() {
           ogType="website"
         />
       )}
+      <AppDownloadJsonLd description={description} pageUrl={canonical} />
       <CustomHeader />
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>

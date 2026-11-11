@@ -3,12 +3,12 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
-import type { AppStorePlatform } from '@/constants/appStore'
+import { APP_STORE_LISTING_URLS, type AppStorePlatform } from '@/constants/appStore'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useDeviceStorePlatform } from '@/hooks/useDeviceStorePlatform'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
-import type { AppDownloadSource } from '@/utils/growthFunnelAnalytics'
+import { trackAppDownloadClicked, type AppDownloadSource } from '@/utils/growthFunnelAnalytics'
 import { openAppStoreListing } from '@/utils/openAppStoreListing'
 
 const STORE_ORDER: AppStorePlatform[] = ['ios', 'android']
@@ -62,9 +62,16 @@ function AppStoreButtons({ source, size = 'lg', fullWidth = false, style, testID
             testID={`${testID}-${platform}`}
             label={STORE_COPY[platform].label()}
             accessibilityLabel={STORE_COPY[platform].a11y()}
+            // #3231: на web — настоящая ссылка на витрину, её видно в серверном HTML без JS.
+            href={APP_STORE_LISTING_URLS[platform]}
             onPress={() => {
               onStorePress?.(platform)
               void openAppStoreListing({ platform, source })
+            }}
+            // Клик с модификатором открывает витрину сам браузер — цель всё равно засчитывается.
+            onHrefFollow={() => {
+              onStorePress?.(platform)
+              trackAppDownloadClicked({ source, platform })
             }}
             variant={primary ? 'primary' : 'outline'}
             size={size}

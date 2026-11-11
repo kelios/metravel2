@@ -8,7 +8,7 @@ export const sharedStaticResources = {
   "appHandoff.signal.offline_save.title": "Offline works better in the app",
   "appHandoff.signal.offline_save.description": "Saved routes and maps always at hand",
   "appHandoff.signal.second_travel.title": "Routes are easier to browse in the app",
-  "appHandoff.signal.second_travel.description": "Favorites, maps and navigation in one place",
+  "appHandoff.signal.second_travel.description": "In a quest an arrow leads you to each point and your phone buzzes on arrival",
   "appHandoff.signal.article_scroll_50.title": "Read routes in the app",
   "appHandoff.signal.article_scroll_50.description": "Save them and open them without internet",
   "appHandoff.install": "Install",

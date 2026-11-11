@@ -8,7 +8,7 @@ export const sharedStaticResources = {
   "appHandoff.signal.offline_save.title": "Офлайн удобнее в приложении",
   "appHandoff.signal.offline_save.description": "Сохранённые маршруты и карты всегда под рукой",
   "appHandoff.signal.second_travel.title": "Маршруты удобнее смотреть в приложении",
-  "appHandoff.signal.second_travel.description": "Избранное, карты и навигация в одном месте",
+  "appHandoff.signal.second_travel.description": "В квесте стрелка ведёт к точке, а на месте телефон вибрирует",
   "appHandoff.signal.article_scroll_50.title": "Читайте маршруты в приложении",
   "appHandoff.signal.article_scroll_50.description": "Сохраняйте и открывайте их без интернета",
   "appHandoff.install": "Установить",

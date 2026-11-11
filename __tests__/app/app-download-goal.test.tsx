@@ -27,6 +27,8 @@ jest.mock('@/utils/analytics', () => ({
 }))
 
 jest.mock('@/utils/externalLinks', () => ({
+  // Button checks a store `href` with the real helper (#3231).
+  normalizeExternalUrl: jest.requireActual('@/utils/externalLinks').normalizeExternalUrl,
   openExternalUrl: jest.fn(() => Promise.resolve(true)),
 }))
 
