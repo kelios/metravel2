@@ -374,6 +374,28 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
   return summary
 }
 
+const QUEST_FACT_FIELDS = ['points', 'duration_min', 'difficulty', 'pet_friendly'] as const
+
+/**
+ * Почему по raw-слепку нельзя собрать факты (#3287), или `null`. Слепок, выгруженный до #3287 (в
+ * `state.json` нет `raw_version`) либо только через `--limit`, не несёт полей фактов: по нему команда
+ * `facts` писала 777 записей без чисел, служба стартовала «с фактами», а карточки шли без длительности
+ * и числа точек. Кроме версии сверяются сами файлы — слепок с версией, но без полей тоже не годится.
+ */
+export function rawFactsProblem(rawDir: string): string | null {
+  const version = readState(rawDir).raw_version ?? 1
+  if (version < RAW_FORMAT_VERSION) {
+    return `raw-слепок ${rawDir} версии ${version}, фактам нужна ${RAW_FORMAT_VERSION}: он выгружен до #3287 или через --limit и не несёт полей фактов`
+  }
+  const quests = readRawQuests(rawDir) as unknown as Record<string, unknown>[]
+  if (quests.length && !quests.some((quest) => QUEST_FACT_FIELDS.some((field) => quest[field] !== undefined && quest[field] !== null))) {
+    return `в файлах квестов raw-слепка ${rawDir} нет полей фактов (${QUEST_FACT_FIELDS.join(', ')})`
+  }
+  const travels = readRawTravels(rawDir) as unknown as Record<string, unknown>[]
+  if (travels.length && !travels.some((travel) => 'number_days' in travel)) return `в файлах статей raw-слепка ${rawDir} нет поля number_days`
+  return null
+}
+
 /** Поля фактов квеста из элемента списка `/api/quests/` — в raw-слепок (#3287). */
 export function questFactFields(meta: Record<string, unknown>): Pick<RawQuest, 'points' | 'duration_min' | 'difficulty' | 'pet_friendly'> {
   return {

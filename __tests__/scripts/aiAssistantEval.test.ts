@@ -117,6 +117,45 @@ describe('проверки хода: режим страницы и утечка
   })
 })
 
+describe('off_place_card: чужое место, а не тема', () => {
+  const cards = [
+    { n: 1, type: 'travel', title: 'Краков: путеводитель по местам', url: 'https://metravel.by/travels/krakow-guide', snippet: 'Польша, Вавель' },
+    { n: 2, type: 'quest', title: 'Квест по Бресту: тени Берестья', url: 'https://metravel.by/quests/brest-shadows', snippet: 'Городской квест по городу Брест (Беларусь)' },
+  ]
+  const observed = (raw: string) => ({
+    turnCreated: true,
+    status: 'done',
+    answerText: raw.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'),
+    linkLabels: [...raw.matchAll(/\[([^\]]+)\]\(/g)].map((match) => match[1]),
+    sources: cards.map((card) => ({ type: card.type, id: String(card.n), title: card.title })),
+    modelCall: { text: raw, cards, finishReason: 'stop', ms: 900 },
+  })
+  const checks = (expectSources: Record<string, unknown>, raw: string) => {
+    const result = evaluateTurn({ expect: 'answer', lang: 'ru', expectSources, question: 'Что посмотреть в Кракове?' }, observed(raw))
+    const pick = (list: { check: string }[]) => list.map((item) => item.check).filter((check) => check.startsWith('off_'))
+    return { failures: pick(result.failures), warnings: pick(result.warnings) }
+  }
+  const BREST = 'Посмотрите [Квест по Бресту: тени Берестья](https://metravel.by/quests/brest-shadows) и [Краков: путеводитель по местам](https://metravel.by/travels/krakow-guide).'
+
+  it('карточка другого города названа ответом — провал', () => {
+    expect(checks({ pattern: 'краков|krak', min: 1 }, BREST)).toEqual({ failures: ['off_place_card'], warnings: [] })
+  })
+
+  it('шаблон набора задаёт тему, а не место — предупреждение off_topic_card, не провал', () => {
+    expect(checks({ pattern: 'краков|krak', min: 1, topic: true }, BREST)).toEqual({ failures: [], warnings: ['off_topic_card'] })
+  })
+
+  it('признание «отдельного материала нет» при карточках места в подсказке провал не снимает', () => {
+    const admitted = 'Отдельного материала про Краков на сайте пока нет. Из того, что нашлось: [Квест по Бресту: тени Берестья](https://metravel.by/quests/brest-shadows).'
+    expect(checks({ pattern: 'краков|krak', min: 1 }, admitted)).toEqual({ failures: ['off_place_card'], warnings: [] })
+  })
+
+  it('набор живых вопросов: шаблон-тема помечен у вопросов без места и с местом-страной', () => {
+    const live = loadCases(path.join(process.cwd(), 'scripts/ai-assistant-eval/cases.live.jsonl')) as { id: string; expect_sources?: { topic?: boolean } }[]
+    expect(live.filter((item) => item.expect_sources?.topic).map((item) => item.id)).toEqual(['lv13', 'lv19', 'lv24', 'lv27', 'lv29'])
+  })
+})
+
 describe('разбор карточек подсказки (#3289)', () => {
   it('строки «Почему подходит» и «материала о месте нет» фрагментом карточки не считаются', () => {
     const withWhy = [{ ...SOURCES[0], why: 'месяц: май, 1 день' }, SOURCES[1]]
@@ -144,6 +183,9 @@ describe('ai-assistant-eval checks', () => {
     'Квестов по Гданьску у нас нет.',
     'Материал про Вильнюс пока не найден.',
     'Нет материалов про Гданьск.',
+    // Живая проба p05 12.11.2026: определение между «нет» и «статьи».
+    'Про это на сайте пока нет отдельной статьи.',
+    'Отдельного материала о прогулках с собакой у нас пока нет.',
     // #3267: учебные ответы на других языках строятся в обратном порядке.
     'Асобнага матэрыялу пра Гданьск на сайце пакуль няма. З таго, што знайшлося, можна паглядзець квэст.',
     'Окремого матеріалу про Гданськ на сайті поки немає. З того, що знайшлося, можна подивитися квест.',

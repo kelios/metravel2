@@ -6,6 +6,7 @@ import {
   emptyState,
   planTravelExport,
   RAW_FORMAT_VERSION,
+  rawFactsProblem,
   readRawQuests,
   readRawTravels,
   readState,
@@ -14,7 +15,9 @@ import {
 } from '@/scripts/ai-index/export'
 import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries } from '@/scripts/ai-index/facts'
 
-import { makeTempDir } from '../cli-test-utils'
+import { sha256Hex } from '@/scripts/ai-index/format'
+
+import { makeTempDir, runCli } from '../cli-test-utils'
 
 const FIXTURES = path.join(__dirname, '..', '..', 'fixtures', 'ai-index', 'raw')
 const readJson = (file: string) => JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -262,6 +265,61 @@ describe('ai-index export: факты источников (#3287)', () => {
     expect(log.join('\n')).toMatch(/перечитываются все статьи/)
     const next = await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
     expect(next.travels).toMatchObject({ fetched: 0, kept: 3 })
+  })
+
+  it('#3287: слепок, выгруженный до поезда, фактам не годится — `facts` отказывает и артефакт не трогает; обычный export его перечитывает', async () => {
+    const outDir = makeTempDir('ai-index-facts-')
+    const legacyRaw = path.join(outDir, 'raw')
+    try {
+      const api = factsApi()
+      await runExport({ rawDir: legacyRaw, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+      expect(rawFactsProblem(legacyRaw)).toBeNull()
+
+      // Слепок до #3287: в state нет версии, в файлах квестов и статей нет полей фактов, отпечатки — от старых файлов.
+      const { raw_version: _version, ...state } = readState(legacyRaw)
+      for (const name of fs.readdirSync(path.join(legacyRaw, 'quests'))) {
+        const file = path.join(legacyRaw, 'quests', name)
+        const { points: _points, duration_min: _duration, difficulty: _difficulty, pet_friendly: _pet, ...old } = readJson(file)
+        fs.writeFileSync(file, JSON.stringify(old))
+        const [id, locale] = name.split('.')
+        state.quests[`${id}:${locale}`] = sha256Hex(JSON.stringify(old))
+      }
+      for (const name of fs.readdirSync(path.join(legacyRaw, 'travels'))) {
+        const file = path.join(legacyRaw, 'travels', name)
+        const { number_days: _days, ...old } = readJson(file)
+        fs.writeFileSync(file, JSON.stringify(old))
+      }
+      fs.writeFileSync(path.join(legacyRaw, 'state.json'), JSON.stringify(state))
+      expect(rawFactsProblem(legacyRaw)).toMatch(/версии 1, фактам нужна 2/)
+      // Именно такой слепок давал записи без чисел: у квестов оставалась одна аудитория по тегам.
+      expect(chunkRawCorpus(legacyRaw).facts.every((record) => !('duration_min' in record) && !('points' in record) && !('number_days' in record))).toBe(true)
+
+      // Версия в state есть, а полей в файлах нет (слепок подправили руками) — тоже отказ.
+      fs.writeFileSync(path.join(legacyRaw, 'state.json'), JSON.stringify({ ...state, raw_version: RAW_FORMAT_VERSION }))
+      expect(rawFactsProblem(legacyRaw)).toMatch(/нет полей фактов/)
+      fs.writeFileSync(path.join(legacyRaw, 'state.json'), JSON.stringify(state))
+
+      // Команда: ненулевой код, подсказка чем перечитать raw, файла фактов в артефакте нет.
+      const run = runCli(
+        process.execPath,
+        ['--import', './scripts/lib/ts-runtime.mjs', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', 'scripts/ai-index/build.ts', 'facts', '--out', outDir],
+        { cwd: process.cwd() },
+      )
+      expect(run.status).toBe(1)
+      expect(run.stderr).toMatch(/facts: raw-слепок .* версии 1, фактам нужна 2/)
+      expect(run.stderr).toContain(`npm run ai:index -- export --out ${outDir}`)
+      expect(run.stdout.trim()).toBe('')
+      expect(fs.existsSync(path.join(outDir, 'dist', 'facts.jsonl'))).toBe(false)
+
+      // Обычный инкрементальный export на таком слепке сам перечитывает статьи и квесты — после него факты с числами.
+      const migrated = await runExport({ rawDir: legacyRaw, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+      expect(migrated.travels).toMatchObject({ fetched: 3, kept: 0 })
+      expect(migrated.quests.changed).toBe(3)
+      expect(rawFactsProblem(legacyRaw)).toBeNull()
+      expect(chunkRawCorpus(legacyRaw).facts).toContainEqual({ type: 'quest', source_id: 1, points: 11, duration_min: 120, difficulty: 'easy', pet_friendly: true })
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true })
+    }
   })
 
   it('--limit версию слепка не подтверждает; сбой словаря экспорт не роняет и оставляет прежний файл', async () => {

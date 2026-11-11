@@ -16,7 +16,7 @@ describe('условия вопроса (#3289): разбор на пяти яз
   })
 
   it.each([
-    ['Посоветуй маршрут в Татрах для новичков без машины', { noCar: true, kind: 'travel' }],
+    ['Посоветуй маршрут в Татрах для новичков без машины', { noCar: true, kind: 'travel', easy: true }],
     ['Куды паехаць без машыны на выхадныя?', { noCar: true, maxDays: 2 }],
     ['Куди поїхати громадським транспортом у травні?', { noCar: true, months: [5] }],
     ['Dokąd pojechać pociągiem w lutym?', { noCar: true, months: [2] }],
@@ -50,6 +50,16 @@ describe('условия вопроса (#3289): разбор на пяти яз
     expect(parseConditions(question)).toEqual(expected)
   })
 
+  it.each([
+    ['Несложная тропа в Татрах для начинающих', { easy: true }],
+    ['Лёгкі маршрут для пачаткоўцаў каля Мінска', { easy: true, kind: 'travel' }],
+    ['Легка стежка для початківців у Карпатах', { easy: true }],
+    ['Łatwy szlak dla początkujących w Tatrach', { easy: true }],
+    ['Is there an easy hike in the Tatras for beginners?', { easy: true }],
+  ])('лёгкий маршрут: %s', (question, expected) => {
+    expect(parseConditions(question)).toEqual(expected)
+  })
+
   it('похожие слова условием не становятся', () => {
     // «лет» — годы, а не лето; «Октябрьская» — площадь; BE «мая» — «моя», UK «маю» — «имею».
     expect(parseConditions('Городу 950 лет, что посмотреть в Полоцке?')).toEqual({})
@@ -76,16 +86,16 @@ describe('условия вопроса (#3289): проверка по факт�
     const everything = parseConditions('Квест с собакой для ребёнка 9 лет на час зимой без машины')
     expect(everything).toEqual({ children: { ages: [9] }, dog: true, noCar: true, months: [1, 2, 12], maxMinutes: 75, kind: 'quest' })
     // Запись фактов пустая либо её нет вовсе: условия не проверить.
-    expect(judgeCard({ ...everything, kind: undefined }, quest())).toEqual({ reasons: [], score: 0, dropped: false })
-    expect(judgeCard({ ...everything, kind: undefined }, travel())).toEqual({ reasons: [], score: 0, dropped: false })
-    expect(judgeCard({ ...everything, kind: undefined }, { type: 'travel', facts: null })).toEqual({ reasons: [], score: 0, dropped: false })
-    expect(judgeCard({ ...everything, kind: undefined }, { type: 'quest' })).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ ...everything, kind: undefined }, quest())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ ...everything, kind: undefined }, travel())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ ...everything, kind: undefined }, { type: 'travel', facts: null })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ ...everything, kind: undefined }, { type: 'quest' })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
     // Квест без пометки аудитории на вопрос о детях — не «не детский»: каталог этого не говорит.
-    expect(judgeCard({ children: { ages: [9] } }, quest({ duration_min: 90, pet_friendly: true }))).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ children: { ages: [9] } }, quest({ duration_min: 90, pet_friendly: true }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
     // Статья с одним днём на вопрос «до часа»: часы по числу дней не сверить.
-    expect(judgeCard({ maxMinutes: 60 }, travel({ number_days: 1 }))).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ maxMinutes: 60 }, travel({ number_days: 1 }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
     // Месяцы и транспорт сверяются только там, где записаны.
-    expect(judgeCard({ months: [1], noCar: true }, travel({ number_days: 2 }))).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ months: [1], noCar: true }, travel({ number_days: 2 }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
   })
 
   it('числовое условие нарушено явно — карточка убирается', () => {
@@ -97,16 +107,16 @@ describe('условия вопроса (#3289): проверка по факт�
     // Возраст вне диапазона квеста.
     expect(judgeCard({ children: { ages: [5] } }, quest({ audience: 'kids', age: [8, 10] })).dropped).toBe(true)
     // Один из двух детей подходит по возрасту — не убирается, но и возраст не совпал.
-    expect(judgeCard({ children: { ages: [6, 9] } }, quest({ audience: 'kids', age: [8, 10] }))).toEqual({ reasons: ['детский'], score: 1, dropped: false })
+    expect(judgeCard({ children: { ages: [6, 9] } }, quest({ audience: 'kids', age: [8, 10] }))).toEqual({ reasons: ['детский'], score: 1, dropped: false, unfit: false })
   })
 
   it('нарушение без числа опускает карточку, но не убирает', () => {
-    expect(judgeCard({ dog: true }, quest({ pet_friendly: false }))).toEqual({ reasons: [], score: -1, dropped: false })
-    expect(judgeCard({ months: [1, 2, 12] }, travel({ months: [5] }))).toEqual({ reasons: [], score: -1, dropped: false })
-    expect(judgeCard({ noCar: true }, travel({ transports: ['Машина'] }))).toEqual({ reasons: [], score: -1, dropped: false })
+    expect(judgeCard({ dog: true }, quest({ pet_friendly: false }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ months: [1, 2, 12] }, travel({ months: [5] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ noCar: true }, travel({ transports: ['Машина'] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
     // Машина и велосипед — без машины не подтверждено, но и не «только на машине».
-    expect(judgeCard({ noCar: true }, travel({ transports: ['Машина', 'Велосипед'] }))).toEqual({ reasons: [], score: 0, dropped: false })
-    expect(judgeCard({ kind: 'quest' }, travel({ number_days: 1 }))).toEqual({ reasons: [], score: -1, dropped: false })
+    expect(judgeCard({ noCar: true }, travel({ transports: ['Машина', 'Велосипед'] }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ kind: 'quest' }, travel({ number_days: 1 }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
   })
 
   it('совпавшее условие — балл и слова для строки «почему подходит»', () => {
@@ -115,13 +125,15 @@ describe('условия вопроса (#3289): проверка по факт�
       reasons: ['детский', '8–10 лет', 'можно с собакой', '75 мин'],
       score: 5,
       dropped: false,
+      unfit: false,
     })
     // Семейный квест весит меньше детского — как места `childrenRank` (#3276).
-    expect(judgeCard({ children: { ages: [] } }, quest({ audience: 'family' }))).toEqual({ reasons: ['семейный'], score: 0.5, dropped: false })
+    expect(judgeCard({ children: { ages: [] } }, quest({ audience: 'family' }))).toEqual({ reasons: ['семейный'], score: 0.5, dropped: false, unfit: false })
     expect(judgeCard({ months: [1, 2, 12], maxDays: 1 }, travel({ number_days: 1, months: [1, 2, 7] }))).toEqual({
       reasons: ['месяцы: январь, февраль', '1 день'],
       score: 2,
       dropped: false,
+      unfit: false,
     })
     expect(judgeCard({ months: [3] }, travel({ months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] })).reasons).toEqual(['круглый год'])
     expect(judgeCard({ noCar: true }, travel({ transports: ['Автобус', 'Поезд', 'Машина'] })).reasons).toEqual(['без машины: автобус, поезд'])
@@ -129,15 +141,39 @@ describe('условия вопроса (#3289): проверка по факт�
     expect(judgeCard({ maxDays: 3 }, travel({ number_days: 2 })).reasons).toEqual(['2 дня'])
     // Квест «на один день» укладывается в день; «на выходные» — не совпал и не нарушил.
     expect(judgeCard({ maxDays: 1 }, quest({ duration_min: 90 })).reasons).toEqual(['90 мин'])
-    expect(judgeCard({ maxDays: 2 }, quest({ duration_min: 90 }))).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ maxDays: 2 }, quest({ duration_min: 90 }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
   })
 
   it('подборка без числа дней подходит «на выходные» по категории каталога «Тур выходного дня»', () => {
     const roundup = travel({ categories: ['Самостоятельное путешествие', 'Тур выходного дня'] })
-    expect(judgeCard({ maxDays: 2 }, roundup)).toEqual({ reasons: ['тур выходного дня'], score: 1, dropped: false })
+    expect(judgeCard({ maxDays: 2 }, roundup)).toEqual({ reasons: ['тур выходного дня'], score: 1, dropped: false, unfit: false })
     expect(judgeCard({ maxDays: 1 }, roundup).score).toBe(1)
     // На три дня и больше категория ничего не подтверждает.
-    expect(judgeCard({ maxDays: 3 }, roundup)).toEqual({ reasons: [], score: 0, dropped: false })
-    expect(judgeCard({ maxDays: 2 }, travel({ categories: ['Поход'] }))).toEqual({ reasons: [], score: 0, dropped: false })
+    expect(judgeCard({ maxDays: 3 }, roundup)).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ maxDays: 2 }, travel({ categories: ['Поход'] }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+  })
+
+  it('лёгкий маршрут: у квеста — факт сложности, у статьи — её собственные слова; без признака условие не совпало и не нарушено', () => {
+    expect(judgeCard({ easy: true }, quest({ difficulty: 'easy' }))).toEqual({ reasons: ['лёгкий'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ easy: true }, quest({ difficulty: 'hard' }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ easy: true }, quest({ points: 9 }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    const trail = { ...travel({ number_days: 1 }), title: 'Закопане: лёгкая тропа Ścieżka nad Reglami', snippet: 'Польша, Groń. Дней: 1' }
+    expect(judgeCard({ easy: true }, trail)).toEqual({ reasons: ['лёгкий маршрут'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ easy: true }, { ...travel(), title: 'Рысы со словацкой стороны', snippet: 'Сложность: лёгкая-средняя, перепады высот умеренные' }).reasons).toEqual(['лёгкий маршрут'])
+    // Слова «легко» и «лёгкий» вне сочетания с маршрутом признаком не считаются; статья без признака — неизвестно.
+    expect(judgeCard({ easy: true }, { ...travel(), title: 'Рысы: маршрут от Попрадского плеса', snippet: 'С лёгким рюкзаком идти легко' })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+  })
+
+  it('детский квест на вопрос с личным условием без детей — карточка другой аудитории; с детьми и без условий остаётся', () => {
+    const kids = quest({ audience: 'kids', age: [8, 10], duration_min: 75, pet_friendly: true })
+    for (const question of ['Где погулять с собакой недалеко от Варшавы?', 'Квест в Варшаве на час', 'Куда сходить в Варшаве зимой?', 'Лёгкий квест для новичков в Варшаве', 'Квест в Варшаве без машины']) {
+      expect({ question, verdict: judgeCard(parseConditions(question), kids) }).toEqual({ question, verdict: { reasons: [], score: -1, dropped: true, unfit: true } })
+    }
+    // Дети названы — детский квест подходит; вопрос без личных условий детские квесты показывает как раньше.
+    expect(judgeCard(parseConditions('Где погулять с собакой и детьми в Варшаве?'), kids)).toMatchObject({ reasons: ['детский', 'можно с собакой'], unfit: false, dropped: false })
+    expect(judgeCard(parseConditions('Какие квесты есть в Варшаве?'), kids)).toEqual({ reasons: [], score: 1, dropped: false, unfit: false })
+    expect(judgeCard(parseConditions('Самый короткий квест в Варшаве'), kids).unfit).toBe(false)
+    // Семейный квест — не «только для детей»: остаётся.
+    expect(judgeCard(parseConditions('Где погулять с собакой в Варшаве?'), quest({ audience: 'family', pet_friendly: true }))).toMatchObject({ reasons: ['можно с собакой'], unfit: false })
   })
 })

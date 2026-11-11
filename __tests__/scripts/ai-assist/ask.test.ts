@@ -444,8 +444,8 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(seen[0].system.endsWith(PAGE_MODE_RULE_RU)).toBe(true)
       expect((reply.events.find((event) => event.event === 'trace')!.data.prompt_sources as { source_id: string; group?: string }[]).map((s) => [s.source_id, s.group])).toEqual([['816', 'page']])
 
-      // Ссылка ответа — только на страницу: адреса соседа в подсказке не было, страж его убирает.
-      expect(reply.events.filter((event) => event.event === 'text').at(-1)!.data.text).toBe('На ярмарки хватит двух дней: [Ярмарки Польши](https://metravel.by/travels/816). Ещё есть Тропа Мюллерталь.')
+      // Ссылка ответа — только на страницу: соседа в подсказке не было — страж убирает и адрес, и предложение с его названием.
+      expect(reply.events.filter((event) => event.event === 'text').at(-1)!.data.text).toBe('На ярмарки хватит двух дней: [Ярмарки Польши](https://metravel.by/travels/816).')
       expect(reply.events.at(-1)!.data).toMatchObject({ status: 'done', removed_links: 1 })
 
       // Место вопроса есть на странице («гданьск» в тексте статьи) — режим страницы остаётся.
@@ -639,6 +639,7 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(loadConfig(env({})).promptHints).toEqual({ whyFits: true, noPlace: true })
       expect(loadConfig(env({ AI_ASSIST_PROMPT_WHY_FITS: '0' })).promptHints).toEqual({ whyFits: false, noPlace: true })
       expect(loadConfig(env({ AI_ASSIST_PROMPT_NO_PLACE: '0' })).promptHints).toEqual({ whyFits: true, noPlace: false })
+      expect([loadConfig(env({})).promptFocus, loadConfig(env({ AI_ASSIST_PROMPT_FOCUS: '0' })).promptFocus]).toEqual([true, false])
     } finally {
       await Promise.all([close(byDefault.server), close(bare.server)])
     }
@@ -1219,7 +1220,7 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
     expect(off.user).toBe(on.user.replace(/\nПочему подходит: [^\n]+/g, ''))
   })
 
-  it('p05 «с собакой недалеко от Варшавы»: квест Варшавы с пометкой каталога — первым, Хельская коса и Краков — nearby', async () => {
+  it('p05 «с собакой недалеко от Варшавы»: детский квест на вопрос без детей — nearby, с детьми — первым; Хельская коса и Краков — nearby', async () => {
     const chunks: Spec[] = [
       { type: 'travel', sourceId: 502, title: 'Варшавские Лазенки', text: 'где погулять в варшаве: парк лазенки дворец на воде', city: 'Pałac na Wyspie' },
       { type: 'travel', sourceId: 459, title: 'Хельская коса: три маяка и неделя на Балтике', text: 'где погулять с собакой у моря: хельская коса', city: 'Hel' },
@@ -1235,13 +1236,22 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
     ]
     for (const question of ['Где погулять с собакой недалеко от Варшавы?', 'Куда сходить с собакой в Варшаве?']) {
       const { sources, prompt, user, inGroup } = await ask(question, chunks, facts)
-      expect(keyOf(sources[0])).toBe('quest:129')
-      expect(prompt[0].why).toBe('можно с собакой')
-      expect(user).toContain('Можно с собакой. квест варшава старый город базилиск\nПочему подходит: можно с собакой\n')
-      // Квест «без собаки» остаётся в подсказке последним: нарушение без числа не убирает.
-      expect(inGroup('match')).toEqual(['quest:129', 'travel:502', 'quest:130'])
-      expect(inGroup('nearby').sort()).toEqual(['travel:459', 'travel:568'])
+      // Детский квест на вопрос без детей в подсказку не идёт, хотя по каталогу он «можно с собакой».
+      expect(inGroup('match')).toEqual(['travel:502', 'quest:130'])
+      expect(inGroup('nearby').sort()).toEqual(['quest:129', 'travel:459', 'travel:568'])
+      expect(keyOf(sources[0])).toBe('travel:502')
+      expect(prompt.every((source) => source.why === undefined)).toBe(true)
+      expect(user).not.toContain('Детский квест по Варшаве')
     }
+    // В вопросе есть дети — квест подходит и встаёт первым со строкой условий.
+    const withKids = await ask('Где погулять с собакой и детьми в Варшаве?', chunks, facts)
+    expect(keyOf(withKids.sources[0])).toBe('quest:129')
+    expect(withKids.prompt[0].why).toBe('детский, можно с собакой')
+    // Кроме детского квеста о Варшаве ничего нет: подсказка пуста, все карточки — «рядом».
+    const only = await ask('Где погулять с собакой недалеко от Варшавы?', chunks.filter((chunk) => ![502, 130].includes(chunk.sourceId)), facts)
+    expect(only.prompt).toEqual([])
+    expect(only.user).toContain('Материалы сайта: ничего не найдено.')
+    expect(only.sources.map((source) => source.group)).toEqual(['nearby', 'nearby', 'nearby'])
   })
 
   it('p13 «з дітьми на вихідні у Польщі»: поездки на 4 и 7 дней — nearby, Energylandia в подсказке со строкой «1 день»', async () => {
@@ -1289,7 +1299,7 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
     }
   })
 
-  it('p08 «в Татрах без машины»: место — регион без своих карточек: маршрут по Люксембургу на автобусе условием не поднят, порядок подбора сохранён', async () => {
+  it('p08 «в Татрах для новичков без машины»: место — регион без своих карточек: в подсказке источники, упоминающие Татры, лёгкая тропа первой; маршрут по Люксембургу — nearby', async () => {
     const chunks: Spec[] = [
       { type: 'travel', sourceId: 553, title: 'Закопане: лёгкая тропа Ścieżka nad Reglami', text: 'лёгкая тропа для новичков у подножия татр', city: 'Groń' },
       { type: 'travel', sourceId: 362, title: 'Морское око в мае: озеро в Татрах, Польша', text: 'маршрут к озеру морское око', city: 'Palenica Białczańska' },
@@ -1300,17 +1310,19 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
       { type: 'travel', source_id: 362, number_days: 1, months: [5], transports: ['Машина'] },
       { type: 'travel', source_id: 761, number_days: 6, months: [9, 10], transports: ['Автобус'] },
     ]
-    const { sources, prompt, user, foundKeys } = await ask('Посоветуй маршрут в Татрах для новичков без машины', chunks, facts)
-    expect(sources.map(keyOf)).toEqual(foundKeys)
-    expect(sources.every((source) => source.group === undefined)).toBe(true)
-    expect(prompt.every((source) => source.why === undefined)).toBe(true)
-    expect(user).not.toContain('Почему подходит')
-    // Татры упомянуты в карточках — строки «материала о месте нет» нет.
+    const { sources, prompt, user, inGroup } = await ask('Посоветуй маршрут в Татрах для новичков без машины', chunks, facts)
+    // Татры упомянуты в тексте двух источников — они и идут в подсказку; лёгкая тропа — первой.
+    expect(inGroup('match')).toEqual(['travel:553', 'travel:362'])
+    expect(inGroup('nearby')).toEqual(['travel:761'])
+    expect(keyOf(sources[0])).toBe('travel:553')
+    expect(prompt.map((source) => source.why)).toEqual(['лёгкий маршрут', undefined])
+    expect(user).toContain('\nПочему подходит: лёгкий маршрут\n')
+    expect(user).not.toContain('Mullerthal')
     expect(user).not.toContain(NO_PLACE_NOTE_RU)
-    // Тот же вопрос без места: условие работает — автобусный маршрут первым.
+    // Тот же вопрос без места: условия работают по всем карточкам — автобусный маршрут первым.
     const anywhere = await ask('Посоветуй маршрут для новичков без машины', chunks, facts)
     expect(keyOf(anywhere.sources[0])).toBe('travel:761')
-    expect(anywhere.prompt[0].why).toBe('без машины: автобус')
+    expect(anywhere.prompt[0].why).toBe('лёгкий маршрут, без машины: автобус')
   })
 
   it('место, которого нет ни в одном источнике, — строка «материала о месте нет» перед вопросом; упоминание в тексте за пределами фрагмента карточки её снимает; строка выключается', async () => {

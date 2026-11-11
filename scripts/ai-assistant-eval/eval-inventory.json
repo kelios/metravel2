@@ -24,7 +24,7 @@
       "cases": 70
     },
     "scripts/ai-assistant-eval/cases.live.jsonl": {
-      "sha256": "67116af528e1244f67d90fe697109f493336e952d7835761a9590504b6cf627a",
+      "sha256": "9bc4719d42fcbcb356e289d9fdb84a4016118858a90e78e46081c1d937156a2d",
       "cases": 86
     },
     "scripts/ai-assistant-eval/cases.quality.jsonl": {

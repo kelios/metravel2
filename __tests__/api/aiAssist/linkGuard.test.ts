@@ -281,6 +281,60 @@ describe('страж содержания ответа (#3291)', () => {
     expect(guardAnswer(clean, [cmok], context)).toMatchObject({ text: clean, promptLeaks: 0, fallback: false })
   })
 
+  it('материал не из подсказки: пункт списка и предложение с вырезанной ссылкой уходят целиком, осиротевший заголовок списка — с ними', () => {
+    const page: AiSource = { ...smolevud, group: 'page' }
+    const link = `[${smolevud.title}](${smolevud.url})`
+    const question = 'Подойдёт ли с детьми?'
+    // p21 живой пробы: квестов в подсказке не было, страж ссылок снимал адрес, а название и числа оставались.
+    const raw = [
+      `С детьми на площадке интересно: ${link}.`,
+      '',
+      'Квесты с ребёнком:',
+      '- [В поисках гномов](https://metravel.by/quests/wroclaw-gnoms) — 8 точек, около 150 мин',
+      '- [Тайна ратуши](https://metravel.by/quests/wroclaw-ratusz) — 6 точек, около 90 мин',
+    ].join('\n')
+    expect(guardAnswer(raw, [page], { question })).toMatchObject({ text: `С детьми на площадке интересно: ${link}.`, removed: 2, ungroundedNumbers: 0, fallback: false })
+    // Весь ответ — такие пункты: текста не остаётся.
+    expect(guardAnswer(['Квесты с ребёнком:', '- [В поисках гномов](https://metravel.by/quests/wroclaw-gnoms) — 8 точек'].join('\n'), [page], { question })).toMatchObject({ text: '', removed: 1, fallback: true })
+    // Свободное предложение с чужим материалом уходит целиком, соседние остаются.
+    expect(guardAnswer(`Советую ${link}. Ещё есть [Тропа Мюллерталь](https://metravel.by/travels/700) в Люксембурге. Удачи!`, [smolevud], { question }).text).toBe(`Советую ${link}. Удачи!`)
+    // В том же предложении есть ссылка на карточку — остаётся она.
+    expect(guardAnswer(`Загляните в ${link} и в [Музей кино](https://metravel.by/travels/999).`, [smolevud], { question }).text).toBe(`${link}.`)
+    // Под заголовком остался живой пункт — заголовок на месте; нумерованный пункт уходит вместе с номером.
+    expect(guardAnswer(['Варианты:', `- ${link}`, '- [Чужой квест](https://metravel.by/quests/x) — 5 точек'].join('\n'), [smolevud], { question }).text).toBe(['Варианты:', `- ${link}`].join('\n'))
+    expect(guardAnswer([`1. ${link}`, '2. [Чужой квест](https://metravel.by/quests/x) — 5 точек'].join('\n'), [smolevud], { question }).text).toBe(`1. ${link}`)
+    // Пояснение за ссылкой называет чужой материал — пояснение убирается, ссылка остаётся.
+    expect(guardAnswer(`Подойдёт ${link} — как и [Чужой квест](https://metravel.by/quests/x).`, [smolevud], { question }).text).toBe(`Подойдёт ${link}.`)
+    // Выдуманный адрес сайта без markdown-подписи — тот же случай: пункт уходит, осиротевшее «Ближайшее из найденного:» — с ним.
+    const invented = ['Про это на сайте пока нет отдельной статьи. Ближайшее из найденного:', '- Выезд в Польшу: наше первое путешествие с пёсиком (1 дн., июль) — https://metravel.by/travels/vyezd-v-polshu-s-pesikom'].join('\n')
+    expect(guardAnswer(invented, [smolevud], { question: 'Где погулять с собакой?' })).toMatchObject({ text: 'Про это на сайте пока нет отдельной статьи.', removed: 1, fallback: false })
+    // Голый внешний адрес без названия предложение не убирает — как раньше.
+    expect(guardAnswer(`Загляните в ${link} и на https://evil.example/x`, [smolevud], { question })).toMatchObject({ text: `Загляните в ${link} и на`, removed: 1 })
+  })
+
+  it('эхо разметки вырезается предложением целиком — с продолжением в скобках; повтор вопроса вырезается и у ответа со ссылками', () => {
+    const page: AiSource = { ...smolevud, group: 'page' }
+    const link = `[${smolevud.title}](${smolevud.url})`
+    const question = 'Сколько дней занимает поездка и что взять с собой?'
+    // p20 живой пробы: от «…[1] — озеро 1 дн. (с ночёвкой не обязательно).» оставалось «(с ночёвкой не обязательно).»
+    const p20 = guardAnswer('Поездка по карточке [1] — озеро 1 дн. (с ночёвкой не обязательно). Что взять: тёплый верх и термос.', [page], { question })
+    expect(p20).toMatchObject({ text: 'Что взять: тёплый верх и термос.', promptLeaks: 1, fallback: false })
+    // Повтор вопроса в хвосте и в начале; регистр и пробелы не важны.
+    expect(guardAnswer(`Хватит одного дня, возьмите удобную обувь: ${link}. Сколько дней занимает поездка и что взять с собой?`, [page], { question }).text).toBe(`Хватит одного дня, возьмите удобную обувь: ${link}.`)
+    expect(guardAnswer(`сколько  дней занимает поездка И что взять с собой?\n\nВот главное:\n- ${link}`, [smolevud], { question }).text).toBe(`Вот главное:\n- ${link}`)
+    const pl = 'Marzą nam się Wyspy Owcze. Macie jakąś trasę albo relację stamtąd?'
+    expect(guardAnswer(`${pl}\n\nOto warianty:\n- ${link}`, [smolevud], { question: pl }).text).toBe(`Oto warianty:\n- ${link}`)
+    // Вопрос без знака вопроса — ещё и честное начало ответа: не вырезается. Повтор внутри фразы тоже остаётся.
+    const shortest = `Самый короткий квест в Минске — [${cmok.title}](${cmok.url}): около 45 мин.`
+    expect(guardAnswer(shortest, [cmok], { question: 'Самый короткий квест в Минске' }).text).toBe(shortest)
+    const quoted = `На вопрос «${question}» отвечает ${link}.`
+    expect(guardAnswer(quoted, [smolevud], { question }).text).toBe(quoted)
+    // Короткий вопрос может честно начать ответ; ответ из одного повтора по-прежнему пустой.
+    expect(guardAnswer(`А в Минске? Есть ${link}.`, [smolevud], { question: 'А в Минске?' }).text).toBe(`А в Минске? Есть ${link}.`)
+    expect(guardAnswer(question, [page], { question })).toMatchObject({ text: '', fallback: true })
+    expect(guardAnswer(`${question} Решайте сами.`, [smolevud], { question }).fallback).toBe(true)
+  })
+
   it('число без опоры в предложении со ссылкой: от предложения остаётся ссылка — в свободном тексте и в пункте списка', () => {
     const link = `[${cmok.title}](${cmok.url})`
     const other = `[${dvoriki.title}](${dvoriki.url})`

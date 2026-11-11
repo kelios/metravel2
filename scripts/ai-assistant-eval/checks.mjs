@@ -78,7 +78,7 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
 )
 /** «На сайте такого нет» — честный отказ по теме. */
 const NO_MATERIAL_RE =
-  /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
+  /(?:пока\s+)?нет\s+(?:(?:отдельн|подходящ|так)\p{L}+\s+)?(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
 /**
  * Обратный порядок слов: «материала про Гданьск пока нет» — сам материал отсутствует, в пределах одной
  * фразы. Так же строятся учебные ответы на других языках (`rag_answers.py`: «Асобнага матэрыялу … няма»,
@@ -282,6 +282,13 @@ export const checkSources = (sources, expectSources) => {
  * подходит ни названием, ни фрагментом, ни адресом, — это выбор модели, а не подбора: квест Бреста
  * в ответе про Краков (UK ln03, v4, 10.11.2026) автопроверки пропускали, находил только судья.
  * Когда карточек места в подсказке нет вовсе, виноват подбор — это `irrelevant_sources`.
+ *
+ * Проверка говорит о месте и неприменима в одном случае (прогон 86 живых вопросов 11.11.2026):
+ * `expect_sources.topic` — шаблон набора задаёт тему («парк динозавров», «велоквесты», «ярмарки»,
+ * «горы зимой»), а вопрос места не называет либо называет страну, из которой все карточки подсказки.
+ * Карточка мимо темы — выбор модели, его оценивает судья; здесь это предупреждение `off_topic_card`.
+ * Признание «отдельного материала нет» провал не снимает: проверка срабатывает, только когда карточки
+ * места в подсказке были, а значит такое признание ложное и чужой город назван вместо своего.
  */
 export const findOffPlaceCards = (raw, cards, expectSources) => {
   const split = splitPlaceCards(cards, expectSources)
@@ -451,7 +458,10 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier },
       else if (recs.bulletsWithoutLink >= 2) fail(failures, 'names_without_links', 'model', `${recs.bulletsWithoutLink} пунктов без ссылки`)
       const offPlace = findOffPlaceCards(raw, cards, expectSources)
       metrics.offPlaceCards = offPlace.length
-      if (offPlace.length) fail(failures, 'off_place_card', 'model', `названа карточка не того места: «${offPlace[0].title}»`)
+      if (offPlace.length) {
+        if (expectSources?.topic) warnings.push({ check: 'off_topic_card', layer: 'model', detail: `названа карточка мимо темы вопроса: «${offPlace[0].title}»` })
+        else fail(failures, 'off_place_card', 'model', `названа карточка не того места: «${offPlace[0].title}»`)
+      }
     }
     if (recs.unknownUrls.length) warnings.push({ check: 'invented_urls', layer: 'model', detail: `${recs.unknownUrls.length} адресов не из карточек вырезано стражем` })
     // Язык — по собственным словам ответа: название карточки стоит как в каталоге, а детские квесты и

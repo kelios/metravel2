@@ -28,7 +28,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ChunkOptions } from './chunk.ts'
 import { createEmbedder, runEmbed } from './embed.ts'
-import { chunkRawCorpus, countCatalogSources, runExport } from './export.ts'
+import { chunkRawCorpus, countCatalogSources, rawFactsProblem, runExport } from './export.ts'
 import { type ChunkRecord, readIndex, readJsonl, type SourceFacts, verifyIndex, writeFacts, writeJsonl } from './format.ts'
 import { checkFreshness, readFreshnessSubject } from './freshness.ts'
 import { resolveModel } from './models.ts'
@@ -116,6 +116,9 @@ function commandChunk(flags: CliArgs['flags'], paths: Paths) {
   const options: ChunkOptions = { size: flagNumber(flags, 'size'), overlap: flagNumber(flags, 'overlap') }
   const localesFlag = flagString(flags, 'locales')
   const { chunks, facts, travels, quests } = chunkRawCorpus(paths.rawDir, options, localesFlag ? localesFlag.split(',') : undefined)
+  // Фрагменты по старому слепку собираются, но факты выйдут без чисел — об этом сказано в журнале.
+  const problem = rawFactsProblem(paths.rawDir)
+  if (problem) log(`⚠️ chunk: ${problem} — факты карточек будут без чисел; перечитайте raw командой \`export\``)
   writeJsonl(paths.workChunks, chunks)
   writeJsonl(paths.workFacts, facts)
   const summary = {
@@ -154,8 +157,19 @@ async function commandEmbed(flags: CliArgs['flags'], paths: Paths) {
   console.log(JSON.stringify({ ...summary, dist: paths.distDir }))
 }
 
-/** Факты в уже собранный артефакт: raw читается заново, векторы и фрагменты не трогаются. */
+/**
+ * Факты в уже собранный артефакт: raw читается заново, векторы и фрагменты не трогаются. По слепку без
+ * полей фактов команда отказывает и артефакт не трогает: иначе служба стартует «с фактами», а карточки
+ * идут без чисел.
+ */
 function commandFacts(paths: Paths) {
+  const problem = rawFactsProblem(paths.rawDir)
+  if (problem) {
+    throw new Error(
+      `facts: ${problem}. Артефакт ${paths.distDir} не изменён. Перечитайте raw: \`npm run ai:index -- export --out ${paths.outDir}\` ` +
+        '(обычный запуск на старом слепке сам перечитает статьи и квесты), затем повторите `facts`.',
+    )
+  }
   const { facts } = chunkRawCorpus(paths.rawDir)
   const manifest = writeFacts(paths.distDir, facts)
   log(`facts: записей ${manifest.facts?.count ?? 0} из ${facts.length} источников raw, формат версии ${manifest.format_version}`)

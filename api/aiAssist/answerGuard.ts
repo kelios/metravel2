@@ -23,9 +23,15 @@
  *      В режиме страницы (#3290) короткий ответ пустым не считается: он о самой странице. Пустой и
  *      остаток после вырезаний, в котором одни вопросы: от «…в Кракове — 60 злотых. Сколько летнему
  *      ребёнку, сколько взрослым?» оставался один встречный вопрос.
+ *      Дословный повтор вопроса посетителя в начале или хвосте ответа вырезается и у ответа со ссылками.
+ *   5. Материал не из подсказки: страж ссылок снимает адрес, которого нет в карточках, но название и числа
+ *      при нём оставались («• В поисках гномов — 8 точек, около 150 мин»). Пункт списка или предложение с
+ *      такой ссылкой убирается целиком (если в нём есть и ссылка на карточку — остаётся она); строка-заголовок
+ *      списка, под которой не осталось пунктов, уходит вместе с ними.
  *   4. Эхо разметки подсказки — заголовок «Материалы сайта:» и строка «Вопрос посетителя:» на любой из
  *      пяти локалей, фразы системного сообщения, номер карточки в квадратных скобках («карточка [2]») —
- *      вырезается: строка с заголовком карточки целиком, в остальном тексте — предложение. Если после
+ *      вырезается: строка с заголовком карточки целиком, в остальном тексте — предложение вместе с его
+ *      продолжением в скобках или со строчной буквы. Если после
  *      этого не осталось ни ссылки, ни признания, ответ пустой (кроме режима страницы, где утверждение
  *      о странице ссылки не требует). Детектор `leaksPrompt` — общий с проверкой `prompt_leak` контура оценки.
  *
@@ -36,7 +42,7 @@
  * Модуль без `@/`-импортов: его грузит служба (`node --experimental-strip-types`) и контур оценки.
  */
 
-import { buildSourceByLinkKey, countKeptSourceLinks, enforceSourceLinks, type LinkGuardResult, normalizeLinkKey, tidyText } from './linkGuard.ts'
+import { buildSourceByLinkKey, countKeptSourceLinks, enforceSourceLinks, type LinkGuardResult, normalizeLinkKey, REMOVED_LINK_MARK, tidyText } from './linkGuard.ts'
 import type { AiSource } from './types'
 
 export type GuardCheck = 'label_mismatch' | 'foreign_description' | 'ungrounded_number' | 'prompt_leak' | 'echo'
@@ -354,6 +360,34 @@ export const leaksPrompt = (text: string | null | undefined): boolean => {
  * Текст без эха подсказки: строка, начатая номером карточки («[1] Статья …»), убирается целиком — это
  * переписанная карточка; в остальных строках убирается предложение с эхом.
  */
+/**
+ * Предложения строки целиком: обрывок, начатый скобкой или строчной буквой, — продолжение прошлого
+ * предложения («…озеро 1 дн. (с ночёвкой не обязательно).»), а не новое.
+ */
+const wholeSentences = (line: string): string[] => {
+  const out: string[] = []
+  for (const fragment of sentencesOf(line)) {
+    if (out.length && /^\s*[(\p{Ll}]/u.test(fragment)) out[out.length - 1] += fragment
+    else out.push(fragment)
+  }
+  return out
+}
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Текст без дословного повтора вопроса посетителя (регистр и пробелы не важны). Вырезается только вопрос
+ * со знаком вопроса, стоящий отдельным предложением: «Самый короткий квест в Минске» без знака — это и
+ * честное начало ответа («Самый короткий квест в Минске — …»). Короткий вопрос не вырезается.
+ */
+const stripQuestionEcho = (text: string, question: string | null | undefined): string => {
+  const asked = String(question ?? '').replace(/\s+/g, ' ').trim()
+  if (asked.length < MIN_ECHO_QUESTION_CHARS || !/[?？]$/.test(asked)) return text
+  const repeat = new RegExp(`(^|[.!?…:]\\s+|\\n\\s*)${asked.split(' ').map(escapeRegExp).join('\\s+')}(?=\\s|$)`, 'giu')
+  const stripped = text.replace(repeat, '$1')
+  return stripped === text ? text : tidyText(stripped)
+}
+
 const stripPromptEcho = (text: string): { text: string; removed: string[] } => {
   const removed: string[] = []
   const lines = text.split('\n').flatMap((line) => {
@@ -362,7 +396,7 @@ const stripPromptEcho = (text: string): { text: string; removed: string[] } => {
       removed.push(line.trim())
       return []
     }
-    const kept = sentencesOf(line).filter((sentence) => {
+    const kept = wholeSentences(line).filter((sentence) => {
       if (!leaksPrompt(sentence)) return true
       removed.push(sentence.trim())
       return false
@@ -378,7 +412,8 @@ const stripPromptEcho = (text: string): { text: string; removed: string[] } => {
  * ответ. `text` — что показать; при `fallback` вызывающий показывает запасную фразу вместо него.
  */
 export function guardAnswer(rawText: string, sources: readonly AiSource[], context: AnswerGuardContext = {}): AnswerGuardResult {
-  const linked = enforceSourceLinks(rawText, sources)
+  // Вырезанная ссылка оставляет метку: по ней ниже уходит предложение или пункт с материалом не из подсказки.
+  const linked = enforceSourceLinks(rawText, sources, { markRemoved: true })
   const findings: GuardFinding[] = []
   if (linked.relabeled) findings.push({ check: 'label_mismatch', detail: `подписей заменено названием карточки: ${linked.relabeled}` })
   const echoed = stripPromptEcho(linked.text)
@@ -395,6 +430,7 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
 
   /** Причина, по которой пояснение не принадлежит карточке ссылки, или `null`. */
   const descriptionDefect = (description: string, own: AiSource): string | null => {
+    if (description.includes(REMOVED_LINK_MARK)) return 'в пояснении назван материал не из подсказки'
     const grounding = ownGrounding.get(own)!
     const stray = extractNumberFacts(description).find((fact) => !isGrounded(fact, grounding) && !isDifference(fact, allGrounding, description))
     if (stray) return `числа «${stray.raw}» нет в карточке «${own.title}»`
@@ -421,6 +457,8 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
   const keepGroundedSentences = (text: string): string =>
     sentencesOf(text)
       .filter((sentence) => {
+        // Материал не из подсказки: ссылку снял страж ссылок, предложение с его названием уходит целиком.
+        if (sentence.includes(REMOVED_LINK_MARK)) return false
         const facts = extractNumberFacts(sentence)
         const stray = facts.find((fact) => !isGrounded(fact, allGrounding) && !isDifference(fact, allGrounding, sentence))
         if (!stray) {
@@ -463,13 +501,17 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
       const words = pieces.map((piece) => (piece.kind === 'text' ? piece.value : ' ')).join('')
       const facts = extractNumberFacts(words)
       const stray = facts.find((fact) => !isGrounded(fact, allGrounding) && !isDifference(fact, allGrounding, words))
-      if (!stray) {
+      // Рядом со ссылкой на карточку назван материал не из подсказки — от предложения остаётся ссылка, как при числе без опоры.
+      const foreign = words.includes(REMOVED_LINK_MARK)
+      if (!stray && !foreign) {
         groundedFacts += facts.length
         out += pieces.map((piece) => piece.value).join('')
         return
       }
-      ungroundedNumbers += 1
-      findings.push({ check: 'ungrounded_number', detail: `числа «${stray.raw}» нет в карточках: «${pieces.map((piece) => piece.value).join('').trim().slice(0, 120)}»` })
+      if (stray) {
+        ungroundedNumbers += 1
+        findings.push({ check: 'ungrounded_number', detail: `числа «${stray.raw}» нет в карточках: «${pieces.map((piece) => piece.value).join('').trim().slice(0, 120)}»` })
+      }
       const head = pieces[0]
       const lastPiece = pieces[pieces.length - 1]
       // Начало: маркер пункта списка либо пробел, которым предложение отделено от предыдущего.
@@ -516,12 +558,27 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
       addText(rest)
     })
     closeSentence()
-    return out
+    // От пункта списка остался один маркер («1.») — пункта больше нет.
+    const emptied = bullet !== null && line.trim() !== bullet.trim() && (out.trim() === '' || out.trim() === bullet.trim())
+    return { text: emptied ? '' : out, bullet: bullet !== null, emptied }
+  })
+  // Строка-заголовок списка («Квесты с ребёнком:»), под которой не осталось ни одного пункта, уходит вместе с ними.
+  lines.forEach((line, index) => {
+    if (line.bullet || !/[:：]\s*$/.test(line.text)) return
+    let emptied = 0
+    for (const next of lines.slice(index + 1)) {
+      if (next.emptied) emptied += 1
+      else if (next.bullet) return
+      else if (next.text.trim()) break
+    }
+    if (emptied) line.text = sentencesOf(line.text).slice(0, -1).join('')
   })
 
-  const text = tidyText(lines.join('\n'))
+  const guarded = tidyText(lines.map((line) => line.text).join('\n').split(REMOVED_LINK_MARK).join(''))
+  const echo = echoesQuestion(context.question, guarded)
+  // Дословный повтор вопроса вырезается и у ответа со ссылками; пустым ответ делает прежнее правило `echo`.
+  const text = stripQuestionEcho(guarded, context.question)
   const keptLinks = countKeptSourceLinks(text, sources)
-  const echo = echoesQuestion(context.question, text)
   // Режим страницы (#3290): ответ о самой странице ссылки не требует — «Хватит двух дней на город.»
   // короткий, но верный; пустым там считается только пустой текст и повтор вопроса.
   const pageMode = sources.some((source) => source.group === 'page')
@@ -530,7 +587,7 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
   // подсказки, текст без ссылки и признания — отвечать нечем. В режиме страницы утверждение о странице
   // ссылки не требует, там пустым остаётся только остаток из вопросов.
   const promptLeaks = echoed.removed.length
-  const cut = linked.removed + droppedDescriptions + ungroundedNumbers + promptLeaks > 0
+  const cut = linked.removed + droppedDescriptions + ungroundedNumbers + promptLeaks > 0 || text !== guarded
   const onlyQuestions = text.length > 0 && text.split('\n').flatMap(sentencesOf).every((sentence) => !sentence.trim() || /\?\s*$/.test(sentence))
   const leftover = cut && (onlyQuestions || (promptLeaks > 0 && !pageMode))
   // Содержание ответа — ссылка на карточку, честное «в материалах этого нет» или подтверждённое число.

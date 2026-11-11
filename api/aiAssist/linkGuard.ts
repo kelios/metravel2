@@ -94,6 +94,13 @@ export const isSameTitle = (label: string, title: string): boolean => {
 /** Название как подпись markdown-ссылки: квадратная скобка закрыла бы подпись раньше времени. */
 const toLinkLabel = (title: string): string => String(title ?? '').replace(/\[/g, '(').replace(/\]/g, ')').replace(/\s+/g, ' ').trim()
 
+/**
+ * Метка на месте вырезанной markdown-ссылки (символ области частного использования, в ответах модели его
+ * нет): по ней страж содержания убирает предложение или пункт списка, где назван материал не из
+ * подсказки. Ставится только по просьбе вызывающего и до показа снимается.
+ */
+export const REMOVED_LINK_MARK = '\uE001'
+
 export type LinkGuardResult = {
   text: string
   /** Сколько адресов вырезано как не из карточек. */
@@ -109,7 +116,7 @@ export type LinkGuardResult = {
  * («doehat» вместо «doekhat», замер #2710), а название копирует точно, поэтому
  * такая ссылка получает адрес своей карточки и не считается вырезанной.
  */
-export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]): LinkGuardResult {
+export function enforceSourceLinks(rawText: string, sources: readonly AiSource[], options: { markRemoved?: boolean } = {}): LinkGuardResult {
   const sourceByKey = buildSourceByLinkKey(sources)
   let removed = 0
   let relabeled = 0
@@ -133,16 +140,18 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
     const cardUrl = urlByTitle.get(normalizeTitleKey(label))
     if (cardUrl) return `[${label}](${cardUrl})`
     removed += 1
-    return label
+    return options.markRemoved ? `${label}${REMOVED_LINK_MARK}` : label
   })
-  const dropUnlessAllowed = (match: string): string => {
+  // Голый адрес сайта, которого нет в карточках, — выдуманный материал («Выезд в Польшу… — metravel.by/travels/…»):
+  // он тоже оставляет метку. Внешний адрес (не metravel.by) исчезает без неё, как раньше.
+  const dropUnlessAllowed = (onSite: (match: string) => boolean) => (match: string): string => {
     if (isAllowed(match)) return match
     removed += 1
-    return ''
+    return options.markRemoved && onSite(match) ? REMOVED_LINK_MARK : ''
   }
-  text = text.replace(ABSOLUTE_URL_RE, dropUnlessAllowed)
-  text = text.replace(BARE_SITE_URL_RE, dropUnlessAllowed)
-  text = text.replace(SITE_PATH_RE, dropUnlessAllowed)
+  text = text.replace(ABSOLUTE_URL_RE, dropUnlessAllowed((match) => /^https?:\/\/(?:www\.)?metravel\.by(?:\/|$)/i.test(match)))
+  text = text.replace(BARE_SITE_URL_RE, dropUnlessAllowed(() => true))
+  text = text.replace(SITE_PATH_RE, dropUnlessAllowed(() => true))
 
   return { text: tidyText(text), removed, relabeled }
 }

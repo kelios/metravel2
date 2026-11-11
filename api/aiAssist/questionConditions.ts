@@ -16,6 +16,8 @@
  *     совпала и не нарушила (неизвестно ≠ нарушено). Убирается карточка только при явном нарушении
  *     числового условия — длительность больше названной, возраст вне диапазона квеста. Нарушение
  *     без числа («без собаки», другой месяц, только на машине) карточку опускает, но не убирает.
+ *     Детский квест на вопрос с личным условием, в котором детей нет, — карточка другой аудитории
+ *     (`unfit`): в подсказку не идёт никогда.
  *
  * Порядок карточек и группы «подходит / рядом» собирает `sourceSelection.ts`.
  * Модуль без `@/`-импортов: службу грузит `node --experimental-strip-types`.
@@ -39,6 +41,8 @@ export type QuestionConditions = {
   maxDays?: number
   /** Вид материала: «квесты…» или «статья, маршрут…». */
   kind?: AiSourceType
+  /** Лёгкий маршрут: «для новичков», «несложная тропа», «dla początkujących», «easy hike». */
+  easy?: true
 }
 
 // `\b` не знает кириллицы: граница слова — по букве и цифре с обеих сторон.
@@ -55,6 +59,24 @@ const DOG_RE = word(
   'ps(?:em|a|u|y|ami|[óo]w)', 'pies(?:kiem|ek|ka|ki)?', 'piesk\\p{L}+', 'szczeniak\\p{L}*', 'zwierzak\\p{L}*',
   // EN
   'dogs?', 'dogg(?:y|ie)', 'pupp(?:y|ies)', 'pets?', 'pet-friendly', 'dog-friendly',
+)
+
+const EASY_RE = word(
+  // RU
+  '(?:для\\s+)?новичк\\p{L}+', 'начинающ\\p{L}+', 'л[её]гк\\p{L}+\\s+(?:маршрут|троп|поход|прогулк|квест)\\p{L}*', 'несложн\\p{L}+', 'нетрудн\\p{L}+', 'без\\s+(?:особой\\s+|специальной\\s+)?подготовки',
+  // BE
+  'пачатко[ўу]ц\\p{L}+', 'л[её]гк\\p{L}+\\s+(?:маршрут|сцежк|паход|прагулк|квэст)\\p{L}*', 'няцяжк\\p{L}+', 'нескладан\\p{L}+',
+  // UK
+  'початківц\\p{L}+', 'легк\\p{L}+\\s+(?:маршрут|стежк|похід|поход|прогулянк|квест)\\p{L}*', 'нескладн\\p{L}+', 'неважк\\p{L}+',
+  // PL
+  'pocz[ąa]tkuj[ąa]c\\p{L}+', '[łl]atw\\p{L}+\\s+(?:tras|szlak|wycieczk|spacer|quest)\\p{L}*', 'niewymagaj[ąa]c\\p{L}+',
+  // EN
+  'beginners?', 'novices?', 'easy\\s+(?:hike|hikes|trail|trails|route|routes|walk|walks|quest|quests)', 'not\\s+too\\s+(?:hard|difficult)',
+)
+/** Признак лёгкого маршрута в названии или фрагменте статьи: у неё нет факта сложности, но карточка сама его называет. */
+const EASY_SIGN_RE = word(
+  'л[её]гк\\p{L}+\\s+(?:маршрут|троп|поход|прогулк)\\p{L}*', '(?:маршрут|тропа|поход|прогулка)\\s+л[её]гк\\p{L}+', 'для\\s+новичков', 'для\\s+начинающих', 'несложн\\p{L}+\\s+(?:маршрут|троп|поход|прогулк)\\p{L}*',
+  'сложность\\s*[:—–-]\\s*л[её]гк\\p{L}+', '[łl]atw\\p{L}+\\s+(?:tras|szlak)\\p{L}*', 'easy\\s+(?:hike|trail|route|walk)',
 )
 
 const NO_CAR_RE = word(
@@ -263,6 +285,7 @@ export const parseConditions = (query: string | null | undefined): QuestionCondi
     ...(maxMinutes !== undefined ? { maxMinutes } : {}),
     ...(maxDays !== undefined ? { maxDays } : {}),
     ...(kind ? { kind } : {}),
+    ...(EASY_RE.test(text) ? { easy: true as const } : {}),
   }
 }
 
@@ -273,6 +296,12 @@ export type CardVerdict = {
   score: number
   /** Явное нарушение числового условия: карточка в подсказку не идёт. */
   dropped: boolean
+  /**
+   * Карточка адресована другой аудитории: детский квест на вопрос взрослого с условием («с собакой», «на
+   * час», «зимой»), в котором детей нет. В подсказку не идёт никогда — даже если больше ответить нечем:
+   * честное «подходящего нет» лучше детского квеста на вопрос «где погулять с собакой».
+   */
+  unfit: boolean
 }
 
 /** Детский квест под вопрос о детях весит больше семейного — как места `childrenRank` (#3276). */
@@ -295,7 +324,10 @@ const lower = (values: readonly string[] | undefined): string[] => (values ?? []
  * Условия вопроса против фактов одной карточки. Вид материала сверяется с типом карточки, остальное —
  * с записью фактов (#3287); у карточки без записи или без нужного поля условие не совпало и не нарушено.
  */
-export const judgeCard = (conditions: QuestionConditions, card: { type: AiSourceType; facts?: SourceFacts | null }): CardVerdict => {
+export const judgeCard = (
+  conditions: QuestionConditions,
+  card: { type: AiSourceType; facts?: SourceFacts | null; title?: string | null; snippet?: string | null },
+): CardVerdict => {
   const reasons: string[] = []
   let score = 0
   let dropped = false
@@ -306,7 +338,24 @@ export const judgeCard = (conditions: QuestionConditions, card: { type: AiSource
   const quest = card.facts?.type === 'quest' ? card.facts : null
   const travel = card.facts?.type === 'travel' ? card.facts : null
 
+  // Детский квест (аудитория «дети» по каталогу) на вопрос с личным условием, где детей нет, — не ответ:
+  // «Где погулять с собакой недалеко от Варшавы?» получал детский квест, потому что он «можно с собакой».
+  // Вопрос без условий («Какие квесты есть в Гродно?») детские квесты по-прежнему показывает.
+  const personal =
+    conditions.dog || conditions.noCar || conditions.easy || conditions.months?.length || conditions.maxMinutes !== undefined || conditions.maxDays !== undefined
+  if (!conditions.children && personal && quest?.audience === 'kids') return { reasons: [], score: -1, dropped: true, unfit: true }
+
   if (conditions.kind) score += card.type === conditions.kind ? 1 : -1
+
+  if (conditions.easy) {
+    if (quest?.difficulty) {
+      if (quest.difficulty === 'easy') match('лёгкий')
+      else score -= 1
+    } else if (card.type === 'travel' && EASY_SIGN_RE.test(`${card.title ?? ''}. ${card.snippet ?? ''}`)) {
+      // У статьи факта сложности нет; признак — её собственные слова: «Закопане: лёгкая тропа…».
+      match('лёгкий маршрут')
+    }
+  }
 
   if (conditions.children && quest?.audience) {
     match(AUDIENCE_RU[quest.audience], AUDIENCE_SCORE[quest.audience])
@@ -361,5 +410,5 @@ export const judgeCard = (conditions: QuestionConditions, card: { type: AiSource
     }
   }
 
-  return { reasons, score, dropped }
+  return { reasons, score, dropped, unfit: false }
 }

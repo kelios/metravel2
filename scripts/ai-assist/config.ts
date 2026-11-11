@@ -56,6 +56,11 @@ export interface AssistConfig {
    * сравнения двух вариантов.
    */
   promptHints: { whyFits: boolean; noPlace: boolean }
+  /**
+   * Сокращение подсказки `/ai/ask` до карточек, выделенных условиями вопроса (#3289): не больше трёх с
+   * добором по порядку. Включено; `0` выключает — для живого сравнения.
+   */
+  promptFocus: boolean
 }
 
 function envNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -99,5 +104,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
       whyFits: env.AI_ASSIST_PROMPT_WHY_FITS !== '0',
       noPlace: env.AI_ASSIST_PROMPT_NO_PLACE !== '0',
     },
+    promptFocus: env.AI_ASSIST_PROMPT_FOCUS !== '0',
   }
 }

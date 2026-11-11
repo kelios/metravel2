@@ -88,6 +88,7 @@ async function main(): Promise<void> {
   if (!config.promptHints.whyFits || !config.promptHints.noPlace) {
     log(`/ai/ask: строки подсказки #3289 — «Почему подходит» ${config.promptHints.whyFits ? 'вкл' : 'ВЫКЛ'}, «материала о месте нет» ${config.promptHints.noPlace ? 'вкл' : 'ВЫКЛ'}`)
   }
+  if (!config.promptFocus) log('/ai/ask: сокращение подсказки до карточек, выделенных условиями вопроса (#3289), ВЫКЛ')
   if (config.evalTrace) log('⚠️ AI_ASSIST_EVAL_TRACE=1: /ai/ask отдаёт карточки подсказки и сырой ответ модели, /ai/health — адрес модели. Только для контура оценки')
 
   const server = createApp({
@@ -107,6 +108,7 @@ async function main(): Promise<void> {
       promptHints: config.promptHints,
     },
     askFragmentChars: config.askFragmentChars,
+    promptFocus: config.promptFocus,
     authorDraft: { limits: authorDraftLimits },
     mapIntent: { limits: mapIntentLimits },
     suggestTags: { catalog: tagCatalog },

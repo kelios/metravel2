@@ -124,7 +124,9 @@ describe('цепочка порядка карточек (#3289): место →
     ]
     const children = arrangeSources('Что посмотреть в Несвиже? А какой из них подойдёт детям?', sources).sources
     expect(ids(children)).toEqual(['q5', 'q3', 't1', 'q2', 'q4'])
-    expect(groupOf(children, 'nearby')).toEqual(['q4'])
+    // Условие выделило две карточки — подсказка сокращается до трёх: они и первая по порядку из остальных.
+    expect(groupOf(children, 'match')).toEqual(['q5', 'q3', 't1'])
+    expect(groupOf(children, 'nearby')).toEqual(['q2', 'q4'])
     expect(children[0].why).toBe('детский')
     expect(children[1].why).toBe('семейный')
     expect(children[2].why).toBeUndefined()
@@ -143,9 +145,14 @@ describe('цепочка порядка карточек (#3289): место →
       travel({ id: 6, title: 'Минск и окрестности за 3 дня', country: 'Беларусь', facts: { number_days: 3 } }),
     ]
     const { sources: arranged } = arrangeSources('Что пройти в Минске до часа?', sources)
-    // Совпавший — первым; без факта — следом в порядке подбора; нарушившие число — в nearby.
-    expect(groupOf(arranged, 'match')).toEqual(['q4', 'q1', 'q3', 't5'])
-    expect(groupOf(arranged, 'nearby')).toEqual(['q2', 't6'])
+    // Без сокращения подсказки: совпавший — первым; без факта — следом в порядке подбора; нарушившие число — в nearby.
+    const whole = arrangeSources('Что пройти в Минске до часа?', sources, { focus: false }).sources
+    expect(groupOf(whole, 'match')).toEqual(['q4', 'q1', 'q3', 't5'])
+    expect(groupOf(whole, 'nearby')).toEqual(['q2', 't6'])
+    // Условие выделило одну карточку — подсказка сокращается до трёх: она и две первые по порядку. Четвёртая
+    // карточка условий не нарушала: это предел размера подсказки, в списке источников она остаётся.
+    expect(groupOf(arranged, 'match')).toEqual(['q4', 'q1', 'q3'])
+    expect(groupOf(arranged, 'nearby')).toEqual(['t5', 'q2', 't6'])
     expect(arranged[0].why).toBe('45 мин')
     expect(arranged.slice(1).every((source) => source.why === undefined)).toBe(true)
   })
@@ -231,26 +238,55 @@ describe('цепочка порядка карточек (#3289): место →
 })
 
 describe('цепочка порядка карточек (#3289): случаи пробы 11.11.2026', () => {
-  it('p05 «с собакой недалеко от Варшавы»: карточки Варшавы, первым — квест с пометкой «можно с собакой»; Хельская коса — в nearby', () => {
+  it('p05 «с собакой недалеко от Варшавы»: детский квест на вопрос без детей в подсказку не идёт; с детьми — первым', () => {
     for (const question of ['Где погулять с собакой недалеко от Варшавы?', 'Куда сходить с собакой в Варшаве?', 'Gdzie na spacer z psem w Warszawie?']) {
       // PL-вопрос называет город латиницей — у квеста в каталоге есть и это написание.
       const cards = P05.map((card) => (card.type === 'quest' ? { ...card, place: { cities: ['Варшава', 'Warszawa'], countries: ['Польша'] } } : card))
       const { sources } = arrangeSources(question, cards)
-      expect(sources[0]).toMatchObject({ source_id: '129', group: 'match', why: 'можно с собакой' })
-      expect(groupOf(sources, 'nearby')).toEqual(expect.arrayContaining(['t634', 't568', 't459']))
+      expect(sources.find((source) => source.source_id === '129')).toMatchObject({ group: 'nearby' })
+      expect(sources.find((source) => source.source_id === '129')?.why).toBeUndefined()
+      expect(groupOf(sources, 'nearby')).toEqual(expect.arrayContaining(['q129', 't634', 't568', 't459']))
     }
     const ru = arrangeSources('Где погулять с собакой недалеко от Варшавы?', P05).sources
-    expect(groupOf(ru, 'match')).toEqual(['q129', 't502'])
+    expect(groupOf(ru, 'match')).toEqual(['t502'])
+    // Кроме детского квеста о Варшаве ничего нет — подсказка пуста: модель честно скажет «подходящего нет».
+    const only = arrangeSources('Где погулять с собакой недалеко от Варшавы?', P05.filter((card) => card.source_id !== '502')).sources
+    expect(groupOf(only, 'match')).toEqual([])
+    expect(ids(selectPromptSources(only, 8, null, true))).toEqual([])
+    expect(groupOf(only, 'nearby')).toEqual(['q129', 't634', 't568', 't459'])
+    // В вопросе есть дети — тот же квест подходит и встаёт первым.
+    const withKids = arrangeSources('Где погулять с собакой и детьми в Варшаве?', P05).sources
+    expect(withKids[0]).toMatchObject({ source_id: '129', group: 'match', why: 'детский, можно с собакой' })
+    // Вопрос без личных условий детский квест показывает, как раньше.
+    expect(groupOf(arrangeSources('Какие квесты есть в Варшаве?', P05).sources, 'match')).toEqual(['q129', 't502'])
   })
 
-  it('p08 «в Татрах без машины»: маршрут по Люксембургу на автобусе условием не поднимается; порядок подбора сохраняется', () => {
-    for (const question of ['Посоветуй маршрут в Татрах для новичков без машины', 'Куда сходить в Татрах без машины?']) {
-      const { sources, noPlace } = arrangeSources(question, P08)
-      expect(noPlace).toBe(false)
-      expect(ids(sources)).toEqual(ids(P08))
-      expect(sources.find((source) => source.source_id === '761')?.why).toBeUndefined()
-      expect(isArranged(sources)).toBe(false)
-    }
+  it('p08 «в Татрах для новичков без машины»: лёгкая тропа встаёт первой среди карточек Татр, маршрут по Люксембургу не поднимается', () => {
+    const { sources, noPlace } = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', P08)
+    expect(noPlace).toBe(false)
+    // По условиям переставляются только карточки, упоминающие Татры (600, 553, 362): лёгкая тропа — первая из них.
+    expect(ids(sources)).toEqual(['t553', 't451', 't600', 't761', 't362'])
+    expect(sources[0].why).toBe('лёгкий маршрут')
+    expect(sources.find((source) => source.source_id === '761')?.why).toBeUndefined()
+    // Условие выделило одну карточку — в подсказке она и две первые по порядку; по названию и фрагменту
+    // карточки место не отбирает, поэтому добор идёт по порядку подбора.
+    expect(groupOf(sources, 'match')).toEqual(['t553', 't451', 't600'])
+    expect(groupOf(sources, 'nearby')).toEqual(['t761', 't362'])
+    expect(isArranged(arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', P08, { focus: false }).sources)).toBe(false)
+    const plain = arrangeSources('Куда сходить в Татрах без машины?', P08).sources
+    expect(ids(plain)).toEqual(ids(P08))
+    // Служба сверяет место по всему тексту источника — тогда не упоминающие его карточки уходят в nearby.
+    const inText = new Set(['600', '451', '553', '362'])
+    const service = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', P08, { mentions: (source) => inText.has(source.source_id) }).sources
+    expect(groupOf(service, 'match')).toEqual(['t553', 't600', 't451'])
+    expect(groupOf(service, 'nearby')).toEqual(['t362', 't761'])
+    const unfocused = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', P08, { mentions: (source) => inText.has(source.source_id), focus: false }).sources
+    expect(groupOf(unfocused, 'match')).toEqual(['t553', 't600', 't451', 't362'])
+    expect(groupOf(unfocused, 'nearby')).toEqual(['t761'])
+    // Ни один источник место не упоминает — отбирать нечем: все карточки остаются, подсказка получает строку о месте.
+    const nowhere = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', P08, { mentions: () => false })
+    expect(nowhere.noPlace).toBe(true)
+    expect(ids(nowhere.sources)).toEqual(ids(P08))
   })
 
   it('p09 «зимой в Беларуси на один день»: поездка на 14 дней по четырём странам убрана, подборки выходного дня — первыми', () => {
@@ -269,8 +305,9 @@ describe('цепочка порядка карточек (#3289): случаи �
       const cards = P13.map((card) => ({ ...card, place: { countries: [...(card.place?.countries ?? []), 'Poland', 'Польща'] } }))
       const { sources } = arrangeSources(question, cards)
       expect(sources[0]).toMatchObject({ source_id: '386', group: 'match', why: '1 день' })
-      expect(groupOf(sources, 'match')).toEqual(['t386', 't263', 't816', 't637'])
-      expect(groupOf(sources, 'nearby')).toEqual(['t178', 't177', 't421', 't438'])
+      // Условие «на выходные» выделило две однодневные поездки — в подсказке они и первая по порядку из остальных.
+      expect(groupOf(sources, 'match')).toEqual(['t386', 't263', 't816'])
+      expect(groupOf(sources, 'nearby')).toEqual(['t637', 't178', 't177', 't421', 't438'])
     }
   })
 

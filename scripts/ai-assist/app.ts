@@ -51,6 +51,8 @@ export interface AppDeps {
   cache: ResponseCache
   queueTimeoutMs: number
   ask: AskAppDeps
+  /** `false` — не сокращать подсказку до карточек, выделенных условиями вопроса (#3289); по умолчанию сокращается. */
+  promptFocus?: boolean
   /** Длина текстового фрагмента карточки `/ai/ask` по типу источника (#3287); нет — `ASK_FRAGMENT_CHARS`. */
   askFragmentChars?: Partial<Record<ChunkType, number>>
   authorDraft: AuthorDraftAppDeps
@@ -346,7 +348,7 @@ export function createApp(deps: AppDeps): http.Server {
     const arranged = arrangeSources(
       q,
       items.map((item) => toSource(item)),
-      { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card },
+      { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card, focus: deps.promptFocus },
     )
     return {
       sources: arranged.sources.slice(0, AI_SOURCES_LIMIT),
