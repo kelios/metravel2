@@ -1044,6 +1044,28 @@
       "autoPort": false
     },
     {
+      "name": "Llama Server v8 GPU 8080 (candidate)",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v8-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8080,
+      "autoPort": false
+    },
+    {
       "name": "AI Sprint29 Web 8093",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
