@@ -8,7 +8,7 @@ import { useContentSafetyAvailable } from '@/components/safety/useContentSafetyA
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers'
-import { resolveAvatar, resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
+import { resolveAvatar } from '@/components/travel/compactSideBar/helpers'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useUserProfileCached } from '@/hooks/useUserProfileCached'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -17,6 +17,7 @@ import { makeContentRef } from '@/types/contentSafety'
 import type { Travel } from '@/types/types'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { routes } from '@/utils/routes'
+import { resolveTravelAuthorId, travelAuthorProfilePath } from '@/utils/travelAuthorProfile'
 import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 import { translate as i18nT } from '@/i18n'
 
@@ -93,7 +94,7 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
     () => resolveTravelAuthorName(travel, (travel as any)?.userName),
     [travel],
   )
-  const authorUserId = useMemo(() => resolveOwnerId(travel), [travel])
+  const authorUserId = useMemo(() => resolveTravelAuthorId(travel), [travel])
   const safetyRef = useMemo(() => makeContentRef('travel', travel.id, authorUserId), [travel.id, authorUserId])
   // Строка соцсетей рисуется и ради «…»: без неё пустая строка дала бы колонке лишний gap.
   const showSafety = useContentSafetyAvailable(safetyRef)
@@ -119,16 +120,17 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
 
   // #3237: на web имя автора — настоящая ссылка `<a href="/user/<id>">`; обычный
   // клик остаётся переходом внутри приложения, клик с модификатором — браузеру.
-  const profileHref = canOpenAuthor ? routes.user(authorUserId) : null
+  // #3326: `href` — общий адрес профиля статьи; профиля без имени (404) нет — нет и ссылки.
+  const profileHref = canOpenAuthor ? travelAuthorProfilePath(travel) : null
   const openProfile = useCallback((event?: unknown) => {
     if (!authorUserId) return
-    if (Platform.OS === 'web' && event) {
+    if (Platform.OS === 'web' && profileHref && event) {
       const linkEvent = event as LinkPressEvent
       if (!shouldHandleLinkClick(linkEvent)) return
       linkEvent.preventDefault?.()
     }
     router.push(routes.user(authorUserId))
-  }, [authorUserId, router])
+  }, [authorUserId, profileHref, router])
 
   const openAuthorTravels = useCallback(() => {
     if (!authorUserId) return
@@ -180,7 +182,7 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
         {...(Platform.OS === 'web' && profileHref ? ({ href: profileHref } as object) : null)}
         onPress={openProfile}
         disabled={!canOpenAuthor}
-        accessibilityRole={canOpenAuthor ? (Platform.OS === 'web' ? 'link' : 'button') : undefined}
+        accessibilityRole={canOpenAuthor ? (Platform.OS === 'web' && profileHref ? 'link' : 'button') : undefined}
         accessibilityLabel={
           canOpenAuthor
             ? i18nT(

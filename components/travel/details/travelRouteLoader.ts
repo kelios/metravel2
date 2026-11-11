@@ -90,26 +90,35 @@ export function projectTravelLoaderPayload(raw: Record<string, unknown>, routeKe
 const AUTHOR_PROFILE_TIMEOUT_MS = 2_000
 const AUTHOR_SAME_AS_TTL_MS = 10 * 60_000
 const AUTHOR_SAME_AS_CACHE_LIMIT = 500
-const authorSameAsCache = new Map<number, { expiresAt: number; sameAs: string[] }>()
+/** `linkable: false` — публичного профиля с именем нет: `/user/<id>` отдаёт 404 (#3326). */
+type TravelAuthorProfileState = { sameAs: string[]; linkable?: boolean }
+const authorSameAsCache = new Map<number, { expiresAt: number; state: TravelAuthorProfileState }>()
 
-async function loadTravelAuthorSameAs(request: ImmutableRequest, authorId: number): Promise<string[]> {
+async function loadTravelAuthorProfileState(
+  request: ImmutableRequest,
+  authorId: number,
+): Promise<TravelAuthorProfileState> {
   const cached = authorSameAsCache.get(authorId)
-  if (cached && cached.expiresAt > Date.now()) return cached.sameAs
+  if (cached && cached.expiresAt > Date.now()) return cached.state
   const controller = new AbortController()
   const abort = () => controller.abort()
   const timer = setTimeout(abort, AUTHOR_PROFILE_TIMEOUT_MS)
   request.signal.addEventListener('abort', abort, { once: true })
   if (request.signal.aborted) abort()
-  const remember = (sameAs: string[]) => {
+  const remember = (state: TravelAuthorProfileState) => {
     if (authorSameAsCache.size >= AUTHOR_SAME_AS_CACHE_LIMIT) authorSameAsCache.clear()
-    authorSameAsCache.set(authorId, { expiresAt: Date.now() + AUTHOR_SAME_AS_TTL_MS, sameAs })
-    return sameAs
+    authorSameAsCache.set(authorId, { expiresAt: Date.now() + AUTHOR_SAME_AS_TTL_MS, state })
+    return state
   }
   try {
-    return remember((await fetchPublicUserProfile({ signal: controller.signal }, authorId)).sameAs)
+    const profile = await fetchPublicUserProfile({ signal: controller.signal }, authorId)
+    return remember({ sameAs: profile.sameAs, linkable: true })
   } catch (error) {
-    // Нет публичного профиля — ответ, а не сбой: помним пустой список.
-    return (error as { httpStatus?: number })?.httpStatus === 404 ? remember([]) : []
+    // Нет публичного профиля с именем (404/410 или пустое имя) — ответ, а не сбой:
+    // помним, и ссылки на профиль нет. Сбой и таймаут состояние не знают (#3326).
+    return (error as { httpStatus?: number })?.httpStatus === 404
+      ? remember({ sameAs: [], linkable: false })
+      : { sameAs: [] }
   } finally {
     clearTimeout(timer)
     request.signal.removeEventListener('abort', abort)
@@ -140,12 +149,13 @@ export async function loadTravelRoute(
       // #3237: соцсети автора для `author.sameAs` — из его публичного профиля. Сбой
       // профиля не роняет статью: разметка просто остаётся без `sameAs`.
       const authorId = resolveTravelAuthorId(payload.travel)
-      const [linkGraph, authorSameAs] = await Promise.all([
+      const [linkGraph, author] = await Promise.all([
         loadTravelLinkGraph(request, payload.travel.id),
-        authorId === null ? Promise.resolve([]) : loadTravelAuthorSameAs(request, authorId),
+        authorId === null ? Promise.resolve<TravelAuthorProfileState>({ sameAs: [] }) : loadTravelAuthorProfileState(request, authorId),
       ])
       payload.linkGraph = linkGraph
-      payload.authorSameAs = authorSameAs
+      payload.authorSameAs = author.sameAs
+      if (author.linkable === false) payload.travel = { ...payload.travel, authorProfileLinkable: false }
       return payload
     } catch (error) {
       if (error instanceof Error && 'httpStatus' in error) throw error

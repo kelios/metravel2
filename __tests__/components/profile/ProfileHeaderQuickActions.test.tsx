@@ -31,6 +31,18 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   return (props: any) => mockImageCardMedia(props);
 });
 
+// Общий Heading читает ширину сам: его нулевой кадр закрывает critical CSS
+// ступеней (#2258), а кегль имени в шапке задаёт стиль шапки — ширина Heading
+// здесь геометрию не меняет. Тест #2174 считает вызовы самой шапки (#3318).
+const mockHeadingProps: any[] = [];
+jest.mock('@/components/ui/Typography', () => ({
+  Heading: (props: any) => {
+    const { Text } = require('react-native');
+    mockHeadingProps.push(props);
+    return <Text style={props.style}>{props.children}</Text>;
+  },
+}));
+
 jest.mock('@/components/profile/ProfileMenu', () => ({ ProfileMenu: () => null }));
 jest.mock('@/components/profile/CoverTopoTexture', () => ({ CoverTopoTexture: () => null }));
 
@@ -60,10 +72,16 @@ describe('ProfileHeader quick actions', () => {
 
   it('reads the live width from the first frame — the header mounts after hydration (#2174)', async () => {
     mockResponsiveOptions.length = 0;
+    mockHeadingProps.length = 0;
     await render(<ProfileHeader {...baseProps} />);
 
     expect(mockResponsiveOptions.length).toBeGreaterThan(0);
     expect(mockResponsiveOptions.every((options) => (options as { clientOnly?: boolean })?.clientOnly === true)).toBe(true);
+    // Посылка мока Heading: кегль и интерлиньяж имени задаёт шапка, не ступень ширины.
+    expect(mockHeadingProps.length).toBeGreaterThan(0);
+    const nameStyle = StyleSheet.flatten(mockHeadingProps[0].style) ?? {};
+    expect(nameStyle.fontSize).toEqual(expect.any(Number));
+    expect(nameStyle.lineHeight).toEqual(expect.any(Number));
   });
 
   it('keeps quick actions at the bottom edge of the regular cover from 360 up', async () => {

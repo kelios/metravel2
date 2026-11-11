@@ -12,21 +12,6 @@ export function webOnly<T extends object>(props: T): T | {} {
   return Platform.OS === 'web' ? props : {}
 }
 
-export function resolveOwnerId(travel: any): number | string | null {
-  const raw = travel?.userIds
-  if (Array.isArray(raw) && raw.length > 0) return raw[0] ?? null
-  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
-  if (typeof raw === 'string') {
-    const first = raw.split(',').map((v) => v.trim()).find(Boolean)
-    if (!first) return null
-    const n = Number(first)
-    return Number.isFinite(n) && n > 0 ? n : first
-  }
-  const direct = travel?.userId ?? travel?.user?.id ?? null
-  if (direct == null) return null
-  return typeof direct === 'string' ? direct.trim() || null : direct
-}
-
 export function resolveAvatar(profile: any, travel: any): string {
   const raw =
     profile?.avatar ??

@@ -150,6 +150,11 @@ export type Travel = TravelModerationMetadata & {
     // #715: backend media variants manifest; отсутствует на старом payload
     media?: TravelMedia | null
     userIds: string
+    /**
+     * #3326: не поле API. Серверный loader статьи ставит `false`, когда публичного
+     * профиля автора с именем нет и `/user/<id>` отдаёт 404: ссылки на профиль нет.
+     */
+    authorProfileLinkable?: boolean
     year: string
     monthName: string
     number_days: number

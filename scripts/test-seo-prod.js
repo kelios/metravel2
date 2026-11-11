@@ -490,6 +490,64 @@ async function testHubContentLinks({ path, groups }) {
 }
 
 /**
+ * #3323: постраничный каталог статей `/search?page=N` в сыром HTML — блок
+ * `<nav data-search-catalog-links="N">` со ссылками на статьи этой страницы.
+ * Пока HTML `/search` отдаётся статикой (до переключения nginx на SSR, #3279),
+ * блока нет ни на одной странице: проверка сообщает об этом и не краснеет.
+ * Как только блок появился, обе страницы обязаны его нести, наборы статей
+ * различаться, а canonical второй страницы — указывать на неё саму.
+ */
+const SEARCH_CATALOG_PAGES = { first: '/search', second: '/search?page=2' };
+const SEARCH_CATALOG_BLOCK = /<nav\b[^>]*\bdata-search-catalog-links="(\d+)"[^>]*>([\s\S]*?)<\/nav>/i;
+
+function readSearchCatalogBlock(html) {
+  const match = String(html || '').match(SEARCH_CATALOG_BLOCK);
+  if (!match) return null;
+  const articles = collectAnchorPaths(match[2]).filter((href) => /^\/travels\/[^/]+$/.test(href));
+  return { page: Number(match[1]), articles };
+}
+
+function evaluateSearchCatalogPages({ first, second, site }) {
+  const one = readSearchCatalogBlock(first);
+  const two = readSearchCatalogBlock(second);
+  if (!one && !two) return { state: 'static', failures: [] };
+  const failures = [];
+  if (!one || one.page !== 1) failures.push('/search has no page-1 catalogue block');
+  if (!two || two.page !== 2) failures.push('/search?page=2 has no page-2 catalogue block');
+  if (two && two.articles.length === 0) failures.push('/search?page=2 block has no /travels/ links');
+  if (one && two && two.articles.length > 0) {
+    const firstSet = new Set(one.articles);
+    if (two.articles.length === one.articles.length && two.articles.every((href) => firstSet.has(href))) {
+      failures.push('/search and /search?page=2 list the same articles');
+    }
+  }
+  const canonical = getCanonical(String(second || ''));
+  if (canonical !== `${site}/search?page=2`) failures.push(`/search?page=2 canonical is "${canonical}"`);
+  return { state: failures.length ? 'fail' : 'ok', failures, counts: [one?.articles.length ?? 0, two?.articles.length ?? 0] };
+}
+
+async function testSearchCatalogPages({ first, second }) {
+  console.log(`\n🔍 ${SITE}${second} (article catalogue pages)`);
+  let pages;
+  try {
+    pages = { first: await fetchHtml(`${SITE}${first}`), second: await fetchHtml(`${SITE}${second}`) };
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${second}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return;
+  }
+  const verdict = evaluateSearchCatalogPages({ ...pages, site: SITE });
+  if (verdict.state === 'static') {
+    console.log('  ⚠️  /search ещё отдаётся статикой: блока ссылок каталога нет (ждёт #3279), проверка пропущена');
+    return;
+  }
+  assert(verdict.state === 'ok', `${second} raw HTML links its own articles and pages`, verdict.failures.join('; '));
+}
+
+/**
  * #3235: постоянный контроль sitemap и редиректов (бэкенд их уже отдаёт верно).
  * Порог `maxWithoutLastmod` — число, а не доля: без `<lastmod>` живут только
  * статические страницы (на 11.11.2026 их 7 из 1885), и рост этого числа значит,
@@ -696,6 +754,9 @@ async function main() {
     await testHubContentLinks(hub);
   }
 
+  // --- 6a'. Article catalogue pages for a no-JS crawler (#3323) ---
+  await testSearchCatalogPages(SEARCH_CATALOG_PAGES);
+
   // --- 6b. Sitemap and the numeric city redirect stay as the backend shipped them (#3235) ---
   await testSitemap(SITEMAP_EXPECTATIONS);
   await testQuestCityAliasRedirect(NUMERIC_QUEST_CITY_PATH);
@@ -809,5 +870,6 @@ if (require.main === module) {
 module.exports = {
   CLI_SPEC, USAGE, parseArgs, isBlockedFromIndexing, checkSeoTitleContract,
   HUB_CONTENT_LINKS, collectAnchorPaths, countContentLinks,
+  SEARCH_CATALOG_PAGES, evaluateSearchCatalogPages,
   SITEMAP_EXPECTATIONS, NUMERIC_QUEST_CITY_PATH, parseSitemap, evaluateSitemap, evaluateQuestCityAliasRedirect,
 };

@@ -380,9 +380,14 @@ export function useTravelDetails(): UseTravelDetailsReturn {
         if (preloaded) return preloaded;
       }
 
-      return isId
+      const fetched = await (isId
         ? fetchTravel(idNum, { signal })
-        : fetchTravelBySlug(normalizedSlug, { signal });
+        : fetchTravelBySlug(normalizedSlug, { signal }));
+      // #3326: признак loader'а «профиля автора с именем нет» в API статьи не приходит;
+      // фоновый refetch (#1479) не должен вернуть ссылку на `/user/<id>`, который 404.
+      return loaderTravel?.authorProfileLinkable === false
+        ? { ...fetched, authorProfileLinkable: false }
+        : fetched;
     },
     // Travel page is a core landing route. On the initial direct load the data
     // comes from the preload bootstrap (initialData), so a network retry never

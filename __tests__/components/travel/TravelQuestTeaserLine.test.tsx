@@ -97,6 +97,16 @@ describe('TravelQuestTeaserLine в приложении (#3221)', () => {
     expect(mockFetchQuestsNearLocation).toHaveBeenCalledTimes(1)
   })
 
+  // #3327: когда выдача знает число квестов всего города, приложение пишет его.
+  it('states the city total once the response carries city_quest_count', async () => {
+    mockFetchQuestsNearLocation.mockResolvedValue(nearLocation([apiQuest('grodno-royal', { city_quest_count: 8 })]))
+
+    await renderWithClient(<TravelQuestTeaserLine travel={travel} />)
+
+    expect(await screen.findByText('Гродно: 8 бесплатных квестов-прогулок')).toBeTruthy()
+    expect(screen.getByTestId('travel-quest-teaser').props.href).toBe('/quests/grodno')
+  })
+
   // У большинства статей квестов рядом нет: резерв на время запроса сдвигал бы
   // их текст при каждом открытии (#2772), поэтому до ответа строка места не занимает.
   it('takes no space while the request is in flight and appears only with quests', async () => {

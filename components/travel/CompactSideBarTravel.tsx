@@ -37,7 +37,6 @@ import {
   parseViews,
   pickRouteFile,
   resolveAvatar,
-  resolveOwnerId,
   shouldShowDivider,
   webOnly,
 } from './compactSideBar/helpers'
@@ -48,6 +47,7 @@ import { WeatherPlaceholder } from './compactSideBar/parts/WeatherPlaceholder'
 import { WidgetFallback } from './compactSideBar/parts/WidgetFallback'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 
 type SideBarProps = {
   refs: Record<string, React.RefObject<ViewInstance>>
@@ -93,7 +93,7 @@ function CompactSideBarTravel({
     setDeferredEnabled(!(Platform.OS === 'web') || isMobile)
   }, [isMobile, travel?.id])
 
-  const travelOwnerId = useMemo(() => resolveOwnerId(travel), [travel])
+  const travelOwnerId = useMemo(() => resolveTravelAuthorId(travel), [travel])
   const authorUserId =
     travelOwnerId != null ? String(travelOwnerId).trim() || null : null
 

@@ -10,21 +10,10 @@ import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { translate as i18nT } from '@/i18n'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 
 
 const ROW_SPACING = { marginTop: DESIGN_TOKENS.spacing.md } as const
-
-function resolveOwnerId(travel: Travel): number | string | null {
-  const direct = travel?.user?.id
-  if (direct != null) return direct
-
-  const raw = travel?.userIds
-  if (typeof raw === 'string' && raw.trim()) {
-    const n = Number(raw.split(',')[0].trim())
-    if (Number.isFinite(n) && n > 0) return n
-  }
-  return null
-}
 
 const TravelPeerBadgesSection: React.FC<{ travel: Travel }> = memo(
   function TravelPeerBadgesSection({ travel }) {
@@ -36,7 +25,7 @@ const TravelPeerBadgesSection: React.FC<{ travel: Travel }> = memo(
     const received = peerBadges.data ?? []
 
     const isOwnTravel = useMemo(() => {
-      const ownerId = resolveOwnerId(travel)
+      const ownerId = resolveTravelAuthorId(travel)
       if (currentUserId == null || ownerId == null) return false
       return String(Number(currentUserId)) === String(Number(ownerId))
     }, [currentUserId, travel])

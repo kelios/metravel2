@@ -9,8 +9,6 @@ export const sharedStaticResources = {
   "appHandoff.signal.offline_save.description": "Захаваныя маршруты і карты заўсёды пад рукой",
   "appHandoff.signal.second_travel.title": "Маршруты зручней глядзець у дадатку",
   "appHandoff.signal.second_travel.description": "У квэсце стрэлка вядзе да пункта, а на месцы тэлефон вібруе",
-  "appHandoff.signal.article_scroll_50.title": "Чытайце маршруты ў дадатку",
-  "appHandoff.signal.article_scroll_50.description": "Захоўвайце і адкрывайце іх без інтэрнэту",
   "appHandoff.install": "Усталяваць",
   "appHandoff.dismiss": "Схаваць прапанову дадатку",
   "userSafety.reason.spam": "Спам",

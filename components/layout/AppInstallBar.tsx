@@ -58,9 +58,12 @@ const SIGNAL_COPY_KEYS = {
     title: 'sharedStatic:appHandoff.signal.second_travel.title',
     description: 'sharedStatic:appHandoff.signal.second_travel.description',
   },
+  // #3320: при чтении статьи у приложения нет своего подтверждённого выигрыша:
+  // офлайн-сохранение есть и на сайте, пуш бэк шлёт только по заявкам в поездки.
+  // Довод — тот же проверенный, что у второй статьи: компас к точке квеста.
   article_scroll_50: {
-    title: 'sharedStatic:appHandoff.signal.article_scroll_50.title',
-    description: 'sharedStatic:appHandoff.signal.article_scroll_50.description',
+    title: 'sharedStatic:appHandoff.signal.second_travel.title',
+    description: 'sharedStatic:appHandoff.signal.second_travel.description',
   },
 } satisfies Record<AppInstallSignal, { title: TranslationKey; description: TranslationKey }>
 

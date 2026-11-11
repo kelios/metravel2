@@ -7,6 +7,7 @@ export {};
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { itWithGeneratedAndroid } = require('../helpers/generatedNativeProject');
 
 const readAppConfig = () => {
   const raw = fs.readFileSync(path.join(__dirname, '../../app.json'), 'utf8');
@@ -102,7 +103,7 @@ describe('Android Configuration Tests', () => {
       expect(Number.isInteger(versionCode)).toBe(true);
     });
 
-    it('Android Gradle versionCode should be sourced from app config', () => {
+    itWithGeneratedAndroid('Android Gradle versionCode should be sourced from app config', () => {
       const gradle = fs.readFileSync(
         path.join(__dirname, '../../android/app/build.gradle'),
         'utf8'
@@ -298,12 +299,12 @@ describe('Android Configuration Tests', () => {
         'utf8'
       );
 
-    it('does not restrict MainActivity orientation', () => {
+    itWithGeneratedAndroid('does not restrict MainActivity orientation', () => {
       const manifest = readManifest();
       expect(manifest).not.toContain('android:screenOrientation=');
     });
 
-    it('declares MainActivity as resizeable', () => {
+    itWithGeneratedAndroid('declares MainActivity as resizeable', () => {
       const manifest = readManifest();
       expect(manifest).toContain('android:resizeableActivity="true"');
     });

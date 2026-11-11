@@ -44,6 +44,9 @@ function projectQuestDiscoveryRow(raw) {
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
     } catch { return null; }
   } else if (cover === undefined) return null;
+  // #3327: число квестов всего города (бэк #3282); у старого ответа поля нет.
+  const cityQuestCount = raw.city_quest_count == null ? undefined : count(raw.city_quest_count);
+  if (cityQuestCount === null) return null;
   const tags = normalizeQuestTags(raw.tags);
   const tagNames = tags ? Object.keys(tags) : [];
   if (!tags || tagNames.length > 50 || tagNames.some((key) => !/^[a-z0-9_-]{1,80}$/.test(key))) return null;
@@ -51,6 +54,7 @@ function projectQuestDiscoveryRow(raw) {
   if (!Array.isArray(locales) || locales.length > 5 || locales.some((locale) => !['ru', 'be', 'uk', 'pl', 'en'].includes(locale))) return null;
   return { id: raw.id, quest_id: raw.quest_id, title: raw.title, city_id: String(raw.city_id), city_name: raw.city_name,
     ...fields, city_alias: alias, city_legacy_ids: [...legacy], country_code: countryCode,
+    ...(cityQuestCount === undefined ? null : { city_quest_count: cityQuestCount }),
     lat, lng, points, duration_min: raw.duration_min == null ? null : duration,
     difficulty: ['easy', 'medium', 'hard', ''].includes(raw.difficulty) ? raw.difficulty : null,
     tags, pet_friendly: raw.pet_friendly === true,

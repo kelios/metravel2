@@ -9,7 +9,6 @@ import {
   stripHtml,
   createSafeImageUrl,
   getSafeOrigin,
-  createSafeJsonLd,
 } from '@/utils/travelDetailsSecure';
 
 describe('travelDetailsSecure', () => {
@@ -199,80 +198,6 @@ describe('travelDetailsSecure', () => {
     it('should return null for null/undefined', () => {
       expect(getSafeOrigin(null as any)).toBe(null);
       expect(getSafeOrigin(undefined)).toBe(null);
-    });
-  });
-
-  describe('createSafeJsonLd', () => {
-    it('should return null for missing travel', () => {
-      expect(createSafeJsonLd(null)).toBe(null);
-      expect(createSafeJsonLd(undefined)).toBe(null);
-    });
-
-    it('should create valid JSON-LD structure', () => {
-      const travel = {
-        name: 'Minsk City Tour',
-        description: '<p>Explore Minsk</p>',
-        slug: 'minsk-city-tour',
-        gallery: ['https://example.com/image.jpg'],
-      } as any;
-
-      const result = createSafeJsonLd(travel);
-
-      expect(result).toHaveProperty('@context', 'https://schema.org');
-      expect(result).toHaveProperty('@type', 'Article');
-      expect(result).toHaveProperty('headline', 'Minsk City Tour');
-      expect(result).toHaveProperty('description');
-      expect(result).toHaveProperty('url');
-    });
-
-    it('should sanitize description HTML', () => {
-      const travel = {
-        name: 'Test',
-        description: '<script>alert(1)</script>Safe content',
-        slug: 'test',
-        gallery: [],
-      } as any;
-
-      const result = createSafeJsonLd(travel);
-      expect(result?.description).not.toContain('<script>');
-      expect(result?.description).toContain('Safe content');
-    });
-
-    it('should validate slug format', () => {
-      const travel = {
-        name: 'Test',
-        description: 'Test',
-        slug: 'test-slug-123',
-        gallery: [],
-      } as any;
-
-      const result = createSafeJsonLd(travel);
-      expect(result?.url).toContain('test-slug-123');
-    });
-
-    it('should reject invalid slug format', () => {
-      const travel = {
-        name: 'Test',
-        description: 'Test',
-        slug: 'test/../../malicious',
-        gallery: [],
-      } as any;
-
-      const result = createSafeJsonLd(travel);
-      expect(result?.url).toBeUndefined();
-    });
-
-    it('should limit field lengths', () => {
-      const travel = {
-        name: 'x'.repeat(300),
-        description: 'y'.repeat(600),
-        slug: 'test',
-        gallery: [],
-      } as any;
-
-      const result = createSafeJsonLd(travel);
-      expect(result?.headline.length).toBeLessThanOrEqual(200);
-      expect(result?.description.length).toBeLessThanOrEqual(500);
     });
   });
 

@@ -1,6 +1,6 @@
 import { memo, Suspense, useCallback, useMemo } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
-import { usePathname, useRouter } from 'expo-router'
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -19,11 +19,18 @@ import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 import UIButton from '@/components/ui/Button'
 import Feather from '@expo/vector-icons/Feather'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
+import {
+  parseSearchCatalogQuery,
+  searchCatalogCanonicalPath,
+  searchParamsEntries,
+  SEARCH_CATALOG_PATH,
+} from '@/components/listTravel/searchCatalogPage'
 
 
 function SearchScreen() {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useLocalSearchParams<Record<string, string | string[]>>()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }))
@@ -47,6 +54,12 @@ function SearchScreen() {
     })
     router.push('/travel/new' as any)
   }, [router])
+
+  // #3323: тот же canonical, что у серверного head: `/search?page=N` у чистого
+  // каталога, иначе `/search` — клиентская голова не должна его перебивать.
+  const canonicalPath = pathname && pathname !== SEARCH_CATALOG_PATH
+    ? pathname
+    : searchCatalogCanonicalPath(parseSearchCatalogQuery(searchParamsEntries(searchParams)))
 
   const createTravelAction = useMemo(() => {
     if (!isAuthenticated || Platform.OS === 'web') return undefined
@@ -105,7 +118,7 @@ function SearchScreen() {
           headKey="travel-search"
           title={i18nT('seoStatic:root.search.title')}
           description={i18nT('seoStatic:root.search.description')}
-          canonical={buildCanonicalUrl(pathname || '/search')}
+          canonical={buildCanonicalUrl(canonicalPath)}
           image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />

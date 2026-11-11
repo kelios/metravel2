@@ -40,7 +40,7 @@ it.each(['ios', 'android'] as const)('uses the native search accessibility role 
 })
 
 it('keeps semantics on the search input family, including the map focusable alias', () => {
-  const paths = ['components/trips/MyCreatedTripsList.tsx', 'components/mainPage/StickySearchBar.tsx', 'screens/tabs/QuestsContentPanel.tsx', 'components/subscriptions/SubscriptionsTabContent.tsx', 'components/messages/ThreadList.tsx', 'components/home/HomeHeroSearchBar.tsx', 'components/trips/PublicTripsCatalog.tsx', 'screens/tabs/PlacesScreen.tsx', 'components/MapPage/MapSearchInput.tsx', 'components/UserPoints/PointsListGrid.tsx', 'components/UserPoints/PointsListHeader.tsx']
+  const paths = ['components/trips/MyCreatedTripsList.tsx', 'components/mainPage/StickySearchBar.tsx', 'screens/tabs/QuestsContentPanel.tsx', 'components/subscriptions/SubscriptionsTabContent.tsx', 'components/messages/ThreadList.tsx', 'components/home/HomeHeroSearchBar.tsx', 'components/trips/PublicTripsCatalog.tsx', 'screens/tabs/PlacesScreen.tsx', 'components/MapPage/MapSearchInput.tsx', 'components/UserPoints/PointsListPanelHeader.tsx', 'components/UserPoints/PointsListHeader.tsx']
   for (const file of paths) {
     const source = fs.readFileSync(path.join(process.cwd(), file), 'utf8')
     const inputs: Array<ts.JsxOpeningElement | ts.JsxSelfClosingElement> = []
@@ -49,7 +49,8 @@ it('keeps semantics on the search input family, including the map focusable alia
       ts.forEachChild(node, visit)
     }
     visit(ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX))
-    expect(inputs.length).toBeGreaterThan(0)
+    // Файл из списка обязан держать поле поиска: перенос поля при распиле экрана меняет путь здесь (#3318).
+    expect({ file, inputs: inputs.length > 0 }).toEqual({ file, inputs: true })
     for (const input of inputs) {
       const semantics = input.attributes.properties.some((prop) => ts.isJsxSpreadAttribute(prop) && ts.isCallExpression(prop.expression) && prop.expression.expression.getText() === 'searchInputAccessibilityProps')
       expect({ file, semantics }).toEqual({ file, semantics: true })

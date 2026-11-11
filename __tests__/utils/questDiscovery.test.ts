@@ -23,6 +23,15 @@ it('accepts the model-default list of tag slugs as a boolean map', () => {
   expect(projectQuestDiscoveryRow({ ...quest, tags: ['Bad Tag'] })).toBeNull();
 });
 
+// #3327: подбор статьи несёт число квестов всего города (бэк #3282).
+it('keeps city_quest_count of the travel selection and rejects a broken one', () => {
+  const quest = questPrivateSnapshot().catalog[0];
+  expect(projectQuestDiscoveryRow({ ...quest, city_quest_count: 8 })?.city_quest_count).toBe(8);
+  expect(projectQuestDiscoveryRow(quest)).not.toHaveProperty('city_quest_count');
+  expect(projectQuestDiscoveryRow({ ...quest, city_quest_count: -1 })).toBeNull();
+  expect(projectQuestDiscoveryRow({ ...quest, city_quest_count: 2.5 })).toBeNull();
+});
+
 it('rejects broken identities, invalid media and the wrong selected discovery view', () => {
   const quest = questPrivateSnapshot().catalog[0];
   expect(projectQuestDiscoveryRow({ ...quest, city_id: '../other' })).toBeNull();

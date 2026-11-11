@@ -2,11 +2,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { itWithGeneratedAndroid } from '../helpers/generatedNativeProject';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
 describe('Android generated native project governance', () => {
-  it('AND-USB-14: Android manifest exposes documented metravel:// scheme and https app links', () => {
+  itWithGeneratedAndroid('AND-USB-14: Android manifest exposes documented metravel:// scheme and https app links', () => {
     const appConfig = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
     const manifestPath = path.join(ROOT, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
     const manifest = fs.readFileSync(manifestPath, 'utf8');
@@ -18,7 +19,7 @@ describe('Android generated native project governance', () => {
     expect(manifest).not.toContain('android:scheme="myapp"');
   });
 
-  it('Android 15/16 store readiness: no legacy system-bar color or orientation restrictions', () => {
+  itWithGeneratedAndroid('Android 15/16 store readiness: no legacy system-bar color or orientation restrictions', () => {
     const appConfig = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
     const manifest = fs.readFileSync(
       path.join(ROOT, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),

@@ -37,7 +37,7 @@ const mockTravel = {
   year: '2022',
   countUnicIpView: '100',
   travelAddress: [{ id: 1, name: 'Храм', coord: '53.9045, 27.5615' }],
-  userIds: 'user-1',
+  userIds: '17',
 }
 
 jest.mock('@/stores/authStore', () => ({
@@ -157,12 +157,32 @@ describe('CompactSideBarTravel in the real React Native Web DOM (#2032)', () => 
   it('renders the author name as a real profile link (#3237)', () => {
     const author = container.querySelector('[data-testid="travel-details-author"] a[href]') as HTMLAnchorElement
     expect(author).not.toBeNull()
-    expect(author.getAttribute('href')).toBe('/user/user-1')
+    expect(author.getAttribute('href')).toBe('/user/17')
     expect(author.getAttribute('role')).not.toBe('button')
     // A modified click stays with the browser (new tab): the app does not cancel it.
     const modified = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true })
     act(() => { author.dispatchEvent(modified) })
     expect(modified.defaultPrevented).toBe(false)
+  })
+
+  it('gives no profile href when the loader found no public profile with a name (#3326)', async () => {
+    await act(async () => {
+      root.render(
+        createElement(CompactSideBarTravel, {
+          refs: {},
+          travel: { ...mockTravel, authorProfileLinkable: false },
+          isMobile: false,
+          onNavigate: jest.fn(),
+          closeMenu: jest.fn(),
+          activeSection: 'gallery',
+          links: mockLinks,
+        }),
+      )
+    })
+    const author = container.querySelector('[data-testid="travel-details-author"]') as HTMLElement
+    expect(author.querySelector('a[href^="/user/"]')).toBeNull()
+    // Переход внутри приложения остаётся: имя по-прежнему нажимается.
+    expect(author.textContent).toContain('Юлия')
   })
 
   it('has app/global.css rules for the sidebar that all reach rendered elements', () => {

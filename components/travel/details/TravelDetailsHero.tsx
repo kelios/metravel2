@@ -5,7 +5,7 @@ import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import { resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers'
-import { resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 import {
   QuickFactsSkeleton,
   QuickJumpSkeleton,
@@ -86,7 +86,7 @@ function TravelHeroSectionInner({
       ? previous
       : { travelId: travel.id, index })
   }, [travel.id])
-  const safetyAuthorId = useMemo(() => resolveOwnerId(travel), [travel])
+  const safetyAuthorId = useMemo(() => resolveTravelAuthorId(travel), [travel])
   const authorName = useMemo(() => resolveTravelAuthorName(travel, travel.userName), [travel])
 
   const {

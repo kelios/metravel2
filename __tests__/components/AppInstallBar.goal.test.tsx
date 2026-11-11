@@ -139,6 +139,19 @@ describe('AppInstallBar', () => {
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Dismiss', { platform: 'android', signal: 'offline_save' })
   })
 
+  // #3320: чтение статьи не даёт приложению своего выигрыша — довод тот же
+  // подтверждённый, что у второй статьи; сигнал в аналитике остаётся своим.
+  it('names the confirmed quest-compass win for the article scroll signal', async () => {
+    resetAppInstallSignalForTests()
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const view = await render(<AppInstallBar />)
+    await act(() => emitAppInstallSignal('article_scroll_50'))
+    expect(view.getByText('sharedStatic:appHandoff.signal.second_travel.title')).toBeTruthy()
+    expect(view.getByText('sharedStatic:appHandoff.signal.second_travel.description')).toBeTruthy()
+    await fireEvent.press(view.getByTestId('app-install-bar-dismiss'))
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Dismiss', { platform: 'android', signal: 'article_scroll_50' })
+  })
+
   it('stacks above existing consent and releases its measured reserve on dismissal', async () => {
     setBottomChromeReserve('consent-banner', 240)
     const AppInstallBar = require('@/components/layout/AppInstallBar').default

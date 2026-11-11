@@ -13,7 +13,7 @@ export const TRAVEL_QUEST_MATCH_LIMIT = 6
 export type TravelQuestTeaser = {
   cityName: string
   cityId: string
-  /** Квестов этого города в подборе статьи. */
+  /** Квестов города: всего по `city_quest_count` (#3327), иначе — в подборе статьи. */
   count: number
   /** `false`, когда подбор заполнен до потолка: точное число квестов города неизвестно. */
   exact: boolean
@@ -23,7 +23,7 @@ export type TravelQuestTeaser = {
 }
 
 /** Поля строки подбора, которые читает верхняя строка (сырой ответ загрузчика). */
-export type TravelQuestTeaserRow = Pick<ApiQuestMeta, 'quest_id' | 'city_id' | 'city_name' | 'city_name_localized' | 'city_alias'>
+export type TravelQuestTeaserRow = Pick<ApiQuestMeta, 'quest_id' | 'city_id' | 'city_name' | 'city_name_localized' | 'city_alias' | 'city_quest_count'>
 
 /**
  * Строка «<Город>: N бесплатных квестов-прогулок» для начала статьи (#3221).
@@ -39,15 +39,24 @@ export function resolveTravelQuestTeaser(quests: ReadonlyArray<TravelQuestTeaser
   if (!primary || !cityName) return null
 
   const cityQuests = quests.filter((quest) => String(quest.city_id) === String(primary.city_id))
-  const cityPath = cityQuests.length > 1 ? buildQuestCityPath(primary.city_alias) : null
+  // #3327: подбор ограничен шестью строками, а бэк (#3282) знает число квестов
+  // всего города. Число меньше пришедших строк — испорченный ответ, ему не верим.
+  const cityTotal = primary.city_quest_count
+  const knownTotal = typeof cityTotal === 'number' && Number.isSafeInteger(cityTotal) && cityTotal >= cityQuests.length
+    ? cityTotal
+    : null
+  const count = knownTotal ?? cityQuests.length
+  // Квестов в городе больше одного — строка ведёт на страницу города, даже если
+  // в подбор попал один из них.
+  const cityPath = count > 1 ? buildQuestCityPath(primary.city_alias) : null
   const href = cityPath ?? buildQuestPath(primary.city_id, primary.quest_id)
   if (!href) return null
 
   return {
     cityName,
     cityId: String(primary.city_id),
-    count: cityQuests.length,
-    exact: quests.length < TRAVEL_QUEST_MATCH_LIMIT,
+    count,
+    exact: knownTotal !== null || quests.length < TRAVEL_QUEST_MATCH_LIMIT,
     href,
     ...(cityPath ? null : { questId: String(primary.quest_id) }),
   }

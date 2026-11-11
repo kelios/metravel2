@@ -16,6 +16,19 @@ describe('travel author profile', () => {
     expect(travelAuthorProfilePath(travel as never)).toBe(expected)
   })
 
+  // #3326: `/user/<id>` без имени в профиле отдаёт 404 + noindex — ни ссылки, ни `author.url`.
+  it('drops the profile link and author.url when the loader found no named public profile', () => {
+    const travel = { user: { id: 5, name: 'login5' }, userIds: 5, authorProfileLinkable: false }
+    expect(travelAuthorProfilePath(travel)).toBeNull()
+    expect(travelAuthorProfileUrl(travel)).toBeNull()
+    const server = buildTravelArticleStructuredData({ headline: 'X', canonical: 'https://metravel.by/travels/x', travel, authorSameAs: ['https://vk.com/x'] }) as { author: Record<string, unknown> }
+    expect(server.author).toEqual({ '@type': 'Person', name: 'login5' })
+    const client = createTravelArticleJsonLd({ id: 5, slug: 'x', name: 'X', ...travel } as never)
+    expect(client?.author).not.toHaveProperty('url')
+    // Неизвестно (нет loader'а) — ссылка остаётся.
+    expect(travelAuthorProfilePath({ ...travel, authorProfileLinkable: undefined })).toBe('/user/5')
+  })
+
   it('adds author.url to the server Article JSON-LD and no sameAs without profile socials', () => {
     // Ответ API статьи «Тиволи» (прод, 11.11.2026): user = { id, name }, соцсетей нет.
     const data = buildTravelArticleStructuredData({

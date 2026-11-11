@@ -16,8 +16,14 @@ function resolveTravelAuthorId(travel) {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
-/** `/user/<id>` автора статьи либо `null`. */
+/**
+ * `/user/<id>` автора статьи либо `null`. `authorProfileLinkable: false` ставит
+ * серверный loader статьи, когда публичного профиля с именем нет: ссылка и
+ * `author.url` не ведут на 404 (#3326). Неизвестно (нет loader'а, сбой профиля) —
+ * ссылка остаётся.
+ */
 function travelAuthorProfilePath(travel) {
+  if (travel?.authorProfileLinkable === false) return null
   const id = resolveTravelAuthorId(travel)
   return id === null ? null : `/user/${id}`
 }

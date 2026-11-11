@@ -41,12 +41,12 @@ jest.mock('@/api/quests', () => ({
   withQuestProgress: async (_questId: string, task: (progress: any) => Promise<unknown>) => {
     writerEntered = true
     await mockWriterGate
-    // POST `/quest-progress/` — get_or_create.
+    // POST `/quest-progress/` — get_or_create под токеном того, кто вошёл сейчас.
     if (!mockServerRow) {
       mockServerRow = {
         id: 461,
         quest: 46,
-        user: 169,
+        user: Number(require('@/stores/authStore').useAuthStore.getState().userId),
         current_index: 0,
         unlocked_index: 0,
         answers: {},
@@ -169,20 +169,31 @@ describe('перенос гостевого прогресса доходит д
     expect(result.current.wizard.answers).toEqual({ ...GUEST_ANSWERS, 'step-4': 'мост' })
   })
 
-  it('перенос в аккаунт, из которого уже вышли, на экран следующего не попадает', async () => {
+  // #2997 сделала перенос адресным: смена аккаунта перезапускает его для
+  // вошедшего, а писатель ушедшего аккаунта строку не трогает. Гостевая копия
+  // устройства продолжает прохождение того, кто вошёл; строка ушедшего аккаунта
+  // на экран следующего не попадает (#2092, #3318).
+  it('перенос в аккаунт, из которого уже вышли, туда не пишется и на экран следующего не попадает', async () => {
     const { result } = await mountScreenBeforeMigration()
+    await waitFor(() => expect(writerEntered).toBe(true))
     useAuthStore.setState({ isAuthenticated: true, userId: '170' })
 
     await act(async () => {
       openWriter()
     })
 
-    await waitFor(() => expect(mockUpdateProgress).toHaveBeenCalledTimes(1))
-    await act(async () => {
-      await Promise.resolve()
+    // Одна запись — перенос в аккаунт 170; писатель аккаунта 169 вышел без PATCH.
+    await waitFor(() => expect(result.current.sync.progress?.user).toBe(170))
+    expect(mockUpdateProgress).toHaveBeenCalledTimes(1)
+    expect(result.current.sync.progress?.answers).toEqual(GUEST_ANSWERS)
+    expect(await loadGuestQuestProgress(QUEST_ID)).toBeNull()
+
+    // Подтверждённая запись ушедшего аккаунта экран вошедшего не меняет.
+    await act(() => {
+      syncQuestProgressReaders(QUEST_ID, '169', { ...result.current.sync.progress, id: 999, user: 169, answers: { 'step-2': 'чужое' } } as any, beginQuestProgressWrite())
     })
-    expect(result.current.sync.progress).toBeNull()
-    expect(result.current.wizard.completedSteps).toHaveLength(0)
+    expect(result.current.sync.progress?.user).toBe(170)
+    expect(result.current.wizard.answers['step-2']).toBeUndefined()
   })
 
   // #2098: «Сбросить» посреди миграции, пока экран ещё не знает id строки.

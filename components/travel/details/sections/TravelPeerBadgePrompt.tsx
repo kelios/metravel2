@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton'
 import Button from '@/components/ui/Button'
-import { resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAuth } from '@/context/AuthContext'
 import { useUserAchievements } from '@/hooks/useAchievementsApi'
@@ -25,7 +25,7 @@ function TravelPeerBadgePrompt({ travel, isMobile, hasArticleText }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const authorId = Number(resolveOwnerId(travel))
+  const authorId = resolveTravelAuthorId(travel) ?? 0
   const travelId = Number(travel.id)
   const viewerId = Number(userId)
   const validTarget = Number.isSafeInteger(authorId) && authorId > 0

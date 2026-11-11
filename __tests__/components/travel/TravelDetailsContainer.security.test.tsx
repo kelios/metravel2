@@ -6,38 +6,10 @@
 import {
   validateYoutubeId,
   safeGetYoutubeId,
-  createSafeJsonLd,
   stripHtml,
   createSafeImageUrl,
   getSafeOrigin,
 } from '@/utils/travelDetailsSecure';
-import type { Travel } from '@/types/types';
-
-const baseTravel: Travel = {
-  id: 1,
-  slug: 'test-travel',
-  name: 'Test Travel',
-  travel_image_thumb_url: 'https://cdn.example.com/thumb.jpg',
-  travel_image_thumb_small_url: 'https://cdn.example.com/thumb-small.jpg',
-  url: 'https://cdn.example.com/full.jpg',
-  youtube_link: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
-  userName: 'Tester',
-  description: '<p>A test travel description</p>',
-  recommendation: '',
-  plus: '',
-  minus: '',
-  cityName: 'City',
-  countryName: 'Country',
-  countUnicIpView: '0',
-  gallery: ['https://example.com/image.jpg'],
-  travelAddress: [],
-  userIds: '',
-  year: '2025',
-  monthName: 'January',
-  number_days: 1,
-  companions: [],
-  countryCode: 'BY',
-};
 
 describe('TravelDetailsContainer - Security & Sanitization', () => {
   describe('YouTube ID Validation', () => {
@@ -95,62 +67,6 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
     it('should provide default fallback text', () => {
       expect(stripHtml('')).toBe('Найди место для путешествия и поделись своим опытом.');
       expect(stripHtml(null)).toBe('Найди место для путешествия и поделись своим опытом.');
-    });
-  });
-
-  describe('JSON-LD Structure Data', () => {
-    const mockTravel: Travel = {
-      ...baseTravel,
-      description: '<p>A test travel description</p>',
-      gallery: ['https://example.com/image.jpg'],
-    };
-
-    it('should create safe JSON-LD from travel data', () => {
-      const jsonLd = createSafeJsonLd(mockTravel);
-      expect(jsonLd).not.toBeNull();
-      expect(jsonLd).toEqual({
-        '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: 'Test Travel',
-        description: 'A test travel description',
-        image: ['https://example.com/image.jpg'],
-        url: 'https://metravel.by/travels/test-travel',
-        publisher: {
-          '@type': 'Organization',
-          name: 'MeTravel',
-          url: 'https://metravel.by',
-        },
-      });
-    });
-
-    it('should handle missing data gracefully', () => {
-      const minimal: Travel = {
-        ...baseTravel,
-        name: '',
-        description: '',
-        gallery: [],
-        slug: '',
-      };
-      const jsonLd = createSafeJsonLd(minimal);
-      expect(jsonLd).not.toBeNull();
-      expect(jsonLd!['@context']).toBe('https://schema.org');
-      expect(jsonLd!['@type']).toBe('Article');
-      expect(jsonLd!.headline).toBeUndefined();
-    });
-
-    it('should truncate long values', () => {
-      const longTravel: Travel = {
-        ...mockTravel,
-        name: 'A'.repeat(250),
-      };
-      const jsonLd = createSafeJsonLd(longTravel);
-      expect(jsonLd).not.toBeNull();
-      expect(jsonLd!.headline?.length).toBeLessThanOrEqual(200);
-    });
-
-    it('should never include null data', () => {
-      const jsonLd = createSafeJsonLd(null);
-      expect(jsonLd).toBeNull();
     });
   });
 

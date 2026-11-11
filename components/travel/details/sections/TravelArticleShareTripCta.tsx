@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 
 import Button from '@/components/ui/Button'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
-import { resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAuth } from '@/context/AuthContext'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
@@ -108,7 +108,7 @@ export const TravelArticleShareTripCta = memo(function TravelArticleShareTripCta
   isMobile,
 }: TravelArticleShareTripCtaProps) {
   const { authReady, isAuthenticated, userId } = useAuth()
-  const ownerId = resolveOwnerId(travel) ?? travel.user?.id
+  const ownerId = resolveTravelAuthorId(travel)
   const isOwner = isAuthenticated && userId != null && ownerId != null
     && String(userId).trim() === String(ownerId).trim()
 

@@ -1,7 +1,9 @@
+import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 import { Platform } from 'react-native';
 import { restoreWindowStubs, stubWindowProperties } from '../helpers/windowStubs';
+import { TravelLoaderDataContext } from '@/components/travel/details/travelLoaderData';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
@@ -786,5 +788,23 @@ describe('useTravelDetails', () => {
     });
 
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it('keeps the loader "no named author profile" mark through the media backfill (#3326)', async () => {
+    (Platform.OS as any) = 'web';
+    useLocalSearchParams.mockReturnValue({ param: 'demo' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({ id: 9, slug: 'demo', userIds: '4' });
+    const loaderPayload = {
+      travel: { id: 9, slug: 'demo', name: 'Demo', userIds: '4', authorProfileLinkable: false } as any,
+      routeKey: 'demo',
+      mediaPartial: true,
+      serverDescriptionSanitized: false,
+    };
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(TravelLoaderDataContext.Provider, { value: loaderPayload }, children);
+
+    await renderHook(() => useTravelDetails(), { wrapper });
+
+    await expect(capturedQueryFn!()).resolves.toEqual({ id: 9, slug: 'demo', userIds: '4', authorProfileLinkable: false });
   });
 });

@@ -27,6 +27,7 @@ function TravelQuestTeaserLine({ travel }: { travel: Travel }) {
       city_id: quest.cityId,
       city_name: quest.cityName ?? '',
       city_alias: quest.cityAlias,
+      city_quest_count: quest.cityQuestCount,
     }))),
     [matches],
   )

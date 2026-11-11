@@ -19,7 +19,7 @@ import { webOnly } from '../helpers'
 import { createStyles } from '../styles'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
-import { routes } from '@/utils/routes'
+import { travelAuthorProfilePath } from '@/utils/travelAuthorProfile'
 import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 
 
@@ -84,7 +84,10 @@ export const AuthorBlock = memo(function AuthorBlock({
   // #3237: на web имя автора — настоящая ссылка `<a href="/user/<id>">` (как в
   // TravelAuthorQuickLink): обычный клик — переход внутри приложения, клик с
   // модификатором — браузеру.
-  const isWebLink = Platform.OS === 'web' && !!authorUserId
+  // #3326: адрес — тот же, что у строки меты и `author.url`; профиля без имени
+  // (сервер отдаёт 404) нет — нет и `href`, переход внутри приложения остаётся.
+  const profilePath = useMemo(() => travelAuthorProfilePath(travel), [travel])
+  const isWebLink = Platform.OS === 'web' && !!authorUserId && !!profilePath
   const handleProfilePress = useCallback((event?: GestureResponderEvent) => {
     if (isWebLink && event) {
       const linkEvent = event as unknown as LinkPressEvent
@@ -144,7 +147,7 @@ export const AuthorBlock = memo(function AuthorBlock({
               {...webOnly(
                 authorUserId
                   ? ({
-                      href: routes.user(authorUserId),
+                      ...(isWebLink ? { href: profilePath } : null),
                       cursor: 'pointer',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                     } as any)

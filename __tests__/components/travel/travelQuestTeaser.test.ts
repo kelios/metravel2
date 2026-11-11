@@ -37,6 +37,23 @@ describe('resolveTravelQuestTeaser (#3221)', () => {
     expect(teaser).toMatchObject({ count: 2, href: '/quests/11/grodno-royal', questId: 'grodno-royal' })
   })
 
+  // #3327: Гродно на проде — 8 квестов, а в подбор статьи попадает не больше шести.
+  it('states the exact city total from city_quest_count even when the selection is full', () => {
+    const full = Array.from({ length: TRAVEL_QUEST_MATCH_LIMIT }, (_, index) => row({ quest_id: `grodno-${index}`, city_quest_count: 8 }))
+    expect(resolveTravelQuestTeaser(full)).toEqual({ cityName: 'Гродно', cityId: '11', count: 8, exact: true, href: '/quests/grodno' })
+  })
+
+  it('leads to the city page when the city has more quests than reached the selection', () => {
+    expect(resolveTravelQuestTeaser([row({ city_quest_count: 3 })])).toEqual({
+      cityName: 'Гродно', cityId: '11', count: 3, exact: true, href: '/quests/grodno',
+    })
+  })
+
+  it('ignores a city total below the rows already in the selection', () => {
+    expect(resolveTravelQuestTeaser([row({ city_quest_count: 1 }), row({ quest_id: 'grodno-castles', city_quest_count: 1 })]))
+      .toMatchObject({ count: 2, exact: true })
+  })
+
   it('does not state a number once the selection is full: the city may have more quests', () => {
     const full = Array.from({ length: TRAVEL_QUEST_MATCH_LIMIT }, (_, index) => row({ quest_id: `grodno-${index}` }))
 

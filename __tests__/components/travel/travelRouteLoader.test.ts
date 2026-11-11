@@ -89,6 +89,24 @@ describe('travel route loader', () => {
     expect(jest.getTimerCount()).toBe(0)
   })
 
+  it('marks the author profile unlinkable when the public profile has no name (#3326)', async () => {
+    const authored = { ...article, user: { id: 4, name: 'login4' }, userIds: 4 }
+    const nameless = { user: 4, first_name: '', last_name: ' ', instagram: 'https://www.instagram.com/x/' }
+    fetchMock.mockImplementation(async (url: string) => ({ ok: true, status: 200,
+      json: async () => url.includes('/quests/web/discovery/') ? graph : url.includes('/user/4/profile/') ? nameless : authored }))
+    const payload = await loadTravelRoute(request(), { param: 'demo' })
+    expect(payload?.travel.authorProfileLinkable).toBe(false)
+    expect(payload?.authorSameAs).toEqual([])
+
+    // A failed profile read knows nothing: the link stays.
+    const other = { ...article, user: { id: 6, name: 'Автор' }, userIds: 6 }
+    fetchMock.mockImplementation(async (url: string) => (url.includes('/user/6/profile/')
+      ? { ok: false, status: 500, json: async () => ({}) }
+      : { ok: true, status: 200, json: async () => url.includes('/quests/web/discovery/') ? graph : other }))
+    const failed = await loadTravelRoute(request(), { param: 'demo' })
+    expect(failed?.travel).not.toHaveProperty('authorProfileLinkable')
+  })
+
   it('gives up on a slow author profile without holding the article (#3237)', async () => {
     const authored = { ...article, user: { id: 3, name: 'Автор' }, userIds: 3 }
     fetchMock.mockImplementation((url: string, init: { signal: AbortSignal }) => (url.includes('/user/3/profile/')

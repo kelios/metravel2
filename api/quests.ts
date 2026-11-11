@@ -154,6 +154,12 @@ export type ApiQuestMeta = {
      * тогда alias выводит эвристика `utils/questCityAlias.js`.
      */
     city_alias?: string; // readOnly
+    /**
+     * #3327: число опубликованных квестов всего города строки (бэк #3282). Приходит
+     * в подборе статьи (`/quests/web/discovery/?view=travel`), где строк не больше
+     * шести; у старого ответа и других выдач поля нет.
+     */
+    city_quest_count?: number;
     country_id?: string | null;
     country_name?: string | null;
     country_code?: string | null;

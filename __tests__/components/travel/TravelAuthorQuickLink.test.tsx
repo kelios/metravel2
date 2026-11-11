@@ -137,6 +137,27 @@ describe('TravelAuthorQuickLink', () => {
     expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://instagram.com/maria')
   })
 
+  it.each([
+    [undefined, '/user/42', 'link'],
+    [false, undefined, 'button'],
+  ])('on web: authorProfileLinkable=%s gives href %s (#3326)', async (linkable, href, role) => {
+    const { Platform } = require('react-native')
+    const originalOS = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    try {
+      const travel: any = { id: 1, slug: 'demo', name: 'Demo', userName: 'Мария', userIds: '42', authorProfileLinkable: linkable }
+      const { getByLabelText } = await render(<TravelAuthorQuickLink travel={travel} />)
+      const profile = getByLabelText('Открыть профиль автора Мария')
+      expect(profile.props.href).toBe(href)
+      expect(profile.props.accessibilityRole ?? profile.props.role).toBe(role)
+      // Переход внутри приложения остаётся и без `href`.
+      await fireEvent.press(profile)
+      expect(mockPush).toHaveBeenCalledWith('/user/42')
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
+    }
+  })
+
   it('does not render without author name or id', async () => {
     const { queryByTestId } = await render(<TravelAuthorQuickLink travel={{ id: 1 } as any} />)
 

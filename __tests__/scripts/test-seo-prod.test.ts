@@ -118,6 +118,49 @@ describe('production SEO gate: hub content links (#3218)', () => {
   });
 });
 
+// #3323: постраничный каталог /search?page=N. До переключения HTML /search на
+// SSR (#3279) блока нет — проба об этом сообщает и не краснеет.
+describe('production SEO gate: article catalogue pages (#3323)', () => {
+  const { SEARCH_CATALOG_PAGES, evaluateSearchCatalogPages } = require('../../scripts/test-seo-prod');
+  const site = 'https://metravel.by';
+  const page = (number: number, slugs: string[], canonical = number > 1 ? `/search?page=${number}` : '/search') => [
+    `<link rel="canonical" href="${site}${canonical}"/>`,
+    '<a href="/travels/footer-link">в подвале</a>',
+    `<nav aria-label="Статьи" data-search-catalog-links="${number}"><style>[data-search-catalog-links] a{color:red}</style><ul>`,
+    ...slugs.map((slug) => `<li><a href="/travels/${slug}">${slug}</a></li>`),
+    '</ul><a href="/search" rel="prev">Назад</a></nav>',
+  ].join('');
+  const staticShell = `<link rel="canonical" href="${site}/search"/><div id="root"></div>`;
+
+  it('probes the bare catalogue and its second page', () => {
+    expect(SEARCH_CATALOG_PAGES).toEqual({ first: '/search', second: '/search?page=2' });
+  });
+
+  it('reports a static /search without failing while the HTML is not SSR yet', () => {
+    expect(evaluateSearchCatalogPages({ first: staticShell, second: staticShell, site })).toEqual({ state: 'static', failures: [] });
+  });
+
+  it('accepts two pages that link different articles, page 2 being its own canonical', () => {
+    const verdict = evaluateSearchCatalogPages({ first: page(1, ['a', 'b']), second: page(2, ['c', 'd']), site });
+    expect(verdict).toMatchObject({ state: 'ok', failures: [], counts: [2, 2] });
+  });
+
+  it('fails a page 2 that repeats page 1, has no articles, or points canonical to /search', () => {
+    expect(evaluateSearchCatalogPages({ first: page(1, ['a', 'b']), second: page(2, ['b', 'a']), site }).failures)
+      .toEqual(['/search and /search?page=2 list the same articles']);
+    expect(evaluateSearchCatalogPages({ first: page(1, ['a']), second: page(2, []), site }).failures)
+      .toEqual(['/search?page=2 block has no /travels/ links']);
+    expect(evaluateSearchCatalogPages({ first: page(1, ['a']), second: page(2, ['c'], '/search'), site }).failures)
+      .toEqual(['/search?page=2 canonical is "https://metravel.by/search"']);
+  });
+
+  it('fails once only one of the two pages carries the block', () => {
+    const verdict = evaluateSearchCatalogPages({ first: page(1, ['a']), second: staticShell, site });
+    expect(verdict.state).toBe('fail');
+    expect(verdict.failures).toContain('/search?page=2 has no page-2 catalogue block');
+  });
+});
+
 // #3235: sitemap и редирект числового id города — постоянный контроль на проде.
 // Разбор и оценка проверяются на фикстурах, без сети.
 describe('production SEO gate: sitemap and city alias redirect (#3235)', () => {

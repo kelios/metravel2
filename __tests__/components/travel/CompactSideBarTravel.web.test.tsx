@@ -138,7 +138,7 @@ const mockTravel = {
     name: 'user-1',
     avatar: 'https://example.com/avatar.jpg',
   },
-  userIds: 'user-1',
+  userIds: '1',
   updated_at: '2022-10-01',
 } as any;
 
@@ -230,7 +230,7 @@ describe('CompactSideBarTravel - Web', () => {
       const author = within(view.getByTestId('travel-details-author'));
       expect(author.getByText('Юлия')).toBeTruthy();
       expect(author.getByRole('button', { name: medalLabel })).toBeTruthy();
-      expect(useUserAchievements).toHaveBeenCalledWith('user-1');
+      expect(useUserAchievements).toHaveBeenCalledWith('1');
 
       jest.mocked(useUserAchievements).mockClear();
       await view.rerender(<CompactSideBarTravel {...defaultProps} isMobile />);
@@ -242,7 +242,7 @@ describe('CompactSideBarTravel - Web', () => {
       await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(mockUseUserProfileCached).toHaveBeenCalledWith(
-        'user-1',
+        1,
         expect.objectContaining({ enabled: true })
       );
     });
@@ -486,7 +486,7 @@ describe('CompactSideBarTravel - Web', () => {
 
   describe('Права доступа', () => {
     it('должен показывать кнопку редактирования для владельца', async () => {
-      mockAuthState.userId = 'user-1';
+      mockAuthState.userId = '1';
       const propsWithEdit = { ...defaultProps };
       await render(<CompactSideBarTravel {...propsWithEdit} />);
 
@@ -550,7 +550,7 @@ describe('CompactSideBarTravel - Web', () => {
   describe('Маркеры web-стилей', () => {
     it('сайдбар не ставит сырых data-* — react-native-web отбрасывает их до DOM', async () => {
       mockAuthState.isSuperuser = true;
-      mockAuthState.userId = 'user-1';
+      mockAuthState.userId = '1';
       const { container: _hostContainer1 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
       // Маркеры, которые сайдбар, карточка автора, её кнопки и виджет погоды ставили
