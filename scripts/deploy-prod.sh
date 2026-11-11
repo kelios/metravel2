@@ -147,6 +147,13 @@ for env_file in .env.prod .env.deploy; do
   ln -sfn "$MT/$env_file" "$WT/$env_file"
 done
 
+# #3292: слепок «похожих» лежит в репозитории и устаревает молча. Напоминание
+# выкатывающему — строка ⚠️ проходит и тихий режим; выкат оно не останавливает,
+# в сеть не ходит, а у коммита без проверки (откат на старую ревизию) молчит.
+if [[ -f "$WT/scripts/ai-similar-age-warning.js" ]]; then
+  node "$WT/scripts/ai-similar-age-warning.js" "$WT/public/assets/data/ai-similar.json" 2>&1 | tee -a "$LOG" || true
+fi
+
 if [[ "$DEPLOY" == "1" ]]; then
   check_prod_checkout_clean 2>&1 | tee -a "$LOG"
   # Production publishes only the SSR release pair (#2766). The installed

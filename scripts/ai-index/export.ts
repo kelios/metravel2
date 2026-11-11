@@ -9,7 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { QUEST_LOCALES } from '../../utils/questLocaleRouting.js'
 import { buildQuestChunks, buildTravelChunks, type ChunkOptions, isPublishedTravel, type RawQuest, type RawTravel } from './chunk.ts'
-import { type ChunkRecord, sha256Hex } from './format.ts'
+import { type ChunkRecord, type IndexSourceCounts, sha256Hex } from './format.ts'
 
 export const DEFAULT_API_BASE = 'https://metravel.by/api'
 export const USER_AGENT = 'metravel-ai-index/1.0 (+https://metravel.by)'
@@ -145,6 +145,22 @@ async function* paginate(
     if (!data.next || results.length === 0) break
     page += 1
   }
+}
+
+/**
+ * Сколько опубликованных статей и квестов в каталоге сейчас (#3288) — только списки, без деталей:
+ * около десяти запросов с той же паузой, что у экспорта. С этим числом сверяется `sources` индекса.
+ */
+export async function countCatalogSources(options: { apiBase?: string; pauseMs?: number; fetcher?: Fetcher } = {}): Promise<IndexSourceCounts> {
+  const apiBase = options.apiBase ?? DEFAULT_API_BASE
+  const fetcher = options.fetcher ?? createFetcher({ pauseMs: options.pauseMs ?? DEFAULT_PAUSE_MS })
+  let travel = 0
+  for await (const item of paginate(fetcher, apiBase, '/travels/', { page_size: TRAVEL_PAGE_SIZE })) {
+    if (isPublishedTravel(item)) travel += 1
+  }
+  let quest = 0
+  for await (const _item of paginate(fetcher, apiBase, '/quests/', {})) quest += 1
+  return { travel, quest }
 }
 
 export function readState(rawDir: string): ExportState {

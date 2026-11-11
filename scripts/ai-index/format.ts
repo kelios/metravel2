@@ -38,12 +38,19 @@ export interface ChunkRecord {
   cover: string | null
 }
 
+export interface IndexSourceCounts {
+  travel: number
+  quest: number
+}
+
 export interface IndexManifest {
   model: string
   dim: number
   count: number
   built_at: string
   source_sha256: string
+  /** Число статей и квестов в индексе (#3288); у артефактов, собранных раньше, поля нет — считать `countSources`. */
+  sources?: IndexSourceCounts
 }
 
 export interface IndexArtifact {
@@ -73,6 +80,21 @@ export function sourceSha256(chunks: ChunkRecord[]): string {
     hash.update('\n')
   }
   return hash.digest('hex')
+}
+
+/** Сколько разных статей и квестов описывают фрагменты (квест на пяти локалях — один источник). */
+export function countSources(chunks: Array<Pick<ChunkRecord, 'type' | 'source_id'>>): IndexSourceCounts {
+  const travel = new Set<number>()
+  const quest = new Set<number>()
+  for (const chunk of chunks) (chunk.type === 'quest' ? quest : travel).add(chunk.source_id)
+  return { travel: travel.size, quest: quest.size }
+}
+
+/** Возраст сборки в целых днях; кривая дата — `null`, чтобы проверка свежести не приняла её за «сегодня». */
+export function indexAgeDays(builtAt: string, now: number = Date.now()): number | null {
+  const built = Date.parse(builtAt)
+  if (!Number.isFinite(built)) return null
+  return Math.max(0, Math.floor((now - built) / 86_400_000))
 }
 
 const f32 = new Float32Array(1)
@@ -197,6 +219,7 @@ export function writeIndex(
     count: input.chunks.length,
     built_at: input.builtAt ?? new Date().toISOString(),
     source_sha256: sourceSha256(input.chunks),
+    sources: countSources(input.chunks),
   }
   const tmpSuffix = `.tmp-${process.pid}`
   const targets: Array<[string, Buffer | string]> = [

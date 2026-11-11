@@ -50,6 +50,9 @@ export const AI_ASSISTANT_URL_NAME: 'EXPO_PUBLIC_AI_ASSISTANT_URL';
 export const AI_ASSISTANT_PROVIDER_NAME: 'EXPO_PUBLIC_AI_ASSISTANT_PROVIDER';
 export const AI_PICKS_FLAG_NAME: 'EXPO_PUBLIC_AI_PICKS';
 export const AI_PICKS_URL_NAME: 'EXPO_PUBLIC_AI_PICKS_URL';
+export const AI_SIMILAR_SOURCE_NAME: 'EXPO_PUBLIC_AI_SIMILAR_SOURCE';
+
+export function getAiSimilarDiagnosticsCore(env?: RoutingApiEnv): RuntimeConfigDiagnostic[];
 
 export function getAiPicksDiagnosticsCore(
   env?: RoutingApiEnv,

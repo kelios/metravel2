@@ -1,6 +1,8 @@
 /**
  * Клиент службы metravel-assist для смыслового подбора (#2459, контракт #2456):
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
+ *        либо, при `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static` (#3292), статический слепок
+ *        `/assets/data/ai-similar.json` — тот же ответ, посчитанный заранее
  *   POST /ai/search  {q, locale, type?, limit?}            → {items, took_ms, degraded, cached}
  *   POST /ai/near-route {points: [{lat, lng}], limit, locale} → {items, took_ms} (#2911)
  * `items[]` — карточки материалов сайта: `url` абсолютный, `cover` может быть null.
@@ -10,7 +12,7 @@ import { Platform } from 'react-native'
 
 import { ApiError } from '@/api/clientErrors'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
-import { buildAiPicksUrl } from '@/utils/aiPicksConfig'
+import { buildAiPicksUrl, getAiSimilarSource, getAiSimilarStaticUrl } from '@/utils/aiPicksConfig'
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting'
 
 export type AiPickType = 'travel' | 'quest'
@@ -119,8 +121,67 @@ export interface FetchAiSimilarParams {
   signal?: AbortSignal
 }
 
+/** Форма слепка «похожих» (#3292, `scripts/ai-assist/similarArtifact.ts`): карточки статей и списки id соседей. */
+interface AiSimilarArtifact {
+  cards: Record<string, unknown>
+  travel: Record<string, unknown>
+  quest: Record<string, unknown>
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
+
+function parseSimilarArtifact(body: unknown): AiSimilarArtifact {
+  if (!isRecord(body) || body.version !== 1 || !isRecord(body.cards)) throw new ApiError(502, 'ai-similar: unexpected artifact shape')
+  return { cards: body.cards, travel: isRecord(body.travel) ? body.travel : {}, quest: isRecord(body.quest) ? body.quest : {} }
+}
+
+/**
+ * Слепок один на все страницы: читается первым блоком «Похожие» и живёт до перезагрузки.
+ * Запрос не привязан к сигналу страницы — уход с неё не должен ронять загрузку для следующей;
+ * отказ кэш не занимает, следующий блок попробует снова.
+ */
+let similarArtifactRequest: Promise<AiSimilarArtifact> | null = null
+
+function loadSimilarArtifact(): Promise<AiSimilarArtifact> {
+  if (!similarArtifactRequest) {
+    const request = requestJson(getAiSimilarStaticUrl(), { method: 'GET' }).then(parseSimilarArtifact)
+    request.catch(() => {
+      if (similarArtifactRequest === request) similarArtifactRequest = null
+    })
+    similarArtifactRequest = request
+  }
+  return similarArtifactRequest
+}
+
+/** Сброс кэша слепка — только для тестов. */
+export function resetAiSimilarArtifactCacheForTests(): void {
+  similarArtifactRequest = null
+}
+
+/**
+ * Соседи из слепка: в нём только статьи (оба блока сайта просят `result_type=travel`), поэтому
+ * запрос квестов-соседей даёт пустой список. Источника нет в слепке (материал новее сборки
+ * индекса) — пустой список, блок не показывается, как при `404` службы.
+ */
+async function fetchAiSimilarStatic({ type, id, limit, resultType }: FetchAiSimilarParams): Promise<AiPickItem[]> {
+  if (resultType === 'quest') return []
+  const artifact = await loadSimilarArtifact()
+  const ids = artifact[type][String(id)]
+  if (!Array.isArray(ids)) return []
+  const items: AiPickItem[] = []
+  for (const neighbour of ids) {
+    const card = artifact.cards[String(neighbour)]
+    const item = isRecord(card) ? normalizeItem({ ...card, type: 'travel', source_id: neighbour }) : null
+    if (item) items.push(item)
+    if (items.length >= limit) break
+  }
+  return items
+}
+
 /** Похожие материалы для источника; источник вне индекса (404) — пустой список, не ошибка. */
-export async function fetchAiSimilar({ type, id, locale, limit, resultType, signal }: FetchAiSimilarParams): Promise<AiPickItem[]> {
+export async function fetchAiSimilar(request: FetchAiSimilarParams): Promise<AiPickItem[]> {
+  if (getAiSimilarSource() === 'static') return fetchAiSimilarStatic(request)
+  const { type, id, locale, limit, resultType, signal } = request
   const params = new URLSearchParams({ type, id: String(id), limit: String(limit), locale })
   if (resultType) params.set('result_type', resultType)
   try {

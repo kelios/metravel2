@@ -98,9 +98,11 @@ export function createKnowledgeServer(knowledge: Knowledge, indexInfo: { model: 
       title: 'Что уже написано про место',
       description:
         'Лексический поиск упоминаний места в заголовках, городах и текстах: статьи и квесты с числом фрагментов, где место названо. ' +
-        'Склонения учитываются по основам слов (stems в ответе). Для «про что ещё нет статьи» см. gaps.',
+        'Склонения учитываются по основам слов (stems в ответе). Для «про что ещё нет статьи» см. gaps. ' +
+        'index_built_at — дата сборки индекса: опубликованное позже в ответ не входит.',
       inputSchema: { place: z.string().min(1).describe('Место: город, парк, озеро — «Беловежская пуща», «Ойцув».') },
       outputSchema: {
+        index_built_at: z.string(),
         place: z.string(),
         stems: z.array(z.string()),
         travels: z.array(coverageSourceSchema),
@@ -117,9 +119,11 @@ export function createKnowledgeServer(knowledge: Knowledge, indexInfo: { model: 
       title: 'Места страны без своей статьи',
       description:
         'Города страны из квестов и статей, у которых нет собственной статьи (ни по городу, ни по заголовку, ни по точке в радиусе 10 км). ' +
-        'Для каждого — квесты этого места и число статей, где оно лишь упоминается.',
+        'Для каждого — квесты этого места и число статей, где оно лишь упоминается. ' +
+        'index_built_at — дата сборки индекса: статья, опубликованная позже, пробел не закрыла.',
       inputSchema: { country: z.string().min(1).describe('Страна как в карточках: Польша, Беларусь, Литва …') },
       outputSchema: {
+        index_built_at: z.string(),
         country: z.string(),
         sources: z.object({ travels: z.number(), quests: z.number() }),
         gaps: z.array(

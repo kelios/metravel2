@@ -21,6 +21,9 @@ import { createKnowledgeServer } from '@/scripts/ai-index/mcp-server'
 import { DIM, fakeEmbedQuery, fakeVector, MODEL, writeFixtureIndex } from '../ai-assist/fixture'
 import { makeTempDir } from '../cli-test-utils'
 
+/** Дата сборки фикстуры (`writeFixtureIndex`). */
+const FIXTURE_BUILT_AT = '2026-10-18T16:48:48.951Z'
+
 const openFixture = (model = MODEL): KnowledgeIndex => openKnowledgeIndex(writeFixtureIndex(model), { expectedModel: model })
 
 describe('metravel-knowledge: открытие индекса', () => {
@@ -110,11 +113,15 @@ describe('metravel-knowledge: инструменты на фикстурном �
       [761, 1, false],
     ])
     expect(knowledge.coverage('').travels).toEqual([])
+    // #3288: дата сборки индекса видна редакции и в пустом ответе.
+    expect(pushcha.index_built_at).toBe(FIXTURE_BUILT_AT)
+    expect(knowledge.coverage('').index_built_at).toBe(FIXTURE_BUILT_AT)
   })
 
   it('gaps: страна без учёта регистра; у фикстуры все точки в одном месте — всё covered по радиусу', () => {
     const result = knowledge.gaps('ПОЛЬША')
     expect(result.sources).toEqual({ travels: 3, quests: 2 })
+    expect(result.index_built_at).toBe(FIXTURE_BUILT_AT)
     expect(result.gaps).toEqual([])
     expect(result.covered.map((c) => c.place).sort()).toEqual(['Брест', 'Гродно', 'Каменюки', 'Краков', 'Ойцув'])
     expect(knowledge.gaps('Литва')).toMatchObject({ sources: { travels: 0, quests: 0 }, gaps: [], covered: [] })
@@ -172,6 +179,7 @@ describe('metravel-knowledge: контракт MCP', () => {
 
     const coverage = await client.callTool({ name: 'coverage', arguments: { place: 'Гродно' } })
     expect((coverage.structuredContent as { quests: unknown[] }).quests).toHaveLength(1)
+    expect((coverage.structuredContent as { index_built_at: string }).index_built_at).toBe(FIXTURE_BUILT_AT)
 
     const gaps = await client.callTool({ name: 'gaps', arguments: { country: 'Польша' } })
     expect((gaps.structuredContent as { covered: unknown[] }).covered).toHaveLength(5)

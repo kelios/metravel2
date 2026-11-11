@@ -8,6 +8,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import type { AiPickItem } from '@/api/aiPicks'
 import { translate as i18nT } from '@/i18n'
+import { sendAnalyticsEvent } from '@/utils/analytics'
 
 /** Запасная высота обложки для кадров без пропорций; геометрию слота задаёт `CARD_MEDIA_SLOT_RATIO` (#1674). */
 export const AI_PICK_CARD_IMAGE_HEIGHT = 170
@@ -28,10 +29,12 @@ type Props = {
   slotWidth: number
   /** Действие под карточкой (#2911: «Добавить в маршрут»); карточка по-прежнему открывает страницу. */
   actionSlot?: React.ReactNode
+  /** Блок, в котором стоит карточка (#3292): с ним клик уходит событием `AiPick_Click` — доля переходов из блока. */
+  analyticsBlock?: string
   testID?: string
 }
 
-export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, testID }: Props) {
+export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, analyticsBlock, testID }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -43,7 +46,10 @@ export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, t
         title={item.title}
         imageUrl={item.cover}
         metaText={aiPickMetaText(item)}
-        onPress={() => router.push(item.path as never)}
+        onPress={() => {
+          if (analyticsBlock) void sendAnalyticsEvent('AiPick_Click', { block: analyticsBlock, type: item.type, id: item.source_id })
+          router.push(item.path as never)
+        }}
         imageHeight={AI_PICK_CARD_IMAGE_HEIGHT}
         mediaAspectRatio={CARD_MEDIA_SLOT_RATIO}
         mediaSlotWidth={slotWidth}

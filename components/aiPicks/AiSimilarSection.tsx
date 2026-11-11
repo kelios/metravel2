@@ -7,7 +7,7 @@ import { useAiSimilar } from '@/hooks/useAiPicks'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
-import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
+import { isAiSimilarEnabled } from '@/utils/aiPicksConfig'
 
 import { AiPickCard, AiPickCardSkeleton } from './AiPickCard'
 
@@ -27,13 +27,14 @@ type Props = {
 }
 
 /**
- * «Похожие статьи» (#2459): смысловые соседи источника из индекса metravel-assist.
+ * «Похожие статьи» (#2459): смысловые соседи источника из индекса metravel-assist —
+ * от службы или из статического слепка (#3292, `getAiSimilarSource`).
  * Пустой ответ, отказ службы или выключенный флаг — `null` без зазора: блок либо
  * есть целиком, либо его нет, а карточки приходят в каркас той же геометрии.
  * Без флага не подписывается ни на кэш, ни на размеры окна.
  */
 export function AiSimilarSection(props: Props) {
-  return isAiPicksEnabled() ? <AiSimilarSectionContent {...props} /> : null
+  return isAiSimilarEnabled() ? <AiSimilarSectionContent {...props} /> : null
 }
 
 function AiSimilarSectionContent({ type, id, limit = 6, enabled = true, testID = 'ai-similar-section' }: Props) {
@@ -82,7 +83,7 @@ function AiSimilarSectionContent({ type, id, limit = 6, enabled = true, testID =
             ))
           : items.map((item) => (
               <View key={`${item.type}-${item.source_id}`} style={styles.cardWrapper}>
-                <AiPickCard item={item} slotWidth={CARD_SLOT_WIDTH} />
+                <AiPickCard item={item} slotWidth={CARD_SLOT_WIDTH} analyticsBlock={`similar_${type}`} />
               </View>
             ))}
       </View>

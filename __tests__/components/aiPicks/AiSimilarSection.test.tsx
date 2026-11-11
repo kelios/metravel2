@@ -55,12 +55,25 @@ async function renderSection(props: Partial<React.ComponentProps<typeof AiSimila
 
 describe('AiSimilarSection (#2459)', () => {
   const env = process.env.EXPO_PUBLIC_AI_PICKS
+  const sourceEnv = process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE
   beforeEach(() => {
     process.env.EXPO_PUBLIC_AI_PICKS = '1'
+    process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE = ''
     mockFetchAiSimilar.mockReset()
   })
   afterAll(() => {
     process.env.EXPO_PUBLIC_AI_PICKS = env
+    process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE = sourceEnv
+  })
+
+  it('shows the block from the static artifact while the picks flag is off (#3292)', async () => {
+    process.env.EXPO_PUBLIC_AI_PICKS = ''
+    process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE = 'static'
+    mockFetchAiSimilar.mockResolvedValue([item(1, 'Пескова Скала')])
+    const { getByTestId, getByText } = await renderSection()
+    await waitFor(() => expect(getByTestId('ai-similar-grid')).toBeTruthy())
+    expect(getByText('Пескова Скала')).toBeTruthy()
+    expect(mockFetchAiSimilar).toHaveBeenCalledTimes(1)
   })
 
   it('shows a skeleton while loading and then the cards in the same grid', async () => {

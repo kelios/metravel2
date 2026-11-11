@@ -8,6 +8,8 @@
 import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '../../api/aiAssist/policy.ts'
 import { createGenerator } from '../../api/aiAssist/generator.ts'
 import { createEmbedder } from '../ai-index/embed.ts'
+import { indexAgeDays } from '../ai-index/format.ts'
+import { DEFAULT_MAX_AGE_DAYS } from '../ai-index/freshness.ts'
 import { resolveModel } from '../ai-index/models.ts'
 import { createApp } from './app.ts'
 import { ResponseCache } from './cache.ts'
@@ -33,6 +35,10 @@ async function main(): Promise<void> {
   const { manifest } = index.artifact
   const spec = resolveModel(pinnedModel ?? manifest.model)
   log(`индекс загружен: ${manifest.count} фрагментов × ${manifest.dim}, модель ${manifest.model}, собран ${manifest.built_at}`)
+  const ageDays = indexAgeDays(manifest.built_at)
+  if (ageDays === null || ageDays > DEFAULT_MAX_AGE_DAYS) {
+    log(`⚠️ индекс собран ${ageDays ?? '?'} дн. назад (порог ${DEFAULT_MAX_AGE_DAYS}): материалы, опубликованные позже, не находятся — \`npm run ai:index -- build\``)
+  }
 
   log(`модель: ${spec.hfId} (${spec.dtype}), потоков ${config.threads}, кэш ${config.modelCacheDir}${config.offline ? ', offline' : ''}`)
   const embedder = await createEmbedder(spec, { threads: config.threads, cacheDir: config.modelCacheDir, offline: config.offline })

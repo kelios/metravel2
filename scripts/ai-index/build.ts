@@ -8,7 +8,12 @@
  *   manifest — проверить артефакт (count, размер vectors.f16, source_sha256) и напечатать manifest
  *   query    — "<вопрос>": top-k фрагментов из артефакта
  *   eval     — --queries <jsonl>: recall@5 и латентность запроса на наборе вопросов
- *   build    — export + chunk + embed + manifest одной командой
+ *   build    — export + chunk + embed + manifest одной командой; повторный запуск без изменений
+ *              контента ничего не пересчитывает (инкремент по updated_at статей и id фрагментов)
+ *   freshness — свежесть слепка (#3288): возраст сборки и число статей и квестов против каталога.
+ *              --artifact <json> проверяет производный файл с полями index_built_at и sources
+ *              (public/assets/data/ai-similar.json), --offline — только возраст, без сети,
+ *              --max-age-days <n> (7), --tolerance <доля> (0.02), --warn-only — код выхода 0
  *
  * Опции: --out <dir> (по умолчанию .codex-temp/ai-index), --dist <dir> (по умолчанию <out>/dist),
  *        --model <ключ> (embeddinggemma-300m | qwen3-embedding-0.6b), --threads <n>, --full,
@@ -20,8 +25,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ChunkOptions } from './chunk.ts'
 import { createEmbedder, runEmbed } from './embed.ts'
-import { chunkRawCorpus, runExport } from './export.ts'
+import { chunkRawCorpus, countCatalogSources, runExport } from './export.ts'
 import { type ChunkRecord, readIndex, readJsonl, verifyIndex, writeJsonl } from './format.ts'
+import { checkFreshness, readFreshnessSubject } from './freshness.ts'
 import { resolveModel } from './models.ts'
 import { type EvalQuery, type EvalSummary, evaluate, formatHit, search } from './query.ts'
 
@@ -61,6 +67,14 @@ const flagNumber = (flags: CliArgs['flags'], name: string): number | undefined =
   if (raw === undefined) return undefined
   const value = Number.parseInt(raw, 10)
   if (!Number.isFinite(value)) throw new Error(`--${name} ожидает число, получено "${raw}"`)
+  return value
+}
+
+const flagFloat = (flags: CliArgs['flags'], name: string): number | undefined => {
+  const raw = flagString(flags, name)
+  if (raw === undefined) return undefined
+  const value = Number.parseFloat(raw)
+  if (!Number.isFinite(value) || value < 0) throw new Error(`--${name} ожидает неотрицательное число, получено "${raw}"`)
   return value
 }
 
@@ -127,7 +141,19 @@ async function commandEmbed(flags: CliArgs['flags'], paths: Paths) {
   const summary = await withEmbedder(flags, (embedder) =>
     runEmbed({ chunks, distDir: paths.distDir, embedder, full: flags.full === true, log }),
   )
+  if (summary.computed === 0) log('embed: изменений нет — ни один фрагмент не пересчитан')
   console.log(JSON.stringify({ ...summary, dist: paths.distDir }))
+}
+
+async function commandFreshness(flags: CliArgs['flags'], paths: Paths) {
+  const subject = readFreshnessSubject({ artifactFile: flagString(flags, 'artifact'), distDir: paths.distDir })
+  const catalog = flags.offline === true ? null : await countCatalogSources({ apiBase: flagString(flags, 'api'), pauseMs: flagNumber(flags, 'pause') })
+  const report = checkFreshness(subject, { maxAgeDays: flagNumber(flags, 'max-age-days'), tolerance: flagFloat(flags, 'tolerance'), catalog })
+  const warnOnly = flags['warn-only'] === true
+  for (const problem of report.problems) log(`${warnOnly ? '⚠️' : '❌'} freshness: ${problem}`)
+  if (!report.ok) log('freshness: обновить — `npm run ai:index -- build`, затем `npm run ai:similar:build`')
+  console.log(JSON.stringify(report))
+  if (!report.ok && !warnOnly) process.exitCode = 1
 }
 
 function commandManifest(paths: Paths) {
@@ -206,6 +232,9 @@ export async function main(argv: string[]): Promise<void> {
       return
     case 'eval':
       await commandEval(flags, paths)
+      return
+    case 'freshness':
+      await commandFreshness(flags, paths)
       return
     case 'build':
       await commandExport(flags, paths)

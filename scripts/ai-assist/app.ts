@@ -8,14 +8,14 @@
  *   POST /ai/near-route {points: [{lat,lng}], limit?, locale?} → {items, took_ms} (nearRoute.ts, #2911)
  *   POST /ai/intent {q, locale?} → {categories, radius_km, center, constraints} (intent.ts, #2887)
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
- *   GET  /ai/health → {ok, model, dim, count, index_built_at, rss_mb, …}
+ *   GET  /ai/health → {ok, model, dim, count, index_built_at, index_age_days, sources, rss_mb, …}
  *
  * Зависимости приходят снаружи (`createApp`), поэтому тесты поднимают сервер на фикстурном
  * индексе с фальшивым эмбеддером и без сети.
  */
 import http from 'node:http'
 
-import type { ChunkType } from '../ai-index/format.ts'
+import { type ChunkType, countSources, indexAgeDays } from '../ai-index/format.ts'
 import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
 import { liftForChildren, questCardLead } from '../../api/aiAssist/questAudience.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
@@ -30,7 +30,7 @@ import { AskLimits, createDayClock, MemoryCounterStore } from './limits.ts'
 import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nearRoute.ts'
 import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
-import { type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, sourceVector, vectorSources } from './search.ts'
+import { type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, vectorSources } from './search.ts'
 import { createSuggestTagsHandler, SUGGEST_TAGS_MAX_BODY_BYTES, type TagCatalog } from './suggestTags.ts'
 
 export { MAX_LIMIT, MAX_QUERY_CHARS }
@@ -130,6 +130,8 @@ export function createApp(deps: AppDeps): http.Server {
     response.end(payload)
   }
 
+  // Артефакт, собранный до #3288, числа источников в манифесте не несёт.
+  const sources = manifest.sources ?? countSources(index.artifact.chunks)
   const health = () => {
     const memory = process.memoryUsage()
     return {
@@ -140,6 +142,9 @@ export function createApp(deps: AppDeps): http.Server {
       dim: manifest.dim,
       count: manifest.count,
       index_built_at: manifest.built_at,
+      // #3288: устаревший индекс молча не находит новые материалы — возраст и состав видны пробе.
+      index_age_days: indexAgeDays(manifest.built_at),
+      sources,
       rss_mb: Math.round(memory.rss / 1048576),
       heap_mb: Math.round(memory.heapUsed / 1048576),
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
@@ -300,9 +305,8 @@ export function createApp(deps: AppDeps): http.Server {
     const locale = parseLocale(params.get('locale'))
     const resultType = parseType(params.get('result_type'), 'result_type')
     const key = `${type}:${id}`
-    const vector = sourceVector(index, key, locale)
-    if (!vector) throw new HttpError(404, 'not_found', `${key} нет в индексе`)
-    const hits = vectorSources(index, { vector, locale, type: resultType, excludeSource: key, limit })
+    const hits = similarHits(index, { key, locale, resultType, limit })
+    if (!hits) throw new HttpError(404, 'not_found', `${key} нет в индексе`)
     return {
       items: hits.map((hit) => itemForRow(index, hit.index, hit.score)),
       took_ms: elapsedMs(started),

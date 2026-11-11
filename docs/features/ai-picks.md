@@ -13,11 +13,45 @@
 | --- | --- | --- |
 | `EXPO_PUBLIC_AI_PICKS` | `1` | выставляется вместе с выкатом службы (#2457) |
 | `EXPO_PUBLIC_AI_PICKS_URL` | пусто (same-origin, Metro проксирует `/ai/` → `127.0.0.1:8787`) | пусто (nginx `location /ai/`) |
+| `EXPO_PUBLIC_AI_SIMILAR_SOURCE` | пусто (блоки «Похожие» идут к службе вместе с `EXPO_PUBLIC_AI_PICKS`) | `static` — блоки «Похожие» из слепка, без службы (#3292) |
 
-Чтение — только `utils/aiPicksConfig.ts` (`isAiPicksEnabled`, `getAiPicksBaseUrl`, `buildAiPicksUrl`).
+Чтение — только `utils/aiPicksConfig.ts` (`isAiPicksEnabled`, `getAiPicksBaseUrl`, `buildAiPicksUrl`,
+`getAiSimilarSource`, `isAiSimilarEnabled`, `getAiSimilarStaticUrl`).
 На native адрес — origin API без `/api`. Диагностика — `utils/runtimeConfigContract.js`
-(`AI_PICKS_URL_INVALID`, `AI_PICKS_LOCAL_URL_IN_PRODUCTION`). Без флага ни один запрос к
-`/ai/*` не уходит.
+(`AI_PICKS_URL_INVALID`, `AI_PICKS_LOCAL_URL_IN_PRODUCTION`, `AI_SIMILAR_SOURCE_INVALID`,
+`AI_SIMILAR_SERVICE_WITHOUT_PICKS`). Без флагов ни один запрос к `/ai/*` и к слепку не уходит.
+
+### «Похожие» без службы: статический слепок (#3292)
+
+Блоки «Похожие статьи» (страница статьи) и «Статьи по городу» (страница квеста) не требуют ни
+модели, ни вычислений в момент запроса: `GET /ai/similar` берёт готовые векторы источника и
+возвращает ближайшие статьи. Этот ответ считается заранее для всех источников индекса и лежит
+в репозитории одним файлом `public/assets/data/ai-similar.json` (≈ 180 КБ, ≈ 46 КБ в Brotli):
+карточки статей-соседей (`cards`) один раз, у источника — список id соседей (`travel`, `quest`),
+плюс `index_built_at` и `sources` для проверки свежести. Сайт раздаёт его как обычную статику —
+на нынешнем сервере, без контейнера `metravel-assist` (#2457).
+
+- Сборка: `npm run ai:similar:build` (`scripts/ai-assist/build-similar.ts` →
+  `similarArtifact.ts`). Соседи считает `similarHits` (`scripts/ai-assist/search.ts`) — та же
+  функция, что у `GET /ai/similar`; тест сверяет слепок с ответом службы. Сериализация
+  стабильная (запись на строку, ключи по возрастанию id): правка одной статьи — короткий diff.
+- Клиент: при `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static` `fetchAiSimilar` читает слепок один раз на
+  сессию (`loadSimilarArtifact`, без привязки к сигналу страницы) и собирает карточки по id;
+  источника нет в слепке (материал новее сборки) — пустой список, блок не показывается. Явное
+  `static` сильнее `EXPO_PUBLIC_AI_PICKS`; строка подбора на `/search` и «Рядом с маршрутом»
+  остаются только под `EXPO_PUBLIC_AI_PICKS` — им нужен эмбеддинг запроса на сервере.
+- Сборочный контракт (#2738): чанк блока попадает в сборку под литералом
+  `process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE`
+  (`TravelDetailsSidebarSection`); без обоих флагов Metro сворачивает ветку.
+- Обновление: `npm run ai:index -- build` (индекс по текущему каталогу, инкремент) →
+  `npm run ai:similar:build` → коммит файла → обычный выкат. Проверка свежести:
+  `npm run guard:ai-index-freshness -- --artifact public/assets/data/ai-similar.json` (возраст и
+  число статей и квестов против каталога, #3288). При выкате `scripts/deploy-prod.sh` печатает
+  `⚠️`, если слепок старше 14 дней (`scripts/ai-similar-age-warning.js`), и не останавливается.
+- Флаг прода живёт в `.env.prod` выкатывающей машины (как остальные `EXPO_PUBLIC_*`): на машине
+  без строки `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static` выкат соберёт сайт без блоков.
+- Клик по карточке блока уходит событием аналитики `AiPick_Click {block: similar_travel |
+  similar_quest, type, id}`.
 
 ## Ключевые компоненты
 
@@ -31,7 +65,8 @@
   «Квест · город, страна» + опциональный `snippet`; скелет той же геометрии (`height="auto"` +
   `aspectRatio`).
 - `components/aiPicks/AiSimilarSection.tsx` — блок статьи/квеста; `null` при пустом ответе,
-  ошибке или выключенном флаге (без флага не создаёт запрос и подписки).
+  ошибке или выключенном флаге (без флага не создаёт запрос и подписки). Источник соседей —
+  служба или статический слепок (#3292, раздел выше); блоку это безразлично.
   На телефоне показывает первые 3 из запрошенных карточек.
 - `components/aiPicks/AiSearchPanelFrame.tsx` — шапка панели и `AiSearchPanelPlaceholder` для
   первого кадра `/search` (`SearchPageSkeleton`): без тяжёлых импортов, одна геометрия.

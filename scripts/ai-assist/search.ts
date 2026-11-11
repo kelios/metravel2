@@ -116,6 +116,25 @@ export function sourceVector(index: LoadedIndex, key: string, locale: Locale): F
   return out
 }
 
+export interface SimilarQuery {
+  /** Источник: `travel:816`, `quest:13`. */
+  key: string
+  locale: Locale
+  resultType?: ChunkType
+  limit: number
+}
+
+/**
+ * Смысловые соседи источника — одна функция для `GET /ai/similar` и для предрасчёта слепка
+ * «похожих» (#3292, `similarArtifact.ts`): живой ответ и статический файл не расходятся.
+ * `null` — источника нет в индексе.
+ */
+export function similarHits(index: LoadedIndex, query: SimilarQuery): Hit[] | null {
+  const vector = sourceVector(index, query.key, query.locale)
+  if (!vector) return null
+  return vectorSources(index, { vector, locale: query.locale, type: query.resultType, excludeSource: query.key, limit: query.limit })
+}
+
 export interface RankedSource {
   key: string
   item: ResultItem

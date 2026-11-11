@@ -28,6 +28,14 @@ describe('getRuntimeConfigDiagnostics', () => {
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'openai' }).some((c) => c.startsWith('AI_'))).toBe(false);
     });
 
+    it('similar blocks source (#3292): static or service; a typo is an error, service without picks is a warning', () => {
+      expect(codes({ ...base, EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'static' }).some((c) => c.startsWith('AI_'))).toBe(false);
+      expect(codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_SIMILAR_SOURCE: ' Static ' }).some((c) => c.startsWith('AI_'))).toBe(false);
+      expect(codes({ ...base, EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'statik' })).toContain('AI_SIMILAR_SOURCE_INVALID:error');
+      expect(codes({ ...base, EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'service' })).toContain('AI_SIMILAR_SERVICE_WITHOUT_PICKS:warning');
+      expect(codes({ ...base, EXPO_PUBLIC_AI_PICKS: '1', EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'service' }).some((c) => c.startsWith('AI_SIMILAR'))).toBe(false);
+    });
+
     it('provider llamacpp requires an absolute http(s) llama-server url', () => {
       const llama = { ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp' };
       expect(codes(llama)).toContain('AI_ASSISTANT_URL_INVALID:error');

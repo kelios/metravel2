@@ -28,6 +28,8 @@
     "e2e:ui": "node scripts/run-with-quality-gate-lock.js e2e:ui -- node node_modules/playwright/cli.js test --ui",
     "test": "jest --watchAll",
     "ai:index": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-index/build.ts",
+    "ai:similar:build": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/build-similar.ts",
+    "guard:ai-index-freshness": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-index/build.ts freshness",
     "ai:assist:dev": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/main.ts",
     "ai:assistant:eval": "node scripts/ai-assistant-eval/run.mjs",
     "ai:assistant:accept": "node scripts/ai-assistant-eval/accept.mjs",

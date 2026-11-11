@@ -23,6 +23,8 @@ const AI_ASSISTANT_PROVIDER_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_PROVIDER'
 const AI_ASSISTANT_PROVIDERS = ['ask', 'llamacpp']
 const AI_PICKS_FLAG_NAME = 'EXPO_PUBLIC_AI_PICKS'
 const AI_PICKS_URL_NAME = 'EXPO_PUBLIC_AI_PICKS_URL'
+const AI_SIMILAR_SOURCE_NAME = 'EXPO_PUBLIC_AI_SIMILAR_SOURCE'
+const AI_SIMILAR_SOURCES = ['static', 'service']
 
 const LEGACY_ROUTING_API_KEY_SOURCES = new Set([
   'EXPO_PUBLIC_ROUTE_SERVICE',
@@ -133,6 +135,35 @@ const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false
 const getAiPicksDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
   if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) return []
   return getAiServiceUrlDiagnosticsCore(env, { isProduction })
+}
+
+/**
+ * Источник блоков «Похожие» (#3292): пусто, `static` (слепок без службы) или `service`.
+ * Опечатка в значении молча выключила бы блоки на проде — поэтому ошибка; `service` без
+ * `EXPO_PUBLIC_AI_PICKS` ничего не включает, о чём стоит сказать.
+ */
+const getAiSimilarDiagnosticsCore = (env = process.env) => {
+  const source = String(env[AI_SIMILAR_SOURCE_NAME] || '').trim().toLowerCase()
+  if (!source) return []
+  if (!AI_SIMILAR_SOURCES.includes(source)) {
+    return [
+      {
+        code: 'AI_SIMILAR_SOURCE_INVALID',
+        severity: 'error',
+        message: `${AI_SIMILAR_SOURCE_NAME} must be "static", "service" or empty; got "${source}".`,
+      },
+    ]
+  }
+  if (source === 'service' && !isTruthyFlag(env[AI_PICKS_FLAG_NAME])) {
+    return [
+      {
+        code: 'AI_SIMILAR_SERVICE_WITHOUT_PICKS',
+        severity: 'warning',
+        message: `${AI_SIMILAR_SOURCE_NAME}=service needs ${AI_PICKS_FLAG_NAME}=1; the similar blocks stay hidden.`,
+      },
+    ]
+  }
+  return []
 }
 
 const isLocalApiEnabled = (env = process.env) =>
@@ -250,6 +281,7 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 
   diagnostics.push(...getAiAssistantDiagnosticsCore(env, { isProduction }))
   diagnostics.push(...getAiPicksDiagnosticsCore(env, { isProduction }))
+  diagnostics.push(...getAiSimilarDiagnosticsCore(env))
 
   const routingDiagnostics = getRoutingConfigDiagnosticsCore(env).map((diagnostic) => ({
     ...diagnostic,
@@ -265,9 +297,11 @@ module.exports = {
   AI_ASSISTANT_URL_NAME,
   AI_PICKS_FLAG_NAME,
   AI_PICKS_URL_NAME,
+  AI_SIMILAR_SOURCE_NAME,
   MOCK_FLAG_NAMES,
   getAiAssistantDiagnosticsCore,
   getAiPicksDiagnosticsCore,
+  getAiSimilarDiagnosticsCore,
   ROUTING_API_KEY_CANDIDATES,
   resolveRoutingApiKeyWithSourceCore,
   getRoutingConfigDiagnosticsCore,

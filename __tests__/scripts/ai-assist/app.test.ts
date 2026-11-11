@@ -78,6 +78,9 @@ describe('metravel-assist: /ai/health', () => {
       expect(reply.status).toBe(200)
       expect(reply.body).toMatchObject({ ok: true, model: MODEL, dim: 8, count: 7, index_built_at: '2026-10-18T16:48:48.951Z' })
       expect(reply.body.rss_mb).toBeGreaterThan(0)
+      // #3288: состав и возраст индекса — проба видит устаревший слепок.
+      expect(reply.body.sources).toEqual({ travel: 3, quest: 2 })
+      expect(reply.body.index_age_days).toBeGreaterThanOrEqual(23)
       expect(reply.body.cache).toEqual({ size: 0, hits: 0, misses: 0, redis: false })
       expect((await call(server, 'POST', '/ai/health')).status).toBe(405)
     } finally {

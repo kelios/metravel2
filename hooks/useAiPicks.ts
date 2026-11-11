@@ -9,7 +9,7 @@ import { fetchAiSearch, fetchAiSimilar, fetchNearRoute, AI_SEARCH_MIN_QUERY_LENG
 import { queryKeys } from '@/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getActiveLocale } from '@/i18n'
-import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
+import { isAiPicksEnabled, isAiSimilarEnabled } from '@/utils/aiPicksConfig'
 
 const HOUR_MS = 60 * 60 * 1000
 /** Пауза после правки маршрута (#2911): перетаскивание и серия добавлений — один запрос. */
@@ -30,7 +30,8 @@ export function useAiSimilar({ type, id, limit, resultType, enabled = true }: Us
   return useQuery({
     queryKey: queryKeys.aiSimilar(type, numericId, locale, resultType ?? 'all'),
     queryFn: ({ signal }) => fetchAiSimilar({ type, id: numericId, locale, limit, resultType, signal }),
-    enabled: enabled && isAiPicksEnabled() && numericId > 0,
+    // #3292: блоки «Похожие» работают и без службы — на статическом слепке.
+    enabled: enabled && isAiSimilarEnabled() && numericId > 0,
     staleTime: HOUR_MS,
     gcTime: HOUR_MS,
     retry: false,

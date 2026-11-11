@@ -9,6 +9,7 @@ const path = require('path')
 const PUBLIC_FILES = Object.freeze({
   '.well-known/assetlinks.json': 'Android App Links verification',
   'apple-touch-icon.png': 'Browser touch icon',
+  'assets/data/ai-similar.json': 'Precomputed semantic neighbours for the "similar articles" blocks (#3292, npm run ai:similar:build)',
   'assets/data/lasy-zanocuj.json': 'Polish forest camping map data',
   'assets/fonts/lora-OFL.txt': 'Lora font redistribution license',
   'assets/fonts/lora-italic-v37-cyrillic.woff2': 'Gallery caption italic font, Cyrillic subset',

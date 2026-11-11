@@ -234,6 +234,28 @@ describe('scripts/deploy-prod.sh', () => {
     }
   })
 
+  it('reminds about a stale similar-articles snapshot without stopping the rollout (#3292)', () => {
+    const fixture = makeFixture()
+    try {
+      fs.copyFileSync(path.join(process.cwd(), 'scripts/ai-similar-age-warning.js'), path.join(fixture.repo, 'scripts/ai-similar-age-warning.js'))
+      writeFile(path.join(fixture.repo, 'public/assets/data/ai-similar.json'), JSON.stringify({ version: 1, index_built_at: '2020-01-01T00:00:00.000Z' }))
+      git(fixture.repo, ['add', 'scripts', 'public'])
+      git(fixture.repo, ['commit', '-q', '-m', 'similar snapshot'])
+      git(fixture.repo, ['push', '-q', 'origin', 'main'])
+
+      const result = runDeploy(fixture, [], { DEPLOY_QUIET: '1' })
+
+      expect(result.status).toBe(0)
+      // The reminder survives quiet mode and lands in the rollout log.
+      expect(result.stdout).toMatch(/⚠️ {2}Слепок «похожих» собран \d+ дн\. назад \(порог 14\)/)
+      const logs = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))
+      expect(fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', logs[0]), 'utf8')).toContain('Слепок «похожих» собран')
+      expect(readStubOut(fixture).head).toBe(git(fixture.repo, ['rev-parse', 'origin/main']))
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
   it('defaults to origin/main and replaces a worktree left by an interrupted rollout', () => {
     const fixture = makeFixture()
     try {

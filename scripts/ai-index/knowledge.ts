@@ -156,6 +156,8 @@ export interface CoverageSource {
 }
 
 export interface CoverageResult {
+  /** Когда собран индекс (#3288): материал, опубликованный позже, в ответ не попал. */
+  index_built_at: string
   place: string
   stems: string[]
   travels: CoverageSource[]
@@ -171,6 +173,8 @@ export interface GapPlace {
 }
 
 export interface GapsResult {
+  /** Когда собран индекс (#3288): статья, опубликованная позже, пробел не закрыла. */
+  index_built_at: string
   country: string
   sources: { travels: number; quests: number }
   /** Места из квестов и статей страны без собственной статьи. */
@@ -201,6 +205,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 
 export function createKnowledge(index: KnowledgeIndex, embedQuery: EmbedQuery): Knowledge {
   const { artifact, rowsBySource, normalizedTexts, countriesBySource } = index
+  const builtAt = artifact.manifest.built_at
 
   const item = (hit: Hit): KnowledgeItem => {
     const chunk = artifact.chunks[hit.index]
@@ -240,7 +245,7 @@ export function createKnowledge(index: KnowledgeIndex, embedQuery: EmbedQuery): 
     const stems = placeStems(place)
     const travels: CoverageSource[] = []
     const quests: CoverageSource[] = []
-    if (!stems.length) return { place, stems, travels, quests }
+    if (!stems.length) return { index_built_at: builtAt, place, stems, travels, quests }
     for (const key of rowsBySource.keys()) {
       const head = headChunk(key)
       const inTitle = mentionsAll(normalizeText(head.title), stems)
@@ -262,7 +267,7 @@ export function createKnowledge(index: KnowledgeIndex, embedQuery: EmbedQuery): 
       Number(b.in_title) - Number(a.in_title) || b.mentions - a.mentions || a.id - b.id
     travels.sort(order)
     quests.sort(order)
-    return { place, stems, travels, quests }
+    return { index_built_at: builtAt, place, stems, travels, quests }
   }
 
   const gaps = (country: string): GapsResult => {
@@ -293,7 +298,7 @@ export function createKnowledge(index: KnowledgeIndex, embedQuery: EmbedQuery): 
     for (const key of travelKeys) addPlace(headChunk(key))
 
     const travelHeads = travelKeys.map(headChunk)
-    const result: GapsResult = { country, sources: { travels: travelKeys.length, quests: questKeys.length }, gaps: [], covered: [] }
+    const result: GapsResult = { index_built_at: builtAt, country, sources: { travels: travelKeys.length, quests: questKeys.length }, gaps: [], covered: [] }
     for (const [, place] of places) {
       const stems = placeStems(place.label)
       const own = travelHeads.filter((head) => {

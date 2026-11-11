@@ -87,6 +87,7 @@ describe('ai-index format: артефакт', () => {
       count: 3,
       built_at: '2026-10-18T00:00:00.000Z',
       source_sha256: sourceSha256(chunks),
+      sources: { travel: 3, quest: 0 },
     })
     expect(fs.statSync(path.join(dir, VECTORS_FILE)).size).toBe(3 * 4 * 2)
     expect(fs.readFileSync(path.join(dir, CHUNKS_FILE), 'utf8').trim().split('\n')).toHaveLength(3)
