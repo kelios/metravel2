@@ -116,7 +116,7 @@ Jest/static guards ниже можно запускать до review; browser/e
 `quest-editor` (авторский текст и словарь) и `quest-friction-analyst`
 (`answer_pattern` по реальным попыткам), координаты — `quest-geo-verifier`.
 
-## Обязательные правила проекта (из CLAUDE.md)
+## Обязательные правила проекта
 
 - TS strict, без `any` в `api/` и `hooks/`.
 - Импорты через алиас `@/`.
@@ -138,7 +138,8 @@ Jest/static guards ниже можно запускать до review; browser/e
 - **Рендер** — `QuestWizard` поверх `questWizardShell` (mobile/desktop layout),
   карточка шага — `questWizardStepCard`, карта — `QuestFullMap`.
 - **Печать** — `QuestPrintable` (печатная версия маршрута).
-- Прохождение требует логина (AuthGate). Квест создаётся со `status=1`.
+- Гость проходит первые `GUEST_QUEST_FREE_STEPS` шагов с локальным прогрессом (`useGuestQuestFlow`,
+  `QuestGuestGate`); дальше и запись прогресса на сервер — после входа. Квест создаётся со `status=1`.
 
 ## Рабочий процесс
 
@@ -166,8 +167,8 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 ## Что не делать
 
-- Не трогать `eas.json`, `app.json`, `plugins/`, `scripts/` без явного запроса
-  (квест-тулинг в `scripts/*quest*.js` — твоя зона; `*-quest-data.js` — нет).
+- Не трогать `eas.json`, `app.json`, `plugins/` без явного запроса; `scripts/` правится в
+  рамках задачи (AGENTS.md §3): квест-тулинг `scripts/*quest*.js` — твоя зона, `*-quest-data.js` — нет.
 - Не добавлять fallback'и и обёртки "на всякий случай".
 - Не писать докстринги и комментарии к нетронутому коду.
 - Не оставлять `console.log`.

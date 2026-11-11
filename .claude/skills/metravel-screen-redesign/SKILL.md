@@ -7,8 +7,8 @@ description: "Редизайн одного экрана по правилам �
 
 Раннбук редизайна **одного** экрана/страницы под существующую дизайн-систему MeTravel —
 не изобретая новую. Цель: лучше иерархия/композиция/адаптив при строгом соблюдении
-load-bearing правил проекта. Перед работой прочитай `CLAUDE.md`, `docs/RULES.md`,
-`docs/DESIGN_SYSTEM.md`.
+load-bearing правил проекта. Перед работой открой `docs/RULES.md` → «UI rules» и нужные
+разделы `docs/DESIGN_SYSTEM.md`.
 
 `$ARGUMENTS` — какой экран/страница (роут или фича).
 
@@ -59,7 +59,7 @@ load-bearing правил проекта. Перед работой прочит
    snapshot, console — нет ошибок, нет горизонтального скролла на mobile, шапка ≤20%,
    фото-доминанта на месте, таргеты ≥44px. Браузер-проверку НЕ перекладывать на пользователя;
    если дефолтное превью не раскладывает цель — исчерпать альтернативу (Prod Static / Playwright)
-   до объявления блокера.
+   до объявления блокера. По карточке борда эта проверка идёт на стадии `testing` после review (AGENTS §4.6), без карточки — после собственного ревью diff; до ревью — static/unit/guard checks.
 6. **Гарды и качество:** `npm run check:image-architecture`, `npm run guard:external-links`,
    `node scripts/verify-design-system.js`, плюс lint/typecheck/Jest затронутого scope
    (`/check-fast`).
@@ -85,10 +85,6 @@ reuse». Не вводить в редизайн web-only
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

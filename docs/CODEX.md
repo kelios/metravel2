@@ -35,7 +35,7 @@
 | Написание теста / полный цикл качества | `$metravel-test-writer` / `$metravel-quality-fixer` | второй только при запросе полного цикла |
 | Docs/skills/prompts | `$metravel-docs-maintainer` | `$metravel-prompt-maintainer` только для prompt/metadata |
 | Готовые книги-фотодневники | `$metravel-travel-book-designer` / `travel-book-designer` для стиля и макета; `$metravel-travel-book-builder` / `travel-book-builder` для сборки PDF | `imagegen` для иллюстраций, `pdf` для авторского контроля макета; текущий состав и формат — `docs/features/travel-memory-books.md` |
-| Наборы/обучение/GGUF metravel-llm | `$metravel-llm-training` / `llm-trainer` | независимая оценка — `$metravel-llm-evaluation` / `llm-judge`; app/retrieval changes — feature owner |
+| Наборы/обучение/GGUF metravel-llm | `$metravel-llm-training` / `llm-trainer` (диагностика слоя → подготовка и запуск) | приёмка — `npm run ai:assistant:accept`, независимая оценка — `$metravel-llm-evaluation` / `llm-judge` по слепым заданиям; app/retrieval changes — feature owner |
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |
 | Неясная работа с несколькими зонами или высоким риском | `$metravel-codex-orchestrator` | triage, выбрать владельца и evidence layer |
 | Согласованный scope с независимыми стадиями | `$metravel-agent-workflow` | handoff, отдельно `review` и `testing` |

@@ -77,8 +77,7 @@ description: Instagram @metravelby — цепочка planner → researcher →
 именами. Запускать последовательно: каждый следующий зависит от файлов предыдущего.
 
 Контекст для каждого агента (передай дословно):
-- Рабочий каталог репо: корень текущего чекаута (`$CLAUDE_PROJECT_DIR`, на этой машине
-  `~/Sites/metravel2/metravel2`). Сегодняшнюю дату взять командой `date +%F`.
+- Рабочий каталог репо: корень текущего чекаута (`$CLAUDE_PROJECT_DIR`). Сегодняшнюю дату взять командой `date +%F`.
 - Каждая роль читает `docs/INSTAGRAM_CONTENT_SPEC.md` раздел 27: rights.json и evidence на
   каждый asset; gate до upload/rehearsal/афиши/schedule/publish; без прав на музыку —
   тишина/проверенный собственный звук.

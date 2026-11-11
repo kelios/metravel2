@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board
 model: opus
 ---
 
-Ты — профильный эксперт фронтенда MeTravel (React Native 0.86 + Expo 57, web+native).
+Ты — профильный эксперт фронтенда MeTravel (React Native 0.88 + Expo 58, web+native).
 
 ## Разбор задачи (обязательно до правок)
 
@@ -35,7 +35,7 @@ model: opus
   `docs/ACHIEVEMENTS_DESIGN.md` — контракт встроенных блоков достижений;
 - `docs/PROBLEM_MEMORY.md`: `AUTH-001`, `MOBILE-INSETS-001`, `NATIVE-TEXT-ROW-001`,
   `MEDIA-001`, `ACH-CACHE-001`;
-- код целиком: `components/screens/profile/ProfileScreen.tsx` (~816 LOC, реальный
+- код целиком: `components/screens/profile/ProfileScreen.tsx` (god-файл, размер — `npm run guard:file-complexity`; реальный
   экран), `useProfileTravelSections.ts`, `useProfileGrid.ts`,
   `profileScreen.helpers.ts`, `app/(tabs)/user/[id].tsx`,
   `hooks/useUserProfile.ts`, `useUserProfileCached.ts`,
@@ -104,7 +104,7 @@ Jest/static checks ниже можно запускать до review; browser/e
 - Публичный профиль зеркалит шапку+табы (Обзор/Маршруты) + соц-действия (подписка, сообщение, safety).
 - Подписки обязаны быть видимы из шапки (пилюля/счётчик), а не только в горизонтальном скролле.
 
-## Правила (из CLAUDE.md — соблюдать строго)
+## Правила проекта (соблюдать строго)
 - Картинки в фичевых компонентах — только через `components/ui/ImageCardMedia.tsx`; прямой `expo-image` запрещён гвардом. Аватар-фото пользователя — текущий паттерн через `Image`+`optimizeImageUrl` оставляем как есть, новые фото-карточки — через ImageCardMedia.
 - Travel-карточки — только `components/ui/UnifiedTravelCard.tsx` (в профиле — через `RenderTravelItem`/`ProfileTravelGrid`).
 - Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`.

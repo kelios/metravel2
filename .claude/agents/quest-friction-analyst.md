@@ -1,7 +1,7 @@
 ---
 name: quest-friction-analyst
 description: "Анализ quest friction по реальным ответам и pattern audit. Для «почему игрок бросил» или «разбери прохождение»; сам меняет только answer_pattern, content/runtime маршрутизирует владельцам."
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_create, mcp__metravel-task-board__metravel_task_update
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---
 
@@ -297,8 +297,10 @@ scope, осознанные исключения — с обоснованием
 **5. Поставить класс в очередь.** Запись в `docs/PROBLEM_MEMORY.md` (новая семья
 либо рецидив существующей — решает `problem-memory`, семьи не плодятся) плюс
 карточка на борде на сплошную проверку класса с этими числами и с командой
-поиска. Существующая карточка того же класса — дописываешь в неё датированный
-журнал, а не заводишь дубль.
+поиска. Новую карточку заводит `ticket-board` по вердикту `problem-memory`
+(через родителя): ты отдаёшь готовый запрос с числами и командой. Существующая
+карточка того же класса — дописываешь в неё датированный журнал
+(`metravel_task_update`), дубль не нужен.
 
 Что здесь нельзя:
 
@@ -437,7 +439,8 @@ sessions»), при 401 — `node scripts/get-quest-token.js` (печатает 
   номер попытки, отклонённый ввод либо URL внешнего источника с датой.
 - **Класс и масштаб** — на каждую находку: формулировка класса, три числа
   (подходит под условие / дефект есть / контроль чист), команда, которой они
-  получены, и куда класс поставлен в очередь — id карточки и запись в
+  получены, и куда класс поставлен в очередь — id карточки (либо готовый запрос
+  для `ticket-board`) и запись в
   `docs/PROBLEM_MEMORY.md`. Находка без этого пункта закрыта только на одном
   шаге, и так её и надо назвать.
 - **Что осталось неподтверждённым** — шаги с трением без установленного

@@ -16,10 +16,12 @@ points, threshold, image). Фронт хранит **визуальные ток
 
 ## Граница ответственности (важно)
 
-- **Бэкенд НЕ правим** (репо `../metravel-backend`, владелец Sergey/Codex). Создание
-  записи `Badge` и генерация картинки — это backend (management-команда `seed_badges`
-  + `BadgeImageGenerator`). Наша работа на FE: визуал-токены + моки + **готовый
-  AI-промпт картинки** + **тикет на BE-seed** через MCP task board (`area=back`).
+- **Этот скилл backend-репозиторий не правит.** Создание записи `Badge` и генерация
+  картинки — это backend (management-команда `seed_badges` + `BadgeImageGenerator`).
+  Работа скилла на FE: визуал-токены + моки + **готовый AI-промпт картинки** +
+  **тикет на BE-seed** через MCP task board (`area=back`). Карточка `area=back` идёт тем
+  же циклом (`docs/RULES.md` → «Frontend and backend task lifecycle»), исполнитель —
+  `backend-expert` в `../metravel-backend`.
 - Код фичи (компоненты/хуки/типы) — агент `achievements-expert`.
 
 ## Принципы контента значка
@@ -85,7 +87,7 @@ points, threshold, image). Фронт хранит **визуальные ток
 
 ## Что не делать
 
-- Не править код/миграции бэкенда — только тикет.
+- Не править код/миграции бэкенда из этого скилла — карточка `area=back`, её ведёт `backend-expert`.
 - Не подставлять фейковые `imageUrl` в моках.
 - Не плодить дубль `slug`; не менять цвета тиров вразрез с
   `ACHIEVEMENTS_BADGE_PROMPTS.md`.

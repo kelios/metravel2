@@ -20,5 +20,5 @@ npm run governance:verify
 - `check:image-architecture`: прямой `expo-image` в фичевом коде → `components/ui/ImageCardMedia`.
 - `governance:verify`: читай сообщение теста, исправляй контракт или документацию.
 
-После code changes передай task diff на `$metravel-code-reviewer`.
+После code changes — независимое ревью по AGENTS §4.6: малый diff — `code-review-gate`, остальное — `review-auditor`, затем `code-review-gate`.
 В конце — список нарушений, исправлений и фактических проверок.

@@ -106,11 +106,11 @@ model: sonnet
 
 ## Главное правило: используй существующий механизм, не выдумывай свой
 
-Канонический дев-деплой — **`bash build-dev.sh`** (в корне репо). Он делает:
-1. `clean_all` — **сносит `node_modules` + `dist` и переустанавливает зависимости** (полная чистая сборка, долго: yarn `--frozen-lockfile` → fallback `yarn install` / `npm install`).
-2. `build_env dev` — копирует `.env.dev → .env`, затем `expo export -p web -c` (NODE_ENV=dev, EXPO_ENV=dev, minify, без source-map, non-lazy) → `dist/dev`. Падает, если нет `dist/dev/index.html`.
-3. `deploy_dev` — `rsync -avzhe ssh --delete ./dist/ → sergey@192.168.50.36:/home/sergey/metravel/dist/`, затем на деве:
-   `rm -rf static/dist && mv dist/dev static/dist && docker compose restart app nginx && rm -rf dist`.
+Канонический дев-деплой — **`bash build-dev.sh`** (в корне репо): `clean_all` →
+`build_env dev` → `deploy_dev`, шаги и точки остановки — «Ход операции» выше. Сверх них:
+`clean_all` переустанавливает зависимости (yarn `--frozen-lockfile` → fallback
+`yarn install` / `npm install`), экспорт идёт с `NODE_ENV=dev`, `EXPO_ENV=dev`, minify,
+без source-map, non-lazy.
 
 Полезные переменные:
 - `DEPLOY=0 bash build-dev.sh` — **собрать без выкладки** (pre-flight: проверить, что сборка проходит, дев не трогая).
@@ -148,18 +148,9 @@ nginx-конфиг (`deploy/local/nginx/nginx.conf`): `root /usr/local/metravel/
 
 ## Обязательный порядок действий
 
-1. **Pre-flight:**
-   - `git status` — ветка `main`; рабочее дерево желательно чистое.
-   - Проверь SSH: `ssh -o BatchMode=yes -o ConnectTimeout=6 sergey@192.168.50.36 whoami` → `sergey`. Нет связи — стоп, отчёт.
-   - Снять baseline здоровья: `curl -s -o /dev/null -w '%{http_code}' http://192.168.50.36/`.
-2. **Деплой:** `bash build-dev.sh` (или `DEPLOY=0` для сборки без выкладки).
-   - Не прерывать на середине rsync/свапа.
-   - Ненулевой код выхода = деплой прерван (нет `dist/dev/index.html`, упал rsync/ssh, упал `docker compose restart`) — разобрать причину из вывода, не перезапускать вслепую.
-3. **Пост-деплой верификация (обязательно):**
-   - `curl -s -o /dev/null -w '%{http_code}' http://192.168.50.36/` = **200**.
-   - Открыть пару маршрутов (`/travelsby`, `/map`) — не 404, не белый экран.
-   - **Транзиентный 404/`Connection refused` сразу после `restart`** — нормально пока контейнеры поднимаются: подождать и повторить curl 2–3 раза, прежде чем считать это ошибкой.
-   - Сверить с baseline из шага 1.
+Порядок один: «Preflight» → «Ход операции» → пост-деплой проверка по «Критериям
+успеха» со сверкой с baseline из preflight. Rsync и свап на середине не прерывать;
+транзиентный 404 сразу после `restart` — см. «Типовые механизмы отказа».
 
 ## Быстрый редеплой (без `clean_all`)
 

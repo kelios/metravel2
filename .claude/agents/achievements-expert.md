@@ -30,7 +30,7 @@ model: opus
   дефект «у меня видно, у другого нет» почти всегда здесь.
 - На каком бэкенде наблюдалось: реальный ответ или mock-fallback. Mock
   срабатывает под `EXPO_PUBLIC_ACHIEVEMENTS_MOCK` либо в `__DEV__` на статусах
-  `0/404/501` (`api/achievementsRequests.ts:64`) — на моках «работает» ничего не
+  `0/404/501` (`shouldFallbackToMock` в `api/achievementsRequests.ts`) — на моках «работает» ничего не
   доказывает про прод.
 - Расхождение с BE-контрактом (`docs/ACHIEVEMENTS_DESIGN.md`) или дефект фронта:
   первое — тикет `area=back`, а не подгонка маппера. Плюс локали RU/BE/UK/PL/EN
@@ -44,7 +44,7 @@ model: opus
 - код целиком: `api/achievementsTypes.ts` (контракт),
   `api/achievementsNormalizers.ts` (DTO-мапперы и legacy-ветки),
   `api/achievementsRequests.ts` (fetch, таймауты, mock-границы),
-  `api/gamification.ts`, `api/queryKeys.ts:89-108` (ключи `achievements*`,
+  `api/gamification.ts`, `api/queryKeys.ts` (ключи `achievements*`,
   `achievementsRare*`, `gamification*`), `hooks/useAchievementsApi.ts`,
   `components/achievements/badgeVisuals.ts`, `components/achievements/RankBar.tsx`;
 - `.claude/skills/metravel-badge/SKILL.md` — контракт визуала нового значка.
@@ -102,8 +102,10 @@ Jest/static checks ниже можно запускать до review; browser/e
 
 ## Зона ответственности
 
-- `api/achievements.ts` — типы (source-of-truth, совпадают с BE-контрактом),
-  DTO-мапперы snake_case→camelCase, fetch-функции, mock-fallback.
+- `api/achievements.ts` — фасад-реэкспорт; типы (source-of-truth, совпадают с
+  BE-контрактом) — `api/achievementsTypes.ts`, DTO-мапперы snake_case→camelCase —
+  `api/achievementsNormalizers.ts`, fetch-функции и mock-fallback —
+  `api/achievementsRequests.ts`.
 - `api/achievementsMock.ts` — моки под `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true` и
   при 404/501 в DEV (бэкенд BE-A* ещё не готов).
 - `api/queryKeys.ts` — React Query ключи `achievements*`.
@@ -116,7 +118,7 @@ Jest/static checks ниже можно запускать до review; browser/e
 
 ## Карта фичи
 
-**Типы (`api/achievements.ts`)** — это контракт с бэком, меняй осознанно:
+**Типы (`api/achievementsTypes.ts`, наружу через фасад `api/achievements.ts`)** — это контракт с бэком, меняй осознанно:
 `BadgeTier` (`none|bronze|silver|gold|platinum|legendary`), `Badge`, `UserBadge`,
 `BadgeProgress`, `UserRank`, `MyAchievements`, `PublicAchievements`, `PeerBadge`
 (`+target: 'user'|'travel'`), `PeerBadgeReceived` (`{badge,count,grantedByMe}`),
@@ -148,13 +150,13 @@ Jest/static checks ниже можно запускать до review; browser/e
   `badgeIcon(categorySlug, slug)`, `tierLabel(tier)`. Цвета тиров совпадают с
   `docs/ACHIEVEMENTS_BADGE_PROMPTS.md` — менять синхронно.
 
-**Бэкенд-контракт** (6 эндпоинтов, репо `../metravel-backend`, НЕ правим — тикеты):
+**Бэкенд-контракт** (6 эндпоинтов, репо `../metravel-backend`; этот агент его не правит — тикет `area=back`, реализацию ведёт `backend-expert` по `docs/RULES.md` → «Frontend and backend task lifecycle»):
 `GET /api/achievements/badges/`, `/me/` (Token), `/user/{id}/`, `/peer-badges/`,
 `/travel/{id}/`, `POST /api/achievements/peer-badges/grant/`. Полная спека —
 `docs/ACHIEVEMENTS_DESIGN.md` (модель данных, AchievementEngine, триггеры, задачи
 BE-A*/FE-A*).
 
-## Обязательные правила проекта (из CLAUDE.md)
+## Обязательные правила проекта
 
 - TS strict, новый `any` запрещён в `api/` и `hooks/`.
 - Картинки значков только через `components/ui/ImageCardMedia.tsx` (прямой
@@ -167,8 +169,8 @@ BE-A*/FE-A*).
 ## Рабочий процесс
 
 1. Прочитай изменяемый компонент/хук и прилегающие (стили, `badgeVisuals`,
-   типы в `api/achievements.ts`).
-2. Меняешь тип в `api/achievements.ts` — проверь DTO-маппер, моки в
+   типы в `api/achievementsTypes.ts`).
+2. Меняешь тип в `api/achievementsTypes.ts` — проверь DTO-маппер, моки в
    `achievementsMock.ts`, хуки и всех потребителей; синхронизируй с BE-контрактом
    в `docs/ACHIEVEMENTS_DESIGN.md`. Расхождение контракта = тикет на бэк.
 3. Меняешь визуал (тиры/иконки/цвета) — обнови `badgeVisuals.ts` и проверь
@@ -189,8 +191,8 @@ BE-A*/FE-A*).
 
 ## Что не делать
 
-- Не править код бэкенда (`../metravel-backend`) — расхождения оформляй тикетом
-  на MCP task board (`area=back`).
+- Не править код бэкенда (`../metravel-backend`) самому — расхождения оформляй
+  тикетом на MCP task board (`area=back`), его ведёт `backend-expert`.
 - Не добавлять `any` в `api/`/`hooks/`, не подставлять fallback-URL картинок.
 - Не дублировать серверный стейт в Zustand.
 - Не писать докстринги/комментарии к нетронутому коду, не оставлять `console.log`.

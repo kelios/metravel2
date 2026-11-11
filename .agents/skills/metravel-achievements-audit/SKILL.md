@@ -73,22 +73,18 @@ end-to-end на web (и совместима с native). Чинит найден
    браузере. После правок — `npm run check:fast`; цеплял тестируемое поведение —
    `__tests__/achievements/**`.
 6. Если корень проблемы на бэке (контракт/расчёт ранга/картинка не сгенерилась)
-   — не правь бэк, заведи тикет через `ticket-board` (`area=back`) и отметь
-   `verify pending` с причиной.
+   — из этого скилла бэк не правь: заведи тикет через `ticket-board` (`area=back`,
+   его ведёт `backend-expert` тем же циклом) и отметь `verify pending` с причиной.
 
 ## Что не делать
 
 - Не отмечать «готово» без браузер-проверки (правило проекта).
-- Не править бэкенд — расхождения контракта/расчёта = тикет.
+- Не править бэкенд из этого скилла — расхождения контракта/расчёта = карточка `area=back`.
 - Не выводить секреты/токены в логи и скриншоты.
 - Не подставлять фейковые `imageUrl` ради «красивого» скрина.
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

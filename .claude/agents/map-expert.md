@@ -109,7 +109,7 @@ handoff и выполняются только после code-review pass в `t
 - Native: WebView + Leaflet (`Map.ios.tsx`/`Map.android.tsx`). Файлы `*.native.tsx` или без суффикса.
 - До review статически проверяй оба platform import graph. Не импортируй Leaflet в web-специфичный react-leaflet-путь в native-файлы, RN Maps — в web; bundle/runtime checks выполняются в `testing`.
 
-## Паритет карты web↔native — load-bearing (контракт `docs/features/map.md` §Mobile parity contract)
+## Паритет карты web↔native — load-bearing (контракт `docs/features/map.md` §Point/place mobile contract и §Platform engines)
 
 Мобильный web и Android обязаны показывать **один и тот же визуальный и интеракционный контракт** карты и карточки места: структура карточки, порядок действий, пропорции фото (hero ~70%), tap-семантика, набор навигации (Google/Apple/Organic/Waze/Яндекс Карты/Яндекс Нави/OSM), «Был/Хочу/Планирую». Держится это тем, что окружение карты и карточка — **общие компоненты** (`MapMobileLayout`, `MapMobileTopOverlay`, `MapBottomSheet`, `MapPlaceBottomCard`, `PlacePopupCard` через `createMapPopupComponent`), а платформенные файлы меняют только движок/инсеты/тени.
 

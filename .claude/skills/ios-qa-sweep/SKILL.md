@@ -41,8 +41,9 @@ operational failures сообщи exact unblock и сохрани checkpoint.
    отдельным разрешением владельца (`/ios-release`).
 4. API-гейт: таргет по умолчанию — локальный бэк (`http://localhost:8000`), и он обязан быть
    обновлён до `origin/master` перед прогоном (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный
-   стек»): `git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset
-   --hard origin/master`, затем `bash /Users/juliasavran/Sites/metravel/run-backend.sh`.
+   стек»): fast-forward только чистого свободного checkout `../metravel-backend` (активную
+   разработку не сбрасывать, `reset --hard` не выполнять), затем
+   `bash /Users/juliasavran/Sites/metravel/run-backend.sh`.
    Симулятор ходит на `localhost` как и мак; физическое устройство — на LAN-IP мака с
    `EXPO_PUBLIC_IS_LOCAL_API=true`. Бэк не поднят или отстал — приложение покажет **пустоту
    везде** или ложные дефекты по старому API, и это легко принять за UI-баг. Прод-API

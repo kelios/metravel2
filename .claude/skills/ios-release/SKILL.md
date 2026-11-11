@@ -79,11 +79,8 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
    - **Квота плана — 15 iOS-сборок и 15 Android за расчётный период.** Дашборд
      показывает их одним агрегатом `Total builds N / 30`, и по нему легко решить,
      что у iOS есть все 30, — это неверно. Считать надо по iOS-половине.
-     Замер 03.09.2026: `Total builds 2 / 30`, обе сборки iOS, значит из
-     iOS-лимита израсходовано 2 из 15.
      - **Упавшая сборка квоту НЕ тратит**: она уходит в отдельный счётчик
-       `Waived builds` (лимит 10 за период; на 03.09.2026 израсходована 1 — это
-       ERRORED-попытка билда 6 от 01.09).
+       `Waived builds` (лимит 10 за период).
      - **Android свои 15 не использует вообще** — он собирается локальным Gradle
        (`Android builds 0`). Перелить их в iOS нельзя: лимиты платформенные.
      - Числа отдаёт только дашборд: у `eas-cli` команды про план и остаток нет
@@ -109,13 +106,11 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
      блокер сборки. Отказ 25.09.2026 (`docs/IOS_APP_REVIEW_REJECTION_20260925.md`)
      случился ровно здесь: 1.2 закрыли «по кнопкам», не сверив пять подпунктов.
    - Guideline 4.8 (Sign in with Apple при живых Google/Facebook login) **по коду
-     закрыт**, проверено 03.09.2026: entitlement `com.apple.developer.applesignin`
-     лежит в трекаемом `ios/metravel/metravel.entitlements`, есть
+     закрыт**: entitlement `com.apple.developer.applesignin` лежит в трекаемом
+     `ios/metravel/metravel.entitlements`, есть
      `components/auth/AppleSignInButton.native.tsx`, `api/appleAuth.ts`,
      `expo-apple-authentication` и `usesAppleSignIn: true`; `ios:release:guard`
-     это стережёт. Отставали ДОКУМЕНТЫ: OpenSpec-изменение запуска держало
-     задачу 3.1 как `[ ]`, а его `design.md:11` описывал состояние до правки
-     (изменение закрыто и архивировано 19.10.2026).
+     это стережёт.
    - Статус комплаенса проверять **по коду и entitlements**, а не по чек-боксам
      в OpenSpec: у проекта bare-проект `ios/`, и config-плагины туда не доезжают,
      поэтому `app.json` тоже не источник истины.
@@ -144,9 +139,12 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
      коммита сборки, и upload отказал. Сторож прав — ослаблять его нельзя.
      Порядок: сборка → загрузка → и только потом коммиты. Если HEAD всё же уехал,
      чинить надо состоянием репозитория, а не гейтом: коммит сборки уже на
-     origin, поэтому локальный `main` временно переводится на него
-     (`git reset --hard <commit>`), делается upload, и `main` возвращается на
-     `origin/main`. Пересборка ради этого — пустая трата квоты владельца.
+     origin, поэтому upload выполняется из изолированного worktree на этом коммите
+     (`git worktree add --detach <scratch>/ios-upload <commit>`, затем
+     `npm run worktree:bootstrap`; `node_modules` и `.secrets/` bootstrap не
+     переносит — подключить их до запуска). `git reset --hard` в общем checkout
+     не выполнять: он сносит правки соседних сессий. Пересборка ради этого —
+     пустая трата квоты владельца.
 8. **Submit в App Review** — отдельное решение владельца по принятому билду:
    метаданные, privacy, скриншоты, reviewer notes и демо-аккаунт проверены,
    манифест сцен этого билда — `PASS` по всем подпунктам гайдлайнов (шаг 6).

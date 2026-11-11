@@ -19,6 +19,6 @@ Use this skill when the user asks to run the migrated source command `check-fast
 3. Если упало — прочитай вывод, найди виновные файлы, почини. Не игнорируй warning'и у изменённых файлов.
 4. Прогон повторно до зелёного.
 
-После code changes передай task diff на `$metravel-code-reviewer`.
+После code changes — независимое ревью по AGENTS §4.6: малый diff — `code-review-gate`, остальное — `review-auditor`, затем `code-review-gate`.
 
 Не запускай полный test suite или полный lint — для этого есть отдельные команды.

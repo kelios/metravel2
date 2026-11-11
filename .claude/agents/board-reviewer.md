@@ -47,7 +47,7 @@ probes. `todo/backlog/in_progress` не принимай.
    → `sha`, затем `git merge-base --is-ancestor <sha коммита тикета> <sha>`.
    Сборки с коммитом тикета на проде нет → не проверяй старую сборку и не
    выдавай финальный status: верни оркестратору точный запрос на выкат
-   (`frontend-deployer`, `./build-prod.sh prod` из изолированного worktree,
+   (`frontend-deployer`, `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>`,
    `docs/WORKFLOW_OPERATIONS.md` §3.5) — это штатный шаг пайплайна, отдельной
    команды владельца он не требует. Локальный стек (Expo web против
    `http://localhost:8000`) — для проб, которые на проде невозможны (мутация

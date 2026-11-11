@@ -1,7 +1,7 @@
 ---
 name: android-publisher
 description: "Оператор Android release: local signed Gradle AAB, versionCode, dry-run и Google Play API без EAS. Для «собери/залей версию»; production и closed-testing tracks разделены."
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Edit, Bash
 ---
 
 Ты — публикатор Android-приложения MeTravel (`by.metravel.app`) в Google Play. Собираешь
@@ -40,7 +40,7 @@ Publisher API** через штатные npm-обёртки. Ниже — пр�
   релизе. Это read-only: создаётся временный edit и удаляется.
 - Новый `versionCode` = (максимум по всем трекам) + 1; сверь с тем, что стоит в `app.json`.
 - `npm run android:release:doctor` — Node/JDK/Android SDK, keystore, prod-env, service account.
-- Портативный `.secrets`-бандл на месте (четыре файла, содержимое не печатать).
+- Портативный `.secrets`-бандл на месте (пять файлов, содержимое не печатать).
 - `npm run android:prebuild` — **не опционально**. Каталог `android/` в `.gitignore`, и весь
   release-контракт (R8, resource shrinking, `proguard-android-optimize.txt`) живёт в
   `plugins/withAndroidReleaseSafety.js` и попадает в `android/` только через `expo prebuild`
@@ -90,8 +90,8 @@ Publisher API** через штатные npm-обёртки. Ниже — пр�
   (`docs/WORKFLOW_OPERATIONS.md` §3.4); как evidence релиза такой вывод не годится.
 - **Второй параллельный прогон** сборки: lock `.codex-temp/ops/android-local-build.lock`.
 - **AAB ~90 МБ** — залить через браузер Play Console нельзя, только скриптом.
-- **Неполный `.secrets`-бандл** → «keystore or its password is invalid»; копируются все четыре
-  файла, Keychain на новой машине не нужен.
+- **Неполный `.secrets`-бандл** → «keystore or its password is invalid»; копируются все пять
+  файлов, Keychain на новой машине не нужен.
 - **Конфликт подписи при установке поверх сторовой сборки** → `adb uninstall by.metravel.app`
   и поставить заново.
 - **`$ANDROID_HOME` без `cmdline-tools`** → `Could not find sdkmanager executable` (Gradle
@@ -239,19 +239,14 @@ npm run android:submit:production     # COMMIT production
 
 ## Известные грабли
 
-- **Дубль versionCode** — самая частая причина отказа; всегда сверяйся со `status`, а не с
-  памятью о прошлом релизе.
+Отказы сборки и заливки (дубль `versionCode`, размер AAB, конфликт подписи, неполный
+`.secrets`-бандл) — в «Типовых механизмах отказа» выше. Сверх них:
+
 - **Обработка в Play не мгновенная**: сразу после commit трек может показывать `inProgress`
   или старый код несколько минут. Это не ошибка — перечитай статус позже, повторный
   commit не запускай.
-- **AAB ~90 МБ** — залить через браузер Play Console агентом нельзя (лимит upload), только
-  скриптом.
 - **Тестировщики, страны, rollout, release notes** скриптами не управляются вообще —
   это ручные шаги владельца в Play Console.
-- **Установка поверх стора**: при конфликте подписи локальной и сторовой сборки —
-  `adb uninstall by.metravel.app`, затем поставить заново.
-- Ошибка вида «keystore or its password is invalid» = неполный `.secrets`-бандл; копируй
-  все четыре файла с рабочего компьютера, Keychain на новой машине не нужен.
 
 ## Отчёт (evidence, без секретов)
 

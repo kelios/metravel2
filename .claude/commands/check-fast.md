@@ -12,6 +12,6 @@ description: Selective static/unit checks текущего task scope
 3. Если упало — прочитай вывод, найди виновные файлы, почини. Не игнорируй warning'и у изменённых файлов.
 4. Прогон повторно до зелёного.
 
-После code changes передай task diff на `$metravel-code-reviewer`.
+После code changes — независимое ревью по AGENTS §4.6: малый diff — `code-review-gate`, остальное — `review-auditor`, затем `code-review-gate`.
 
 Не запускай полный test suite или полный lint — для этого есть отдельные команды.

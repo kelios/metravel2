@@ -6,8 +6,9 @@ description: "Аудит native-совместимости перед сборк
 # android-native-audit
 
 Системный поиск кода, который работает на web, но падает или ломается на
-native Android. Цель — закрыть краши **до** local build, а не ловить их на
-устройстве. Полный кодекс правил — `docs/NATIVE_COMPAT_RULES.md`; механическую
+native Android. Общий код идёт в оба native-бандла, поэтому те же находки закрывают и
+iPhone; iOS-специфика (Keychain, APNs, entitlements) — агент `ios-expert`. Цель — закрыть
+краши **до** local build, а не ловить их на устройстве. Полный кодекс правил — `docs/NATIVE_COMPAT_RULES.md`; механическую
 часть сторожит `__tests__/config/native-compat-governance.test.ts` (прогнать его —
 первый шаг аудита).
 
@@ -74,10 +75,6 @@ guarded/ложных. Не раздувать список ложными сра
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

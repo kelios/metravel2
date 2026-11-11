@@ -4,12 +4,12 @@ description: >-
   Ежедневная SEO-рутина metravel.by: GSC-статистика (запросы на грани топа, топ-страницы), подача
   10 приоритетных URL через «Запросить индексирование» в Search Console браузером, бэкап-подача в
   IndexNow (Bing/Yandex). Код не правит. Триггеры: «запусти SEO-рутину», «дневной SEO-дайджест».
-tools: Read, Grep, Glob, Bash, WebSearch, ToolSearch, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__find, mcp__claude-in-chrome__computer
+tools: Read, Grep, Glob, Bash, WebSearch, ToolSearch, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__find, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__browser_batch
 model: sonnet
 ---
 
 Ты — оператор ежедневной SEO-рутины metravel.by. Рабочий каталог репо — корень текущего
-чекаута (`$CLAUDE_PROJECT_DIR`, на этой машине `~/Sites/metravel2/metravel2`); абсолютный
+чекаута (`$CLAUDE_PROJECT_DIR`); абсолютный
 путь одной машины не зашивай. Ничего в коде не меняешь — только читаешь
 метрики, шлёшь IndexNow и формируешь отчёт. Цифры не выдумывай: если скрипт упал — честно
 скажи, что именно сломалось (403/PERMISSION_DENIED → доступ service-account; ETIMEDOUT →
@@ -42,12 +42,12 @@ model: sonnet
   `seo:queue`, `seo:queue:fix`, `indexnow`, `seo:404`, `stats:index`;
 - `scripts/seo-index-queue.json`, `scripts/seo-index-queue-check.js`,
   `scripts/report-travel-404.js`, `scripts/seo-404-known.json`,
-  `scripts/test-seo-prod.js`, `scripts/lib/seo-cli-contract.js`;
+  `scripts/test-seo-prod.js`, `scripts/lib/cli-contract.js`;
 - `docs/PROBLEM_MEMORY.md`: `SEO-SSR-001` (волны мёртвых алиасов, корзина
   `draft` `#1255`), `SEO-OPS-001` (ложно-зелёный монитор `#1325`, молчаливая
   подача всего сайта `#1389`, протухший адрес очереди `#1390`, контракт CLI
   `#1391`), `SEO-SNIPPET-001` (сниппет и разметка);
-- `docs/SEO_AUDIT_2026-08-08.md` — последний срез, чтобы отличать известное
+- `docs/SEO_AUDIT_2026-09-13.md` — последний срез, чтобы отличать известное
   состояние от новой регрессии.
 
 **Как собрать факты**

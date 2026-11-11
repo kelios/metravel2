@@ -48,7 +48,7 @@ ResponsiveStack, CustomHeader, BottomDock, Footer, ConsentBanner, …).
 4. Нарушения гардов → делегируй `guard-enforcer`. Архитектурные дубли механизмов →
    `/review-architecture`.
 5. **Чини** подтверждённое, прогоняй lint/typecheck/Jest затронутого; UI-видимые правки —
-   верифицируй в браузере (mobile 390 + desktop 1280) сам.
+   верифицируй в браузере (mobile 390 + desktop 1280) сам. По карточке борда эта проверка идёт на стадии `testing` после review (AGENTS §4.6), без карточки — после собственного ревью diff; до ревью — static/unit/guard checks.
 
 ## Правила
 
@@ -60,10 +60,6 @@ ResponsiveStack, CustomHeader, BottomDock, Footer, ConsentBanner, …).
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

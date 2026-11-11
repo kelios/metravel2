@@ -1,6 +1,6 @@
 ---
 name: metravel-llm-training
-description: "Prepare datasets, train local metravel-llm adapters, and export GGUF candidates. Use for AI training mixtures, replay, MLX memory failures, dataset leakage, or continuing a model version."
+description: "Наборы данных, локальное MLX-обучение адаптеров metravel-llm и экспорт GGUF-кандидатов: диагностика слоя причины до обучения, смеси, replay, утечки оценки, память обучения. Триггеры: «продолжай обучать модель», «новый круг/версия модели», «собери набор», «почему модель ошибается»."
 ---
 
 # Metravel LLM Training
@@ -25,11 +25,51 @@ evidence. Do not train around a retrieval/evaluator bug. State the chosen
 corrective layer, alternative, risk and rollback before editing. Reuse existing
 generators and `sets/common.py` record/split contracts; avoid a second trainer.
 
+## Diagnose before any training (mandatory)
+
+A training round costs hours of the only GPU. v5, v5-rag and v6 (#2751) were
+trained around causes that were not in the weights and all ended no-go. Before
+preparing data, run these six checks and write each result with numbers:
+
+1. **Repeat the failing request at least three times on the same prompt.** A
+   refusal that appears 2 of 3 times is probabilistic and belongs to the
+   pipeline, a 3 of 3 failure is systematic. «Какую кашу взять с собой в поход?»:
+   v4 refused 3/3, v6 2/3 — fixed by the second gate in the app (#3216), not by
+   weights.
+2. **Compare every auto-check hit with the raw answer before blaming the
+   model.** `detectLoop` produced 22 false hits out of 34: one fact shared by
+   three different quests was read as a loop. A wrong check is fixed in the
+   evaluator and old reports are recomputed (`--report`).
+3. **Compare the live prompt with the training prompt in numbers**: cards per
+   prompt, prompt tokens, snippet length. The screen sent 8 cards (median 1088
+   prompt tokens); training saw 1–5 cards under `max_seq_length` 1024 (#3268).
+   A shape the model never saw is a pipeline or data-shape cause.
+4. **Check that the feature the answer depends on is visible in the prompt.**
+   Edition 6 picked three quests in export order while the cards were shuffled:
+   48 of 67 answers did not follow card order, so «which three» was unlearnable.
+5. **Check that budget fitting keeps the point of the sample.** `fit_sources`
+   dropped the cards the answer did not name, so no sample showed more matching
+   cards than recommendations; the model listed everything it saw.
+6. **Name the new mechanism.** A new round starts only when the data or recipe
+   contains something the previous round did not have and the checks above
+   attribute the failure to it. «More steps» or «another seed» is not one.
+
+Report the diagnosis as its own artifact: failing ids, repetitions, raw
+answers, the layer and the evidence for it. The coordinator or an independent
+reviewer confirms it **before** preparation starts; preparation and launch are
+a separate stage of the same task.
+
 ## Prepare and review
 
 - Freeze source/cache, base model/tokenizer, starting adapter, code, config and
-  evaluation file hashes. Preserve previous candidates and reports. A version
-  label alone does not identify a model or dataset.
+  evaluation file hashes (`scripts/ai-assistant-eval/eval-inventory.json`).
+  Preserve previous candidates and reports. A version label alone does not
+  identify a model or dataset.
+- A resumed adapter carries its training data with it. Check the lineage, not
+  only the current mix: the v4 adapter that v6 and v7 continue was trained on
+  22 questions of `cases.jsonl` (two acceptance targets and 17 of 27 off-topic
+  questions). `prepare_training_data.py` reports lineage violations; list the
+  affected ids in the handoff so acceptance does not count them as held out.
 - Keep evaluation questions, their paraphrases, fixtures and expected answers
   out of training. Inventory **all** evaluation families, including
   `cases*.jsonl` and `eval_prompts/`, before generation. Use independently
@@ -72,9 +112,10 @@ Existing or partial output is not evidence of successful export.
 
 ## Handoff
 
-Give `llm-judge` the `$metravel-llm-evaluation` scope with frozen inputs,
+Give `llm-judge` the `metravel-llm-evaluation` scope with frozen inputs,
 baseline/candidate identities, acceptance thresholds and independent raw
-artifacts, without a desired verdict. Report data/split/replay counts,
+artifacts, without a desired verdict. Acceptance is one command —
+`npm run ai:assistant:accept` (see that skill), not a hand-built table. Report data/split/replay counts,
 code-level results, training completion/loss/resource failures, artifact paths
 and hashes, remaining gates and rollback. A launched process or lower loss is
 not improvement. Failed acceptance means **no-go**; keep the incumbent model.
@@ -83,12 +124,13 @@ Do not change a product default or deploy from this skill.
 Reusable assignment (fill concrete values; no historical permission):
 
 ```text
-Use $metravel-llm-training for <task and corrective layer>.
+Use metravel-llm-training for <task and corrective layer>.
+Stage: <diagnosis | prepare | probe/train | export>; diagnosis confirmed by <who, where>.
 Owned paths: <generator/config/new artifact paths>; preserve <existing work>.
 Inputs: <AI_HOME, base/resume hashes, caches, mix/config, unique RUN>.
 Platform/localization impact: <values>. Acceptance: <slices and thresholds>.
 Frozen evaluation inventory: <paths/hashes>; exclude from all training data.
-Authorized stage: <prepare | probe/train | export>; resource owner: <owner>.
+Resource owner: <owner>; lineage of the resumed adapter: <data path, known contaminated ids>.
 Output: manifests, exact commands, PID/checkpoint or completion, hashes,
 code-review evidence and bounded evaluation handoff; no model promotion.
 ```

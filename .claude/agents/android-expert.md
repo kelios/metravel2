@@ -39,8 +39,10 @@ code-review pass и статуса `testing`.
   локальной сборкой на выбранном эмуляторе/устройстве. Физический слой и
   `AND-USB-*` нужны только для соответствующей capability/release gate;
 - нужен ли бэкенд (регистрация push-токена, routing, эндпоинт фичи) — это
-  тикет `area=back` через `ticket-board`, код бэка не правится;
-- задеты ли protected paths `app.json`, `eas.json`, `plugins/**`, `scripts/**`
+  тикет `area=back` через `ticket-board`; backend-часть ведёт `backend-expert`
+  в `../metravel-backend` по `docs/RULES.md` → «Frontend and backend task
+  lifecycle», этот агент код бэка не правит;
+- задеты ли protected paths `app.json`, `eas.json`, `plugins/**`
   (пермишены, плагины, `versionCode`) — сам не редактируешь, описываешь и
   передаёшь `android-publisher`/владельцу; каталог `android/` в git не
   трекается и пересоздаётся prebuild'ом, поэтому правка прямо в нём не
@@ -66,7 +68,7 @@ code-review pass и статуса `testing`.
   «Current project contract», «Local device gate», «Pre-release and operation
   gate»: что вообще разрешено делать без владельца;
 - `docs/DESIGN_SYSTEM.md` и `constants/layout.ts` (`METRICS`),
-  `hooks/useTheme.ts:199` (`useThemedColors`), `hooks/useResponsive.ts`;
+  `hooks/useTheme.ts` (`useThemedColors`), `hooks/useResponsive.ts`;
 - `docs/features/map.md` §Point/place mobile contract и §Platform engines,
   `docs/features/places.md` §UI-правила, `docs/features/offline.md`,
   `docs/features/images.md`;
@@ -103,7 +105,8 @@ code-review pass и статуса `testing`.
   `npx jest __tests__/config/native-compat-governance.test.ts`, по поверхности —
   `npm run guard:text-row-sizing`, `npm run guard:touch-targets`,
   `npm run guard:external-links`, `npm run guard:no-direct-osm-tiles`;
-- EAS build/submit, Expo export и dev-client/Metro маршрут — только по явному
+- Android EAS/cloud build/submit запрещён (AGENTS.md §3): Android собирается
+  локально. Expo export и dev-client/Metro маршрут — только по явному
   разрешению владельца, дефолтом не используются.
 
 **Типовые механизмы отказа**
@@ -181,13 +184,13 @@ code-review pass и статуса `testing`.
 
 ## Правила
 
-- **Конфиги сборки не трогаешь**: `app.json`, `eas.json`, `plugins/**`, `scripts/**` — в списке «не трогать без явного запроса». Нужна правка пермишена/плагина/versionCode — опиши её и передай `android-builder` (или владельцу), сам не редактируй.
-- **EAS/dev-client не дефолт для проверки**: Android production/dev/preview EAS-сборки, submit, Expo export и dev-client/Metro route запускаются только по явному разрешению владельца. Обычный Android UI test = локальная сборка на выбранном эмуляторе; USB — только для физической capability или явно заданного device/release gate.
+- **Конфиги сборки не трогаешь**: `app.json`, `eas.json`, `plugins/**` — в списке «не трогать без явного запроса» (`scripts/` правится в рамках задачи, AGENTS.md §3). Нужна правка пермишена/плагина/versionCode — опиши её и передай `android-publisher` (или владельцу), сам не редактируй.
+- **EAS запрещён, dev-client не дефолт для проверки**: Android production/dev/preview EAS-сборки и submit запрещены (AGENTS.md §3); Expo export и dev-client/Metro route запускаются только по явному разрешению владельца. Обычный Android UI test = локальная сборка на выбранном эмуляторе; USB — только для физической capability или явно заданного device/release gate.
 - Внешние ссылки — только `@/utils/externalLinks.openExternalUrl`, не `Linking.openURL`.
 - Токен — через `utils/secureStorage.ts` (на native = `expo-secure-store`), не лезь в localStorage напрямую.
 - expo-image не импортировать напрямую — только через `ImageCardMedia`.
 - TS strict, новый `any` запрещён в `api/`/`hooks/`/`stores/`.
-- Бэкенд (push endpoint регистрации токена и т.п.) — **только тикет на общем MCP task board** (`area=back`, через агент `ticket-board`; см. `docs/TASK_BOARD_MCP.md`), код бэка не править.
+- Бэкенд (push endpoint регистрации токена и т.п.) — **тикет на общем MCP task board** (`area=back`, через агент `ticket-board`; см. `docs/TASK_BOARD_MCP.md`); реализацию ведёт `backend-expert` в `../metravel-backend`, этот агент код бэка не правит.
 
 ## Верификация реализации
 

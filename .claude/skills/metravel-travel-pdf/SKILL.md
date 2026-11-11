@@ -26,7 +26,7 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 5. **Тяжёлый runtime грузится лениво.** Точка входа — тонкий хук `usePdfExport`, вся
    генерация в `usePdfExportRuntime` + `services/`. Не импортируй генератор статически в
    UI-компонентах — сломаешь bundle-split (PERF-014).
-6. **Фото — доминанта** (правило CLAUDE.md): на фото-страницах и обложке кадр главный,
+6. **Фото — доминанта** (`docs/RULES.md` → «Images and placeholders»): на фото-страницах и обложке кадр главный,
    оверлеи только в углах; не подменяй `contain`+blur на `cover`.
 7. **Верифицируй в браузере** перед сдачей: реально открой превью книги и проверь печать
    (см. «Верификация»). «Готово» — только после визуальной проверки.
@@ -74,7 +74,7 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 | Сборка/markup | `runtime/pdfPageAssembly.ts`, `runtime/pdfRuntimeMarkup.ts` (+`pdfRuntimeMarkup/`), `runtime/pdfVisualHelpers.ts` | DOCTYPE, печатный CSS, склейка страниц, running header |
 | Контент | `services/pdf-export/parsers/ContentParser.ts`, `services/pdf-export/renderers/BlockRenderer.ts` | Парс/рендер блоков описания (plus/minus/recommendation) |
 | Темы | `services/pdf-export/themes/PdfThemeConfig.ts` (реестр), `themes/types.ts` (`PdfThemeConfig`), `themes/configs/*.ts` (20 тем) | Цвета/типографика/отступы темы |
-| Имя темы | `services/pdf-export/themes/types.ts` — канонический `PdfThemeName` (20 имён), реэкспорт из `PdfThemeConfig.ts`. ⚠️ В `components/export/ThemePreview.tsx:10` лежит ВТОРОЙ, рассинхронизированный союз на 19 имён без `illustrated` | Союз допустимых тем |
+| Имя темы | `services/pdf-export/themes/types.ts` — канонический `PdfThemeName` (20 имён), реэкспорт из `PdfThemeConfig.ts` и `components/export/ThemePreview.tsx` | Союз допустимых тем |
 | Premium-доступ | `hooks/usePdfPremium.ts` → `services/pdf-export/entitlement/PdfEntitlementSource`, потребитель `components/export/BookSettingsModal.tsx` | Тир, paywall-аналитика |
 | Пресеты | `types/pdf-presets.ts` (`BOOK_PRESETS`, `getPresetById`) | Готовые наборы настроек |
 | Типы | `types/pdf-export.ts` (`ExportStage`, `ExportConfig`), `types/book.ts`, `types/pdf-gallery.ts` | Енумы/модели |
@@ -103,7 +103,7 @@ pdf-lib НЕТ** — не добавляй их, генератор отдаёт
 1. `services/pdf-export/themes/configs/<name>.ts` — экспортируй `PdfThemeConfig`
    (colors / typography / spacing) по образцу `minimal.ts` или `classic.ts`.
 2. Зарегистрируй в `services/pdf-export/themes/PdfThemeConfig.ts` (реестр `PDF_THEMES`).
-3. Добавь имя в `PdfThemeName` (`components/export/ThemePreview.tsx`).
+3. Добавь имя в `PdfThemeName` (`services/pdf-export/themes/types.ts`).
 4. (Опц.) Превью в `ThemePreview.tsx` и/или пресет в `types/pdf-presets.ts`.
 
 ### Добавить раздел книги (напр. «Маршруты»)
@@ -192,10 +192,12 @@ UI и генератор не трогаются. Подробности зад�
 Это переиспользует ту же вёрстку/темы, что и интерактивный экспорт — единый источник
 правды по виду книги. Не дублируй рендереры.
 
-**Путь B — настоящий API-эндпоинт на бэкенде.** Бэкенд — **отдельное репо, НЕ правим**
-(см. CLAUDE.md). Если решение должно жить на сервере metravel.by (напр.
-`GET /api/travels/{id}/book.pdf`) — это **тикет на MCP-борд** (`area=back`, через агента
-`ticket-board`), а не правка здесь. Во фронте только потребляем готовый URL.
+**Путь B — настоящий API-эндпоинт на бэкенде.** Бэкенд — отдельное репо
+`../metravel-backend`; этот скилл его не правит. Если решение должно жить на сервере
+metravel.by (напр. `GET /api/travels/{id}/book.pdf`) — это **карточка MCP-борда**
+(`area=back`, через агента `ticket-board`), её ведёт `backend-expert` тем же циклом
+(`docs/RULES.md` → «Frontend and backend task lifecycle»). Во фронте только потребляем
+готовый URL.
 
 Текущее состояние: ни A, ни B не реализованы — есть только браузерная печать. Прежде
 чем строить headless, уточни у владельца, нужен ли файл на сервере (B) или достаточно
@@ -219,13 +221,10 @@ UI и генератор не трогаются. Подробности зад�
 5. На разных темах прогон 2–3 шаблонов; для списка — экспорт нескольких travel.
 
 Не отмечай «готово», пока книга реально не собралась и не распечаталась в превью.
+По карточке борда эта проверка идёт на стадии `testing` после review (AGENTS §4.6), без карточки — после собственного ревью diff; до ревью — static/unit/guard checks.
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

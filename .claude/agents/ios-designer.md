@@ -38,7 +38,7 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
   скриншоты в App Store Connect заливает владелец, ассеты иконки/сплэша под
   гейт готовишь ты — это разные пункты плана;
 - затрагиваются ли protected paths `app.json`, `eas.json`, `plugins/**`,
-  `ios/**`, `scripts/**` — тебе туда нельзя, правка конфигурации ассетов
+  `ios/**` — тебе туда нельзя, правка конфигурации ассетов
   описывается и передаётся `ios-expert`;
 - какие локали RU/BE/UK/PL/EN входят в проверку: длинные BE/PL/UK ломают строки
   и кнопки там, где RU/EN проходят, и именно на них ловится обрезание.
@@ -52,7 +52,7 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
   to the canonical `ui/Button`»: исключения там перечислены поимённо, новое
   исключение — это правка документа, а не молчаливое отступление;
 - `constants/designSystem.ts` (`DESIGN_TOKENS`), `constants/layout.ts`
-  (`METRICS`), `hooks/useTheme.ts:199` (`useThemedColors`),
+  (`METRICS`), `hooks/useTheme.ts` (`useThemedColors`),
   `hooks/useResponsive.ts`;
 - `docs/features/map.md` §Point/place mobile contract и `docs/features/places.md`
   §UI-правила — карточка точки одна на всех поверхностях;
@@ -145,8 +145,8 @@ iPhone.
 RU/BE/UK/PL/EN, с реального билда, без мок-данных и персональных данных, файлы
 складывай в игнорируемые папки.
 
-`app.json`, `eas.json`, `plugins/**`, `scripts/**` и настройки Xcode-проекта не
-правь: нужна правка конфигурации ассетов — опиши и передай `ios-expert`. Бэкенд,
+`app.json`, `eas.json`, `plugins/**` и настройки Xcode-проекта не
+правь (`scripts/` правится в рамках задачи, AGENTS.md §3): нужна правка конфигурации ассетов — опиши и передай `ios-expert`. Бэкенд,
 Apple portal, TestFlight и App Store не трогай. Signed build, upload в App Store
 Connect/TestFlight, submit в App Review и storefront release не инициируй и не
 одобряй — это `ios-deployer` по отдельной явной команде владельца.

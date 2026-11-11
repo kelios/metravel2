@@ -55,7 +55,7 @@ description: "Ведёт frontend и backend задачи MeTravel от todo д�
 | Роль (как на бэке) | Исполнитель в этом репо |
 |---|---|
 | task-watcher / manager | агент `ticket-board` (борд: create/list/update/sync) |
-| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — `task-author` оформит детали; для App Store scope и Apple-требований — `ios-analyst` |
+| refinement / BA | оркестратор: уточнить Goal/AC, при нехватке — скилл `metravel-issue` (`ticket-board`) оформит детали; для App Store scope и Apple-требований — `ios-analyst` |
 | architect (мобильный/платформенный scope) | `ios-architect` для iOS/shared границ и плана валидации |
 | designer | `ios-designer` (HIG, safe area, скриншоты стора, паритет трёх поверхностей) |
 | developer (FE) | `travel-expert`, `map-expert`, `metravel-seo-expert`, `refactor-surgeon`, `dev-loop` |
@@ -116,11 +116,9 @@ handoff до evidence, не создавай deploy-only дубль.
    - `changes_requested` (любой P1/P2) → агент сам возвращает тикет в `in_progress` с findings в
      `description`; чинит исполнитель, затем ревью прогоняется заново;
    - `pass` (чисто или только P3) → агент записывает вердикт, коммитит diff задачи ЯВНЫМИ
-     путями и пушит его в `main` (`git add <пути задачи>` → `git commit` →
-     `PREFLIGHT_SKIP_E2E=1 git push origin main` — переменная на этом переходе обязательна,
-     `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`»;
-     `git add -A` и commit без путей в общем чекауте запрещены), дописывает sha коммита в
-     `description` и только после этого переводит тикет в `testing`.
+     путями, пушит его в `main`, дописывает sha коммита в `description` и только после этого
+     переводит тикет в `testing`. Команды и порядок — `docs/TASK_BOARD_MCP.md` → «Коммит и
+     пуш — часть перехода `review → testing`».
 
    Гейт принудительный и в обратную сторону: PreToolUse-ветка того же хука блокирует
    `metravel_task_update(status="testing")`, пока для тикета нет свежего вердикта `pass`; вердикт
@@ -135,7 +133,7 @@ handoff до evidence, не создавай deploy-only дубль.
      20.09.2026); EAS и публикацию в стор без явной команды не запускай, dev-стенд — только по
      явному запросу;
    - делегируй `test-author` unit/e2e на новое поведение; видимые/web-изменения — ОБЯЗАТЕЛЬНО
-     браузерная проверка (Playwright/preview), как требует CLAUDE.md; шаги, где нужен
+     браузерная проверка (Playwright/preview), как требует AGENTS §4 → «UI/layout/interaction»; шаги, где нужен
      вход, проверяются сессией e2e-аккаунта 104 через `e2e/prod-probe`
      (`docs/WORKFLOW_OPERATIONS.md` §3.3.2), а не откладываются владельцу;
    - вызови `board-reviewer` с id тикета: он сверяет, что выкаченный sha (`.build-source.json`)
@@ -171,12 +169,10 @@ handoff до evidence, не создавай deploy-only дубль.
   `ticket-board` не ставят `testing` руками: хук `.claude/hooks/review-gate.mjs` откажет, и это
   правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
   явной просьбе пользователя и фиксируется в `description` тикета.
-- **В `testing` уходит только запушенный код.** Коммит явными путями +
-  `PREFLIGHT_SKIP_E2E=1 git push origin main`
-  выполняются ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, прод-деплой и любая
-  последующая проба берут код из `main`, а не из общего рабочего дерева. Коммит и push
-  вердикт не ломают. Чужой набор в `npm run check:preflight:dry` → узкие проверки своих путей
-  и `SKIP_PREFLIGHT=1 git push origin main` с пометкой в тикете. Протокол —
+- **В `testing` уходит только запушенный код.** Коммит явными путями и push выполняются
+  ПОСЛЕ вердикта `pass` и ДО смены статуса: приёмка, прод-деплой и любая последующая проба
+  берут код из `main`, а не из общего рабочего дерева; вердикт они не ломают. Протокол
+  (`PREFLIGHT_SKIP_E2E=1`, запрет `git add -A`, чужой набор в preflight) —
   `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
 - **Ревью и приёмка — не «по требованию».** Их поднимает статус на борде: `review` → `code-review-gate`,
   `testing` → `board-reviewer`. Оба субагента запускаются автоматически board pipeline;
@@ -197,10 +193,6 @@ handoff до evidence, не создавай deploy-only дубль.
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
+(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
+Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».

@@ -30,7 +30,11 @@ catalog по frontmatter `description`.
 - Board/backend/docs: `problem-memory`, `task-contract`, `ticket-board`,
   `sprint-reviewer`, `backend-diagnostician`, `docs-maintainer`,
   `prompt-maintainer`.
-- Local LLM: `llm-training`, `llm-evaluation`.
+- Local LLM: `llm-training`, `llm-evaluation` — общие навыки: исходник лежит в
+  `.claude/skills/metravel-llm-*` (виден Claude-сессиям через Skill), Codex и
+  Grok читают зеркало `.agents/skills/` от `npm run sync:agent-skills` (#3269).
+  В `.codex/skills/` их нет; роли `llm-trainer` и `llm-judge` ссылаются на
+  исходник.
 
 Все имена имеют prefix `$metravel-`, кроме vendor OpenSpec skills. Точные
 triggers и ограничения принадлежат frontmatter/`SKILL.md`; не копируй их сюда.

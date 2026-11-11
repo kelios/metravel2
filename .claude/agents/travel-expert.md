@@ -109,7 +109,7 @@ Jest/static checks ниже можно запускать до review; browser/e
   `api/travels*.ts`, `api/travelRoutes.ts`, `api/travelRating.ts`
 - Stores, связанные с travel (`stores/travelSectionsStore.ts`, `stores/travelStatusStore.ts`)
 
-## Обязательные правила проекта (из CLAUDE.md)
+## Обязательные правила проекта
 
 - Travel-карточки только через `components/ui/UnifiedTravelCard.tsx`.
 - Изображения только через `components/ui/ImageCardMedia.tsx` (прямой `expo-image` запрещён).
@@ -141,7 +141,7 @@ LOC сверяй перед работой: `npm run guard:file-complexity` (п�
 
 ## Что не делать
 
-- Не трогать `eas.json`, `app.json`, `plugins/`, `scripts/` без явного запроса.
+- Не трогать `eas.json`, `app.json`, `plugins/` без явного запроса; `scripts/` правится в рамках задачи (AGENTS.md §3).
 - Не добавлять fallback'и и обёртки "на всякий случай".
 - Не писать докстринги и комментарии к нетронутому коду.
 - Не оставлять `console.log` — проект и так имеет ~300 console-вызовов, не множь.

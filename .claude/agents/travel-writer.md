@@ -58,10 +58,11 @@ model: sonnet
 
 ## Выкат, индекс, журнал
 
-- Новый slug или правка, которая должна дойти до краулера, — выкатываешь сам:
-  `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha origin/main>`, затем
-  `curl -o /dev/null -w "%{http_code}" https://metravel.by/travels/<slug>` = 200.
-  Публикацию и снятие с публикации не трогаешь.
+- Новый slug и правка данных статьи выката фронта не требуют: `/travels/*`
+  рендерит SSR на запрос (#2766, `docs/features/travel.md`). Проверка —
+  `curl -o /dev/null -w "%{http_code}" https://metravel.by/travels/<slug>` = 200
+  и правка в сыром HTML. Выкат нужен только для правки кода — это шаг пайплайна
+  через `frontend-deployer`. Публикацию и снятие с публикации не трогаешь.
 - URL в индекс не подаёшь: перечисли их в отчёте для агента `seo-daily` — он
   владеет очередью `scripts/seo-index-queue.json` и подачей в Search Console.
 - После каждой статьи дописывай строку в `docs/ARTICLE_ATTENTION_LOG.md` (дата,
