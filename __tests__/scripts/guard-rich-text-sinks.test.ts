@@ -2,6 +2,7 @@ const {
   SINK_ALLOWLIST,
   DOM_SINK_ALLOWLIST,
   ATTRIBUTE_REWRITE_FILES,
+  INLINE_SCRIPT_FILES,
   parseArgs,
   lexSource,
   shouldScanFile,
@@ -134,7 +135,8 @@ describe('guard-rich-text-sinks', () => {
       '}',
     ].join('\n')
     const violations = findInlineScriptViolations({ filePath: 'components/MapPage/Map/sample.ts', content: builder })
-    expect(violations.map((v: { line: number }) => v.line)).toEqual([3, 6])
+    // #3264: `${pointsJson}` объявлен через JSON.stringify — и подстановка тоже нарушение.
+    expect(violations.map((v: { line: number }) => v.line)).toEqual([3, 5, 6])
     expect(violations.every((v: { rule: string }) => v.rule === 'inline-script')).toBe(true)
 
     // Без признаков HTML-документа JSON.stringify — обычный код.
@@ -194,6 +196,87 @@ describe('guard-rich-text-sinks', () => {
       contractVersion: OUTPUT_CONTRACT_VERSION,
       ok: false,
       violationCount: 1,
+    })
+  })
+
+  describe('#3264: границы правил', () => {
+    const domLines = (content: string) =>
+      findDomSinkViolations({ filePath: 'components/x.ts', content }).map((v: { line: number }) => v.line)
+
+    it('reads the innerHTML value to the end of the expression', () => {
+      expect(domLines([
+        "el.innerHTML = '' + html",
+        'el.innerHTML = toInertHtml(a) + b',
+        'el.innerHTML = toInertHtml(a)',
+        '  + tail',
+        "el.innerHTML = ''.concat(html)",
+        'el.innerHTML = toInertHtml(pick(a, (b)))[0]',
+      ].join('\n'))).toEqual([1, 2, 3, 5, 6])
+    })
+
+    it('still accepts a cleared or inert value in every statement position', () => {
+      expect(domLines([
+        "el.innerHTML = ''",
+        "el.innerHTML = '';",
+        'el.innerHTML = toInertHtml(render(a, (b)))',
+        "if (stale) { el.innerHTML = '' }",
+        'box.innerHTML = toInertHtml(html); next()',
+        "reset(() => (el.innerHTML = ''), 0)",
+        "el.innerHTML = ''",
+        'next()',
+      ].join('\n'))).toEqual([])
+    })
+
+    it('flags bracket writes, setHTMLUnsafe and createContextualFragment', () => {
+      expect(domLines([
+        "el['innerHTML'] = html",
+        'el["outerHTML"] += html',
+        'el.setHTMLUnsafe(html)',
+        'const node = range.createContextualFragment(html)',
+        "const same = el['innerHTML'] === html",
+        "// el['innerHTML'] = html",
+      ].join('\n'))).toEqual([1, 2, 3, 4])
+    })
+
+    it('applies the inline-script rule to the first-screen web scripts, allowlisted or not', () => {
+      expect(INLINE_SCRIPT_FILES).toEqual(expect.arrayContaining(['app/+html.tsx', 'utils/mapHeadBootstrap.ts']))
+      const content = 'export const boot = `var endpoint = ${JSON.stringify(ENDPOINT)};`'
+      for (const filePath of INLINE_SCRIPT_FILES) {
+        expect(findInlineScriptViolations({ filePath, content }).map((v: { rule: string }) => v.rule)).toEqual(['inline-script'])
+      }
+      expect(findInlineScriptViolations({ filePath: 'utils/other.ts', content })).toEqual([])
+    })
+
+    it('accepts a pre-serialized ${…Json} only when the same file serialized it', () => {
+      const builder = (declaration: string) => [
+        'export const build = (points, routesJson) => {',
+        declaration,
+        '  return `<!DOCTYPE html><script>draw(${pointsJson}, ${routesJson}, ${ZOOM})</script>`',
+        '}',
+      ].join('\n')
+      const lines = (content: string) =>
+        findInlineScriptViolations({ filePath: 'components/x.ts', content }).map((v: { line: number }) => v.line)
+
+      // `routesJson` пришёл параметром: чем его сериализовали, отсюда не видно.
+      expect(lines(builder('  const pointsJson = serializeForInlineScript(points)'))).toEqual([3])
+      expect(lines(builder("  const pointsJson = points ? serializeForInlineScript(points) : 'null'"))).toEqual([3])
+      expect(lines(builder('  const pointsJson = String(points)'))).toEqual([3, 3])
+    })
+
+    it('covers the book chain and sees an attribute name inside an alternation group', () => {
+      expect(ATTRIBUTE_REWRITE_FILES).toEqual(expect.arrayContaining([
+        'services/pdf-export/TravelDataTransformer.ts',
+        'services/pdf-export/segments/contentContinuation.ts',
+      ]))
+      const rules = (content: string) => findAttributeRewriteViolations({
+        filePath: 'services/pdf-export/segments/contentContinuation.ts',
+        content,
+      }).length
+      expect(rules("html.replace(/\\s(?:id|name)=(['\"])[\\s\\S]*?\\1/gi, '')")).toBe(1)
+      expect(rules("html.replace(/(src|href)\\s*=\\s*\"/g, '')")).toBe(1)
+      expect(rules("html.replace(/style\\s*=\\s*(\"([^\"]*)\"|'([^']*)')/gi, '')")).toBe(1)
+      expect(rules("html.replace(/^<thead(?:\\s|>)/i, '')")).toBe(0)
+      expect(rules("src.match(/[?&]v=([a-z0-9_-]{6,})/i)")).toBe(0)
     })
   })
 })

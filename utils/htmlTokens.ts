@@ -264,27 +264,28 @@ export const removeAttribute = (attrs: HtmlAttribute[], name: string): void => {
   if (index !== -1) attrs.splice(index, 1)
 }
 
-export type StartTagEditor = (tag: HtmlStartTag, html: string) => void
+export type StartTagEditor = (tag: HtmlStartTag, html: string) => void | false
 
 /**
- * Переписывает открывающие теги с именами из `tagNames` по разобранным атрибутам.
- * Всё остальное копируется из исходной строки без изменений.
+ * Переписывает открывающие теги с именами из `tagNames` (`null` — любые) по
+ * разобранным атрибутам. Всё остальное копируется из исходной строки без изменений;
+ * так же копируется тег, для которого `edit` вернул `false` («править нечего»).
  */
 export function rewriteStartTags(
   html: string,
-  tagNames: readonly string[],
+  tagNames: readonly string[] | null,
   edit: StartTagEditor,
   options?: { limit?: number },
 ): string {
   if (!html) return html
-  const names = new Set(tagNames)
+  const names = tagNames && new Set(tagNames)
   let out = ''
   let cursor = 0
   let edited = 0
   for (const token of tokenizeHtml(html)) {
-    if (token.kind !== 'start' || !names.has(token.name)) continue
+    if (token.kind !== 'start' || (names && !names.has(token.name))) continue
     if (options?.limit !== undefined && edited >= options.limit) break
-    edit(token, html)
+    if (edit(token, html) === false) continue
     out += html.slice(cursor, token.start) + serializeStartTag(token.name, token.attrs)
     cursor = token.end
     edited += 1

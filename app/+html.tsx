@@ -37,6 +37,7 @@ import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
 import { getLocaleBootCss, getLocaleBootScript } from '@/i18n/localeBootShell'
 import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff';
 import { siteDefaultRobots } from '@/utils/seo';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 
 export { getAnalyticsInlineScript };
 
@@ -113,7 +114,7 @@ const TRAVEL_LIST_PRELOAD_ENDPOINT = (() => {
 const getTravelListPreloadScript = () => String.raw`
 (function(){
   try {
-    var endpoint = ${JSON.stringify(TRAVEL_LIST_PRELOAD_ENDPOINT)};
+    var endpoint = ${serializeForInlineScript(TRAVEL_LIST_PRELOAD_ENDPOINT)};
     if (!endpoint) return;
     var loc = window.location;
     var path = String((loc && loc.pathname) || '');
@@ -125,12 +126,12 @@ const getTravelListPreloadScript = () => String.raw`
     var search = (loc && loc.search) || '';
     if (search) {
       var params = new URLSearchParams(search);
-      var filterKeys = ${JSON.stringify(TRAVEL_LIST_FILTER_PARAM_KEYS)};
+      var filterKeys = ${serializeForInlineScript(TRAVEL_LIST_FILTER_PARAM_KEYS)};
       for (var i = 0; i < filterKeys.length; i++) {
         if (params.has(filterKeys[i])) return;
       }
     }
-    if (window[${JSON.stringify(TRAVEL_LIST_PRELOAD_GLOBAL)}]) return;
+    if (window[${serializeForInlineScript(TRAVEL_LIST_PRELOAD_GLOBAL)}]) return;
     // Свой таймаут обязателен: потребитель ждёт именно этот промис, а
     // fetchWithTimeout с его LONG_TIMEOUT здесь уже не участвует. Окно то же
     // самое, поэтому обрыв не может добавить второй полный запрос поверх
@@ -151,7 +152,7 @@ const getTravelListPreloadScript = () => String.raw`
     try {
       response.then(function(){ clearTimeout(timer); }, function(){ clearTimeout(timer); });
     } catch (_e) {}
-    window[${JSON.stringify(TRAVEL_LIST_PRELOAD_GLOBAL)}] = {
+    window[${serializeForInlineScript(TRAVEL_LIST_PRELOAD_GLOBAL)}] = {
       url: endpoint,
       startedAt: Date.now(),
       response: response
@@ -163,7 +164,7 @@ const getTravelListPreloadScript = () => String.raw`
 const getTravelHeroPreloadScript = () => String.raw`
 (function(){
   try {
-    if (${JSON.stringify(process.env.NODE_ENV)} !== 'production') return;
+    if (${serializeForInlineScript(process.env.NODE_ENV)} !== 'production') return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
     if (window.__metravelTravelPreload && window.__metravelTravelPreload.data) return;
@@ -174,7 +175,7 @@ const getTravelHeroPreloadScript = () => String.raw`
     try { window.__metravelTravelPreloadTargetPath = path; } catch (_e) {}
     window.__METRAVEL_API_URL__ = '';
     var s = document.createElement('script');
-    s.src = ${JSON.stringify(TRAVEL_HERO_PRELOAD_SCRIPT_SRC)};
+    s.src = ${serializeForInlineScript(TRAVEL_HERO_PRELOAD_SCRIPT_SRC)};
     s.async = true;
     try {
       s.fetchPriority = 'high';
@@ -305,46 +306,46 @@ const getCriticalHeadScript = () => {
       if(!text)return'';
       text=decode(text).replace(/\.(html?|php)$/i,'').replace(/[-_+]+/g,' ').replace(/\s+/g,' ').trim();
       if(!text)return'';
-      if(/^\d+$/.test(text))return${JSON.stringify(i18nT('seoStatic:critical.travel'))}+' '+text;
+      if(/^\d+$/.test(text))return${serializeForInlineScript(i18nT('seoStatic:critical.travel'))}+' '+text;
       return text.charAt(0).toUpperCase()+text.slice(1);
     }
     function isAssetLikePath(path){
       return /\.(?:avif|css|gif|ico|jpe?g|js|json|map|mp4|pdf|png|svg|webmanifest|webp|woff2?|xml)$/i.test(normalizePath(path));
     }
-    var SECRET_LINK_PATHS=${JSON.stringify(SECRET_LINK_ROUTE_PATHS)};
+    var SECRET_LINK_PATHS=${serializeForInlineScript(SECRET_LINK_ROUTE_PATHS)};
     function shouldNoindexPath(path){
       var p=normalizePath(path);
       return p==='/login'||p==='/register'||p==='/registration'||SECRET_LINK_PATHS.indexOf(p)!==-1||p==='/favorites'||p==='/history'||p==='/profile'||p==='/settings'||p==='/subscriptions'||p==='/calendar'||p==='/export'||p==='/messages'||p==='/travel/new'||p==='/travels/create'||/^\/travel\/[^/]+$/.test(p)||/^\/user\/[^/]+$/.test(p)||isAssetLikePath(p);
     }
     function isGenericTitle(value){
       var t=String(value||'').trim();
-      return !t||t===${JSON.stringify(SITE_BRAND)}||t==='MeTravel'||t===${JSON.stringify(i18nT('seoStatic:critical.generic.travelTitle'))}||t===${JSON.stringify(i18nT('seoStatic:critical.generic.meTravelTitle'))}||t===${JSON.stringify(i18nT('seoStatic:critical.generic.loadingTitle'))};
+      return !t||t===${serializeForInlineScript(SITE_BRAND)}||t==='MeTravel'||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.travelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.meTravelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.loadingTitle'))};
     }
     function isGenericDescription(value){
       var d=String(value||'').trim();
-      return !d||d===${JSON.stringify(DEFAULT_DESCRIPTION)}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.findPlaceDescription'))}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.loadingDescription'))}||d===${JSON.stringify(i18nT('seoStatic:critical.generic.travelDescription'))}||d.indexOf(${JSON.stringify(i18nT('seoStatic:critical.generic.platformDescriptionPrefix'))})===0;
+      return !d||d===${serializeForInlineScript(DEFAULT_DESCRIPTION)}||d===${serializeForInlineScript(i18nT('seoStatic:critical.generic.findPlaceDescription'))}||d===${serializeForInlineScript(i18nT('seoStatic:critical.generic.loadingDescription'))}||d===${serializeForInlineScript(i18nT('seoStatic:critical.generic.travelDescription'))}||d.indexOf(${serializeForInlineScript(i18nT('seoStatic:critical.generic.platformDescriptionPrefix'))})===0;
     }
     function getRouteMeta(path){
       var normalized=normalizePath(path);
       var lastSegment=humanizeSegment(getLastSegment(normalized));
-      if(normalized==='/'||normalized==='/index')return{title:${JSON.stringify(HOME_TITLE)},description:${JSON.stringify(HOME_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/search')return{title:${JSON.stringify(SEARCH_TITLE)},description:${JSON.stringify(SEARCH_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/map')return{title:${JSON.stringify(MAP_TITLE)},description:${JSON.stringify(MAP_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/articles')return{title:${JSON.stringify(ARTICLES_TITLE)},description:${JSON.stringify(ARTICLES_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/about')return{title:${JSON.stringify(ABOUT_TITLE)},description:${JSON.stringify(ABOUT_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/become-author')return{title:${JSON.stringify(AUTHOR_TITLE)},description:${JSON.stringify(AUTHOR_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/contact')return{title:${JSON.stringify(CONTACT_TITLE)},description:${JSON.stringify(CONTACT_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/travelsby')return{title:${JSON.stringify(TRAVELSBY_TITLE)},description:${JSON.stringify(TRAVELSBY_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/quests')return{title:${JSON.stringify(QUESTS_TITLE)},description:${JSON.stringify(QUESTS_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/roulette')return{title:${JSON.stringify(ROULETTE_TITLE)},description:${JSON.stringify(ROULETTE_DESCRIPTION)},ogType:'website'};
-      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | '+${JSON.stringify(SITE_BRAND)}:${JSON.stringify(i18nT('seoStatic:critical.travel.titleFallback'))}),description:lastSegment?${JSON.stringify(i18nT('seoStatic:critical.travel.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
-      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?${JSON.stringify(i18nT('seoStatic:critical.edit.titlePrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(i18nT('seoStatic:critical.edit.titleFallback'))}),description:${JSON.stringify(i18nT('seoStatic:critical.edit.description'))},ogType:'website',robots:'noindex, nofollow'};
-      if(normalized==='/travel/new')return{title:${JSON.stringify(i18nT('seoStatic:critical.create.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.create.description'))},ogType:'website',robots:'noindex, nofollow'};
-      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${JSON.stringify(SITE_BRAND)}):${JSON.stringify(ARTICLE_FALLBACK_TITLE)},description:lastSegment?${JSON.stringify(i18nT('seoStatic:critical.article.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${JSON.stringify(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
-      if(normalized.indexOf('/quests/')===0)return{title:${JSON.stringify(HOME_TITLE)},description:${JSON.stringify(HOME_DESCRIPTION)},ogType:'website'};
-      if(normalized==='/registration'||normalized==='/register')return{title:${JSON.stringify(i18nT('seoStatic:critical.registration.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.registration.description'))},ogType:'website',robots:'noindex, nofollow'};
-      if(isAssetLikePath(normalized))return{title:${JSON.stringify(i18nT('seoStatic:critical.asset.title'))},description:${JSON.stringify(i18nT('seoStatic:critical.asset.description'))},ogType:'website',robots:'noindex, nofollow'};
-      return{title:${JSON.stringify(SITE_BRAND)},description:${JSON.stringify(DEFAULT_DESCRIPTION)},ogType:'website',robots:shouldNoindexPath(normalized)?'noindex, nofollow':undefined};
+      if(normalized==='/'||normalized==='/index')return{title:${serializeForInlineScript(HOME_TITLE)},description:${serializeForInlineScript(HOME_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/search')return{title:${serializeForInlineScript(SEARCH_TITLE)},description:${serializeForInlineScript(SEARCH_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/map')return{title:${serializeForInlineScript(MAP_TITLE)},description:${serializeForInlineScript(MAP_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/articles')return{title:${serializeForInlineScript(ARTICLES_TITLE)},description:${serializeForInlineScript(ARTICLES_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/about')return{title:${serializeForInlineScript(ABOUT_TITLE)},description:${serializeForInlineScript(ABOUT_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/become-author')return{title:${serializeForInlineScript(AUTHOR_TITLE)},description:${serializeForInlineScript(AUTHOR_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/contact')return{title:${serializeForInlineScript(CONTACT_TITLE)},description:${serializeForInlineScript(CONTACT_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/travelsby')return{title:${serializeForInlineScript(TRAVELSBY_TITLE)},description:${serializeForInlineScript(TRAVELSBY_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/quests')return{title:${serializeForInlineScript(QUESTS_TITLE)},description:${serializeForInlineScript(QUESTS_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/roulette')return{title:${serializeForInlineScript(ROULETTE_TITLE)},description:${serializeForInlineScript(ROULETTE_DESCRIPTION)},ogType:'website'};
+      if(normalized.indexOf('/travels/')===0)return{title:(lastSegment?lastSegment+' | '+${serializeForInlineScript(SITE_BRAND)}:${serializeForInlineScript(i18nT('seoStatic:critical.travel.titleFallback'))}),description:lastSegment?${serializeForInlineScript(i18nT('seoStatic:critical.travel.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${serializeForInlineScript(DEFAULT_DESCRIPTION)},ogType:'article',robots:normalized==='/travels/create'?'noindex, nofollow':undefined};
+      if(normalized.indexOf('/travel/')===0)return{title:(lastSegment?${serializeForInlineScript(i18nT('seoStatic:critical.edit.titlePrefix'))}.replace('{{value1}}', function(){return lastSegment}):${serializeForInlineScript(i18nT('seoStatic:critical.edit.titleFallback'))}),description:${serializeForInlineScript(i18nT('seoStatic:critical.edit.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(normalized==='/travel/new')return{title:${serializeForInlineScript(i18nT('seoStatic:critical.create.title'))},description:${serializeForInlineScript(i18nT('seoStatic:critical.create.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(normalized.indexOf('/article/')===0)return{title:lastSegment?(lastSegment+' | '+${serializeForInlineScript(SITE_BRAND)}):${serializeForInlineScript(ARTICLE_FALLBACK_TITLE)},description:lastSegment?${serializeForInlineScript(i18nT('seoStatic:critical.article.descriptionPrefix'))}.replace('{{value1}}', function(){return lastSegment}):${serializeForInlineScript(ARTICLE_FALLBACK_DESCRIPTION)},ogType:'article'};
+      if(normalized.indexOf('/quests/')===0)return{title:${serializeForInlineScript(HOME_TITLE)},description:${serializeForInlineScript(HOME_DESCRIPTION)},ogType:'website'};
+      if(normalized==='/registration'||normalized==='/register')return{title:${serializeForInlineScript(i18nT('seoStatic:critical.registration.title'))},description:${serializeForInlineScript(i18nT('seoStatic:critical.registration.description'))},ogType:'website',robots:'noindex, nofollow'};
+      if(isAssetLikePath(normalized))return{title:${serializeForInlineScript(i18nT('seoStatic:critical.asset.title'))},description:${serializeForInlineScript(i18nT('seoStatic:critical.asset.description'))},ogType:'website',robots:'noindex, nofollow'};
+      return{title:${serializeForInlineScript(SITE_BRAND)},description:${serializeForInlineScript(DEFAULT_DESCRIPTION)},ogType:'website',robots:shouldNoindexPath(normalized)?'noindex, nofollow':undefined};
     }
     function upsertMeta(selector,attrs,content){
       var el=document.querySelector(selector);

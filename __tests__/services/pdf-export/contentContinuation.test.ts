@@ -73,6 +73,13 @@ describe('measured-page content continuation', () => {
     expect(cells.map((entry) => entry.textContent)).toEqual(['', 'rest'])
     expect(cells[0].getAttribute('aria-hidden')).toBe('true')
     expect(nextPage.html).not.toMatch(/id=/)
+    // #3264: якоря снимаются с разобранных тегов, значения остальных атрибутов те же, что дал санитайзер.
+    const linkedHeader = `<thead><tr><th id="place"><a href="https://example.com/?q=a id='y' b">Place</a></th><th>Info</th></tr></thead>`
+    const sanitizedHref = parseHtmlBody(sanitizeRichTextForPdf(`<table>${linkedHeader}</table>`))?.querySelector('a')?.getAttribute('href')
+    expect(sanitizedHref).toContain('example.com')
+    const linked = parseHtmlBody(continueContentOnPage(fragment, linkedHeader).html)
+    expect(linked?.querySelector('th')?.getAttribute('id')).toBeNull()
+    expect(linked?.querySelector('a')?.getAttribute('href')).toBe(sanitizedHref)
     expect(nextPage.sourceTextChars).toBe(4)
     expect(nextPage.imageOccurrences).toBe(fragment.imageOccurrences)
     const mergedPage = mergeContentContinuation(nextPage.html,

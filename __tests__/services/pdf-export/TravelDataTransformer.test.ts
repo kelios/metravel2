@@ -4,6 +4,7 @@
 import { TravelDataTransformer } from '@/services/pdf-export/TravelDataTransformer';
 import { ExportError } from '@/types/pdf-export';
 import type { Travel } from '@/types/types';
+import { tokenizeHtml } from '@/utils/htmlTokens';
 
 describe('TravelDataTransformer', () => {
   let transformer: TravelDataTransformer;
@@ -63,6 +64,27 @@ describe('TravelDataTransformer', () => {
         gallery: Array.from({ length: 70 }, (_, j) => ({ url: `https://metravel.by/${i}/${j}.jpg` })),
       })) as unknown as Travel[];
       expect(() => transformer.validate(travels)).toThrow(ExportError);
+    });
+  });
+
+  describe('inline styles are edited on parsed tags (#3264)', () => {
+    const describeBook = (description: string) =>
+      new TravelDataTransformer().transform([{ id: 1, name: 'T', slug: 't', url: 't', description } as Travel])[0].description || '';
+
+    it('keeps quoted style text inside alt as text instead of turning it into attributes', () => {
+      const html = describeBook(`<p><img src="https://metravel.by/a.jpg" alt="x style='color: inherit' onerror=alert(1)"></p>`);
+
+      const img = tokenizeHtml(html).find((token) => token.kind === 'start' && token.name === 'img');
+      const attrs = img && img.kind === 'start' ? img.attrs : [];
+      expect(attrs.map((attr) => attr.name)).toEqual(['src', 'alt']);
+      expect(attrs[1].value).toBe("x style='color: inherit' onerror=alert(1)");
+    });
+
+    it('drops unprintable colour declarations and inlines known alignment classes', () => {
+      const html = describeBook('<p class="ql-align-center" style="color: inherit; margin: 0">Текст</p><p style="color: initial">Пусто</p>');
+
+      expect(html).toMatch(/<p[^>]*style="margin:\s*0;\s*text-align:\s*center;"[^>]*>Текст<\/p>/);
+      expect(html).toMatch(/<p>Пусто<\/p>/);
     });
   });
 

@@ -1,5 +1,6 @@
 import { SEASONAL_THEMES, SEASONAL_THEME_DOM_ATTRIBUTE, SEASONAL_THEME_STORAGE_KEY } from '@/constants/seasonalThemes'
 import { seasonalCalendarCore } from '@/utils/seasonalCalendarCore'
+import { serializeForInlineScript } from '@/utils/webViewBridge'
 
 /**
  * Стартовый ES5-сниппет для `app/+html.tsx`: выставляет `data-season` на `<html>`
@@ -13,15 +14,15 @@ export function getSeasonalThemeBootScript(): string {
     rules: t.rules,
   }))
   return (
-    `try{var sw=${JSON.stringify(registry)};var calendar=${seasonalCalendarCore.toString()};` +
-    `var sp=null;try{sp=window.localStorage.getItem(${JSON.stringify(SEASONAL_THEME_STORAGE_KEY)})}catch(_){}` +
+    `try{var sw=${serializeForInlineScript(registry)};var calendar=${seasonalCalendarCore.toString()};` +
+    `var sp=null;try{sp=window.localStorage.getItem(${serializeForInlineScript(SEASONAL_THEME_STORAGE_KEY)})}catch(_){}` +
     `var sid=null;` +
     `if(sp!=='off'){` +
     `var fixed=null;for(var i=0;i<sw.length;i++){if(sw[i].id===sp)fixed=sw[i].id}` +
     `if(fixed){sid=fixed}else{` +
     `var now=new Date();sid=calendar(sw,{year:now.getFullYear(),month:now.getMonth()+1,day:now.getDate()}).activeId}}` +
-    `if(sid)document.documentElement.setAttribute(${JSON.stringify(SEASONAL_THEME_DOM_ATTRIBUTE)},sid);` +
-    `else document.documentElement.removeAttribute(${JSON.stringify(SEASONAL_THEME_DOM_ATTRIBUTE)});` +
+    `if(sid)document.documentElement.setAttribute(${serializeForInlineScript(SEASONAL_THEME_DOM_ATTRIBUTE)},sid);` +
+    `else document.documentElement.removeAttribute(${serializeForInlineScript(SEASONAL_THEME_DOM_ATTRIBUTE)});` +
     `}catch(_){}`
   )
 }

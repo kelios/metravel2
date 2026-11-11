@@ -1,14 +1,16 @@
 import fs from 'fs'
 import path from 'path'
 
+import { serializeForInlineScript } from '@/utils/webViewBridge'
+
 const htmlSource = fs.readFileSync(path.resolve(process.cwd(), 'app/+html.tsx'), 'utf8')
 
 function runHeroBootstrap(pathname: string, search = '') {
   const marker = 'const getTravelHeroPreloadScript = () => String.raw`'
   const start = htmlSource.indexOf(marker) + marker.length
   const body = htmlSource.slice(start, htmlSource.indexOf('`', start))
-  const script = new Function('process', 'TRAVEL_HERO_PRELOAD_SCRIPT_SRC', `return String.raw\`${body}\``)(
-    { env: { NODE_ENV: 'production' } }, '/travel-hero-preload-v2.js',
+  const script = new Function('process', 'TRAVEL_HERO_PRELOAD_SCRIPT_SRC', 'serializeForInlineScript', `return String.raw\`${body}\``)(
+    { env: { NODE_ENV: 'production' } }, '/travel-hero-preload-v2.js', serializeForInlineScript,
   )
   const appendChild = jest.fn()
   const win = { location: { pathname, search } } as Record<string, unknown>

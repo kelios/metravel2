@@ -15,6 +15,7 @@ import {
   TRAVEL_LIST_PRELOAD_GLOBAL,
   TRAVEL_LIST_PRELOAD_TIMEOUT_MS,
 } from '@/utils/travelListPreload'
+import { serializeForInlineScript } from '@/utils/webViewBridge'
 
 const SOURCE_PATH = path.resolve(process.cwd(), 'app/+html.tsx')
 const ENDPOINT = buildTravelListPreloadUrl(TEST_API_BASE_URL, PER_PAGE)
@@ -43,14 +44,14 @@ function loadPreloadScript(endpoint: string): string {
     'TRAVEL_LIST_PRELOAD_GLOBAL',
     'TRAVEL_LIST_FILTER_PARAM_KEYS',
     'TRAVEL_LIST_PRELOAD_TIMEOUT_MS',
-    'JSON',
+    'serializeForInlineScript',
     `return String.raw\`${body}\``,
   )(
     endpoint,
     TRAVEL_LIST_PRELOAD_GLOBAL,
     TRAVEL_LIST_FILTER_PARAM_KEYS,
     TRAVEL_LIST_PRELOAD_TIMEOUT_MS,
-    JSON,
+    serializeForInlineScript,
   )
 }
 

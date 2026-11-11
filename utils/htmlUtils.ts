@@ -77,13 +77,3 @@ export function stripBase64Images(html: string): string {
     if (!html || typeof html !== 'string') return html ?? '';
     return html.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '');
 }
-
-/**
- * Safe JSON stringify that avoids breaking HTML script tags
- */
-export function safeJsonString(value: string): string {
-    return JSON.stringify(value)
-        .replace(/</g, '\\u003c')
-        .replace(/\u2028/g, '\\u2028')
-        .replace(/\u2029/g, '\\u2029');
-}

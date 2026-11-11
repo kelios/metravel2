@@ -9,7 +9,8 @@ import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { normalizeAnchorId, safeJsonString } from '@/utils/htmlUtils';
+import { normalizeAnchorId } from '@/utils/htmlUtils';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   trackArticleEditorAutosaveFailed,
@@ -71,9 +72,9 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     isUserEditingRef.current = false;
   }, ARTICLE_EDITOR_NATIVE_MESSAGE_DEBOUNCE_MS);
 
-  const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder]);
+  const safePlaceholder = useMemo(() => serializeForInlineScript(placeholder), [placeholder]);
   const safeInitialContent = useMemo(
-    () => safeJsonString(initialEditorContentRef.current ?? ''),
+    () => serializeForInlineScript(initialEditorContentRef.current ?? ''),
     [],
   );
 

@@ -14,9 +14,8 @@ import { readViewportSize } from '@/utils/viewportMetrics'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
-
 // #3262: `data-yt` приходит из разметки статьи — в адрес плеера только id ролика.
-const YOUTUBE_FACADE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{6,20}$/
+import { YOUTUBE_FACADE_VIDEO_ID_RE } from './youtubeFacadeId'
 
 type LightboxImage = { src: string; alt: string }
 type LightboxGallery = { images: LightboxImage[]; initialIndex: number }

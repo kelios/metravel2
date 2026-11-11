@@ -28,6 +28,7 @@ import {
   tokenizeHtml,
 } from '@/utils/htmlTokens'
 import { decorateRichImageFrames } from '@/components/travel/stableContent/richImageFrames'
+import { extractYouTubeFacadeVideoId } from '@/components/travel/stableContent/youtubeFacadeId'
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
 import {
   familyRouteOfMediaUrl,
@@ -552,14 +553,6 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
   })
 }
 
-// Канонический вид, в который `buildYoutubeEmbedHtmlFromUrl` приводит ЛЮБОЙ
-// ролик, — `/embed/<id>` без query. Без этой ветки id не извлекался ни разу,
-// и вместо лёгкого фасада на страницу вставал живой плеер (по одному на видео).
-const youTubeVideoId = (src: string): string | undefined =>
-  src.match(/\/embed\/([a-z0-9_-]{6,})/i)?.[1] ||
-  src.match(/[?&]v=([a-z0-9_-]{6,})/i)?.[1] ||
-  src.match(/youtu\.be\/([a-z0-9_-]{6,})/i)?.[1]
-
 // Пустой `<iframe src="…youtube…"></iframe>` → лёгкий фасад. `src` читается из
 // разобранного тега (#3202), а не регуляркой по строке.
 const replaceYouTubeIframes = (html: string): string => {
@@ -571,7 +564,7 @@ const replaceYouTubeIframes = (html: string): string => {
     const closing = tokens[index + 1]
     if (token.kind !== 'start' || token.name !== 'iframe' || closing?.kind !== 'end' || !closing.closesRawText) return
     const src = getAttribute(token.attrs, 'src') ?? ''
-    const id = src && isYouTubeEmbedUrl(src) ? youTubeVideoId(src) : undefined
+    const id = src && isYouTubeEmbedUrl(src) ? extractYouTubeFacadeVideoId(src) : undefined
     if (!id) return
     out += html.slice(cursor, token.start) + buildYouTubeFacade(id)
     cursor = closing.end

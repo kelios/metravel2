@@ -1,5 +1,6 @@
 import { Parser } from 'htmlparser2'
 import type { SafeContentFragment } from '../parsers/incrementalContent'
+import { removeAttribute, rewriteStartTags } from '@/utils/htmlTokens'
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText'
 
 const MAX_MERGE_CHARS = 32768
@@ -9,6 +10,16 @@ type Opening = { name: string; attrs: Record<string, string>; start: number; end
 
 function invalid(): never {
   throw new Error('CONTENT_CONTINUATION_INVALID')
+}
+
+const ANCHOR_ATTRIBUTES = ['id', 'name']
+
+function stripAnchorAttributes(html: string): string {
+  return rewriteStartTags(html, null, ({ attrs }) => {
+    if (!attrs.some((attr) => ANCHOR_ATTRIBUTES.includes(attr.name))) return false
+    for (const name of ANCHOR_ATTRIBUTES) removeAttribute(attrs, name)
+    return undefined
+  })
 }
 
 /** Quoted `>` is legal in sanitized attributes; do not slice tags with `[^>]*`. */
@@ -149,8 +160,9 @@ export function continueContentOnPage(fragment: SafeContentFragment, headerHtml?
   const placeholder = `<${cell} aria-hidden="true"></${cell}>`
   let header = ''
   if (context && !context.header && headerHtml) {
-    header = sanitizeRichTextForPdf(headerHtml, { suppressAutomaticHeadingAnchors: true })
-      .replace(/\s(?:id|name)=(['"])[\s\S]*?\1/gi, '')
+    // Повтор шапки не должен дублировать якоря: `id`/`name` снимаются с разобранных
+    // тегов (#3264), а не регуляркой по строке после санитайзера.
+    header = stripAnchorAttributes(sanitizeRichTextForPdf(headerHtml, { suppressAutomaticHeadingAnchors: true }))
     if (!/^<thead(?:\s|>)/i.test(header) || !/<\/thead>$/i.test(header)) return invalid()
   }
   if (fragment.html.length + header.length + column * placeholder.length > MAX_MERGE_CHARS) {

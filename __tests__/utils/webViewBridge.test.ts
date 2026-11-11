@@ -20,6 +20,26 @@ describe('webViewBridge', () => {
     expect(serialized).toContain('\\u2029')
   })
 
+  // #3264: `safeJsonString` из utils/htmlUtils удалён — его вызовы (iOS-редактор,
+  // /map bootstrap) получают тот же литерал для `<`, U+2028 и U+2029.
+  it('keeps the former safeJsonString output for <, U+2028 and U+2029', () => {
+    const ls = String.fromCharCode(0x2028)
+    const ps = String.fromCharCode(0x2029)
+    const formerSafeJsonString = (value: string) =>
+      JSON.stringify(value)
+        .replace(/</g, '\\u003c')
+        .replace(new RegExp(ls, 'g'), '\\u2028')
+        .replace(new RegExp(ps, 'g'), '\\u2029')
+
+    for (const value of ['<', 'a<b', `a${ls}b${ps}c`, '</script', 'https://metravel.by/api/travels/?page=1', '"quoted" \\ slash']) {
+      expect(serializeForInlineScript(value)).toBe(formerSafeJsonString(value))
+    }
+    // `>` и `&` экранируются дополнительно; значение в WebView то же самое.
+    const html = '<p style="a">R&D</p>'
+    expect(serializeForInlineScript(html)).not.toBe(formerSafeJsonString(html))
+    expect(JSON.parse(serializeForInlineScript(html))).toBe(html)
+  })
+
   it('accepts JSON objects only and ignores executable-looking/non-object payloads', () => {
     expect(parseWebViewJsonObject('{"type":"READY"}')).toEqual({ type: 'READY' })
     expect(parseWebViewJsonObject('globalThis.pwned=true')).toBeNull()

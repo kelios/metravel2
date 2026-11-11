@@ -104,7 +104,7 @@ describe('secret e-mail link routes', () => {
   it('pre-hydration noindex reads the shared list, not a hand copy', () => {
     const html = read('app/+html.tsx')
     expect(html).toContain("from '@/utils/secretLinkRoutes'")
-    expect(html).toMatch(/SECRET_LINK_PATHS=\$\{JSON\.stringify\(SECRET_LINK_ROUTE_PATHS\)\}/)
+    expect(html).toMatch(/SECRET_LINK_PATHS=\$\{serializeForInlineScript\(SECRET_LINK_ROUTE_PATHS\)\}/)
     expect(html).toMatch(/function shouldNoindexPath[\s\S]*?SECRET_LINK_PATHS\.indexOf\(p\)!==-1/)
   })
 

@@ -12,9 +12,11 @@ import {
 } from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
 import { toInertHtml } from '@/utils/inertHtml';
+import { getAttribute, removeAttribute, rewriteStartTags, setAttribute } from '@/utils/htmlTokens';
 import { buildDescriptionImageAspects, buildGalleryAspectsById } from './utils/imageAspects';
 import { translate as i18nT, translatePlural } from '@/i18n'
 
+const INLINE_CLASS_STYLE_TAGS = ['p', 'div', 'section', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'figure'] as const
 
 const SAFE_COLOR_FALLBACK = 'rgb(31, 41, 55)';
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
@@ -152,8 +154,9 @@ export class TravelDataTransformer {
     const withInlinedClassStyles = this.inlineKnownClassStyles(withoutVarUsage);
 
     const sanitizedHtml = sanitizeRichTextForPdf(withInlinedClassStyles);
-    // #3262: sanitizeInlineStyles правит строку регуляркой уже после санитайзера
-    // (`style='…'` внутри alt/title становится отдельными атрибутами) — рубеж последним.
+    // #3264: sanitizeInlineStyles правит `style` по разобранным тегам, а не регуляркой
+    // по строке (та превращала `style='…'` внутри alt/title в отдельные атрибуты, #3262).
+    // Рубеж `toInertHtml` остаётся последним шагом.
     const sanitizedStyles: string = toInertHtml(this.sanitizeInlineStyles(sanitizedHtml));
 
     // ✅ КРИТИЧНО: Убеждаемся что HTML валиден - если остался голый текст без тегов,
@@ -185,40 +188,33 @@ export class TravelDataTransformer {
       { re: /\balignright\b/i, style: 'float: right; margin-left: 12pt; margin-bottom: 8pt;' },
     ];
 
-    // Общий обработчик: добавляет CSS в style= если class= содержит нужные классы
-    return html.replace(
-      /<(p|div|section|h[1-6]|img|figure)([^>]*?)>/gi,
-      (full, tagNameRaw, attrsRaw) => {
-        const tagName = String(tagNameRaw).toLowerCase();
-        const attrs = String(attrsRaw || '');
-        const classMatch = attrs.match(/\bclass\s*=\s*(['"])(.*?)\1/i);
-        if (!classMatch) return full;
-        const classValue = classMatch[2] || '';
+    // Общий обработчик: добавляет CSS в `style`, если `class` содержит нужные классы.
+    // Атрибуты читаются из разобранного тега (#3264), а не регуляркой по строке.
+    return rewriteStartTags(html, INLINE_CLASS_STYLE_TAGS, ({ name, attrs }) => {
+      const classValue = getAttribute(attrs, 'class');
+      if (!classValue) return false;
 
-        const stylesToAdd: string[] = [];
-        for (const item of alignMap) {
+      const stylesToAdd: string[] = [];
+      for (const item of alignMap) {
+        if (item.re.test(classValue)) stylesToAdd.push(item.style);
+      }
+      if (name === 'img' || name === 'figure') {
+        for (const item of imgAlignMap) {
           if (item.re.test(classValue)) stylesToAdd.push(item.style);
         }
-        if (tagName === 'img' || tagName === 'figure') {
-          for (const item of imgAlignMap) {
-            if (item.re.test(classValue)) stylesToAdd.push(item.style);
-          }
-        }
-
-        if (stylesToAdd.length === 0) return full;
-
-        const styleMatch = attrs.match(/\bstyle\s*=\s*(["'])([\s\S]*?)\1/i);
-        if (styleMatch) {
-          const quote = styleMatch[1];
-          const existing = styleMatch[2] || '';
-          const merged = `${existing}${existing.trim().endsWith(';') || existing.trim() === '' ? ' ' : '; '}${stylesToAdd.join(' ')}`;
-          const newAttrs = attrs.replace(styleMatch[0], `style=${quote}${merged}${quote}`);
-          return `<${tagNameRaw}${newAttrs}>`;
-        }
-
-        return `<${tagNameRaw}${attrs} style="${stylesToAdd.join(' ')}">`;
       }
-    );
+      if (stylesToAdd.length === 0) return false;
+
+      const existing = getAttribute(attrs, 'style');
+      if (existing === undefined) {
+        attrs.push({ name: 'style', value: stylesToAdd.join(' ') });
+        return undefined;
+      }
+      const current = existing ?? '';
+      const separator = current.trim().endsWith(';') || current.trim() === '' ? ' ' : '; ';
+      setAttribute(attrs, 'style', `${current}${separator}${stylesToAdd.join(' ')}`);
+      return undefined;
+    });
   }
 
   /**
@@ -446,27 +442,24 @@ export class TravelDataTransformer {
   }
 
   private sanitizeInlineStyles(html: string): string {
-    return html.replace(/style\s*=\s*("([^"]*)"|'([^']*)')/gi, (_match, _group, doubleQuoted, singleQuoted) => {
-      const styleContent = doubleQuoted ?? singleQuoted ?? '';
-      const declarations = styleContent
-        .split(';')
-        .map((decl: string) => decl.trim())
-        .filter(Boolean)
-        .filter((decl: string) => {
-          const invalidValuePattern = /(inherit|initial|unset|currentcolor)/i;
-          if (/^color\s*:/i.test(decl) && invalidValuePattern.test(decl)) {
-            return false;
-          }
-          if (/^background-color\s*:/i.test(decl) && invalidValuePattern.test(decl)) {
-            return false;
-          }
-          return true;
-        })
-        .map((decl: string) => (decl.endsWith(';') ? decl : `${decl};`));
-      if (!declarations.length) {
-        return '';
-      }
-      return `style="${declarations.join(' ')}"`;
+    return rewriteStartTags(html, null, ({ attrs }) => {
+      const style = getAttribute(attrs, 'style');
+      if (style === undefined) return false;
+      const cleaned = this.dropUnprintableColorDeclarations(style ?? '');
+      if (cleaned) setAttribute(attrs, 'style', cleaned);
+      else removeAttribute(attrs, 'style');
+      return undefined;
     });
+  }
+
+  private dropUnprintableColorDeclarations(styleContent: string): string {
+    const invalidValuePattern = /(inherit|initial|unset|currentcolor)/i;
+    return styleContent
+      .split(';')
+      .map((decl: string) => decl.trim())
+      .filter(Boolean)
+      .filter((decl: string) => !(/^(?:background-)?color\s*:/i.test(decl) && invalidValuePattern.test(decl)))
+      .map((decl: string) => `${decl};`)
+      .join(' ');
   }
 }

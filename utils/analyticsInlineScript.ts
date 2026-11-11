@@ -6,6 +6,7 @@
  */
 import { SECRET_LINK_QUERY_PARAMS } from '@/utils/secretLinkRoutes';
 import { ANALYTICS_ORIGINS } from '@/utils/webResourceHints';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   const metrikaWebvisorEnabled =
@@ -179,7 +180,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
 
   // Secrets from e-mail links (?token=, ?hash=, ?password_reset_token=) must never
   // reach Metrika/GA4: the list comes from utils/secretLinkRoutes.js (#2121).
-  var SECRET_QUERY_PARAMS = ${JSON.stringify(SECRET_LINK_QUERY_PARAMS)};
+  var SECRET_QUERY_PARAMS = ${serializeForInlineScript(SECRET_LINK_QUERY_PARAMS)};
   function stripSecretParams(value){
     var s = String(value || '');
     var hashIndex = s.indexOf('#');

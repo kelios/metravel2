@@ -25,6 +25,14 @@ const path = require('path')
 // `serializeForInlineScript` (`utils/webViewBridge.ts`), иначе `</script>` в данных
 // закрывает скрипт. `JSON.stringify` в тексте шаблона исполняется внутри WebView
 // и правилом не считается.
+//
+// #3264: границы правил 2–4. Правило 3 читает значение `innerHTML` до конца
+// выражения (`'' + html` и `toInertHtml(a) + b` — нарушения) и ловит запись через
+// скобки, `setHTMLUnsafe` и `createContextualFragment`. Правило 4 действует и в
+// web-скриптах первого экрана (INLINE_SCRIPT_FILES), а подстановка `${…Json}` —
+// «значение уже сериализовано» — допускается только для имени, объявленного в том
+// же файле через `serializeForInlineScript`: лексер не видит, чем сериализовал
+// вызывающий. Правило 2 видит и группу имён `(?:id|name)=`.
 
 const OUTPUT_CONTRACT_VERSION = 1
 
@@ -54,20 +62,33 @@ const DOM_SINK_ALLOWLIST = new Map([
   ],
 ])
 const INLINE_SCRIPT_SIGNAL = /ReactNativeWebView|<!DOCTYPE html|\bbuildLeafletWebViewHtml\s*\(/i
+// Web-скрипты первого экрана: текст <script> собирается без сигналов WebView, а
+// `app/+html.tsx` по правилу стоков стоит в SINK_ALLOWLIST — правило 4 на него
+// действует всё равно.
+const INLINE_SCRIPT_FILES = [
+  'app/+html.tsx',
+  'utils/analyticsInlineScript.ts',
+  'utils/mapHeadBootstrap.ts',
+  'utils/seasonalThemeBootScript.ts',
+]
+const SERIALIZED_NAME_SUBSTITUTION_RE = /\$\{\s*([A-Za-z_$][\w$]*(?:Json|JSON|Serialized))\s*\}/g
 
 const ATTRIBUTE_REWRITE_FILES = [
   'components/travel/stableContent/htmlTransform.ts',
   'components/travel/stableContent/richImageFrames.ts',
+  'services/pdf-export/TravelDataTransformer.ts',
+  'services/pdf-export/segments/contentContinuation.ts',
   'utils/richTextImageLayout.ts',
   'utils/serverSafeHtml.ts',
 ]
 const ATTRIBUTE_NAMES = [
-  'src', 'srcset', 'sizes', 'class', 'style', 'width', 'height', 'alt', 'id', 'href', 'title',
+  'src', 'srcset', 'sizes', 'class', 'style', 'width', 'height', 'alt', 'id', 'name', 'href', 'title',
   'loading', 'decoding', 'fetchpriority', 'data-aspect-fallback',
 ]
 // Имя атрибута (не хвост другого слова) и `=` — допускаются `\s*`/`\s+` между ними.
+// Имя может стоять в группе перечисления: `(?:id|name)=`, `(src|href)\s*=`.
 const ATTRIBUTE_ASSIGNMENT_IN_REGEX = new RegExp(
-  `(?:^|[^A-Za-z0-9_-])(?:${ATTRIBUTE_NAMES.join('|')})(?:\\\\s[*+?]?)*=`,
+  `(?:^|[^A-Za-z0-9_-])(?:${ATTRIBUTE_NAMES.join('|')})(?:\\|[A-Za-z0-9_|-]*)?\\)?(?:\\\\s[*+?]?)*=`,
   'i',
 )
 
@@ -289,16 +310,51 @@ const findSinkViolations = ({ filePath, content }) => {
 }
 
 const DOM_HTML_ASSIGNMENT_RE = /\.(?:inner|outer)HTML\s*(\+?=)(?!=)\s*/g
+// Имя свойства строкой: `el['innerHTML'] = x`. Ищется в `code` — в `bare` текст строк погашен.
+const DOM_HTML_BRACKET_ASSIGNMENT_RE = /\[\s*(['"`])(?:inner|outer)HTML\1\s*\]\s*\+?=(?!=)/g
 const DOM_HTML_CALL_RES = [
   { re: /\binsertAdjacentHTML\s*\(/g, label: 'insertAdjacentHTML' },
   { re: /\b\w*[dD]oc(?:ument)?\s*\.\s*write(?:ln)?\s*\(/g, label: 'document.write' },
+  { re: /\bsetHTMLUnsafe\s*\(/g, label: 'setHTMLUnsafe' },
+  { re: /\bcreateContextualFragment\s*\(/g, label: 'createContextualFragment' },
 ]
+const EXPRESSION_CONTINUATION_CHARS = new Set('+-*/%.[(?:&|=<>^`'.split(''))
+
+/** Индекс сразу за закрывающей скобкой вызова, чья `(` стоит по индексу `open`; -1 — не закрыт. */
+const endOfCall = (bare, open) => {
+  let depth = 0
+  for (let j = open; j < bare.length; j += 1) {
+    if (bare[j] === '(') depth += 1
+    else if (bare[j] === ')') {
+      depth -= 1
+      if (depth === 0) return j + 1
+    }
+  }
+  return -1
+}
+
+/** После значения выражение кончилось: `;`, закрывающая скобка, запятая либо новая инструкция с новой строки. */
+const endsExpression = (rest) => {
+  const gap = /^\s*/.exec(rest)[0]
+  const next = rest[gap.length]
+  if (next === undefined || ';})],'.includes(next)) return true
+  return gap.includes('\n') && !EXPRESSION_CONTINUATION_CHARS.has(next)
+}
+
+const isSafeDomHtmlValue = (value) => {
+  const empty = /^(?:''|""|``)/.exec(value)
+  if (empty) return endsExpression(value.slice(empty[0].length))
+  const call = /^toInertHtml\s*\(/.exec(value)
+  if (!call) return false
+  const end = endOfCall(value, call[0].length - 1)
+  return end !== -1 && endsExpression(value.slice(end))
+}
 
 const findDomSinkViolations = ({ filePath, content }) => {
   const normalizedPath = normalizePath(filePath)
   if (!SINK_SCAN_ROOTS.some((root) => normalizedPath.startsWith(root))) return []
   if (DOM_SINK_ALLOWLIST.has(normalizedPath)) return []
-  const { bare } = lexSource(content)
+  const { code, bare } = lexSource(content)
   const sourceLines = String(content).split('\n')
   const violations = []
   const report = (index, reason) => {
@@ -309,9 +365,13 @@ const findDomSinkViolations = ({ filePath, content }) => {
   DOM_HTML_ASSIGNMENT_RE.lastIndex = 0
   while ((match = DOM_HTML_ASSIGNMENT_RE.exec(bare))) {
     const value = bare.slice(match.index + match[0].length)
-    const clears = match[1] === '=' && /^(?:''|""|``)(?![\w$.([])/.test(value)
-    const inert = match[1] === '=' && /^toInertHtml\s*\(/.test(value)
-    if (!clears && !inert) report(match.index, 'innerHTML/outerHTML: только пустая строка или toInertHtml(...) из utils/inertHtml.ts')
+    if (match[1] !== '=' || !isSafeDomHtmlValue(value)) {
+      report(match.index, 'innerHTML/outerHTML: только пустая строка или toInertHtml(...) из utils/inertHtml.ts, без продолжения выражения')
+    }
+  }
+  DOM_HTML_BRACKET_ASSIGNMENT_RE.lastIndex = 0
+  while ((match = DOM_HTML_BRACKET_ASSIGNMENT_RE.exec(code))) {
+    report(match.index, "['innerHTML']/['outerHTML']: запись через скобки запрещена — `.innerHTML = toInertHtml(...)`")
   }
   for (const { re, label } of DOM_HTML_CALL_RES) {
     re.lastIndex = 0
@@ -325,13 +385,29 @@ const findDomSinkViolations = ({ filePath, content }) => {
 const findInlineScriptViolations = ({ filePath, content }) => {
   const normalizedPath = normalizePath(filePath)
   if (!SINK_SCAN_ROOTS.some((root) => normalizedPath.startsWith(root))) return []
-  if (SINK_ALLOWLIST.has(normalizedPath)) return []
+  const listed = INLINE_SCRIPT_FILES.includes(normalizedPath)
+  if (!listed && SINK_ALLOWLIST.has(normalizedPath)) return []
   const { code, bare } = lexSource(content)
-  if (!INLINE_SCRIPT_SIGNAL.test(code)) return []
+  if (!listed && !INLINE_SCRIPT_SIGNAL.test(code)) return []
   const sourceLines = String(content).split('\n')
   const violations = []
   const re = /\bJSON\s*\.\s*stringify\s*\(/g
   let match
+  SERIALIZED_NAME_SUBSTITUTION_RE.lastIndex = 0
+  while ((match = SERIALIZED_NAME_SUBSTITUTION_RE.exec(bare))) {
+    const declaration = new RegExp(
+      `\\b(?:const|let|var)\\s+${match[1].replace(/\$/g, '\\$')}\\s*=[^;\\n]*\\bserializeForInlineScript\\s*\\(`,
+    )
+    if (declaration.test(bare)) continue
+    const line = lineOf(bare, match.index)
+    violations.push({
+      file: normalizedPath,
+      line,
+      rule: 'inline-script',
+      snippet: sourceLines[line - 1].trim(),
+      reason: `\${${match[1]}} в тексте <script>: «уже сериализованное» значение объявляется в этом же файле через serializeForInlineScript(...), а не приходит параметром`,
+    })
+  }
   while ((match = re.exec(bare))) {
     const line = lineOf(bare, match.index)
     violations.push({
@@ -342,7 +418,7 @@ const findInlineScriptViolations = ({ filePath, content }) => {
       reason: 'данные в текст <script> — только serializeForInlineScript (utils/webViewBridge.ts): JSON.stringify не экранирует </script>',
     })
   }
-  return violations
+  return violations.sort((a, b) => a.line - b.line)
 }
 
 const findAttributeRewriteViolations = ({ filePath, content }) => {
@@ -445,6 +521,7 @@ module.exports = {
   DOM_SINK_ALLOWLIST,
   ATTRIBUTE_REWRITE_FILES,
   ATTRIBUTE_ASSIGNMENT_IN_REGEX,
+  INLINE_SCRIPT_FILES,
   parseArgs,
   lexSource,
   shouldScanFile,

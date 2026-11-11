@@ -5,6 +5,7 @@ import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { translate as i18nT } from '@/i18n'
 import { getSeasonalThemeBootScript } from '@/utils/seasonalThemeBootScript'
 import { SECRET_LINK_ROUTE_PATHS } from '@/utils/secretLinkRoutes'
+import { serializeForInlineScript } from '@/utils/webViewBridge'
 
 const { injectMeta } = require('@/scripts/postprocess-route-shells')
 const { normalizeHeadCharset } = require('@/scripts/lib/htmlCharset')
@@ -23,8 +24,9 @@ function loadCriticalHeadScript(): string {
   const getter = source.slice(start + marker.length, end).trim()
   return new Function(
     'i18nT', 'SITE_BRAND', 'getMapSeoTitle', 'getMapSeoDescription', 'SECRET_LINK_ROUTE_PATHS', 'DESIGN_COLORS', 'getSeasonalThemeBootScript',
+    'serializeForInlineScript',
     `return (${getter})()`,
-  )(i18nT, 'Metravel', getMapSeoTitle, getMapSeoDescription, SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript)
+  )(i18nT, 'Metravel', getMapSeoTitle, getMapSeoDescription, SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript, serializeForInlineScript)
 }
 
 function runCriticalHead(doc: Document, pathname: string): void {
