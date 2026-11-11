@@ -3,12 +3,13 @@
  * Меняет ТОЛЬКО поле `order` у шагов живого квеста (двухфазно, без коллизий unique).
  * step_id не трогает — прогресс игроков переживает реордер.
  *
- * node scripts/reorder-quest-steps-prod.js --quest-id=<qid> --order=<step_id,step_id,...> [--dry-run]
+ * node scripts/reorder-quest-steps-prod.js --quest-id=<qid> --order=<step_id,step_id,...> [--dry-run | --apply]
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3211).
  */
 const { createToolSession, publicRequest, TokenError, formatTokenError } = require('./lib/metravel-tool-session');
 
 const args=process.argv.slice(2);
-const dry=args.includes('--dry-run');
+const { isDryRun: dry } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['quest-id', 'order', 'api-url'] });
 const qid=(args.find(a=>a.startsWith('--quest-id='))||'').split('=')[1];
 const orderArg=(args.find(a=>a.startsWith('--order='))||'').split('=').slice(1).join('=');
 const API=(args.find(a=>a.startsWith('--api-url='))||'').split('=')[1]||'https://metravel.by';
@@ -27,5 +28,5 @@ async function patch(e,b) { if(dry){console.log('[DRY] PATCH',e,JSON.stringify(b
  if(missing.length||extra.length){console.error('MISMATCH missing:',missing,'extra:',extra);process.exit(1);}
  for(let i=0;i<want.length;i++) await patch(`/api/quest-steps/${byId.get(want[i]).id}/`,{order:900+i});
  for(let i=0;i<want.length;i++) await patch(`/api/quest-steps/${byId.get(want[i]).id}/`,{order:i+1});
- console.log(`✅ ${qid}: ${want.join(' -> ')}`);
+ console.log(`${dry ? '[DRY] порядок не записан' : '✅'} ${qid}: ${want.join(' -> ')}`);
 })().catch(e=>{console.error('Fatal:',formatTokenError(e));process.exit(1);});

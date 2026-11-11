@@ -85,6 +85,10 @@ acquireBuildLock()
 
 const allowDirty =
   process.env.ALLOW_DIRTY === '1' || process.argv.includes('--allow-dirty')
+// `--deploy 1` остаётся (#3272), хотя `dist/prod` с #3209 никто не публикует:
+// это прод-образ для приёмки и перф-замеров, и его маркер источника должен
+// называть чистый запушенный коммит. Сверку с живой ревизией (`--live-check`)
+// этот путь не просит — её делает издатель, `scripts/deploy-prod.sh`.
 runStep('node', [
   'scripts/assert-deployable-source.js',
   '--deploy',

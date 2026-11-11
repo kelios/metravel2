@@ -665,86 +665,19 @@ def materialize_v3(root, archive_stream, raw, lookup, transfer, releases):
 
 
 @contextlib.contextmanager
-def legacy_lock(root, *, root_cleanup=False):
+def legacy_lock(root):
     # Also works before the backend contract is deployed; same path, UID and
     # flock as operation_lock(). The active type is rechecked under the lock.
+    # Its only caller is the `overlay` read of an unmanaged static root: the
+    # CAS operations that mutated that root were removed in #3272.
     require(root.is_dir() and not root.is_symlink(), "Static parent must exist")
-    require(os.geteuid() == root.stat().st_uid or (root_cleanup and os.geteuid() == 0), "Operation must use the static owner UID")
-    flags = os.O_RDWR | os.O_NOFOLLOW
-    if not root_cleanup:
-        flags |= os.O_CREAT
-    fd = os.open(root / '.quest-seo-operation.lock', flags, 0o600)
+    require(os.geteuid() == root.stat().st_uid, "Operation must use the static owner UID")
+    fd = os.open(root / '.quest-seo-operation.lock', os.O_RDWR | os.O_NOFOLLOW | os.O_CREAT, 0o600)
     with os.fdopen(fd, 'rb') as lock:
         require(stat.S_ISREG(os.fstat(lock.fileno()).st_mode), "Regular lock required")
         fcntl.flock(lock, fcntl.LOCK_EX)
         require(not (root / 'dist').is_symlink(), "Managed root: use the normal v1 deploy/rollback")
         yield
-
-
-def legacy_identity(root):
-    active = root / 'dist'
-    if not active.exists():
-        return 'none'
-    require(active.is_dir() and not active.is_symlink(), 'Legacy directory required')
-    info = active.stat()
-    return f'{info.st_dev}:{info.st_ino}'
-
-
-def legacy_operation(action, arguments):
-    root = Path('/app/static')
-    with legacy_lock(root, root_cleanup=action in ('legacy-prune', 'legacy-prepare', 'legacy-chunk')):
-        if action == 'legacy-check':
-            print(legacy_identity(root))
-            return
-        expected, *extra = arguments
-        require(legacy_identity(root) == expected, 'Legacy CAS refused')
-        active, staged, old = root / 'dist', root / 'dist.new', root / 'dist.old'
-        if action == 'legacy-commit':
-            require(staged.is_dir() and not staged.is_symlink() and not old.exists() and not old.is_symlink(), 'Unsafe legacy staging')
-            if active.exists():
-                active.rename(old)
-            try:
-                staged.rename(active)
-            except OSError:
-                if not active.exists() and old.is_dir():
-                    old.rename(active)
-                raise
-            print(legacy_identity(root))
-        elif action == 'legacy-rollback':
-            require(old.is_dir() and not old.is_symlink(), 'Prior legacy tree missing')
-            rejected = root / ('dist.failed.' + str(os.getpid()))
-            active.rename(rejected)
-            try:
-                old.rename(active)
-            except OSError:
-                rejected.rename(active)
-                raise
-            # Retain failed bytes for owner inspection; no deletion after rollback.
-            print(legacy_identity(root))
-        elif action in ('legacy-prune', 'legacy-prepare'):
-            for entry in root.iterdir():
-                if entry.name in ('dist.new', 'dist.old') or entry.name.startswith(('dist.old-', 'dist.old.stale-', 'dist.failed.')):
-                    require(entry.is_dir() and not entry.is_symlink(), 'Unknown legacy leftover')
-                    shutil.rmtree(entry)
-            if action == 'legacy-prepare':
-                uid, gid = (int(value) for value in extra)
-                require(uid > 0 and gid > 0, 'Host staging owner required')
-                staged.mkdir()
-                os.chown(staged, uid, gid)
-        elif action == 'legacy-chunk':
-            new, old_name = extra
-            require(all('/' not in name and name.endswith('.js') and '..' not in name for name in extra), 'Chunk name refused')
-            directory = active / '_expo/static/js/web'
-            require(directory.resolve() == directory, 'Chunk directory link refused')
-            source, target = directory / new, directory / old_name
-            require(source.is_file() and not source.is_symlink() and not target.is_symlink(), 'Chunk file refused')
-            # nginx prefers `<name>.br` (brotli_static); a copy of the old bytes would shadow the new chunk.
-            compressed = directory / (old_name + '.br')
-            require(not compressed.is_symlink(), 'Chunk file refused')
-            compressed.unlink(missing_ok=True)
-            shutil.copyfile(source, target)
-        else:
-            raise ValueError('Unknown legacy action')
 
 
 def inventory(package, activation, releases, budget, incoming=0):
@@ -1012,9 +945,6 @@ def main():
         return
     if action in ('pack', 'unpack'):
         (pack if action == 'pack' else unpack)(Path(arguments[0]).absolute())
-        return
-    if action.startswith('legacy-'):
-        legacy_operation(action, arguments)
         return
     package, activation, active, releases = backend()
     if action in ('inventory-v2', 'storage-plan-v2', 'stage-v2', 'transfer-plan-v3', 'stage-v3'):

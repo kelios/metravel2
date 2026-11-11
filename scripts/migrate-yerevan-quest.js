@@ -3,14 +3,14 @@
  * Миграция квеста «Ереван: Город на вулкане» на прод.
  *
  * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/migrate-yerevan-quest.js \
- *   --api-url=https://metravel.by --token=YOUR_TOKEN
+ *   --apply --api-url=https://metravel.by --token=YOUR_TOKEN
  *
- * Dry run (без записи):
+ * Пробный прогон (режим по умолчанию, без записи):
  *   node scripts/migrate-yerevan-quest.js --dry-run
  */
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token'] });
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';

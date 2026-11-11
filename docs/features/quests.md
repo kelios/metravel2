@@ -1582,7 +1582,10 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
 - Тайлы/атрибуция карты — общий контракт `config/mapWebTileContract.ts`.
 - Контент квестов: `scripts/<city>-quest-data.js` + универсальная идемпотентная
   миграция `node scripts/migrate-quest-from-file.js --source-file=… --dry-run|--apply`
-  (отдельный `migrate-<city>-quest.js` — только для нестандартной логики),
+  (отдельный `migrate-<city>-quest.js` — только для нестандартной логики; такие
+  разовые скрипты и `reorder-quest-steps-prod.js` без флага режима делают
+  пробный прогон, пишут на прод только с `--apply`, а неизвестный флаг — отказ:
+  `scripts/lib/one-off-write-mode.js`, #3211),
   гейт data-файла `npm run quest:gates -- --source=…`, итоговая оценка
   независимого ревью ≥8/10 перед заливкой (скилл `metravel-quest` →
   `references/quality-score.md`, правило владельца 09.11.2026),

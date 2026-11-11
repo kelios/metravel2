@@ -1,7 +1,6 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { spawnSync } from 'child_process';
 import { makeTempDir, removeDir, runCli } from './cli-test-utils';
 
 // #2479: полный источник OSM из страновых PBF-экстрактов (sources/osm_pbf.py) —
@@ -16,7 +15,7 @@ const findPython = (): string | null => {
   );
   for (const candidate of candidates) {
     if (candidate.includes('/') && !fs.existsSync(candidate)) continue;
-    const probe = spawnSync(candidate, ['-I', '-c', 'import osmium, shapely'], { encoding: 'utf8' });
+    const probe = runCli(candidate, ['-I', '-c', 'import osmium, shapely']);
     if (probe.status === 0) return candidate;
   }
   return null;

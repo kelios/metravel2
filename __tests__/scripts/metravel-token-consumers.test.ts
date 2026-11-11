@@ -38,12 +38,33 @@ function runConsumer(script: string, args: string[], identity: number, failure?:
 }
 
 test.each([
-  ['scripts/migrate-amsterdam-quest.js', 1],
-  ['scripts/create-brest-guide.js', 104],
-])('actual %s consumer refuses a different actor before content or login', (script, identity) => {
-  const run = runConsumer(String(script), [], Number(identity))
+  ['scripts/migrate-amsterdam-quest.js', 1, ['--apply']],
+  ['scripts/create-brest-guide.js', 104, []],
+])('actual %s consumer refuses a different actor before content or login', (script, identity, args) => {
+  const run = runConsumer(String(script), args as string[], Number(identity))
   expect(run.status).toBe(1)
   expect(run.counts).toMatchObject({ mutations: 0, login: 0 })
+})
+
+// #3211: разовые квестовые скрипты без флага режима — пробный прогон, а опечатка
+// во флаге — отказ до первого запроса, а не боевая запись.
+it('one-off quest migration without a mode flag rehearses and sends nothing', () => {
+  const run = runConsumer('scripts/migrate-amsterdam-quest.js', [], 104)
+  expect(run.status).toBe(0)
+  expect(run.stdout).toContain('DRY RUN')
+  // напоминание — последней строкой: после «✅ Миграция завершена» самого скрипта
+  expect(run.stderr.trim().split('\n').pop()).toContain('на прод ничего не пишется; боевая запись: --apply')
+  expect(run.counts).toMatchObject({ identity: 0, login: 0, mutations: 0 })
+})
+
+test.each([
+  ['scripts/migrate-amsterdam-quest.js', ['--dryrun']],
+  ['scripts/migrate-amsterdam-quest.js', ['--dry-run', '--apply']],
+  ['scripts/reorder-quest-steps-prod.js', ['--quest-id=fixture', '--order=a,b', '--dryrun']],
+])('one-off quest script %s refuses %j before any request', (script, args) => {
+  const run = runConsumer(String(script), args as string[], 104)
+  expect(run.status).toBe(2)
+  expect(run.counts).toMatchObject({ identity: 0, login: 0, mutations: 0, publicReads: 0 })
 })
 
 it('maintenance dry-run reads public bundles without identity/login/cache publication', () => {
@@ -68,7 +89,7 @@ it('SEO rejects a credential-bearing configured target before printing it', () =
 })
 
 test.each(['bundle', 'step'] as const)('actual migration stops all later writes after terminal authentication at %s', (terminalAt) => {
-  const run = runConsumer('scripts/migrate-amsterdam-quest.js', [], 104, undefined, terminalAt)
+  const run = runConsumer('scripts/migrate-amsterdam-quest.js', ['--apply'], 104, undefined, terminalAt)
   expect(run.status).toBe(1)
   expect(run.stderr).toContain('authentication')
   expect(run.counts).toMatchObject({ identity: 1, login: 0, mutations: terminalAt === 'step' ? 1 : 0 })

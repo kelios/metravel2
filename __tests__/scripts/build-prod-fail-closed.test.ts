@@ -195,6 +195,27 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     expect(actions().slice(-2)).toEqual([`finalize-code ${SHA}`, `rollback-code ${SHA}`])
   })
 
+  // #3272: the signal lands while a successful `finalize-code` is still running.
+  // The release is accepted; a rollback would be refused by the backend and the
+  // report would ask for a manual return of an intact production.
+  it('does not roll an accepted release back when the signal arrives during finalization', () => {
+    const result = publish({ STUB_SIGNAL_ON: 'finalize-code' })
+
+    expect(result.status).toBe(143)
+    expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, 'capability', `finalize-code ${SHA}`])
+    expect(result.stdout).toContain(`релиз ${SHA.slice(0, 9)} уже принят, прод не возвращается`)
+    expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+    expect(result.stdout).not.toContain('переключён, но не подтверждён')
+  })
+
+  it('still returns the release when the interrupted finalization itself failed', () => {
+    const result = publish({ STUB_SIGNAL_ON: 'finalize-code', STUB_FAIL: 'finalize-code' })
+
+    expect(result.status).toBe(143)
+    expect(actions().slice(-2)).toEqual([`finalize-code ${SHA}`, `rollback-code ${SHA}`])
+    expect(result.stdout).toContain('✅ Возврат выполнен')
+  })
+
   it('asks for a manual rollback, loudly and with a failing code, when the automatic one fails', () => {
     const result = publish({ STUB_SIGNAL_ON: 'capability', STUB_FAIL: 'rollback-code' })
 

@@ -16,7 +16,60 @@ const SAFE_VALUE_PATTERNS = [
   /^\$\{\{\s*secrets\..+\}\}$/,
 ]
 
+// ── Ключ, вписанный литералом в отслеживаемый файл (#3211) ──────────────────
+// Правила выше смотрят на ИМЯ: путь `.env*` и присваивание `SECRET_KEY=…` в
+// конфиге. `const TOKEN = '<40 hex>'` в `scripts/*.js` под них не попадал и
+// пролежал в публичном репозитории с февраля по ноябрь 2026. Здесь проверяется
+// ФОРМАТ значения, в любом текстовом файле; само значение в отчёт не попадает
+// никогда — только файл, строка и причина.
+const BINARY_FILE_PATTERN =
+  /\.(?:png|jpe?g|webp|gif|ico|icns|heic|avif|pdf|ttf|otf|woff2?|mp[34]|mov|webm|zip|gz|tgz|jar|keystore|jks|p8|p12|aab|apk|ipa|bin|wasm)$/i
+// 40 шестнадцатеричных знаков — формат ключа DRF, но и git-объекта. В прозе и
+// разметке интерфейса это ссылки на коммиты и идентификаторы связей, поэтому
+// голый литерал там не проверяется; заголовок `Token <ключ>` — проверяется везде.
+const HEX_LITERAL_EXEMPT_PATTERN = /\.(?:mdx?|storyboard|xib)$/i
+const HEX_KEY_LITERAL = /(['"`])[0-9a-fA-F]{40}\1/g
+// Литерал, привязанный к имени git-объекта или контрольной суммы, ключом не
+// считается: `const SHA = '…'`, `commit: '…'`, `baseSha`. Сравниваются целые
+// слова имени, поэтому `shareToken` исключением не становится.
+const NON_KEY_NAME_WORDS = new Set([
+  'sha', 'sha1', 'commit', 'revision', 'rev', 'blob', 'tree', 'oid', 'hash', 'digest', 'checksum', 'fingerprint',
+])
+const KEY_FORMATS = [
+  { reason: 'authorization header with a literal 40-hex key', pattern: /\b(?:Token|Bearer)\s+[0-9a-fA-F]{40}(?![0-9A-Za-z_])/ },
+  { reason: 'GitHub token literal', pattern: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})/ },
+  { reason: 'Slack token literal', pattern: /\bxox[abprs]-[A-Za-z0-9-]{20,}/ },
+  { reason: 'Stripe live key literal', pattern: /\b[sr]k_live_[A-Za-z0-9]{20,}/ },
+  { reason: 'Telegram bot token literal', pattern: /(?<![0-9A-Za-z_])\d{8,10}:AA[A-Za-z0-9_-]{33}(?![0-9A-Za-z_-])/ },
+  // С телом ключа: одна строка-заголовок встречается в детекторах и шаблонах.
+  { reason: 'private key block', pattern: /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:\\r|\\n|\s)*[A-Za-z0-9+/]{32,}/ },
+]
+// Дешёвый отсев: построчный разбор нужен единицам файлов из тысяч.
+const KEY_FORMAT_HINT = /[0-9a-fA-F]{40}|gh[pousr]_|github_pat_|xox[abprs]-|[sr]k_live_|:AA[A-Za-z0-9_-]{33}|PRIVATE KEY-----/
+
 const normalizePath = (filePath) => filePath.split(path.sep).join('/')
+
+const nameWords = (text) =>
+  String(text).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/)
+
+const findKeyLiterals = (content, { hexLiterals = true } = {}) => {
+  const text = String(content ?? '')
+  if (!KEY_FORMAT_HINT.test(text)) return []
+  const found = []
+  const lines = text.split(/\r?\n/)
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    for (const { reason, pattern } of KEY_FORMATS) {
+      if (pattern.test(line)) found.push({ line: index + 1, reason })
+    }
+    if (!hexLiterals) continue
+    for (const match of line.matchAll(HEX_KEY_LITERAL)) {
+      if (nameWords(line.slice(0, match.index)).some((word) => NON_KEY_NAME_WORDS.has(word))) continue
+      found.push({ line: index + 1, reason: '40-hex key literal' })
+    }
+  }
+  return found
+}
 
 const isAllowedEnvPlaceholder = (filePath) => ALLOWED_ENV_PLACEHOLDER.test(normalizePath(filePath))
 
@@ -44,10 +97,19 @@ const findSensitiveAssignments = (content) => {
   return [...keys]
 }
 
-const readTrackedFiles = (root) =>
-  execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
-    .split('\0')
-    .filter(Boolean)
+// Индекс плюс неигнорируемый untracked-срез: ключ в новом файле должен краснеть
+// до `git add`, а не после коммита (тот же приём, что у guard корня репозитория).
+const readTrackedFiles = (root) => [
+  ...new Set(
+    execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    })
+      .split('\0')
+      .filter(Boolean),
+  ),
+]
 
 const scanFiles = (root, filePaths) => {
   const violations = []
@@ -63,11 +125,17 @@ const scanFiles = (root, filePaths) => {
       violations.push({ file: relativePath, reason: 'forbidden env/secret path' })
     }
 
-    if (!CONFIG_FILE_PATTERN.test(relativePath)) continue
+    if (BINARY_FILE_PATTERN.test(relativePath)) continue
     const stat = fs.statSync(absolutePath)
     if (!stat.isFile() || stat.size > 1024 * 1024) continue
+    const content = fs.readFileSync(absolutePath, 'utf8')
 
-    for (const key of findSensitiveAssignments(fs.readFileSync(absolutePath, 'utf8'))) {
+    for (const { line, reason } of findKeyLiterals(content, { hexLiterals: !HEX_LITERAL_EXEMPT_PATTERN.test(relativePath) })) {
+      violations.push({ file: relativePath, line, reason })
+    }
+
+    if (!CONFIG_FILE_PATTERN.test(relativePath)) continue
+    for (const key of findSensitiveAssignments(content)) {
       violations.push({ file: relativePath, key, reason: 'literal sensitive assignment' })
     }
   }
@@ -97,7 +165,8 @@ const run = ({ root = process.cwd(), filePaths } = {}) => {
   process.stderr.write(`Environment/secret guard found ${violations.length} violation(s):\n`)
   for (const violation of violations) {
     const keySuffix = violation.key ? ` key=${violation.key}` : ''
-    process.stderr.write(`- ${violation.file}${keySuffix}: ${violation.reason}\n`)
+    const lineSuffix = violation.line ? `:${violation.line}` : ''
+    process.stderr.write(`- ${violation.file}${lineSuffix}${keySuffix}: ${violation.reason}\n`)
   }
   return 1
 }
@@ -108,6 +177,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  findKeyLiterals,
   findSensitiveAssignments,
   isAllowedEnvPlaceholder,
   isForbiddenSecretPath,

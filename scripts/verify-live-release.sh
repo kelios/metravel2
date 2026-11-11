@@ -18,10 +18,11 @@ ORIGIN="${VERIFY_LIVE_ORIGIN:-https://metravel.by}"
 ATTEMPTS="${VERIFY_LIVE_ATTEMPTS:-3}"
 DELAY="${VERIFY_LIVE_RETRY_DELAY:-12}"
 
+# Тот же чтец, что у гейта источника перед выкатом (#3272): «до» и «после»
+# одного выката читают /.build-source.json одним кодом.
+LIVE_BUILD_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/live-build-source.js"
 live_sha() {
-  curl -fsS --max-time 10 "$ORIGIN/.build-source.json" 2>/dev/null \
-    | node -e 'let s="";process.stdin.on("data",(d)=>{s+=d}).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).sha||""))}catch{}})' \
-    || true
+  node "$LIVE_BUILD_SOURCE" "$ORIGIN" 2>/dev/null || true
 }
 
 # Печатает строки кодов; код возврата 0 — все три URL ответили 200.

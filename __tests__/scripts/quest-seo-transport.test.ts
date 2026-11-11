@@ -1,10 +1,9 @@
 /** @jest-environment node */
-// The private archive transport and the legacy static-root lock of
-// scripts/quest-seo-transport.py stay live for the owner recovery script
-// (scripts/fix-missing-chunk.sh via scripts/quest-seo-legacy-operation.sh;
-// scripts/fix-prod.sh was removed in #3209). These cases moved here from the
-// retired quest-seo-operation.test.ts when the static quest publication
-// pipeline was removed (#2766).
+// The private archive transport and the static-root lock of
+// scripts/quest-seo-transport.py. These cases moved here from the retired
+// quest-seo-operation.test.ts when the static quest publication pipeline was
+// removed (#2766); the CAS operations on the static root and their recovery
+// scripts went with #3209 and #3272.
 import path from 'path'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
@@ -64,50 +63,7 @@ print('sealed cover/lock/CAS PASS')
     } finally { removeDir(root) }
   })
 
-  it('writer death between legacy renames releases the same lock and cannot mutate a subsequent managed pointer', () => {
-    const root = makeTempDir('quest-e-writer-death-')
-    try {
-      const result = runCli('python3', ['-B', '-c', `
-import fcntl, importlib.util, os, pathlib, subprocess, sys
-root=pathlib.Path(sys.argv[2]).resolve(); static=root/'static'; static.mkdir(); (static/'dist').mkdir(); (static/'dist.new').mkdir(); (static/'dist'/'old').write_text('retained'); (static/'dist.new'/'new').write_text('candidate')
-child="""
-import importlib.util, os, pathlib, signal, sys
-spec=importlib.util.spec_from_file_location('m',sys.argv[1]); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-static=pathlib.Path(sys.argv[2])/'static'; original=m.Path; m.Path=lambda p:static if p=='/app/static' else original(p)
-# Patch Path.rename, not os.rename: pathlib on Python 3.9 binds os.rename at
-# import time (_NormalAccessor), so an os-level patch never pauses the writer.
-rename=pathlib.Path.rename
-def pause_after_first(a,b):
- result=rename(a,b)
- if str(b).endswith('dist.old'): print('first rename',flush=True); signal.pause()
- return result
-pathlib.Path.rename=pause_after_first
-m.legacy_operation('legacy-commit',[m.legacy_identity(static)])
-"""
-p=subprocess.Popen([sys.executable,'-B','-c',child,sys.argv[1],str(root)],stdout=subprocess.PIPE,text=True)
-try:
- assert p.stdout.readline().strip()=='first rename'
- fd=os.open(static/'.quest-seo-operation.lock',os.O_RDWR)
- try:
-  try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB); raise AssertionError('writer failed to own lock')
-  except BlockingIOError:pass
-  p.kill(); p.wait(timeout=5); fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-  (static/'dist').symlink_to('quest-seo-releases/new-owner/dist')
- finally:os.close(fd)
- spec=importlib.util.spec_from_file_location('m',sys.argv[1]); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); original=m.Path; m.Path=lambda p:static if p=='/app/static' else original(p)
- try:m.legacy_operation('legacy-commit',['none']); raise AssertionError('managed pointer mutated')
- except ValueError:pass
- assert os.readlink(static/'dist')=='quest-seo-releases/new-owner/dist' and (static/'dist.old'/'old').read_text()=='retained'
- print('writer death and managed CAS PASS')
-finally:
- if p.poll() is None:p.kill(); p.wait(timeout=5)
-`, path.resolve('scripts/quest-seo-transport.py'), root])
-      expect(result.status).toBe(0)
-      expect(result.stdout).toContain('managed CAS PASS')
-    } finally { removeDir(root) }
-  })
-
-  it('preserves bytes/mtime, rejects archive links/traversal and tree links, and holds flock through legacy mutation', () => {
+  it('preserves bytes/mtime, rejects archive links/traversal and tree links, and holds the static-root flock', () => {
     const root = makeTempDir('quest-e-transport-')
     try {
       const result = runCli('python3', ['-B', '-c', `

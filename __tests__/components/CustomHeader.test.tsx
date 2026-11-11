@@ -80,10 +80,15 @@ jest.mock('@/hooks/useSafeAreaInsetsSafe', () => ({
 }));
 
 // Моки для expo-router
-jest.mock('expo-router', () => ({
-    usePathname: jest.fn(),
-    useRouter: jest.fn(),
-}));
+jest.mock('expo-router', () => {
+    const { mockExpoRouterLink, mockExpoRouterSingleton } = require('../helpers/expoRouterMock');
+    return {
+        usePathname: jest.fn(),
+        useRouter: jest.fn(),
+        router: mockExpoRouterSingleton,
+        Link: mockExpoRouterLink,
+    };
+});
 
 describe('CustomHeader', () => {
     const mockPush = jest.fn();
@@ -447,10 +452,12 @@ describe('CustomHeader', () => {
             }
         });
 
-        it('does not crash when primary navigation config is unavailable', async () => {
+        // Экспорт всегда массив (`constants/headerNavigation.ts`), поэтому «конфига нет»
+        // моделируется пустым списком, а не `undefined` (#3281).
+        it('does not crash when the desktop bar has no navigation items', async () => {
             const headerNavigationModule = require('@/constants/headerNavigation');
             const originalBar = headerNavigationModule.DESKTOP_BAR_NAV_ITEMS;
-            headerNavigationModule.DESKTOP_BAR_NAV_ITEMS = undefined;
+            headerNavigationModule.DESKTOP_BAR_NAV_ITEMS = [];
 
             try {
                 (usePathname as jest.Mock).mockReturnValue('/');

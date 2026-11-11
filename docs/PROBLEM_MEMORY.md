@@ -1320,8 +1320,9 @@ guard, падающий в CI на попытке обойти этот конт
   "1986"` на `metravel.by/` наутро после выкладки `#1721` (перегруппировка
   shared-чанков по маршрутам, из 48 shared-файлов имя сохранили 8); свежая
   сессия открывала сайт без ошибок, прогон замыкания sync-зависимостей по всем
-  128 чанкам и 8 HTML — 0 пробелов. Ранее `scripts/fix-missing-chunk.sh` —
-  ручная подмена `CustomHeader-*.js` для «закэшированного старого _layout».
+  128 чанкам и 8 HTML — 0 пробелов. Ранее разовый скрипт подмены чанка
+  (удалён в #3272) вручную копировал `CustomHeader-*.js` для «закэшированного
+  старого _layout».
 - **Подтверждённые причины:** (1) upstream `getAsyncChunkTargets` при
   `includeAsyncPaths` (прод-экспорт) выходит до наших циклов, поэтому хеш имени
   маршрутного/секционного чанка не включал его shared-зависимости — имя жило
@@ -1760,10 +1761,11 @@ guard, падающий в CI на попытке обойти этот конт
 - **Controls:** общий source-contract test читает реальные `build-prod.sh`,
   `scripts/deploy-prod.sh` и `scripts/web-ssr-publication.sh` (до #3209 — и
   `scripts/fix-prod.sh`), запрещает Docker/Compose lifecycle commands и содержит
-  negative fixtures; оба пути используют Nginx config validation + graceful
-  reload без изменения container identity/restart count.
-- **Решение для новой жалобы:** lifecycle-команда вернулась в одном из этих двух
-  путей — `reopen #1427`; новый frontend-owned deploy/recovery entrypoint с тем
+  negative fixtures. Путь публикации один — SSR-пара `scripts/deploy-prod.sh` →
+  `build-prod.sh` → `scripts/web-ssr-publication.sh` (#2766, #3209): контейнеры
+  и Nginx переключает backend-хелпер релиза, фронт их не трогает.
+- **Решение для новой жалобы:** lifecycle-команда вернулась в пути публикации
+  — `reopen #1427`; новый frontend-owned deploy/recovery entrypoint с тем
   же обходом — `create-linked` к `#1427` и сразу расширить общий guard. Backend
   deploy или scheduler lifecycle относится к `#1368`/backend family.
 - **Последняя проверка:** 2026-08-13; локальная реализация `#1427`, production
@@ -6723,8 +6725,8 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Итог #2186:** 89 % → 74 % (занято 12 776 → 10 644 МБ). Устойчивый коридор
   диска при всех классах в своих пределах — 74–81 %.
 - **Открыто:** контрольный замер по классам не раньше 12.10.2026 (#2247);
-  аварийный `scripts/fix-prod.sh` переносит overlay копией без пределов и без
-  проверки места (#2226); предел кэша nginx (#2225); дубли SSG-страниц (#2227).
+  предел кэша nginx (#2225); дубли SSG-страниц (#2227). Аварийный скрипт с
+  переносом overlay без пределов (#2226) удалён в #3209.
 - **Regression control:** `__tests__/scripts/deploy-expo-overlay.test.ts`
   (бюджет, целые поколения, заменяемый релиз, срок),
   `__tests__/scripts/deploy-disk-guard.test.ts` (отказ до заливки, сборка образа
@@ -8107,8 +8109,9 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   `rsync` в прод-чекаут бэкенда. Каждое изменение штатного пути (имена
   контейнеров, владелец `static/`, гейты источника, пределы overlay, SSR-релизы
   #2766) приходилось повторять в нём, и пять раз этого не сделали. После #2766
-  он отказывал на `legacy-check` уже после заливки `dist/`, `icons/`, `images/`
-  и этим останавливал следующий штатный выкат («прод-чекаут грязный»).
+  он отказывал на проверке статического корня уже после заливки `dist/`,
+  `icons/`, `images/` и этим останавливал следующий штатный выкат («прод-чекаут
+  грязный»).
 - **Инвариант:** на прод пишет один издатель — `scripts/web-ssr-publication.sh`
   (`stage` → `web-ssr/incoming/<sha>`). Аварийный возврат — те же операции:
   `rollback-code`, исправление вперёд, backend `rollback-code --accepted`,
@@ -8120,8 +8123,8 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   из документов в границах бэкенда.
 - **Решение для новой жалобы:** появился скрипт со своей заливкой на прод-хост —
   `reopen #3209`, а не правка скрипта под текущий прод. Остаток статической эры
-  (`scripts/fix-missing-chunk.sh`, `scripts/quest-seo-legacy-operation.sh`) на
-  управляемом SSR-корне отказывает на `legacy-check` без записи.
+  (скрипт подмены чанка и legacy-операции `scripts/quest-seo-transport.py`)
+  удалён в #3272.
 
 ### DEPLOY-MONOTONIC-LIVE-REVISION-001 — выкат ревизии старше живой тихо откатывал прод
 

@@ -30,12 +30,10 @@ published and complete locale), city and country landings, `/`, `/quests` and
 
 ## What remains from the static era
 
-- `scripts/fix-missing-chunk.sh` still mutates the static root only through
-  the CAS legacy operations of `scripts/quest-seo-transport.py`
-  (`scripts/quest-seo-legacy-operation.sh`); on the SSR-managed root its
-  `legacy-check` refuses. The emergency `scripts/fix-prod.sh` was removed in
-  #3209: recovery is `docs/WORKFLOW_OPERATIONS.md` → «Аварийный возврат прошлой
-  версии».
+- No script mutates the static root any more: the chunk-copy script and the
+  CAS legacy operations of `scripts/quest-seo-transport.py` went with #3272;
+  the emergency `scripts/fix-prod.sh` was removed in #3209. Recovery is
+  `docs/WORKFLOW_OPERATIONS.md` → «Аварийный возврат прошлой версии».
 - Retained v1 generations on the production disk and their manual cleanup are
   described in [prod-disk-growth.md](prod-disk-growth.md) → «Поколения
   v1-публикации».

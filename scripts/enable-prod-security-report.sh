@@ -28,7 +28,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./deploy-target.sh
 source "${SCRIPT_DIR}/deploy-target.sh"
 
-CRON_SCHEDULE="${CRON_SCHEDULE:-10 9 * * *}"   # время хоста (Europe/Minsk), после SEO-отчёта 09:00
+# Письмо уходит в 09:00 по Варшаве круглый год (#3266). Хост живёт по Europe/Minsk
+# (UTC+3 без перевода часов), а Варшава часы переводит: её 09:00 — это 10:00 хоста
+# летом и 11:00 зимой. Поэтому cron будит обёртку в оба часа, а условие пропускает
+# только тот, где в Варшаве ровно 09. `\%` — экранирование для crontab: голый `%`
+# там означает перевод строки. Своё расписание — целиком через CRON_SCHEDULE.
+# shellcheck disable=SC2016  # строка уходит в crontab как текст, раскрывает её cron
+DEFAULT_CRON_SCHEDULE='0 10,11 * * * test "$(TZ=Europe/Warsaw /bin/date +\%H)" = 09 &&'
+CRON_SCHEDULE="${CRON_SCHEDULE:-$DEFAULT_CRON_SCHEDULE}"
 REPORT_EMAIL="${REPORT_EMAIL:-metraveldev@gmail.com}"
 REPORT_HOST="${REPORT_HOST:-metravel.by}"
 # Свои адреса не считаются атакой и лимитом: публичный IPv4 этой машины плюс
@@ -45,9 +52,11 @@ usage() {
                     свои адреса и crontab не трогаются
   --preview         собрать отчёт сейчас и напечатать (без письма)
   --run-now         собрать отчёт сейчас и отправить письмо
-  --verify          проверить критерии приёмки #2721, ничего не меняя
+  --verify          проверить критерии приёмки #2721, ничего не меняя: cron-строка
+                    хоста сверяется с той, что записала бы установка
   -h, --help        эта справка
 
+Расписание по умолчанию — 09:00 по Варшаве (Europe/Warsaw) круглый год.
 Переменные окружения: CRON_SCHEDULE, REPORT_EMAIL, REPORT_HOST, IGNORE_IPS.
 Адрес сервера — из .env.deploy (scripts/deploy-target.sh).
 USAGE
@@ -75,7 +84,7 @@ trap 'rm -f "$payload"' EXIT
 
 {
   # Константы — телом payload, не аргументами ssh: удалённый шелл переразбирает
-  # командную строку, и `10 9 * * *` расщепляется по пробелам (см. db-backup).
+  # командную строку, и расписание расщепляется по пробелам (см. db-backup).
   printf 'CRON_SCHEDULE=%q\nREPORT_EMAIL=%q\nREPORT_HOST=%q\nIGNORE_IPS=%q\nMODE=%q\n' \
     "$CRON_SCHEDULE" "$REPORT_EMAIL" "$REPORT_HOST" "$IGNORE_IPS" "$MODE"
   printf 'SCRIPT_B64=%q\n' "$(base64 < "${SCRIPT_DIR}/security-report.py" | tr -d '\n')"
@@ -93,6 +102,10 @@ STATE_FILE="$HOME/.local/state/metravel/security-report-state.json"
 CRON_MARK="# metravel-security-report"
 
 fail() { echo "❌ $*" >&2; exit 1; }
+
+# Одна сборка cron-строки для установки и для --verify: иначе проверка сверяла бы
+# хост не с тем, что запишет следующая установка (#3266).
+expected_cron_line() { printf '%s %s %s\n' "$CRON_SCHEDULE" "$WRAPPER" "$CRON_MARK"; }
 
 # Обе копии ставятся вместе: отчёт без модуля свежести печатает ⚠ «возраст не
 # проверен». Сначала во временные файлы и компиляция, потом атомарная замена —
@@ -186,7 +199,7 @@ WRAPEOF
   local tmp
   tmp="$(mktemp)"
   crontab -l 2>/dev/null | grep -v -F "$CRON_MARK" > "$tmp" || true
-  echo "$CRON_SCHEDULE $WRAPPER $CRON_MARK" >> "$tmp"
+  expected_cron_line >> "$tmp"
   crontab "$tmp"
   rm -f "$tmp"
 
@@ -215,7 +228,22 @@ run_now() {
 verify() {
   local rc=0
   echo "== 1. расписание =="
-  if crontab -l 2>/dev/null | grep -F "$CRON_MARK"; then :; else echo "❌ cron-строки нет"; rc=1; fi
+  # Сверяется содержимое строки, а не её наличие: ручная правка crontab иначе живёт
+  # до первой переустановки, которая молча сдвинет время письма (#3266).
+  local actual_line expected_line
+  actual_line="$(crontab -l 2>/dev/null | grep -F "$CRON_MARK" || true)"
+  expected_line="$(expected_cron_line)"
+  if [[ -z "$actual_line" ]]; then
+    echo "❌ cron-строки нет"; rc=1
+  elif [[ "$actual_line" == "$expected_line" ]]; then
+    echo "$actual_line"
+    echo "расписание совпадает с установщиком"
+  else
+    echo "❌ cron-строка хоста отличается от установщика — переустановка сменит время письма"
+    echo "  хост:       $actual_line"
+    echo "  установщик: $expected_line"
+    rc=1
+  fi
   echo "== 2. файлы =="
   for f in "$ENV_FILE" "$PY_FILE" "$FRESHNESS_FILE" "$WRAPPER"; do
     if [[ -f "$f" ]]; then ls -l "$f"; else echo "❌ нет $f"; rc=1; fi

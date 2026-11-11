@@ -99,7 +99,7 @@ function makeFixture(): Fixture {
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true })
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
   // assert-deployable-source.js is the shipped live-revision gate (#3207).
-  for (const script of ['assert-deployable-source.js', 'lib/buildStamp.js', 'guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
+  for (const script of ['assert-deployable-source.js', 'lib/buildStamp.js', 'lib/live-build-source.js', 'guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
     'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })

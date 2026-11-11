@@ -254,6 +254,9 @@ module.exports = [
       "scripts/**/*.{js,ts,mjs,cjs}",
       "tools/ios-device-uitests/run.js",
       ".grok/**/*.{js,mjs,cjs}",
+      // Хуки адаптера Codex — зеркало `.claude/hooks`: Node-скрипты гейтов борда,
+      // линтуются как адаптер `.grok`, а не прячутся в `baseIgnores` (#3281).
+      ".codex/hooks/**/*.{js,mjs,cjs}",
       "*.config.{js,ts,mjs,cjs}",
       ".*rc.{js,cjs,mjs,ts}",
       "babel.config.*",

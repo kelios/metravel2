@@ -16,14 +16,12 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
 const { resolveBuildTimeMs } = require('./lib/buildStamp')
+const { ARTIFACT_MARKER_NAME, DEFAULT_LIVE_ORIGIN, fetchLiveSha, liveBuildSourceUrl } = require('./lib/live-build-source')
 
 const repoRoot = path.resolve(__dirname, '..')
-const ARTIFACT_MARKER_NAME = '.build-source.json'
-const DEFAULT_LIVE_ORIGIN = 'https://metravel.by'
 // Distinct from a refusal (1): the requested revision is what production
 // already serves, so there is nothing to build or publish.
 const EXIT_ALREADY_LIVE = 3
-const SHA_PATTERN = /^[a-f0-9]{40}$/
 
 function defaultMarkerPath(cwd = repoRoot) {
   return path.join(cwd, '.codex-temp', 'ops', 'last-build-source.json')
@@ -88,23 +86,16 @@ function readLiveSha({
   attempts = Math.max(1, positiveInt(process.env.VERIFY_LIVE_ATTEMPTS, 3)),
   delayMs = positiveInt(process.env.VERIFY_LIVE_RETRY_DELAY, 12) * 1000,
 } = {}) {
-  const url = `${String(origin).replace(/\/+$/, '')}/${ARTIFACT_MARKER_NAME}`
+  // Сам запрос и разбор ответа — общий чтец `scripts/lib/live-build-source.js`
+  // (#3272); здесь только бюджет повторов.
   let reason = ''
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      const body = execFileSync('curl', ['-fsS', '--max-time', '10', url], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-      const sha = String(JSON.parse(body).sha || '')
-      if (SHA_PATTERN.test(sha)) return { sha, url, attempts: attempt }
-      reason = 'в ответе нет поля sha с полным хешем коммита'
-    } catch (error) {
-      reason = String((error && error.stderr) || (error && error.message) || error).trim().split('\n').pop()
-    }
+    const observed = fetchLiveSha(origin)
+    if (observed.sha) return { sha: observed.sha, url: observed.url, attempts: attempt }
+    reason = observed.reason
     if (attempt < attempts) sleepSync(delayMs)
   }
-  return { sha: '', url, attempts, reason }
+  return { sha: '', url: liveBuildSourceUrl(origin), attempts, reason }
 }
 
 function hasCommit(sha, cwd) {

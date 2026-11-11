@@ -7,9 +7,9 @@
  * Идемпотентно: переиспользует существующий квест по quest_id, не дублирует шаги.
  *
  * node scripts/migrate-poland-legend-quests.js \
- *   --api-url=https://metravel.by
+ *   --apply --api-url=https://metravel.by
  *
- * Dry run (без записи):
+ * Пробный прогон (режим по умолчанию, без записи):
  *   node scripts/migrate-poland-legend-quests.js --dry-run
  */
 
@@ -17,7 +17,7 @@
 const { rethrowTerminalAuthError, createToolSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token', 'only'] });
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const onlyArg = args.find(a => a.startsWith('--only='));

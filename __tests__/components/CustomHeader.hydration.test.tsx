@@ -73,10 +73,15 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsiveWidth: () => (global as any).__mockResponsive?.width ?? 0,
 }))
 
-jest.mock('expo-router', () => ({
-  usePathname: jest.fn(),
-  useRouter: jest.fn(),
-}))
+jest.mock('expo-router', () => {
+  const { mockExpoRouterLink, mockExpoRouterSingleton } = require('../helpers/expoRouterMock')
+  return {
+    usePathname: jest.fn(),
+    useRouter: jest.fn(),
+    router: mockExpoRouterSingleton,
+    Link: mockExpoRouterLink,
+  }
+})
 
 const setResponsive = (width: number, isHydrated: boolean) => {
   ;(global as any).__mockResponsive = {

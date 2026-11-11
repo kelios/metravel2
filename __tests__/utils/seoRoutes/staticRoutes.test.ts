@@ -19,7 +19,7 @@ describe('utils/seoRoutes/staticRoutes (#2740)', () => {
     expect(new Set(routes).size).toBe(routes.length);
     expect(routes).toEqual([
       '/', '/about', '/become-author', '/contact', '/search', '/map', '/articles', '/places', '/article',
-      '/roulette', '/advent', '/favorites', '/privacy', '/cookies', '/login', '/registration', '/register',
+      '/roulette', '/advent', '/games', '/favorites', '/privacy', '/cookies', '/login', '/registration', '/register',
       '/accountconfirmation', '/set-password', '/subscribe/confirm', '/subscribe/unsubscribe', '/travelsby',
       '/quests', '/quests/scenario', '/history', '/messages', '/export', '/metravel', '/profile', '/settings',
       '/subscriptions', '/quests/map', '/userpoints', '/app-stats',

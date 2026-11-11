@@ -38,6 +38,8 @@ SOURCE_ALREADY_LIVE=0
 # подтверждён живыми проверками и finalize-code. Пока он не пуст, любой выход —
 # ошибка, сигнал, обрыв обёртки — обязан вернуть предыдущую пару.
 PUBLISH_UNCONFIRMED_SHA=''
+# #3272: код сигнала, отложенного на время finalize-code (см. конец публикации).
+FINALIZE_PENDING_SIGNAL=''
 MEDIA_CHECKS_PID=''
 MEDIA_CHECKS_LOG=''
 STAGE_NAME=''
@@ -447,8 +449,31 @@ deploy_prod() {
     return 1
   fi
   stage "выкат: финализация и диск"
-  bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
-  PUBLISH_UNCONFIRMED_SHA=''
+  # #3272: сигнал, пришедший во время успешного finalize-code, срабатывал между
+  # его завершением и снятием отметки: on_exit звал rollback-code для уже
+  # принятого релиза, бэкенд отказывал, отчёт печатал «НУЖЕН РУЧНОЙ ВОЗВРАТ» при
+  # целом проде. На время финализации сигнал откладывается: принятый релиз
+  # сначала снимает отметку, и только потом выкат выходит с кодом сигнала.
+  # Провал или обрыв самого finalize-code отметку не снимает — возврат, как раньше.
+  local finalize_status=0
+  FINALIZE_PENDING_SIGNAL=''
+  trap 'FINALIZE_PENDING_SIGNAL=130' INT
+  trap 'FINALIZE_PENDING_SIGNAL=143' TERM
+  trap 'FINALIZE_PENDING_SIGNAL=129' HUP
+  bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA" || finalize_status=$?
+  if [[ "$finalize_status" == "0" ]]; then
+    PUBLISH_UNCONFIRMED_SHA=''
+  fi
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+  if [[ -n "$FINALIZE_PENDING_SIGNAL" ]]; then
+    if [[ "$finalize_status" == "0" ]]; then
+      echo "⚠️  Сигнал пришёл во время финализации: релиз ${BUILD_SOURCE_SHA:0:9} уже принят, прод не возвращается"
+    fi
+    exit "$FINALIZE_PENDING_SIGNAL"
+  fi
+  return "$finalize_status"
 }
 
 ENV=''
