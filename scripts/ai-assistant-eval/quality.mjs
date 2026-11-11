@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Fixed-context model evaluation. Requires Node 22 with --experimental-strip-types. */
+/** Fixed-context model evaluation. Run with `npm run ai:assistant:quality`: the script loads the app's TypeScript modules through scripts/lib/ts-runtime.mjs (Node 20 and 22). */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -61,7 +61,9 @@ export function loadQualityCases(casesFile, fixturesFile) {
 }
 
 export function scoreQualityTurn(turn) {
-  const evaluation = evaluateTurn({ expect: turn.expect, lang: turn.lang }, turn.observed)
+  // Слой стража содержания (#3291): вопрос хода и вопросы посетителя из истории случая.
+  const earlier = (turn.history ?? []).filter((item) => item.role === 'user').map((item) => item.text).join(' ')
+  const evaluation = evaluateTurn({ expect: turn.expect, lang: turn.lang, question: turn.question, earlier }, turn.observed)
   if (turn.observed.modelCall && !turn.observed.modelCall.error) {
     evaluation.failures.push(...evaluateAnswerExpectations(turn.criteria, turn.observed.answerText, turn.sources, turn.observed.modelCall.text))
   }

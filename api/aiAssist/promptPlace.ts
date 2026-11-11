@@ -156,12 +156,13 @@ const withSpellings = (direct: readonly string[], sources: readonly AiSource[]):
 }
 
 /**
- * Карточки места из вопроса; без названного места, без его карточек и при исключении («кроме
- * Минска») — список как есть. Порядок подбора сохраняется.
+ * Карточки места, названного в запросе; `null` — место не названо, его карточек нет или названо
+ * исключение («кроме Минска»). Порядок карточек сохраняется. Отдельно от `selectPlaceSources` нужна
+ * тому, кто сам решает, что делать без места: сортировке по фактам каталога (#3287).
  */
-export const selectPlaceSources = (query: string | null | undefined, sources: readonly AiSource[]): readonly AiSource[] => {
+export const matchPlaceSources = <T extends AiSource>(query: string | null | undefined, sources: readonly T[]): T[] | null => {
   const text = String(query ?? '')
-  if (sources.length < 2 || !text.trim() || EXCLUSION_RE.test(text)) return sources
+  if (!text.trim() || EXCLUSION_RE.test(text)) return null
   const asked = wordsOf(text)
   for (const level of ['cities', 'countries'] as const) {
     const known = namesOf(sources.flatMap((source) => source.place?.[level] ?? []))
@@ -173,11 +174,45 @@ export const selectPlaceSources = (query: string | null | undefined, sources: re
     const kept = sources.filter((source) => isOfPlace(source, named, level))
     if (kept.length) return kept
   }
-  return sources
+  return null
 }
 
-/** Место карточки без служебного поля — для списка источников, который уходит посетителю. */
-export const withoutPlace = <T extends AiSource>(source: T): Omit<T, 'place'> => {
-  const { place: _place, ...rest } = source
+/**
+ * Карточки места из вопроса; без названного места, без его карточек и при исключении («кроме
+ * Минска») — список как есть. Порядок подбора сохраняется.
+ */
+export const selectPlaceSources = (query: string | null | undefined, sources: readonly AiSource[]): readonly AiSource[] =>
+  sources.length < 2 ? sources : (matchPlaceSources(query, sources) ?? sources)
+
+/**
+ * Карточка без служебных полей — для списка источников, который уходит посетителю: место (#3315),
+ * запись фактов и строка «почему подходит» (#3289) нужны только отбору и подсказке.
+ */
+export const withoutPlace = <T extends AiSource>(source: T): Omit<T, 'place' | 'facts' | 'why'> => {
+  const { place: _place, facts: _facts, why: _why, ...rest } = source
   return rest
+}
+
+const MIN_PLACE_WORD = 3
+/** Сколько букв окончания может отличаться с каждой стороны: «под Минском» — «Минск», «в Гданьске» — «Гданьска». */
+const MAX_PLACE_ENDING = 2
+
+const foldWord = (value: string): string => normalize(value).toLowerCase()
+
+const samePlaceWord = (a: string, b: string): boolean => {
+  const shared = sharedPrefix(a, b)
+  return shared >= Math.max(MIN_PLACE_WORD, Math.min(a.length, b.length) - MAX_PLACE_ENDING) && Math.max(a.length, b.length) - shared <= MAX_PLACE_ENDING + 1
+}
+
+/**
+ * Текст упоминает хотя бы одно из названных мест — словом в любом падеже. Грубее отбора по месту
+ * (регистр и предлог не смотрятся): отвечает на вопрос «есть ли об этом месте хоть что-то» для режима
+ * страницы (#3290) и признака «материала о месте нет» (#3289). Название на другом письме («w Gdańsku»
+ * при русском тексте) не узнаётся.
+ */
+export const mentionsAnyPlace = (places: readonly string[], text: string): boolean => {
+  const names = places.map(foldWord).filter((name) => name.length >= MIN_PLACE_WORD)
+  if (!names.length) return false
+  const words = new Set(String(text ?? '').split(/[^\p{L}]+/u).filter((word) => word.length >= MIN_PLACE_WORD).map(foldWord))
+  return names.some((name) => [...words].some((word) => samePlaceWord(name, word)))
 }

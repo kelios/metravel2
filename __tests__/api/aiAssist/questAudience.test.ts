@@ -1,6 +1,6 @@
 import path from 'path'
 
-import { asksAboutChildren, childrenRank, cityNamedIn, liftForChildren, questAudience, questCardLead } from '@/api/aiAssist/questAudience'
+import { asksAboutChildren, childrenRank, cityNamedIn, questAudience, questAudienceLead } from '@/api/aiAssist/questAudience'
 import { questToSource } from '@/api/aiAssist/retrieval'
 import { enabledQuestTags } from '@/utils/questTags'
 
@@ -61,13 +61,13 @@ describe('аудитория квеста в карточке ассистент
   })
 
   it('начало карточки: вид квеста с городом и страной, возраст, «Со взрослым»', () => {
-    expect(questCardLead({ tags: ['kids', 'age-8-10', 'adult-required'], city: 'Несвиж', country: 'Беларусь' })).toEqual([
+    expect(questAudienceLead(questAudience(['kids', 'age-8-10', 'adult-required']), 'Несвиж', 'Беларусь')).toEqual([
       'Детский городской квест по городу Несвиж (Беларусь)',
       'Возраст: 8–10 лет',
       'Со взрослым',
     ])
-    expect(questCardLead({ tags: ['family'], city: 'Краков', country: 'Польша' })).toEqual(['Семейный городской квест по городу Краков (Польша)'])
-    expect(questCardLead({ tags: [], city: ' ', country: null })).toEqual(['Городской квест'])
+    expect(questAudienceLead(questAudience(['family']), 'Краков', 'Польша')).toEqual(['Семейный городской квест по городу Краков (Польша)'])
+    expect(questAudienceLead(questAudience([]), ' ', null)).toEqual(['Городской квест'])
   })
 
   it('карточка экрана несёт признак и возраст; обычный квест выглядит как раньше', () => {
@@ -145,20 +145,8 @@ describe('аудитория квеста в карточке ассистент
     expect(cityNamedIn('', ['Гродно'])).toBe(false)
   })
 
-  it('при вопросе о детях детские, затем семейные квесты города встают первыми; чужой город и другой вопрос порядок не меняют', () => {
-    const items = [
-      { id: 'статья' },
-      { id: 'общий', tags: ['legend'], city: 'Несвиж' },
-      { id: 'семейный', tags: ['family'], city: 'Несвиж' },
-      { id: 'детский-бреста', tags: ['kids'], city: 'Брест' },
-      { id: 'детский', tags: ['kids', 'age-8-10'], city: 'Несвиж' },
-    ]
-    const describeItem = (item: (typeof items)[number]) => (item.tags ? { tags: item.tags, cities: [item.city] } : null)
-    const ids = (question: string) => liftForChildren(question, items, describeItem).map((item) => item.id)
-    expect(ids('Что посмотреть в Несвиже? А какой из них подойдёт детям?')).toEqual(['детский', 'семейный', 'статья', 'общий', 'детский-бреста'])
-    expect(ids('Что посмотреть в Несвиже?')).toEqual(items.map((item) => item.id))
-    // Просьба о статье квесты не поднимает — как у экрана (`searchSiteMaterials`).
-    expect(ids('Есть статья про Несвиж с детьми?')).toEqual(items.map((item) => item.id))
+  // Порядок найденных карточек при вопросе о детях — общая цепочка `arrangeSources` (#3289): `sourceSelection.test.ts`.
+  it('место квеста при вопросе о детях: детский квест города — 2, семейный — 1, чужой город и обычный квест — 0', () => {
     expect(childrenRank('С детьми в Несвиже', ['kids'], ['Несвиж'])).toBe(2)
     expect(childrenRank('С детьми в Несвиже', ['family'], ['Несвиж'])).toBe(1)
     expect(childrenRank('С детьми в Несвиже', ['kids'], ['Брест'])).toBe(0)

@@ -8,6 +8,7 @@ import {
   detectLang,
   detectLoop,
   evaluateTurn,
+  leaksPrompt,
   hasTemplate,
   isNoMaterial,
   isOfftopicRefusal,
@@ -84,6 +85,47 @@ const SOURCES: AiSource[] = [
 ]
 const USER_MESSAGE = `Материалы сайта:\n${formatSourcesBlock(SOURCES)}\n\nВопрос посетителя: что посмотреть в Кракове`
 const CARDS = parseCards(USER_MESSAGE)
+
+describe('проверки хода: режим страницы и утечка разметки', () => {
+  const pageCards = [{ n: 1, type: 'travel', title: SOURCES[0].title, url: SOURCES[0].url, snippet: 'Польша, Краков. Дней: 3', group: 'page' }]
+  const observedPage = (answerText: string, cards: unknown[]) => ({
+    turnCreated: true,
+    status: 'done',
+    answerText,
+    linkLabels: [],
+    sources: [{ type: 'travel', id: SOURCES[0].source_id, title: SOURCES[0].title }],
+    modelCall: { text: answerText, cards, finishReason: 'stop', ms: 900 },
+  })
+
+  it('ответ по странице без ссылки на неё — не провал, а предупреждение; в общем режиме no_links остаётся провалом', () => {
+    const answer = 'В карточке указано, что поездка занимает 3 дня.'
+    const page = evaluateTurn({ expect: 'answer', lang: 'ru', question: 'Сколько дней занимает поездка?' }, observedPage(answer, pageCards))
+    expect(page.failures).toEqual([])
+    expect(page.warnings).toEqual([{ check: 'no_links', layer: 'model', detail: 'ответ по странице без ссылки на неё' }])
+    // Та же карточка без группы `page` — общий подбор: ссылка обязательна.
+    const general = evaluateTurn({ expect: 'answer', lang: 'ru', question: 'Сколько дней занимает поездка?' }, observedPage(answer, [{ ...pageCards[0], group: undefined }]))
+    expect(general.failures.map((failure: { check: string }) => failure.check)).toContain('no_links')
+  })
+
+  it('prompt_leak — общий со стражем детектор: переведённый заголовок блока карточек и номер карточки в скобках', () => {
+    for (const leaked of ['Матеріали сайту:\n[1] Отдых в Доминикане', 'The most relevant card is [2].', 'Материалы сайта: ничего не найдено.', 'Вопрос посетителя: что посмотреть?']) {
+      expect({ leaked, found: leaksPrompt(leaked) }).toEqual({ leaked, found: true })
+    }
+    expect(leaksPrompt('Загляните в путеводитель по Кракову.')).toBe(false)
+    const result = evaluateTurn({ expect: 'any_on_topic', lang: 'en', question: 'Is there a hike near Krakow?' }, observedPage('The site lists several hikes near Krakow. The most relevant card is [2].', CARDS))
+    expect(result.failures.filter((failure: { check: string }) => failure.check === 'prompt_leak')).toEqual([{ check: 'prompt_leak', layer: 'prompt', detail: expect.any(String) }])
+  })
+})
+
+describe('разбор карточек подсказки (#3289)', () => {
+  it('строки «Почему подходит» и «материала о месте нет» фрагментом карточки не считаются', () => {
+    const withWhy = [{ ...SOURCES[0], why: 'месяц: май, 1 день' }, SOURCES[1]]
+    const message = `Материалы сайта:\n${formatSourcesBlock(withWhy)}\n\nО месте из вопроса на сайте материала нет: карточки выше — ближайшее из того, что есть.\n\nВопрос посетителя: что посмотреть в Кракове`
+    const cards = parseCards(message)
+    expect(cards.map((card: { snippet: string }) => card.snippet)).toEqual(CARDS.map((card: { snippet: string }) => card.snippet))
+    expect(cards.map((card: { why?: string }) => card.why)).toEqual(['месяц: май, 1 день', undefined])
+  })
+})
 
 const observedDone = (raw: string, answerText: string, extra: Record<string, unknown> = {}) => ({
   turnCreated: true,

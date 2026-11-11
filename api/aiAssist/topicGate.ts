@@ -157,19 +157,39 @@ const TRAVEL_SIGNAL_RE = re(
 const NOT_CAPITALIZED = new Set(['do'])
 const withCapitalized = (prepositions: string): string =>
   prepositions.split('|').flatMap((word) => (NOT_CAPITALIZED.has(word) ? [word] : [word, word[0].toLocaleUpperCase() + word.slice(1)])).join('|')
-const placeAfter = (prepositions: string): RegExp =>
-  new RegExp(`(?<![\\p{L}])(?:${withCapitalized(prepositions)})\\s+(?!(?:Вас|Вам|Вами|Ваш\\p{L}*)(?![\\p{L}]))\\p{Lu}\\p{Ll}{2,}`, 'u')
+const placeAfter = (prepositions: string, flags = 'u'): RegExp =>
+  new RegExp(`(?<![\\p{L}])(?:${withCapitalized(prepositions)})\\s+(?!(?:Вас|Вам|Вами|Ваш\\p{L}*)(?![\\p{L}]))(\\p{Lu}\\p{Ll}{2,})`, flags)
+/** Предлоги места («где», «куда», «откуда») и предлоги темы («о чём») — один список на все правила ниже. */
+const WHERE_PREPOSITIONS = 'в|во|из|по|под|до|около|возле|у|ў|w|we|z|do|pod|in|to|from|near|around'
+const TOPIC_PREPOSITIONS = 'про|пра|о|об|на|nad|na|o|about'
 /** Где: «в Кракове», «под Гродно», «w Gdańsku», «in Vilnius» — признак поездки. */
-const PLACE_AFTER_PREPOSITION_RE = placeAfter('в|во|из|по|под|до|около|возле|у|ў|w|we|z|do|pod|in|to|from|near|around')
+const PLACE_AFTER_PREPOSITION_RE = placeAfter(WHERE_PREPOSITIONS)
 /**
  * О чём: «А про Брест?», «на Нарочи» — своё место уточнения, но не признак поездки:
  * «анекдот про Лукашенко» поездкой не становится.
  */
-const PLACE_AFTER_TOPIC_PREPOSITION_RE = placeAfter('про|пра|о|об|на|nad|na|o|about')
+const PLACE_AFTER_TOPIC_PREPOSITION_RE = placeAfter(TOPIC_PREPOSITIONS)
 
 /** Вопрос сам называет место с большой буквы: «А в Бресте?», «А про Брест?», «and in Riga?». */
 export const mentionsPlace = (question: string): boolean =>
   PLACE_AFTER_PREPOSITION_RE.test(question) || PLACE_AFTER_TOPIC_PREPOSITION_RE.test(question)
+
+// С заглавной после предлога пишут и праздник («в Рождество», «на Новый год»), и сервис («из Instagram») — местом они не считаются.
+const NOT_A_PLACE_RE = /^(?:рождеств|раство|різдв|нов(?:ый|ы|ий|ого|ага)$|пасх|вялікдз|великд|bo[żz]e|wielkanoc|sylwest|christmas|easter|instagram|google|telegram|youtube|facebook|tiktok)/iu
+const placesAfter = (question: string, prepositions: string): string[] =>
+  [...String(question ?? '').matchAll(placeAfter(prepositions, 'gu'))].map((match) => match[1]).filter((name) => !NOT_A_PLACE_RE.test(name))
+
+/**
+ * Названия мест из вопроса — слова с большой буквы после предлога места или темы (#3290): по ним видно,
+ * что вопрос уводит со страницы. Праздник и сервис местом не считаются: «на Новый год» режим страницы не снимает.
+ */
+export const namedPlaces = (question: string): string[] => placesAfter(question, `${WHERE_PREPOSITIONS}|${TOPIC_PREPOSITIONS}`)
+
+/**
+ * Куда или где — названия мест после предлога места (#3289): по ним видно, что вопрос называет место,
+ * которого в найденных карточках нет. Предлоги темы («о Беларуси») сюда не входят.
+ */
+export const namedDestinations = (question: string): string[] => placesAfter(question, WHERE_PREPOSITIONS)
 
 export const hasTravelSignal = (question: string): boolean =>
   TRAVEL_SIGNAL_RE.test(question) || PLACE_AFTER_PREPOSITION_RE.test(question)

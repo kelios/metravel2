@@ -408,7 +408,10 @@ describe('команда приёмки и опись оценочных вхо�
       const live = plan('base').find((run: { name: string }) => run.name === 'live')
       expect(live).toMatchObject({ kind: 'ask', side: 'base', dir: '/out/base/live', expected: count('cases.live.jsonl') })
       const command = live.command.slice(1).join(' ')
-      expect(command).toContain('--experimental-strip-types')
+      // #3291: общий код приложения грузит загрузчик проекта — один на Node 20 и 22, у каждого прогона плана.
+      expect(command).toContain('scripts/lib/ts-runtime.mjs')
+      expect(command).not.toContain('--experimental-strip-types')
+      for (const run of plan('base')) expect({ name: run.name, preload: run.command.includes('--import') }).toEqual({ name: run.name, preload: true })
       expect(command).toContain(`run.mjs --provider ask --ask-url <base-ask-url> --model-url <base-url> --cases ${path.join(casesDir, 'cases.live.jsonl')} --repeat 1 --out /out/base/live`)
       expect(command).not.toContain('--base ')
       expect(plan('candidate').find((run: { name: string }) => run.name === 'live').command.join(' ')).toContain('--ask-url <candidate-ask-url> --model-url <candidate-url>')

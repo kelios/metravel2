@@ -3,7 +3,11 @@
  * что у `readIndex` (#2454), с повтором — файлы пишутся по одному через rename, и читатель может
  * попасть между ними. Поверх артефакта — карты источников для /ai/similar и фильтра локали.
  */
-import { type IndexArtifact, readIndex } from '../ai-index/format.ts'
+import fs from 'node:fs'
+import path from 'node:path'
+
+import { factsKey, type SourceFacts } from '../../api/aiAssist/sourceFacts.ts'
+import { CHUNKS_FILE, type ChunkRecord, type IndexArtifact, readIndex } from '../ai-index/format.ts'
 import { sourceKey } from '../ai-index/query.ts'
 import { snippet } from './search.ts'
 
@@ -20,6 +24,14 @@ export interface LoadedIndex {
    * держит ~100 МБ кучи, поэтому после вычисления сниппетов `chunk.text` обнуляется.
    */
   snippets: string[]
+  /** Факты источника по ключу `type:id` (#3287); у артефакта без `facts.jsonl` карта пуста. */
+  factsBySource: Map<string, SourceFacts>
+  /**
+   * Полный текст фрагмента по строке (#3290) — с диска: в памяти остаются только сниппеты. Нужен режиму
+   * страницы, который берёт окно текста вокруг слов вопроса. `null` — строку прочитать не удалось
+   * (файл подменили на месте); у индекса, собранного без `loadIndex` (тесты), чтения нет вовсе.
+   */
+  readText?: (row: number) => string | null
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -52,7 +64,9 @@ export function indexMaps(artifact: IndexArtifact): Omit<LoadedIndex, 'artifact'
     snippets[row] = Buffer.from(snippet(chunk.text), 'utf8').toString('utf8')
     chunk.text = ''
   })
-  return { rowsBySource, localesBySource, typeOfRow, snippets }
+  const factsBySource = new Map<string, SourceFacts>()
+  for (const record of artifact.facts) factsBySource.set(factsKey(record), record)
+  return { rowsBySource, localesBySource, typeOfRow, snippets, factsBySource }
 }
 
 export async function loadIndex(distDir: string, options: LoadIndexOptions): Promise<LoadedIndex> {
@@ -65,7 +79,7 @@ export async function loadIndex(distDir: string, options: LoadIndexOptions): Pro
       if (options.expectedModel && artifact.manifest.model !== options.expectedModel) {
         throw new IndexModelMismatch(artifact.manifest.model, options.expectedModel)
       }
-      return { artifact, ...indexMaps(artifact) }
+      return { artifact, ...indexMaps(artifact), readText: openChunkText(path.join(distDir, CHUNKS_FILE), artifact.chunks) }
     } catch (error) {
       if (error instanceof IndexModelMismatch) throw error
       lastError = error
@@ -73,6 +87,62 @@ export async function loadIndex(distDir: string, options: LoadIndexOptions): Pro
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
+/**
+ * Чтение текста фрагмента по номеру строки `chunks.jsonl`. Файл открывается один раз и остаётся
+ * открытым: пересборка индекса заменяет его через rename, и открытый описатель продолжает видеть
+ * тот файл, по которому посчитаны смещения. Прочитанная запись сверяется по `id` — если файл всё же
+ * изменили на месте, чтение отдаёт `null`, и вызывающий берёт сниппет из памяти.
+ */
+export function openChunkText(file: string, chunks: readonly Pick<ChunkRecord, 'id'>[]): (row: number) => string | null {
+  let fd: number
+  try {
+    fd = fs.openSync(file, 'r')
+  } catch {
+    return () => null
+  }
+  // Смещения непустых строк — тем же правилом, что `readJsonl`: пустые строки записью не считаются.
+  const starts: number[] = []
+  const lengths: number[] = []
+  const block = Buffer.alloc(1 << 20)
+  let position = 0
+  let lineStart = 0
+  let hasContent = false
+  for (;;) {
+    const read = fs.readSync(fd, block, 0, block.length, position)
+    if (read <= 0) break
+    for (let i = 0; i < read; i += 1) {
+      const byte = block[i]
+      if (byte === 0x0a) {
+        if (hasContent) {
+          starts.push(lineStart)
+          lengths.push(position + i - lineStart)
+        }
+        lineStart = position + i + 1
+        hasContent = false
+      } else if (byte !== 0x20 && byte !== 0x09 && byte !== 0x0d) {
+        hasContent = true
+      }
+    }
+    position += read
+  }
+  if (hasContent) {
+    starts.push(lineStart)
+    lengths.push(position - lineStart)
+  }
+  if (starts.length !== chunks.length) return () => null
+  return (row) => {
+    if (!Number.isInteger(row) || row < 0 || row >= starts.length) return null
+    try {
+      const buffer = Buffer.alloc(lengths[row])
+      fs.readSync(fd, buffer, 0, buffer.length, starts[row])
+      const record = JSON.parse(buffer.toString('utf8')) as Partial<ChunkRecord>
+      return record.id === chunks[row].id && typeof record.text === 'string' ? record.text : null
+    } catch {
+      return null
+    }
+  }
 }
 
 export class IndexModelMismatch extends Error {

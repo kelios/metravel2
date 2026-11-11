@@ -105,6 +105,47 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     expect(direct).toEqual([]);
   });
 
+  // #3290: вопрос со страницы статьи — служба отдаёт карточку страницы и соседние материалы отдельной группой.
+  test('page mode: the page card under «Sources», neighbours under «More on the topic», source in the request', async ({ page }) => {
+    const direct = await trackModelRequests(page);
+    const asks: Array<{ q?: string; source?: unknown }> = [];
+    const pageCard = { ...sources[1], group: 'page', snippet: 'Беларусь, Минск. Дней: 2. Парки и музеи … короткие маршруты на выходные.' };
+    const nearby = { ...sources[0], group: 'nearby' };
+    await page.route('**/ai/ask', async (route) => {
+      asks.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream; charset=utf-8',
+        body: sse(
+          ['sources', { sources: [pageCard, nearby], degraded: false, remaining: 18 }],
+          ['text', { text: 'На странице [Выходные в Минске с детьми](https://metravel.by/travels/minsk-e2e) маршрут рассчитан на два дня.' }],
+          ['done', { status: 'done', removed_links: 0, usage: { prompt_tokens: 800, completion_tokens: 40, ttft_ms: 400, tokens_per_s: 40 }, remaining: 18 }],
+        ),
+      });
+    });
+
+    await preacceptCookies(page);
+    await page.goto('/assistant?source=travel:816', { waitUntil: 'domcontentloaded' });
+    test.skip(!(await waitForScreen(page.getByTestId('assistant-screen'))), 'бандл собран без EXPO_PUBLIC_AI_ASSISTANT');
+    await expect(page.getByTestId('assistant-input')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+    await send(page, 'Сколько дней нужно на этот маршрут?');
+
+    await expect(page.getByTestId('assistant-turn-done')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+    await expect(page.getByTestId('assistant-answer-text')).toContainText('рассчитан на два дня');
+    // Страница — в «Источниках», сосед — ниже, под своим заголовком группы.
+    await expect(page.getByTestId('assistant-source-travel-816')).toBeVisible();
+    const nearbyTitle = page.getByTestId('assistant-sources-nearby');
+    await expect(nearbyTitle).toBeVisible();
+    const neighbour = page.getByTestId('assistant-source-quest-7');
+    await expect(neighbour).toBeVisible();
+    const [titleBox, pageBox, neighbourBox] = await Promise.all([nearbyTitle.boundingBox(), page.getByTestId('assistant-source-travel-816').boundingBox(), neighbour.boundingBox()]);
+    expect(pageBox!.y).toBeLessThan(titleBox!.y);
+    expect(titleBox!.y).toBeLessThan(neighbourBox!.y);
+    expect(asks).toHaveLength(1);
+    expect(asks[0]).toMatchObject({ q: 'Сколько дней нужно на этот маршрут?', source: { type: 'travel', id: 816 } });
+    expect(direct).toEqual([]);
+  });
+
   test('service down → unavailable with retry; 429 offtopic_blocked → block notice and disabled composer', async ({ page }) => {
     const direct = await trackModelRequests(page);
     let mode: 'down' | 'blocked' = 'down';

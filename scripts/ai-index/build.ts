@@ -3,8 +3,11 @@
  * Смысловой индекс контента сайта (#2454). Запуск: `npm run ai:index -- <команда> [опции]`.
  *
  *   export   — скачать статьи и квесты из прод-API в <out>/raw (инкремент по updated_at)
- *   chunk    — raw → <out>/work/chunks.jsonl (нарезка ~800 символов, перекрытие 100)
- *   embed    — work/chunks.jsonl → <dist>/{chunks.jsonl,vectors.f16,manifest.json}, инкремент по id
+ *   chunk    — raw → <out>/work/chunks.jsonl (нарезка ~800 символов, перекрытие 100) и
+ *              <out>/work/facts.jsonl (факты источников для карточки ассистента, #3287)
+ *   embed    — work/chunks.jsonl → <dist>/{chunks.jsonl,vectors.f16,facts.jsonl,manifest.json}, инкремент по id
+ *   facts    — raw → <dist>/facts.jsonl и версия формата в manifest БЕЗ пересчёта векторов:
+ *              перевод уже собранного артефакта на формат с фактами
  *   manifest — проверить артефакт (count, размер vectors.f16, source_sha256) и напечатать manifest
  *   query    — "<вопрос>": top-k фрагментов из артефакта
  *   eval     — --queries <jsonl>: recall@5 и латентность запроса на наборе вопросов
@@ -26,7 +29,7 @@ import { fileURLToPath } from 'node:url'
 import type { ChunkOptions } from './chunk.ts'
 import { createEmbedder, runEmbed } from './embed.ts'
 import { chunkRawCorpus, countCatalogSources, runExport } from './export.ts'
-import { type ChunkRecord, readIndex, readJsonl, verifyIndex, writeJsonl } from './format.ts'
+import { type ChunkRecord, readIndex, readJsonl, type SourceFacts, verifyIndex, writeFacts, writeJsonl } from './format.ts'
 import { checkFreshness, readFreshnessSubject } from './freshness.ts'
 import { resolveModel } from './models.ts'
 import { type EvalQuery, type EvalSummary, evaluate, formatHit, search } from './query.ts'
@@ -82,13 +85,15 @@ interface Paths {
   outDir: string
   rawDir: string
   workChunks: string
+  workFacts: string
   distDir: string
 }
 
 function resolvePaths(flags: CliArgs['flags']): Paths {
   const outDir = path.resolve(flagString(flags, 'out') ?? path.join('.codex-temp', 'ai-index'))
   const distDir = path.resolve(flagString(flags, 'dist') ?? path.join(outDir, 'dist'))
-  return { outDir, rawDir: path.join(outDir, 'raw'), workChunks: path.join(outDir, 'work', 'chunks.jsonl'), distDir }
+  const workDir = path.join(outDir, 'work')
+  return { outDir, rawDir: path.join(outDir, 'raw'), workChunks: path.join(workDir, 'chunks.jsonl'), workFacts: path.join(workDir, 'facts.jsonl'), distDir }
 }
 
 const log = (line: string) => console.error(line)
@@ -110,11 +115,13 @@ async function commandExport(flags: CliArgs['flags'], paths: Paths) {
 function commandChunk(flags: CliArgs['flags'], paths: Paths) {
   const options: ChunkOptions = { size: flagNumber(flags, 'size'), overlap: flagNumber(flags, 'overlap') }
   const localesFlag = flagString(flags, 'locales')
-  const { chunks, travels, quests } = chunkRawCorpus(paths.rawDir, options, localesFlag ? localesFlag.split(',') : undefined)
+  const { chunks, facts, travels, quests } = chunkRawCorpus(paths.rawDir, options, localesFlag ? localesFlag.split(',') : undefined)
   writeJsonl(paths.workChunks, chunks)
+  writeJsonl(paths.workFacts, facts)
   const summary = {
     travels,
     quests,
+    facts: facts.length,
     chunks: chunks.length,
     travelChunks: chunks.filter((c) => c.type === 'travel').length,
     questChunks: chunks.filter((c) => c.type === 'quest').length,
@@ -138,11 +145,21 @@ async function withEmbedder<T>(flags: CliArgs['flags'], fn: (embedder: Awaited<R
 async function commandEmbed(flags: CliArgs['flags'], paths: Paths) {
   const chunks = readJsonl<ChunkRecord>(paths.workChunks)
   if (!chunks.length) throw new Error(`нет фрагментов в ${paths.workChunks}: сначала \`chunk\``)
+  const facts = readJsonl<SourceFacts>(paths.workFacts)
+  if (!facts.length) log(`embed: нет фактов в ${paths.workFacts} — артефакт соберётся без них; факты пишет \`chunk\``)
   const summary = await withEmbedder(flags, (embedder) =>
-    runEmbed({ chunks, distDir: paths.distDir, embedder, full: flags.full === true, log }),
+    runEmbed({ chunks, facts, distDir: paths.distDir, embedder, full: flags.full === true, log }),
   )
   if (summary.computed === 0) log('embed: изменений нет — ни один фрагмент не пересчитан')
   console.log(JSON.stringify({ ...summary, dist: paths.distDir }))
+}
+
+/** Факты в уже собранный артефакт: raw читается заново, векторы и фрагменты не трогаются. */
+function commandFacts(paths: Paths) {
+  const { facts } = chunkRawCorpus(paths.rawDir)
+  const manifest = writeFacts(paths.distDir, facts)
+  log(`facts: записей ${manifest.facts?.count ?? 0} из ${facts.length} источников raw, формат версии ${manifest.format_version}`)
+  console.log(JSON.stringify({ facts: manifest.facts, format_version: manifest.format_version, dist: paths.distDir }))
 }
 
 async function commandFreshness(flags: CliArgs['flags'], paths: Paths) {
@@ -225,6 +242,10 @@ export async function main(argv: string[]): Promise<void> {
       await commandEmbed(flags, paths)
       return
     case 'manifest':
+      commandManifest(paths)
+      return
+    case 'facts':
+      commandFacts(paths)
       commandManifest(paths)
       return
     case 'query':

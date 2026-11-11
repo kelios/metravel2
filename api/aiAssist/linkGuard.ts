@@ -6,6 +6,11 @@
  * другой URL — внешний, выдуманный путь на metravel.by, относительный
  * `/travels/…` — вырезается, а счётчик вырезанного отдаётся экрану для подписи.
  * Служебные `<think>` блоки Qwen снимаются до показа.
+ *
+ * Подпись ссылки (#3291): адрес из карточки модель могла подписать чужим или выдуманным
+ * названием («Минск в кадре: город, который играл Москву» у статьи о Смолевуде, проба
+ * 11.11.2026, p14). Подпись разрешённого адреса заменяется названием его карточки, если они
+ * расходятся. Пояснение пункта, числа и пустой ответ проверяет `answerGuard.ts`.
  */
 
 import type { AiSource } from './types'
@@ -30,20 +35,23 @@ export const normalizeLinkKey = (value: string): string =>
 
 const siteHostKey = (url: string): string => normalizeLinkKey(url).split('/')[0]
 
-/** Разрешённые ключи: URL карточек и те же пути без хоста. */
-export const buildAllowedLinkKeys = (sources: readonly AiSource[]): Set<string> => {
-  const allowed = new Set<string>()
-  for (const source of sources) {
-    const full = normalizeLinkKey(source.url)
-    if (!full) continue
-    allowed.add(full)
-    const host = siteHostKey(source.url)
-    const path = full.slice(host.length)
-    if (path) allowed.add(path)
-    if (source.path) allowed.add(normalizeLinkKey(source.path))
-  }
-  return allowed
+/** Ключи, которыми ответ может назвать карточку: её URL, тот же путь без хоста и путь приложения. */
+const linkKeysOf = (source: AiSource): string[] => {
+  const full = normalizeLinkKey(source.url)
+  if (!full) return []
+  const path = full.slice(siteHostKey(source.url).length)
+  return [full, ...(path ? [path] : []), ...(source.path ? [normalizeLinkKey(source.path)] : [])]
 }
+
+/** Карточка по ключу ссылки; при совпадении ключей остаётся карточка, стоящая в подборе раньше. */
+export const buildSourceByLinkKey = <T extends AiSource>(sources: readonly T[]): Map<string, T> => {
+  const byKey = new Map<string, T>()
+  for (const source of sources) for (const key of linkKeysOf(source)) if (!byKey.has(key)) byKey.set(key, source)
+  return byKey
+}
+
+/** Разрешённые ключи: URL карточек и те же пути без хоста. */
+export const buildAllowedLinkKeys = (sources: readonly AiSource[]): Set<string> => new Set(buildSourceByLinkKey(sources).keys())
 
 /** Срезает `<think>…</think>` (в том числе незакрытый блок в начале стрима). */
 export const stripThinking = (text: string): string =>
@@ -57,7 +65,7 @@ export const stripThinking = (text: string): string =>
  * вырезанной ссылкой в конце строки («Стартуйте с истории —»), заглушки обучения
  * вида `__draft_placeholder__`.
  */
-const tidyText = (text: string): string =>
+export const tidyText = (text: string): string =>
   text
     .replace(/__[a-z0-9]+(?:_[a-z0-9]+)+__/gi, '')
     .replace(/\(\s*\)/g, '')
@@ -77,10 +85,21 @@ const normalizeTitleKey = (value: string): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
+/** Подпись совпадает с названием: выделение (`**…**`) и знак в конце подписи названия не меняют. */
+export const isSameTitle = (label: string, title: string): boolean => {
+  const key = (value: string) => normalizeTitleKey(String(value ?? '').replace(/[*_`]/g, '')).replace(/[.!?…:;,\s]+$/, '')
+  return key(label) === key(title)
+}
+
+/** Название как подпись markdown-ссылки: квадратная скобка закрыла бы подпись раньше времени. */
+const toLinkLabel = (title: string): string => String(title ?? '').replace(/\[/g, '(').replace(/\]/g, ')').replace(/\s+/g, ' ').trim()
+
 export type LinkGuardResult = {
   text: string
   /** Сколько адресов вырезано как не из карточек. */
   removed: number
+  /** Сколько подписей ссылок заменено названием карточки (#3291). */
+  relabeled: number
 }
 
 /**
@@ -91,18 +110,26 @@ export type LinkGuardResult = {
  * такая ссылка получает адрес своей карточки и не считается вырезанной.
  */
 export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]): LinkGuardResult {
-  const allowed = buildAllowedLinkKeys(sources)
+  const sourceByKey = buildSourceByLinkKey(sources)
   let removed = 0
+  let relabeled = 0
   const isAllowed = (candidate: string): boolean => {
     const key = normalizeLinkKey(candidate)
-    return key.length > 0 && allowed.has(key)
+    return key.length > 0 && sourceByKey.has(key)
   }
 
   const urlByTitle = new Map(sources.map((source) => [normalizeTitleKey(source.title), source.url]))
 
   let text = stripThinking(rawText)
   text = text.replace(MARKDOWN_LINK_RE, (match, label: string, _bracket: string, url: string) => {
-    if (isAllowed(url)) return match
+    const card = sourceByKey.get(normalizeLinkKey(url))
+    if (card) {
+      // Адрес настоящий — подпись обязана быть названием его карточки (#3291).
+      const title = toLinkLabel(card.title)
+      if (!title || isSameTitle(label, card.title)) return match
+      relabeled += 1
+      return `[${title}](${url})`
+    }
     const cardUrl = urlByTitle.get(normalizeTitleKey(label))
     if (cardUrl) return `[${label}](${cardUrl})`
     removed += 1
@@ -117,7 +144,7 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
   text = text.replace(BARE_SITE_URL_RE, dropUnlessAllowed)
   text = text.replace(SITE_PATH_RE, dropUnlessAllowed)
 
-  return { text: tidyText(text), removed }
+  return { text: tidyText(text), removed, relabeled }
 }
 
 /** Сколько адресов карточек осталось в ответе после стража: отказ модели «не по теме» ссылок не даёт. */

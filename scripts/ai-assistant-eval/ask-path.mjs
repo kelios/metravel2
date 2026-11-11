@@ -33,10 +33,13 @@ let resolveHookInstalled = false
  * Node такой адрес сам не находит, поэтому для модулей `api/aiAssist` он дополняется до `.ts`.
  */
 export async function loadAskProvider() {
-  if (!process.features?.typescript || typeof nodeModule.registerHooks !== 'function') {
-    throw new Error(`путь службы: нужен Node ≥ 22.18 (сейчас ${process.versions.node}): PATH="/opt/homebrew/opt/node@22/bin:$PATH"`)
+  // Загрузчик `scripts/lib/ts-runtime.mjs` (#3291) уже снимает типы и находит соседей без расширения —
+  // так путь службы идёт на Node 20 и 22.13; свой перехват нужен только Node со встроенным снятием типов.
+  const hooked = globalThis[Symbol.for('metravel.tsRuntime')] === 'hooks'
+  if (!hooked && (!process.features?.typescript || typeof nodeModule.registerHooks !== 'function')) {
+    throw new Error(`путь службы: запускайте через npm run ai:assistant:eval (загрузчик scripts/lib/ts-runtime.mjs) либо Node ≥ 22.18 (сейчас ${process.versions.node})`)
   }
-  if (!resolveHookInstalled) {
+  if (!hooked && !resolveHookInstalled) {
     nodeModule.registerHooks({
       resolve(specifier, context, nextResolve) {
         try {
@@ -117,8 +120,9 @@ export function renderShown(text, sources) {
 }
 
 /** Карточки подсказки в той же форме, что разбор перехваченного запроса экрана (`parseCards`). */
+// Группа `page` (#3290) нужна стражу ответа в `checks.mjs`: короткий ответ о странице там не пустой.
 const toCards = (promptSources) =>
-  promptSources.map((source, index) => ({ n: index + 1, type: source.type === 'quest' ? 'quest' : 'travel', title: String(source.title ?? ''), url: String(source.url ?? ''), snippet: String(source.snippet ?? '') }))
+  promptSources.map((source, index) => ({ n: index + 1, type: source.type === 'quest' ? 'quest' : 'travel', title: String(source.title ?? ''), url: String(source.url ?? ''), snippet: String(source.snippet ?? ''), ...(source.group === 'page' ? { group: 'page' } : {}) }))
 
 /**
  * Диалог одного вопроса набора со службой. Возвращает функцию «задать вопрос → наблюдение хода» в
@@ -160,6 +164,8 @@ export function createAskSession({ createAskClient, askUrl, visitor, locale, sou
         ...renderShown(refused ? '' : result.text, sources),
         sources: sources.map((item) => ({ type: item.type, id: item.source_id, title: item.title })),
         linksRemovedNotice: result.done.removedLinks > 0,
+        // Запасной ответ стража (#3291): текста нет, экран показывает фразу «точного ответа в материалах нет».
+        fallback: result.done.fallback === true,
         // Нет события `trace` — модель не вызывалась (фильтр тем, пустой подбор) или служба без флага.
         modelCall: trace ? { provider: 'ask', cards: toCards(trace.promptSources), text: trace.rawText, usage: result.done.usage, ms: Date.now() - startedAt } : null,
       }

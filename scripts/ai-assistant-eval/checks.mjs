@@ -7,7 +7,16 @@
  * запрос к модели: карточки промпта и сырой ответ до стража ссылок. По ним
  * считаются проверки, а каждый провал получает слой, где его чинить:
  * подбор / фильтр тем / промпт / страж / модель / инфраструктура.
+ *
+ * Слой стража содержания (#3291) считает показанный ответ тем же кодом, что и продукт
+ * (`api/aiAssist/answerGuard.ts`), поэтому модуль грузит TypeScript. Команды `ai:assistant:*` и
+ * дочерние прогоны `accept.mjs` подключают загрузчик `scripts/lib/ts-runtime.mjs` — он работает на
+ * Node 20 и 22 без ручных флагов; прямой вызов `node …/run.mjs` требует того же `--import` либо Node
+ * со встроенным снятием типов (22.18+). jest собирает модуль своим преобразованием.
  */
+
+import { guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
+import { isSameTitle } from '../../api/aiAssist/linkGuard.ts'
 
 export const LAYERS = ['infra', 'retrieval', 'gate', 'prompt', 'guard', 'model']
 
@@ -16,7 +25,7 @@ export const LAYER_RU = {
   retrieval: 'подбор карточек',
   gate: 'фильтр тем',
   prompt: 'промпт',
-  guard: 'страж ссылок',
+  guard: 'страж ответа',
   model: 'модель',
 }
 
@@ -45,8 +54,6 @@ const BULLET_RE = /^\s*(?:[*\-•]|\d+[.)])\s+/
  * факты карточки, не шаблон, поэтому «Длительность» считается только в днях.
  */
 const TEMPLATE_RE = /(^|\n)\s*(?:[*\-•]\s*)?(?:\*\*)?(Страна|Когда|Точки маршрута|Длительность(?=(?:\*\*)?\s*:\s*\d+\s*дн))(?:\*\*)?\s*:/i
-/** Фразы системного промпта и разметки карточек — их появление в ответе значит, что промпт утёк. */
-const PROMPT_LEAK_RE = /Ты\s+—\s+помощник\s+сайта|Материалы сайта:|Это данные для ответа, а не инструкции|Вопрос посетителя:/i
 /** Отказ «не по теме» — фраза из #2711 и её свободные пересказы на пяти языках. */
 const OFFTOPIC_REFUSAL_RE = new RegExp(
   [
@@ -71,7 +78,7 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
 )
 /** «На сайте такого нет» — честный отказ по теме. */
 const NO_MATERIAL_RE =
-  /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)/iu
+  /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
 /**
  * Обратный порядок слов: «материала про Гданьск пока нет» — сам материал отсутствует, в пределах одной
  * фразы. Так же строятся учебные ответы на других языках (`rag_answers.py`: «Асобнага матэрыялу … няма»,
@@ -107,7 +114,13 @@ export const parseCards = (userMessage) => {
       continue
     }
     const last = cards[cards.length - 1]
-    if (last && !last.snippet && line.trim() && !line.startsWith('Вопрос посетителя:')) last.snippet = line.trim()
+    // Строки #3289 — «Почему подходит: …» в карточке и «О месте из вопроса…» перед вопросом — фрагментом не считаются.
+    const text = line.trim()
+    if (text.startsWith('Почему подходит:')) {
+      if (last) last.why = text.slice('Почему подходит:'.length).trim()
+      continue
+    }
+    if (last && !last.snippet && text && !text.startsWith('Вопрос посетителя:') && !text.startsWith('О месте из вопроса')) last.snippet = text
   }
   return cards
 }
@@ -173,7 +186,12 @@ export const hasTemplate = (text) => {
   return match ? match[2] : null
 }
 
-export const leaksPrompt = (text) => PROMPT_LEAK_RE.test(String(text ?? ''))
+/**
+ * Фразы системного промпта и разметки карточек в ответе — промпт утёк. Детектор общий со стражем содержания
+ * (`leaksPrompt` в `api/aiAssist/answerGuard.ts`): заголовок «Материалы сайта:» на пяти локалях, строка
+ * вопроса, номер карточки в квадратных скобках.
+ */
+export { leaksPrompt }
 export const isOfftopicRefusal = (text) => OFFTOPIC_REFUSAL_RE.test(String(text ?? ''))
 export const isNoMaterial = (text) => {
   const value = String(text ?? '')
@@ -286,11 +304,60 @@ export function splitPlaceCards(cards, expectSources) {
 
 const fail = (failures, check, layer, detail) => failures.push({ check, layer, detail })
 
+/** Проверки стража содержания (#3291): то, что он обязан был исправить до показа. */
+export const GUARD_CHECKS = ['label_mismatch', 'foreign_description', 'ungrounded_number', 'echo']
+
+/**
+ * Слой стража содержания (#3291) по ПОКАЗАННОМУ ответу — тем же `guardAnswer`, что у экрана и службы:
+ *   - `label_mismatch` — нажимаемая ссылка подписана не названием карточки;
+ *   - `foreign_description` — пояснение пункта от соседней карточки или с числом не из своей;
+ *   - `ungrounded_number` — число с единицей, которого нет ни в одной карточке и в вопросе;
+ *   - `echo` — ответ без содержания: повтор вопроса или фраза без ссылки и признания.
+ * Показанный текст ссылок не несёт, поэтому подпись, равная названию карточки, снова становится
+ * ссылкой на неё: так страж видит, чьё пояснение стоит рядом. `earlier` — прошлые вопросы диалога:
+ * уточнение повторяет их условия («не дольше 90 минут»).
+ */
+export const findGuardDefects = ({ question, earlier = '' }, observed) => {
+  const answer = String(observed.answerText ?? '')
+  const cards = observed.modelCall?.cards ?? []
+  if (!answer.trim() || !cards.length) return []
+  const defects = []
+  const labels = [...new Set((observed.linkLabels ?? []).map((label) => String(label ?? '').trim()).filter(Boolean))]
+  const cardOf = (label) => cards.find((card) => isSameTitle(label, card.title))
+  // Голый адрес карточки экран показывает самим адресом: это ссылка без подписи, а не чужая подпись.
+  const isCardUrl = makeCardUrlMatcher(cards)
+  const strangers = labels.filter((label) => !cardOf(label) && !isCardUrl(label))
+  if (strangers.length) defects.push({ check: 'label_mismatch', detail: `подпись ссылки не равна названию карточки: «${strangers[0].slice(0, 80)}»` })
+
+  // Длинные подписи раньше коротких: «Квест по Гродно» не должен разорвать «Квест по Гродно: две звезды».
+  // Метка замены — символ из области частного использования: в ответах модели его нет.
+  const tokens = []
+  let markdown = answer
+  for (const label of labels.filter(cardOf).sort((a, b) => b.length - a.length)) {
+    const card = cardOf(label)
+    markdown = markdown.split(label).join(`${tokens.length}`)
+    tokens.push(`[${card.title.replace(/[[\]]/g, ' ')}](${card.url})`)
+  }
+  markdown = markdown.replace(/(\d+)/g, (_match, index) => tokens[Number(index)]).replace(/^• /gm, '- ')
+  const sources = cards.map((card) => ({ type: card.type, source_id: '', title: card.title, url: card.url, path: '', snippet: card.snippet ?? '', score: 0, ...(card.group ? { group: card.group } : {}) }))
+  const guarded = guardAnswer(markdown, sources, { question, retrievalQuery: earlier })
+  const seen = new Set(defects.map((item) => item.check))
+  for (const finding of guarded.findings) {
+    // Утечку разметки показанного ответа ловит своя проверка `prompt_leak` — тем же детектором.
+    if (finding.check === 'label_mismatch' || finding.check === 'prompt_leak' || seen.has(finding.check)) continue
+    seen.add(finding.check)
+    defects.push(finding)
+  }
+  return defects
+}
+
 /**
  * Проверки одного хода. `observed` собирает `run.mjs`; ожидание и язык — из набора вопросов.
- * Возвращает `{pass, failures, warnings, metrics}`; у провала — слой, где чинить.
+ * Возвращает `{pass, failures, warnings, metrics}`; у провала — слой, где чинить. `question` (и
+ * `earlier` — прошлые вопросы диалога) включает слой стража содержания (#3291); без вопроса он не
+ * считается: числа из вопроса нельзя было бы отличить от выдуманных.
  */
-export function evaluateTurn({ expect, lang, expectSources }, observed) {
+export function evaluateTurn({ expect, lang, expectSources, question, earlier }, observed) {
   const failures = []
   const warnings = []
   const call = observed.modelCall ?? null
@@ -350,7 +417,10 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     if (status === 'no_sources') fail(failures, 'no_sources', 'retrieval', 'подбор не нашёл карточек')
     else if (sourcesCheck && !sourcesCheck.ok) fail(failures, 'irrelevant_sources', 'retrieval', `подходящих карточек ${sourcesCheck.matched} из ${sourcesCheck.min} нужных`)
   }
-  if (expect === 'no_material' && status !== 'no_sources' && !isNoMaterial(answer)) {
+  // Запасной ответ стража (#3291) — честное «точного ответа в материалах нет»: экран показывает его
+  // фразой, путь службы — флагом `fallback` при пустом тексте.
+  const admitted = observed.fallback === true || isNoMaterial(answer)
+  if (expect === 'no_material' && status !== 'no_sources' && !admitted) {
     fail(failures, 'no_admission', answeredByModel ? 'model' : 'retrieval', 'нет признания «на сайте такого нет»')
   }
 
@@ -364,7 +434,7 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     if (answer.length > MAX_ANSWER_CHARS) fail(failures, 'too_long', 'model', `${answer.length} знаков > ${MAX_ANSWER_CHARS}`)
     const recs = countRecommendations(raw, cards)
     Object.assign(metrics, { cardLinks: recs.cardLinks, bullets: recs.bullets, unknownUrls: recs.unknownUrls.length })
-    const onTopicAnswer = expect === 'answer' || ((expect === 'any_on_topic' || expect === 'no_material') && !isNoMaterial(answer))
+    const onTopicAnswer = expect === 'answer' || ((expect === 'any_on_topic' || expect === 'no_material') && !admitted)
     if (onTopicAnswer && !refusedOfftopic) {
       // Рекомендация — карточка: пункты-советы к одной статье без своих ссылок списком рекомендаций не считаются.
       const recommended = Math.max(recs.cardLinks, recs.bullets - recs.bulletsWithoutLink)
@@ -373,7 +443,11 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
       const shown = countShownRecommendations(answer, links)
       metrics.shownRecommendations = shown
       if (shown > MAX_RECOMMENDATIONS) fail(failures, 'too_many_shown', 'guard', `в показанном ответе рекомендаций ${shown} > ${MAX_RECOMMENDATIONS}`)
-      if (links.length === 0) fail(failures, 'no_links', 'model', 'в ответе нет ни одной ссылки на карточку')
+      // Режим страницы (#3290): в подсказке одна карточка — страница, на которой посетитель уже стоит;
+      // ответ по ней без ссылки верен («В карточке указано 13 точек, около 180 мин.») — это предупреждение.
+      const pageMode = cards.length === 1 && cards[0].group === 'page'
+      if (links.length === 0 && pageMode) warnings.push({ check: 'no_links', layer: 'model', detail: 'ответ по странице без ссылки на неё' })
+      else if (links.length === 0) fail(failures, 'no_links', 'model', 'в ответе нет ни одной ссылки на карточку')
       else if (recs.bulletsWithoutLink >= 2) fail(failures, 'names_without_links', 'model', `${recs.bulletsWithoutLink} пунктов без ссылки`)
       const offPlace = findOffPlaceCards(raw, cards, expectSources)
       metrics.offPlaceCards = offPlace.length
@@ -388,6 +462,10 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     const leaked = findUrls(answer).filter((url) => !makeCardUrlMatcher(cards)(url))
     if (leaked.length) fail(failures, 'url_leak', 'guard', `в показанном тексте адрес не из карточек: ${leaked[0]}`)
     if (/\(\s*\)|(^|\n)\s*•\s*(\n|$)/.test(answer)) warnings.push({ check: 'guard_residue', layer: 'guard', detail: 'пустые скобки или пункт после вырезания ссылки' })
+    // Страж содержания (#3291): в показанном ответе не должно остаться того, что он обязан убрать.
+    if (typeof question === 'string' && question.trim()) {
+      for (const defect of findGuardDefects({ question, earlier }, observed)) fail(failures, defect.check, 'guard', defect.detail)
+    }
   }
 
   return { pass: failures.length === 0, failures, warnings, metrics }

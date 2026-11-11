@@ -34,7 +34,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { buildAcceptance, renderAcceptance, validateThresholds } from './acceptance.mjs'
 import { inspectAskService } from './ask-path.mjs'
@@ -46,7 +46,12 @@ const THRESHOLDS = path.join(HERE, 'acceptance.thresholds.json')
 const INVENTORY = path.join(HERE, 'eval-inventory.json')
 const EVAL_PROMPTS = path.join(ROOT, 'scripts/ai-train/eval_prompts')
 const SIDES = ['base', 'candidate']
-const NODE22_FLAGS = ['--experimental-strip-types', '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON']
+/**
+ * Флаги Node для дочерних прогонов (#3291): общий код приложения (`api/aiAssist/*.ts`) грузят и путь
+ * службы, и набор quality, и проверки `checks.mjs`. Загрузчик `scripts/lib/ts-runtime.mjs` делает его
+ * доступным на Node 20 и 22 одинаково — те же флаги стоят у команд `ai:assistant:*` в `package.json`.
+ */
+export const TS_RUNTIME_FLAGS = ['--import', pathToFileURL(path.join(ROOT, 'scripts/lib/ts-runtime.mjs')).href, '--disable-warning=MODULE_TYPELESS_PACKAGE_JSON']
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
 const readLines = (file) => fs.readFileSync(file, 'utf8').split('\n').filter((line) => line.trim()).map((line) => JSON.parse(line))
@@ -112,10 +117,10 @@ export function planRuns(thresholds, side, modelUrl, sideDir, screen, { askUrl =
     const cases = readLines(casesFile)
     const selected = cases.filter((item) => (run.only !== 'targets' || thresholds.targets.includes(item.id)) && (!run.group || run.group.includes(item.group)))
     if (run.only === 'targets' && selected.length !== thresholds.targets.length) throw new Error(`runs.${name}: в ${run.cases} нет части целевых вопросов`)
-    // Путь службы грузит клиент экрана (`askProvider.ts`) — тем же Node с type stripping, что набор quality.
+    // Общий код приложения грузят оба пути: служба — клиент экрана (`askProvider.ts`), проверки — страж ответа.
     const argv = isAskRun(run)
-      ? [...NODE22_FLAGS, path.join(HERE, 'run.mjs'), '--provider', 'ask', '--ask-url', askUrl, '--model-url', modelUrl]
-      : [path.join(HERE, 'run.mjs'), '--base', screen, '--model-url', modelUrl]
+      ? [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--provider', 'ask', '--ask-url', askUrl, '--model-url', modelUrl]
+      : [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--base', screen, '--model-url', modelUrl]
     argv.push('--cases', casesFile, '--repeat', String(run.repeat ?? 1), '--out', path.join(sideDir, name))
     if (run.only === 'targets') argv.push('--only', thresholds.targets.join(','))
     if (run.group) argv.push('--group', run.group.join(','))
@@ -124,7 +129,7 @@ export function planRuns(thresholds, side, modelUrl, sideDir, screen, { askUrl =
   const quality = readLines(path.join(casesDir, 'cases.quality.jsonl')).length
   for (let round = 1; round <= (thresholds.quality?.repeat ?? 1); round += 1) {
     const dir = path.join(sideDir, `quality-${round}`)
-    runs.push({ kind: 'quality', side, name: `quality-${round}`, dir, expected: quality, command: [process.execPath, ...NODE22_FLAGS, path.join(HERE, 'quality.mjs'), '--model-url', modelUrl, '--out', dir] })
+    runs.push({ kind: 'quality', side, name: `quality-${round}`, dir, expected: quality, command: [process.execPath, ...TS_RUNTIME_FLAGS, path.join(HERE, 'quality.mjs'), '--model-url', modelUrl, '--out', dir] })
   }
   return runs
 }
@@ -228,12 +233,12 @@ function rebuildReports(outDir, thresholds) {
   for (const side of SIDES) {
     for (const [name, run] of Object.entries(thresholds.runs)) {
       const dir = path.join(outDir, side, name)
-      if (fs.existsSync(path.join(dir, 'results.jsonl'))) execFileSync(process.execPath, [path.join(HERE, 'run.mjs'), '--report', dir, '--cases', path.join(HERE, run.cases)], { cwd: ROOT, stdio: 'inherit' })
+      if (fs.existsSync(path.join(dir, 'results.jsonl'))) execFileSync(process.execPath, [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--report', dir, '--cases', path.join(HERE, run.cases)], { cwd: ROOT, stdio: 'inherit' })
     }
     for (let round = 1; round <= (thresholds.quality?.repeat ?? 1); round += 1) {
       const dir = path.join(outDir, side, `quality-${round}`)
       // Код выхода 1 у quality — честный провал качества, а не сбой пересборки.
-      if (fs.existsSync(path.join(dir, 'results.jsonl'))) spawnSync(process.execPath, [...NODE22_FLAGS, path.join(HERE, 'quality.mjs'), '--report', dir], { cwd: ROOT, stdio: 'inherit' })
+      if (fs.existsSync(path.join(dir, 'results.jsonl'))) spawnSync(process.execPath, [...TS_RUNTIME_FLAGS, path.join(HERE, 'quality.mjs'), '--report', dir], { cwd: ROOT, stdio: 'inherit' })
     }
   }
 }
@@ -329,9 +334,9 @@ async function collect(args, thresholds) {
 
 export async function main(argv) {
   const args = parseAcceptArgs(argv)
-  // Набор quality идёт через `quality.mjs` с type stripping — тем же Node, что и эта команда.
+  // Дочерние прогоны получают загрузчик TypeScript флагом `--import` (`TS_RUNTIME_FLAGS`): он есть с Node 20.6.
   const [major, minor] = process.versions.node.split('.').map(Number)
-  if (!args.freeze && !args.plan && (major < 22 || (major === 22 && minor < 6))) throw new Error(`нужен Node ≥ 22.6 (сейчас ${process.versions.node}): PATH="/opt/homebrew/opt/node@22/bin:$PATH"`)
+  if (!args.freeze && !args.plan && (major < 20 || (major === 20 && minor < 6))) throw new Error(`нужен Node ≥ 20.6 (сейчас ${process.versions.node}): PATH="/opt/homebrew/opt/node@22/bin:$PATH"`)
   if (args.freeze) {
     fs.writeFileSync(INVENTORY, `${JSON.stringify(buildInventory(), null, 2)}\n`)
     console.log(`Опись оценочных входов: ${path.relative(ROOT, INVENTORY)}`)

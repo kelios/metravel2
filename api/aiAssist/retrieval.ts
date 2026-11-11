@@ -22,8 +22,9 @@ import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
 import { AI_SOURCES_LIMIT } from './policy'
-import { asksAboutChildren, childrenRank, questCardLead } from './questAudience'
+import { asksAboutChildren, childrenRank } from './questAudience'
 import { detectIntent, type AiSourceIntent } from './retrievalQuery'
+import { questFactsLine, questFactsOf, travelFactsLine, travelFactsOf } from './sourceFacts'
 import type { AiSourceRef } from './sourceRef'
 import type { AiSource } from './types'
 
@@ -263,9 +264,14 @@ export const travelToSource = (travel: Travel, tokens: readonly string[], intent
   const title = String(travel?.name ?? '').trim()
   if (!path || !title) return null
   const place = [travel.countryName, travel.cityName].map((v) => String(v ?? '').trim()).filter(Boolean).join(', ')
-  const snippet = joinParts([place, htmlToSnippet(travel.description)])
-  // Бэкенд уже отобрал статью по вопросу — базовый балл 1, совпадения слов сверху.
-  const score = 1 + scoreText(`${title} ${place} ${snippet}`, tokens) + (intent === 'travel' ? INTENT_BONUS : 0)
+  const body = htmlToSnippet(travel.description)
+  // Строка фактов (#3287) — тем же построителем, что у службы и слепка обучения: страна и город, число дней, месяцы.
+  // Список статей отдаёт `month` номерами (`[6, 7, 8]`), в типе `Travel` его нет.
+  const facts = travelFactsOf(Number(travel.id), { number_days: travel.number_days, month: (travel as { month?: unknown }).month })
+  const snippet = joinParts([travelFactsLine(facts, { city: travel.cityName, country: travel.countryName }), body])
+  // Бэкенд уже отобрал статью по вопросу — базовый балл 1, совпадения слов сверху. Балл считается по
+  // месту и описанию: слова фактов («дней», название месяца) статью под вопрос не выбирают.
+  const score = 1 + scoreText(`${title} ${place} ${joinParts([place, body])}`, tokens) + (intent === 'travel' ? INTENT_BONUS : 0)
   return {
     type: 'travel',
     source_id: String(travel.id),
@@ -276,10 +282,10 @@ export const travelToSource = (travel: Travel, tokens: readonly string[], intent
     score,
     // Город статьи в каталоге — точка маршрута, а не город; месту карточки служит только страна (#3315).
     place: { countries: [travel.countryName] },
+    // Запись фактов — для проверки условий вопроса (#3289, `arrangeSources`).
+    facts,
   }
 }
-
-const DIFFICULTY_RU: Record<string, string> = { easy: 'лёгкий', medium: 'средний', hard: 'сложный' }
 
 export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], intent: AiSourceIntent = null): AiSource | null => {
   const path = buildQuestPath(quest.city_alias || quest.city_id, quest.quest_id)
@@ -295,15 +301,16 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], in
   // иначе не находил ни одного квеста и честно, но ложно отвечал «материалов нет».
   const boosted = score + (intent === 'quest' ? INTENT_BONUS : 0)
   if (boosted <= 0) return null
-  const points = Number.parseInt(String(quest.points), 10)
-  const difficulty = quest.difficulty ? DIFFICULTY_RU[quest.difficulty] : ''
-  const snippet = joinParts([
-    // Вид квеста, возраст и «Со взрослым» — по тегам каталога (#3276); слепок обучения строит ту же строку.
-    ...questCardLead({ tags: enabledQuestTags(quest.tags), city, country }),
-    Number.isFinite(points) && points > 0 ? `Точек: ${points}` : '',
-    quest.duration_min ? `Длительность: ${quest.duration_min} мин` : '',
-    difficulty ? `Сложность: ${difficulty}` : '',
-  ])
+  // Строка фактов (#3276, #3287): вид квеста, возраст и «Со взрослым» по тегам каталога, число точек,
+  // длительность, сложность, «Можно с собакой». Тот же построитель у службы `/ai/ask` и слепка обучения.
+  const facts = questFactsOf(Number(quest.id), {
+    points: quest.points,
+    duration_min: quest.duration_min,
+    difficulty: quest.difficulty,
+    pet_friendly: quest.pet_friendly,
+    tags: enabledQuestTags(quest.tags),
+  })
+  const snippet = questFactsLine(facts, { city, country })
   return {
     type: 'quest',
     source_id: quest.quest_id,
@@ -313,6 +320,7 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], in
     snippet,
     score: boosted,
     place: { cities: [quest.city_name_localized, quest.city_name, quest.city_name_canonical], countries: [country] },
+    facts,
   }
 }
 

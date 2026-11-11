@@ -88,6 +88,68 @@ describe('useAssistantChat (#2460)', () => {
     expect(result.current.busy).toBe(false)
   })
 
+  it('#3289: путь llamacpp расставляет карточки той же цепочкой — группа nearby в списке источников, строка «Почему подходит» в подсказке', async () => {
+    const quest = (id: string, city: string, minutes: number): AiSource => ({
+      type: 'quest',
+      source_id: id,
+      title: `Квест: ${city}`,
+      url: `https://metravel.by/quests/${id}`,
+      path: `/quests/${id}`,
+      snippet: `Городской квест по городу ${city} (Беларусь). Длительность: ${minutes} мин`,
+      score: 2,
+      place: { cities: [city], countries: ['Беларусь'] },
+      facts: { type: 'quest', source_id: 1, duration_min: minutes, pet_friendly: true },
+    })
+    mockedSearch.mockResolvedValue([quest('brest', 'Брест', 30), quest('long', 'Гродно', 150), quest('short', 'Гродно', 45)])
+    const prompts: string[] = []
+    const generator: Generator = {
+      generate: async ({ messages, onDelta }) => {
+        prompts.push(String(messages.at(-1)?.content ?? ''))
+        const text = 'Подойдёт [Квест: Гродно](https://metravel.by/quests/short).'
+        onDelta?.(text, text)
+        return { text, usage: { prompt_tokens: 10, completion_tokens: 5, ttft_ms: 100, tokens_per_s: 20 } }
+      },
+    }
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    await act(async () => {
+      await result.current.ask('Квесты в Гродно с собакой до часа')
+    })
+    expect(result.current.turns[0].status).toBe('done')
+    // Квест Гродно в срок — подходит; длинный квест города и квест Бреста — «Ещё по теме».
+    expect(result.current.turns[0].sources.map((item) => [item.source_id, item.group])).toEqual([['short', 'match'], ['long', 'nearby'], ['brest', 'nearby']])
+    expect(prompts[0].match(/^\[\d+\] /gm)).toEqual(['[1] '])
+    expect(prompts[0]).toContain('\nПочему подходит: можно с собакой, 45 мин\n')
+  })
+
+  it('#3291: страж содержания на пути llamacpp — подпись ссылки равна названию карточки, чужое число у пункта убрано', async () => {
+    const quest: AiSource = { ...source, type: 'quest', source_id: 'q4', title: 'Квест по центру Минска: в поисках цмока', url: 'https://metravel.by/quests/4/minsk-cmok', path: '/quests/4/minsk-cmok', snippet: 'Городской квест по городу Минск (Беларусь). Точек: 10. Длительность: 45 мин. Сложность: лёгкий' }
+    mockedSearch.mockResolvedValue([source, quest])
+    const generator = streamingGenerator([`Короткий маршрут — это [Минск в кадре](${source.url}): 9 точек, около 45 минут.\n`, `- [Квест про цмока](${quest.url}) — городской квест: 10 точек, около 45 мин`])
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    await act(async () => {
+      await result.current.ask('Самый короткий квест в Минске')
+    })
+    expect(result.current.turns[0]).toMatchObject({
+      status: 'done',
+      fallback: false,
+      answer: `Короткий маршрут — это [${source.title}](${source.url}).\n- [${quest.title}](${quest.url}) — городской квест: 10 точек, около 45 мин`,
+    })
+  })
+
+  it('#3291: ответ — повтор вопроса без ссылки: ход done с запасным ответом, текста нет, в историю он не идёт', async () => {
+    mockedSearch.mockResolvedValue([source])
+    const question = 'Сколько стоит пройти квест?'
+    const generator = streamingGenerator([`${question}\n\n`, 'Ответ: Цены в карточках — в отдельных пунктах.'])
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    await act(async () => {
+      await result.current.ask(question)
+    })
+    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, sources: [source] })
+    expect(buildHistoryFromTurns(result.current.turns)).toEqual([])
+    // Вопрос списан: модель отработала, посетитель получил честную фразу и источники.
+    expect(mockedConsume).toHaveBeenCalledTimes(1)
+  })
+
   it('без карточек модель не вызывается: честный отказ и запись в журнал спроса', async () => {
     mockedSearch.mockResolvedValue([])
     const generate = jest.fn()
@@ -204,7 +266,7 @@ describe('useAssistantChat (#2460)', () => {
     expect(guardStreamingText('Смотрите https://metravel.by/travels/vyhodnye-pod-grodno ', [source]).text).toBe(
       'Смотрите https://metravel.by/travels/vyhodnye-pod-grodno',
     )
-    expect(guardStreamingText('Смотрите https://evil.example/x ', [source])).toEqual({ text: 'Смотрите', removed: 1 })
+    expect(guardStreamingText('Смотрите https://evil.example/x ', [source])).toEqual({ text: 'Смотрите', removed: 1, relabeled: 0 })
   })
 })
 
@@ -365,6 +427,10 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
     strikes: null,
     strikesToBlock: null,
     removedLinks: 0,
+    fallback: false,
+    relabeled: 0,
+    droppedDescriptions: 0,
+    ungroundedNumbers: 0,
     usage: null,
     remaining: null,
     ...patch,
@@ -433,6 +499,28 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
       { role: 'user', text: 'Jakie questy są w Grodnie?' },
       { role: 'assistant', text: 'Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno' },
     ])
+  })
+
+  it('#3290: группа карточки из события sources доходит до хода — экран рисует «Ещё по теме» отдельно', async () => {
+    const pageCard: AiSource = { ...source, group: 'page' }
+    const nearby: AiSource = { ...source, source_id: '700', title: 'Тропа Мюллерталь', url: 'https://metravel.by/travels/700', path: '/travels/700', group: 'nearby' }
+    const { ask, client } = scriptedClient(() => ({ sources: [pageCard, nearby], remaining: 18, texts: ['На странице этого нет.'], done: doneEvent({ remaining: 18 }) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client, source: { type: 'travel', id: 1 }, loadSource: async () => source }))
+    await act(async () => {
+      await result.current.ask('Сколько дней занимает поездка?')
+    })
+    expect(ask.mock.calls[0][0]).toMatchObject({ source: { type: 'travel', id: 1 } })
+    expect(result.current.turns[0].sources.map((item) => [item.source_id, item.group])).toEqual([['1', 'page'], ['700', 'nearby']])
+  })
+
+  it('#3291: служба прислала done с fallback — ход done без текста и с признаком запасного ответа', async () => {
+    const { client } = scriptedClient(() => ({ sources: [source], remaining: 18, texts: ['Сколько стоит', ''], done: doneEvent({ fallback: true, remaining: 18 }) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client }))
+    await act(async () => {
+      await result.current.ask('Сколько стоит пройти квест?')
+    })
+    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, sources: [source] })
+    expect(buildHistoryFromTurns(result.current.turns)).toEqual([])
   })
 
   it('вопрос не по теме: предупреждение с номером от сервера; отказ модели — без номера; нет карточек — no_sources', async () => {

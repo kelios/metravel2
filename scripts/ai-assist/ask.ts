@@ -18,10 +18,30 @@
  * Событие `text` несёт накопленный текст после стража (`{text}`), не дельту:
  * страж может убрать уже показанный чужой адрес.
  *
+ * Страж содержания (#3291, `api/aiAssist/answerGuard.ts`) работает по готовому ответу: подпись ссылки
+ * приводится к названию карточки уже в стриме, а пояснение пункта от чужой карточки и фраза с числом
+ * без опоры убираются в последнем `text`. Событие `done` получает необязательные счётчики
+ * `relabeled`, `dropped_descriptions`, `ungrounded_numbers`, `prompt_leaks` (вырезано эхо разметки подсказки) и флаг `fallback: true` — ответ пустой
+ * (повтор вопроса, фраза без ссылки и признания): последний `text` пуст, экран показывает запасную
+ * фразу и источники. Старый клиент новые поля не читает.
+ *
  * Контекстный вход (#2897): необязательное `source {type: travel|quest, id}` — страница,
- * с которой открыт ассистент; её карточка из индекса ставится первой в контекст на
- * каждом ходу, подбор добавляет остальные. Кривой `source` — 400 bad_request; материала
- * нет в индексе (опубликован после сборки) — ход идёт без закреплённой карточки.
+ * с которой открыт ассистент; на каждом ходу вопрос сначала читается как вопрос об этой
+ * странице (режим страницы, ниже). Кривой `source` — 400 bad_request; материала нет в индексе
+ * (опубликован после сборки) — ход идёт как обычный вопрос.
+ *
+ * Режим страницы (#3290): вопрос со страницы отвечается по её тексту. Карточка страницы несёт строку
+ * фактов и лучшие под вопрос фрагменты (группа `page`) и одна идёт в подсказку; найденное общим
+ * подбором уходит в событие `sources` группой `nearby` — экран показывает её как «Ещё по теме».
+ * Ссылки ответа — только на страницу. Вопрос с местом, которого на странице нет, идёт общим подбором,
+ * как обычный вопрос; карточка страницы остаётся в событии `sources` последней, группой `nearby`, и в
+ * подсказку не попадает (первой карточкой модель называла её ответом на вопрос о другом месте).
+ *
+ * Условия вопроса (#3289): подбор отдаёт карточки расставленными цепочкой «место → условия →
+ * превосходная степень» (`api/aiAssist/sourceSelection.ts`). Карточки, прошедшие отбор, уходят в
+ * событие `sources` с `group: 'match'`, остальные — с `group: 'nearby'` и в подсказку не идут; если
+ * отделять нечего, поля нет. Строка «Почему подходит» карточки подсказки и строка «материала о месте
+ * нет» выключаются переменными окружения (`promptHints`).
  *
  * Контур оценки (#3286): при `AI_ASSIST_EVAL_TRACE=1` поток несёт перед `done` событие
  * `trace {prompt_sources, raw_text}` — карточки, ушедшие в подсказку модели, и её ответ до
@@ -30,12 +50,13 @@
 import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
-import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
+import { guardAnswer } from '../../api/aiAssist/answerGuard.ts'
+import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
-import { buildAssistantMessages, MAX_HISTORY_ITEMS, selectPromptSources } from '../../api/aiAssist/prompt.ts'
+import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources } from '../../api/aiAssist/prompt.ts'
 import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
-import { type AiSourceRef, parseSourceRef, pinSourceFirst } from '../../api/aiAssist/sourceRef.ts'
+import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog } from './demandLog.ts'
@@ -54,6 +75,13 @@ export interface RetrievalResult {
   sources: AiSource[]
   /** Лексика бэкенда не ответила: подбор только векторный. */
   degraded: boolean
+  /**
+   * Карточка страницы-источника с фрагментами под вопрос (#3290) — ход идёт в режиме страницы. Нет:
+   * страницы нет в индексе либо вопрос уводит с неё — общий подбор со страницей первой карточкой.
+   */
+  page?: AiSource | null
+  /** Вопрос называет место, которого нет ни в одном найденном источнике (#3289). */
+  noPlace?: boolean
 }
 
 /** Режим контура оценки (#3286); адрес модели показывает `/ai/health` — приёмка сверяет, на какую модель смотрит служба. */
@@ -62,8 +90,12 @@ export interface EvalTrace {
 }
 
 export interface AskDeps {
-  /** Подбор карточек по индексу; бросает `HttpError` (503 busy) при занятой модели эмбеддинга. */
-  retrieve: (q: string, locale: Locale) => Promise<RetrievalResult>
+  /**
+   * Подбор карточек по индексу; бросает `HttpError` (503 busy) при занятой модели эмбеддинга. С `page`
+   * (#3290) тем же вектором запроса ищет ещё и внутри фрагментов этой страницы. Карточки приходят
+   * расставленными под вопрос (#3289): порядок и группы `match` / `nearby` обработчик не меняет.
+   */
+  retrieve: (q: string, locale: Locale, page?: AiSourceRef | null) => Promise<RetrievalResult>
   /** Карточка страницы-источника (#2897) из индекса; `null` — такого материала в индексе нет. */
   lookupSource: (ref: AiSourceRef, locale: Locale) => AiSource | null
   /** `null` — `AI_LLM_URL` не задан: вопросы по теме получают 503 generator_unavailable. */
@@ -77,6 +109,8 @@ export interface AskDeps {
   trustProxy: boolean
   /** `AI_ASSIST_EVAL_TRACE=1`: событие `trace` перед `done`. Без него события нет — так живёт прод. */
   evalTrace?: EvalTrace | null
+  /** Новые строки подсказки (#3289); не задано — обе включены. */
+  promptHints?: PromptHints
   log: (line: string) => void
   now?: () => Date
 }
@@ -210,13 +244,18 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const retrievalQuery = buildRetrievalQuery(question, resolveRetrievalAnchor(history) ?? pinned?.title ?? null)
     let retrieved: RetrievalResult
     try {
-      retrieved = await deps.retrieve(retrievalQuery, locale)
+      retrieved = await deps.retrieve(retrievalQuery, locale, pinned ? (sourceRef ?? null) : null)
     } catch (error) {
       await refund()
       throw error
     }
     const { degraded } = retrieved
-    const sources = pinSourceFirst(pinned, retrieved.sources)
+    // Режим страницы (#3290): страница — единственная карточка подсказки, остальное — «ещё по теме».
+    const page = retrieved.page ?? null
+    // Вопрос уводит со страницы («а что в Гданьске?»): обычный ход по общему подбору, карточка страницы —
+    // в списке источников группой `nearby`, в подсказку не идёт.
+    const left = pinned !== null && page === null
+    const sources = page ? pageSources(page, retrieved.sources) : pinned ? leftPageSources(pinned, retrieved.sources) : retrieved.sources
     if (!sources.length) {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)
@@ -232,10 +271,26 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       throw new HttpError(503, 'generator_unavailable', { detail: 'AI_LLM_URL не задан', retryAfterSec: GENERATOR_RETRY_AFTER_SEC })
     }
 
-    // Место вопроса — по запросу подбора (#3315); у закреплённой страницы карточки уже выбраны.
-    const messages = buildAssistantMessages({ question, locale, sources, history, retrievalQuery: pinned ? null : retrievalQuery })
-    // Контур оценки (#3286): карточки подсказки — тем же отбором и с тем же запросом места, что в `messages`.
-    const tracedSources = deps.evalTrace ? selectPromptSources(sources, undefined, pinned ? null : retrievalQuery).map(withoutPlace) : null
+    // Карточки расставил подбор (#3315, #3289): место, условия и группы повторно не считаются.
+    const messages = buildAssistantMessages({
+      question,
+      locale,
+      sources,
+      history,
+      retrievalQuery: pinned ? null : retrievalQuery,
+      arranged: true,
+      noPlace: (!pinned || left) && retrieved.noPlace === true,
+      hints: deps.promptHints,
+    })
+    // Карточки подсказки — тем же отбором, что в `messages`.
+    const promptSources = selectPromptSources(sources, undefined, null, true)
+    // Контур оценки (#3286) видит их в событии `trace` — вместе со строкой «почему подходит».
+    const tracedSources = deps.evalTrace
+      ? promptSources.map((source) => ({ ...withoutPlace(source), ...(source.why && deps.promptHints?.whyFits !== false ? { why: source.why } : {}) }))
+      : null
+    // Ссылки ответа: в режиме страницы модель видела только страницу — адрес соседнего материала она
+    // могла лишь выдумать; в обычном режиме годится любая карточка списка источников.
+    const answerSources = page ? promptSources : sources
     const controller = new AbortController()
     // Посетитель закрыл вкладку или нажал «Остановить»: генерация прекращается.
     response.once('close', () => {
@@ -261,7 +316,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     }
     const flush = () => {
       flushTimer = null
-      ensureStream().event('text', { text: guardStreamingText(pendingText, sources).text })
+      ensureStream().event('text', { text: guardStreamingText(pendingText, answerSources).text })
     }
 
     try {
@@ -278,11 +333,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         }),
       )
       clearFlush()
-      const guarded = enforceSourceLinks(result.text, sources)
+      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery })
       const open = ensureStream()
       // Сырой ответ — до стража ссылок; остановку генератора на цикле и четвёртой рекомендации он уже прошёл.
       if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text })
-      const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
+      const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, answerSources))
       if (verdict === 'no_material') {
         // #3216: модель отказала вопросу с признаком поездки — «материала нет» и строка в журнале спроса.
         await demandLog.append({ q: question, locale, reason: 'no_sources' })
@@ -295,8 +350,18 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         open.done({ status: 'off_topic', reason: 'model_refusal' })
         return
       }
-      open.event('text', { text: guarded.text })
-      open.done({ status: 'done', removed_links: guarded.removed, usage: result.usage, remaining: quota.remaining })
+      open.event('text', { text: guarded.fallback ? '' : guarded.text })
+      open.done({
+        status: 'done',
+        removed_links: guarded.removed,
+        ...(guarded.relabeled ? { relabeled: guarded.relabeled } : {}),
+        ...(guarded.droppedDescriptions ? { dropped_descriptions: guarded.droppedDescriptions } : {}),
+        ...(guarded.ungroundedNumbers ? { ungrounded_numbers: guarded.ungroundedNumbers } : {}),
+        ...(guarded.promptLeaks ? { prompt_leaks: guarded.promptLeaks } : {}),
+        ...(guarded.fallback ? { fallback: true } : {}),
+        usage: result.usage,
+        remaining: quota.remaining,
+      })
     } catch (error) {
       clearFlush()
       // `stream` открывается внутри колбэка: TS сузил бы его до null, читаем явно.

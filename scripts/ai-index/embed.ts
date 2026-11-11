@@ -3,7 +3,7 @@
  * с тем же id берётся из предыдущего артефакта той же модели, считаются только новые.
  */
 import os from 'node:os'
-import { type ChunkRecord, type IndexArtifact, readIndex, writeIndex } from './format.ts'
+import { type ChunkRecord, type IndexArtifact, readIndex, type SourceFacts, writeIndex } from './format.ts'
 import { defaultModelCacheDir, type EmbeddingModelSpec } from './models.ts'
 
 export interface EmbeddingPlan {
@@ -132,6 +132,8 @@ export async function createEmbedder(spec: EmbeddingModelSpec, options: Embedder
 
 export interface EmbedRunOptions {
   chunks: ChunkRecord[]
+  /** Факты источников (#3287) — пишутся в `facts.jsonl` артефакта вместе с фрагментами. */
+  facts?: SourceFacts[]
   distDir: string
   embedder: Embedder
   full?: boolean
@@ -152,7 +154,8 @@ export async function runEmbed(options: EmbedRunOptions): Promise<EmbedRunSummar
   let previous: IndexArtifact | null = null
   if (!options.full) {
     try {
-      previous = readIndex(options.distDir)
+      // Факты пишутся заново в любом случае: их несовпавший файл не повод пересчитывать векторы.
+      previous = readIndex(options.distDir, { skipFacts: true })
     } catch (error) {
       log(`предыдущий артефакт не читается, полный пересчёт: ${String(error)}`)
     }
@@ -172,7 +175,7 @@ export async function runEmbed(options: EmbedRunOptions): Promise<EmbedRunSummar
     if (!vector) throw new Error(`no vector for chunk ${chunk.id}`)
     return vector
   })
-  writeIndex(options.distDir, { model: spec.key, dim: spec.dim, chunks: options.chunks, vectors })
+  writeIndex(options.distDir, { model: spec.key, dim: spec.dim, chunks: options.chunks, vectors, facts: options.facts })
   const seconds = (Date.now() - started) / 1000
   log(`пересчитано ${plan.compute.length} фрагментов, переиспользовано ${plan.reuse.size}, итого ${options.chunks.length} за ${seconds.toFixed(1)} с`)
   return { computed: plan.compute.length, reused: plan.reuse.size, count: options.chunks.length, seconds }

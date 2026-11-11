@@ -146,6 +146,60 @@ describe('/assistant route under feature flag (#2460)', () => {
     expect(screen.getByTestId('assistant-composer-meta').props.children).not.toContain('20')
   })
 
+  it('#3291: запасной ответ стража — честная фраза вместо текста, источники на месте, повтор не предлагается', async () => {
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    mockChatState.turns = [
+      {
+        id: 't4',
+        question: 'Сколько стоит пройти квест?',
+        answer: '',
+        fallback: true,
+        sources: [{ type: 'quest', source_id: '64', title: 'Квест по Софии: Сердика под ногами', url: 'https://metravel.by/quests/sofia/serdica', path: '/quests/sofia/serdica', snippet: '', score: 1 }],
+        status: 'done',
+        removedLinks: 0,
+        retryAfterSec: null,
+        usage: null,
+      },
+    ]
+    await render(<Route />)
+    await screen.findByTestId('assistant-screen')
+
+    expect(screen.getByTestId('assistant-answer-text')).toBeTruthy()
+    expect(screen.getByText('Точного ответа в найденных материалах нет — посмотрите источники ниже.')).toBeTruthy()
+    expect(screen.getByTestId('assistant-source-quest-64')).toBeTruthy()
+    expect(screen.queryByTestId('assistant-retry')).toBeNull()
+    expect(screen.queryByText('Модель не дала ответа. Попробуйте переформулировать вопрос.')).toBeNull()
+  })
+
+  it('#3290: режим страницы — страница под «Источники», соседние материалы отдельной группой «Ещё по теме»', async () => {
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    const source = (id: string, title: string, group?: string) => ({ type: 'travel', source_id: id, title, url: `https://metravel.by/travels/${id}`, path: `/travels/${id}`, snippet: '', score: 1, ...(group ? { group } : {}) })
+    mockChatState.turns = [
+      {
+        id: 't5',
+        question: 'Сколько дней занимает поездка?',
+        answer: 'На ярмарки хватит двух дней.',
+        sources: [source('816', 'Ярмарки Польши', 'page'), source('700', 'Тропа Мюллерталь', 'nearby'), source('701', 'Италия с собакой', 'nearby')],
+        status: 'done',
+        removedLinks: 0,
+        retryAfterSec: null,
+        usage: null,
+      },
+      // Обычный ход: группы нет, второй заголовок не появляется.
+      { id: 't6', question: 'Куда поехать?', answer: 'Под Гродно.', sources: [source('1', 'Выходные под Гродно')], status: 'done', removedLinks: 0, retryAfterSec: null, usage: null },
+    ]
+    await render(<Route />)
+    await screen.findByTestId('assistant-screen')
+
+    expect(screen.getAllByText('Источники')).toHaveLength(2)
+    expect(screen.getAllByTestId('assistant-sources-nearby')).toHaveLength(1)
+    expect(screen.getByText('Ещё по теме')).toBeTruthy()
+    for (const id of ['816', '700', '701', '1']) expect(screen.getByTestId(`assistant-source-travel-${id}`)).toBeTruthy()
+    await fireEvent.press(screen.getByTestId('assistant-source-travel-700'))
+    const { router } = jest.requireMock('expo-router')
+    expect(router.push).toHaveBeenCalledWith('/travels/700')
+  })
+
   it('остановленный ответ не остаётся пустой карточкой: подпись и повтор', async () => {
     process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
     mockChatState.turns = [

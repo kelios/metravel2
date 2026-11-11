@@ -5,12 +5,14 @@ import {
   chunkRawCorpus,
   emptyState,
   planTravelExport,
+  RAW_FORMAT_VERSION,
   readRawQuests,
   readRawTravels,
   readState,
   runExport,
   type Fetcher,
 } from '@/scripts/ai-index/export'
+import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries } from '@/scripts/ai-index/facts'
 
 import { makeTempDir } from '../cli-test-utils'
 
@@ -172,5 +174,122 @@ describe('ai-index export: прогон на фикстурах', () => {
     expect(ru.quests).toBe(2)
     expect(ru.chunks.every((c) => c.locale === 'ru')).toBe(true)
     expect(ru.chunks.length).toBeLessThan(all.chunks.length)
+  })
+})
+
+// #3287: факты источника для карточки ассистента идут тем же путём, что и текст: каталог → raw → артефакт.
+describe('ai-index export: факты источников (#3287)', () => {
+  let rawDir: string
+  beforeEach(() => {
+    rawDir = makeTempDir('ai-index-export-facts-')
+  })
+  afterEach(() => {
+    fs.rmSync(rawDir, { recursive: true, force: true })
+  })
+
+  const QUEST_FACTS: Record<number, Record<string, unknown>> = {
+    1: { points: 11, duration_min: 120, difficulty: 'easy', pet_friendly: true },
+    2: { points: '6', duration_min: 90, difficulty: 'medium', pet_friendly: false },
+  }
+  const TRAVEL_FACTS: Record<number, Record<string, unknown>> = {
+    816: { number_days: 3, transports: [1, 9] },
+    791: { number_days: null, transports: [] },
+    761: { number_days: 1, transports: [404] },
+  }
+  const DICTIONARY = {
+    transports: [{ id: 1, name: 'Машина' }, { id: 9, name: 'Поезд' }, { id: 5, name: ' ' }],
+    categories: [{ id: 19, name: 'Ярмарки' }, { id: 14, name: 'Города' }],
+    month: [{ id: 1, name: 'Январь' }],
+  }
+
+  /** Тот же каталог, что у `fakeApi`, с полями фактов в списке квестов, деталях статей и словаре. */
+  function factsApi(options: { dictionary?: boolean } = {}) {
+    const api = fakeApi()
+    const fetcher: Fetcher = async (url: string) => {
+      const { pathname } = new URL(url)
+      if (pathname === '/api/getFiltersTravel/') {
+        api.calls.push(url)
+        if (options.dictionary === false) throw new Error('HTTP 502')
+        return DICTIONARY
+      }
+      const data = (await api.fetcher(url)) as Record<string, unknown>
+      if (pathname === '/api/quests/') {
+        return { ...data, results: (data.results as Array<{ id: number }>).map((quest) => ({ ...quest, ...QUEST_FACTS[quest.id] })) }
+      }
+      const travel = /^\/api\/travels\/(\d+)\/$/.exec(pathname)
+      return travel ? { ...data, ...TRAVEL_FACTS[Number(travel[1])] } : data
+    }
+    return { fetcher, calls: api.calls }
+  }
+
+  it('экспорт кладёт в raw поля фактов квеста и статьи и словарь каталога; chunkRawCorpus отдаёт запись на источник', async () => {
+    const api = factsApi()
+    await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+    expect(readRawQuests(rawDir).map((quest) => [quest.id, quest.content_locale, quest.points, quest.duration_min, quest.difficulty, quest.pet_friendly])).toEqual([
+      [1, 'pl', 11, 120, 'easy', true],
+      [1, 'ru', 11, 120, 'easy', true],
+      [2, 'ru', '6', 90, 'medium', false],
+    ])
+    expect(readRawTravels(rawDir).map((travel) => [travel.id, travel.number_days, travel.transports])).toEqual([
+      [761, 1, [404]],
+      [791, null, []],
+      [816, 3, [1, 9]],
+    ])
+    expect(readDictionaries(rawDir)).toEqual({ transports: { 1: 'Машина', 9: 'Поезд' }, categories: { 19: 'Ярмарки', 14: 'Города' } })
+    expect(readState(rawDir).raw_version).toBe(RAW_FORMAT_VERSION)
+
+    const { facts, chunks } = chunkRawCorpus(rawDir)
+    // Квест 1 лежит на двух локалях — запись одна; id транспорта без названия в словаре в запись не идёт.
+    expect(facts).toEqual([
+      { type: 'travel', source_id: 761, number_days: 1, months: [9, 10] },
+      { type: 'travel', source_id: 791, months: [10] },
+      { type: 'travel', source_id: 816, number_days: 3, months: [11, 12], transports: ['Машина', 'Поезд'], categories: ['Ярмарки', 'Города'] },
+      { type: 'quest', source_id: 1, points: 11, duration_min: 120, difficulty: 'easy', pet_friendly: true },
+      { type: 'quest', source_id: 2, points: 6, duration_min: 90, difficulty: 'medium', pet_friendly: false, audience: 'family' },
+    ])
+    expect(new Set(chunks.map((chunk) => `${chunk.type}:${chunk.source_id}`)).size).toBe(facts.length)
+  })
+
+  it('слепок прежней версии полей перечитывает все статьи один раз; следующий запуск снова инкрементален', async () => {
+    const api = factsApi()
+    await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+    // Слепок, собранный до #3287: в state нет версии, в файлах статей нет полей фактов.
+    const { raw_version: _version, ...legacy } = readState(rawDir)
+    fs.writeFileSync(path.join(rawDir, 'state.json'), JSON.stringify(legacy))
+    const log: string[] = []
+    const migrated = await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: (line) => log.push(line) })
+    expect(migrated.travels).toMatchObject({ fetched: 3, kept: 0 })
+    expect(log.join('\n')).toMatch(/перечитываются все статьи/)
+    const next = await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+    expect(next.travels).toMatchObject({ fetched: 0, kept: 3 })
+  })
+
+  it('--limit версию слепка не подтверждает; сбой словаря экспорт не роняет и оставляет прежний файл', async () => {
+    const limited = factsApi()
+    await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: limited.fetcher, limit: 1, log: () => {} })
+    expect(readState(rawDir).raw_version).toBeUndefined()
+
+    await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: factsApi().fetcher, log: () => {} })
+    const saved = fs.readFileSync(path.join(rawDir, DICTIONARIES_FILE), 'utf8')
+    const log: string[] = []
+    const broken = await runExport({ rawDir, apiBase: 'https://example.test/api', fetcher: factsApi({ dictionary: false }).fetcher, log: (line) => log.push(line) })
+    expect(broken.travels.kept).toBe(3)
+    expect(log.join('\n')).toMatch(/dictionaries: словарь каталога не получен/)
+    expect(fs.readFileSync(path.join(rawDir, DICTIONARIES_FILE), 'utf8')).toBe(saved)
+  })
+
+  it('словарь и факты читаются из кривых значений без падения: пустые поля в запись не попадают', () => {
+    expect(parseDictionaries(null)).toEqual({ transports: {}, categories: {} })
+    expect(parseDictionaries({ transports: 'нет', categories: [{ id: null, name: 'Без id' }, { id: 3 }] })).toEqual({ transports: {}, categories: {} })
+    expect(readDictionaries(rawDir)).toEqual({ transports: {}, categories: {} })
+    expect(
+      buildCorpusFacts(
+        [{ id: 5, slug: 'a', number_days: '0', month: ['13', 'май', 2, 2], transports: null, categories: [7] }],
+        [{ id: 9, points: 'много', duration_min: 0, difficulty: 'extreme', pet_friendly: null, tags: ['kids', 'age-5-7', 'age-8-10', 'adult-required'] }],
+      ),
+    ).toEqual([
+      { type: 'travel', source_id: 5, months: [2] },
+      { type: 'quest', source_id: 9, audience: 'kids', age: [5, 10], adult: true },
+    ])
   })
 })

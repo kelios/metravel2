@@ -28,11 +28,13 @@ import {
   readRemainingQuestions,
   registerOffTopicStrike,
 } from '@/api/aiAssist/limits'
-import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
+import { guardAnswer } from '@/api/aiAssist/answerGuard'
+import { countKeptSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
 import { AI_MAX_RECOMMENDATIONS, secondsToDayEnd } from '@/api/aiAssist/policy'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
+import { arrangeSources } from '@/api/aiAssist/sourceSelection'
 import { classifyQuestion, judgeModelReply } from '@/api/aiAssist/topicGate'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
 import { getAiAssistantBaseUrl, getAiAssistantProvider, type AiAssistantProvider } from '@/utils/aiAssistantConfig'
@@ -61,6 +63,11 @@ export type AssistantTurn = {
   usage: AiUsage | null
   /** Какой по счёту за день вопрос не по теме (только у `off_topic`). */
   offTopicStrikes: number | null
+  /**
+   * Страж содержания (#3291): ответ модели пустой (повтор вопроса, фраза без ссылки и признания) —
+   * `answer` пуст, карточка хода показывает запасную фразу и источники. В историю такой ход не идёт.
+   */
+  fallback?: boolean
 }
 
 export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
@@ -299,7 +306,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         applyServerRemaining(done.remaining)
         switch (done.status) {
           case 'done':
-            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage })
+            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage, fallback: done.fallback })
             if (__DEV__) {
               console.info('[ai-assist] usage', { ...done.usage, removedLinks: done.removedLinks, sources: result.sources.length })
             }
@@ -384,7 +391,10 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         } catch {
           sources = []
         }
-        sources = pinSourceFirst(pinned, sources)
+        // Одна цепочка порядка со службой (#3289): место → условия → превосходная степень; не прошедшие
+        // отбор карточки встают группой «Ещё по теме». У закреплённой страницы карточки уже выбраны.
+        const arrangement = pinned ? null : arrangeSources(searchQuery, sources)
+        sources = arrangement ? arrangement.sources : pinSourceFirst(pinned, sources)
         if (controller.signal.aborted) {
           patchTurn(id, { status: 'aborted' })
           return
@@ -403,7 +413,15 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         }
 
         // Место вопроса — по запросу подбора (#3315); у закреплённой страницы карточки уже выбраны.
-        const messages = buildAssistantMessages({ question, locale, sources, history, retrievalQuery: pinned ? null : searchQuery })
+        const messages = buildAssistantMessages({
+          question,
+          locale,
+          sources,
+          history,
+          retrievalQuery: pinned ? null : searchQuery,
+          arranged: true,
+          noPlace: arrangement?.noPlace === true,
+        })
         let pendingFull = ''
         const flush = () => {
           flushTimerRef.current = null
@@ -420,7 +438,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           },
         })
         clearFlush()
-        const guarded = enforceSourceLinks(result.text, sources)
+        const guarded = guardAnswer(result.text, sources, { question, retrievalQuery: searchQuery })
         const verdict = judgeModelReply(searchQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
         if (verdict === 'no_material') {
           // #3216: модель отказала вопросу с признаком поездки — это «материала нет», а не чужая тема.
@@ -439,7 +457,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           await finishQuota()
           return
         }
-        patchTurn(id, { answer: guarded.text, removedLinks: guarded.removed, status: 'done', usage: result.usage })
+        // Пустой ответ (#3291): текста нет, карточка хода покажет запасную фразу и источники.
+        patchTurn(id, { answer: guarded.fallback ? '' : guarded.text, removedLinks: guarded.removed, status: 'done', usage: result.usage, fallback: guarded.fallback })
         if (__DEV__) {
           console.info('[ai-assist] usage', { ...result.usage, removedLinks: guarded.removed, sources: sources.length })
         }

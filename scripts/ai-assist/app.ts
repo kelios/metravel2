@@ -16,10 +16,12 @@
 import http from 'node:http'
 
 import { type ChunkType, countSources, indexAgeDays } from '../ai-index/format.ts'
-import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
-import { liftForChildren, questCardLead } from '../../api/aiAssist/questAudience.ts'
+import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
+import { mentionsAnyPlace } from '../../api/aiAssist/promptPlace.ts'
+import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLine } from '../../api/aiAssist/sourceFacts.ts'
+import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
-import type { AiSourceRef } from '../../api/aiAssist/sourceRef.ts'
+import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult } from './ask.ts'
 import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHandler } from './authorDraft.ts'
 import type { ResponseCache } from './cache.ts'
@@ -28,9 +30,10 @@ import { createIntentHandler, INTENT_LIMITS_PREFIX } from './intent.ts'
 import type { LexicalHit, LexicalSearch } from './lexical.ts'
 import { AskLimits, createDayClock, MemoryCounterStore } from './limits.ts'
 import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nearRoute.ts'
+import { bestPageRows, focusFragment, joinPageFragments, pageRows } from './page.ts'
 import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
-import { type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, vectorSources } from './search.ts'
+import { ASK_FRAGMENT_CHARS, type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, snippet, vectorSources } from './search.ts'
 import { createSuggestTagsHandler, SUGGEST_TAGS_MAX_BODY_BYTES, type TagCatalog } from './suggestTags.ts'
 
 export { MAX_LIMIT, MAX_QUERY_CHARS }
@@ -48,6 +51,8 @@ export interface AppDeps {
   cache: ResponseCache
   queueTimeoutMs: number
   ask: AskAppDeps
+  /** Длина текстового фрагмента карточки `/ai/ask` по типу источника (#3287); нет — `ASK_FRAGMENT_CHARS`. */
+  askFragmentChars?: Partial<Record<ChunkType, number>>
   authorDraft: AuthorDraftAppDeps
   /**
    * `/ai/intent` (#2887): свой счётчик на IP. Необязателен для стендов и тестов других
@@ -147,6 +152,9 @@ export function createApp(deps: AppDeps): http.Server {
       // #3288: устаревший индекс молча не находит новые материалы — возраст и состав видны пробе.
       index_age_days: indexAgeDays(manifest.built_at),
       sources,
+      // #3287: версия формата артефакта и число записей фактов — проба видит службу на индексе без фактов.
+      index_format_version: manifest.format_version ?? 1,
+      facts: index.factsBySource.size,
       rss_mb: Math.round(memory.rss / 1048576),
       heap_mb: Math.round(memory.heapUsed / 1048576),
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
@@ -163,7 +171,7 @@ export function createApp(deps: AppDeps): http.Server {
   }
 
   /** Гибрид «вектор + лексика» без кэша: общий для `/ai/search` и подбора карточек `/ai/ask`. */
-  async function hybrid({ q, locale, type, limit }: HybridQuery): Promise<{ items: ResultItem[]; degraded: boolean }> {
+  async function hybrid({ q, locale, type, limit }: HybridQuery): Promise<{ items: ResultItem[]; degraded: boolean; vector: ArrayLike<number> }> {
     // Лексика — только для статей (бэкенд ищет travels) и стартует уже внутри слота очереди,
     // параллельно с эмбеддингом: запрос, который не дождётся слота (503 busy), не должен
     // запускать поиск в Django на том же vCPU. Отказ лексики → null (degraded) сразу, чтобы
@@ -181,7 +189,7 @@ export function createApp(deps: AppDeps): http.Server {
     }
     const vectorHits = vectorSources(index, { vector, locale, type, limit: VECTOR_SOURCES })
     const lexicalHits = await lexicalPromise
-    return { items: rrfMerge(vectorHits, lexicalHits ?? [], index, limit), degraded: lexicalHits === null }
+    return { items: rrfMerge(vectorHits, lexicalHits ?? [], index, limit), degraded: lexicalHits === null, vector }
   }
 
   async function search(body: unknown): Promise<SearchResponse> {
@@ -207,7 +215,7 @@ export function createApp(deps: AppDeps): http.Server {
   }
 
   /** Теги квеста и названия его города на всех локалях индекса; для статьи и источника вне индекса — `null`. */
-  const questFacts = (item: ResultItem): { tags: string[]; cities: (string | null)[] } | null => {
+  const questCatalog = (item: ResultItem): { tags: string[]; cities: (string | null)[] } | null => {
     const rows = item.type === 'quest' ? index.rowsBySource.get(`quest:${item.source_id}`) : undefined
     if (!rows?.length) return null
     const chunks = rows.map((row) => index.artifact.chunks[row])
@@ -215,30 +223,137 @@ export function createApp(deps: AppDeps): http.Server {
   }
 
   /**
-   * Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. Карточка квеста
-   * начинается, как на экране (`questToSource`): вид квеста с городом и страной, возраст, «Со взрослым»
-   * (#3276) — затем фрагмент текста квеста. Числа точек, длительности и сложности в индексе нет.
+   * Факты квеста (#3287): запись `facts.jsonl`; у артефакта без фактов — аудитория по тегам
+   * фрагмента, как до #3287 (карточка тогда несёт только вид квеста, возраст и «Со взрослым»).
    */
-  const toSource = (item: ResultItem): AiSource => {
-    const quest = questFacts(item)
-    const lead = quest ? questCardLead({ tags: quest.tags, city: item.city, country: item.country }) : []
+  const questFacts = (item: ResultItem): QuestFacts | null => {
+    if (item.type !== 'quest') return null
+    const facts = index.factsBySource.get(`quest:${item.source_id}`)
+    if (facts?.type === 'quest') return facts
+    const catalog = questCatalog(item)
+    return catalog ? questFactsOf(item.source_id, { tags: catalog.tags }) : null
+  }
+
+  const fragmentChars = { ...ASK_FRAGMENT_CHARS, ...deps.askFragmentChars }
+
+  /**
+   * Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. Первой в
+   * карточке идёт строка фактов (#3287) — тем же построителем, что на экране (`questToSource`,
+   * `travelToSource`) и в слепке обучения: у квеста — вид квеста с городом и страной, возраст,
+   * «Со взрослым» (#3276), число точек, длительность, сложность, «Можно с собакой»; у статьи —
+   * страна и город, число дней, месяцы. Затем — фрагмент текста под вопрос, не длиннее
+   * `ASK_FRAGMENT_CHARS` своего типа.
+   */
+  const toSource = (item: ResultItem, pageFragments?: string): AiSource => {
+    const quest = questCatalog(item)
+    const place = { city: item.city, country: item.country }
+    const indexed = item.type === 'travel' ? index.factsBySource.get(`travel:${item.source_id}`) : undefined
+    const travelFacts = indexed?.type === 'travel' ? indexed : null
+    const ownQuestFacts = item.type === 'quest' ? questFacts(item) : null
+    const facts = item.type === 'quest' ? questFactsLine(ownQuestFacts, place) : travelFactsLine(travelFacts, place)
+    // Карточка страницы (#3290) несёт свои фрагменты — несколько окон текста под вопрос.
+    const fragment = pageFragments ?? (fragmentChars[item.type] > 0 ? snippet(item.snippet, fragmentChars[item.type]) : '')
     return {
       type: item.type,
       source_id: String(item.source_id),
       title: item.title,
       url: item.url,
       path: new URL(item.url).pathname,
-      snippet: [...lead, item.snippet].filter(Boolean).join('. '),
+      snippet: [facts, fragment].filter(Boolean).join('. '),
       score: item.score ?? 0,
       // Место карточки для отбора подсказки (#3315): у квеста — город на всех локалях индекса, у статьи — страна.
       place: { cities: quest ? quest.cities : [], countries: [item.country] },
+      // Запись фактов — для проверки условий вопроса (#3289); посетителю не уходит.
+      facts: ownQuestFacts ?? travelFacts,
     }
   }
 
-  async function retrieve(q: string, locale: Locale): Promise<RetrievalResult> {
-    const { items, degraded } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
-    // Вопрос о детях: детские и семейные квесты города из вопроса — первыми, они уйдут в подсказку модели.
-    return { sources: liftForChildren(q, items, questFacts).map(toSource), degraded }
+  /** Источник индекса по ключу `type:id`: фрагмент запрошенной локали, если он есть, иначе первый; нет в индексе — `null`. */
+  const sourceItem = (key: string, locale: Locale): ResultItem | null => {
+    const rows = index.rowsBySource.get(key)
+    if (!rows?.length) return null
+    const row = rows.find((candidate) => index.artifact.chunks[candidate].locale === locale) ?? rows[0]
+    return itemForRow(index, row, null)
+  }
+
+  const questKeys = [...index.factsBySource.values()].filter((facts) => facts.type === 'quest').map(factsKey)
+
+  /**
+   * Все квесты индекса карточками — кандидаты превосходной степени (#3287): «самый короткий квест в
+   * Минске» решается по фактам каталога до модели, а самый короткий квест города мог и не попасть в
+   * восемь найденных. Место и условия среди них выбирает общая цепочка (`arrangeSources`).
+   */
+  const questPool = (locale: Locale) => (): AiSource[] =>
+    questKeys.flatMap((key) => {
+      const item = sourceItem(key, locale)
+      return item ? [toSource(item)] : []
+    })
+
+  /**
+   * Источник упоминает названное в вопросе место (#3289) — в карточке, в названиях на всех локалях
+   * индекса или где-либо в тексте. Фрагмент карточки — 120 знаков, и статья о тропе в Закопане слова
+   * «Татры» в нём не несёт; по нему одному подсказка получала бы ложное «материала о месте нет».
+   * Порядок — от дешёвого: карточка и названия, затем сниппеты строк из памяти и только потом полный
+   * текст с диска (чтение синхронное, строка за строкой до первого упоминания).
+   */
+  const mentionsInIndex = (locale: Locale) => (source: AiSource, places: readonly string[]): boolean => {
+    const key = `${source.type}:${source.source_id}`
+    const { chunks } = index.artifact
+    const everywhere = index.rowsBySource.get(key) ?? []
+    const names = everywhere.flatMap((row) => [chunks[row].title, chunks[row].city, chunks[row].country])
+    if (mentionsAnyPlace(places, [source.title, source.snippet, ...new Set(names)].filter(Boolean).join(' '))) return true
+    const rows = pageRows(index, key, locale)
+    if (rows.some((row) => mentionsAnyPlace(places, index.snippets[row]))) return true
+    const { readText } = index
+    return readText ? rows.some((row) => mentionsAnyPlace(places, readText(row) ?? '')) : false
+  }
+
+  /**
+   * Карточка страницы для режима страницы (#3290): строка фактов и лучшие под вопрос фрагменты текста
+   * этой страницы — тем же вектором запроса, что у общего подбора. `null` — источника нет в индексе
+   * либо вопрос называет место, которого на странице нет («а что в Гданьске?»): тогда ход идёт общим
+   * подбором, как до #3290.
+   */
+  function pageCard(ref: AiSourceRef, q: string, locale: Locale, vector: ArrayLike<number>): AiSource | null {
+    const key = `${ref.type}:${ref.id}`
+    const rows = pageRows(index, key, locale)
+    if (!rows.length) return null
+    const { chunks } = index.artifact
+    // Полный текст строки читается с диска один раз за вопрос: и для сверки места, и для фрагмента.
+    const texts = new Map<number, string>()
+    const textOf = (row: number): string => {
+      if (!texts.has(row)) texts.set(row, index.readText?.(row) ?? index.snippets[row])
+      return texts.get(row)!
+    }
+    // Место вопроса сверяется с названием и городом страницы на всех локалях индекса и со сниппетами
+    // строк (память); полный текст читается, только если место названо, а там его нет: сниппет строки —
+    // первые 200 знаков, а фрагмент — до 800, место часто стоит дальше.
+    const everywhere = index.rowsBySource.get(key) ?? rows
+    const names = new Set(everywhere.flatMap((row) => [chunks[row].title, chunks[row].city, chunks[row].country]))
+    const head = [...names, ...rows.map((row) => index.snippets[row])].filter(Boolean).join(' ')
+    if (leavesPage(q, head) && leavesPage(q, rows.map(textOf).join(' '))) return null
+    const best = bestPageRows(index, rows, vector, AI_PAGE_FRAGMENTS)
+    const fragments = best.map((row) => focusFragment(textOf(row), q, AI_PAGE_FRAGMENT_CHARS))
+    return toSource(itemForRow(index, best[0], null), joinPageFragments(fragments))
+  }
+
+  async function retrieve(q: string, locale: Locale, page: AiSourceRef | null = null): Promise<RetrievalResult> {
+    const { items, degraded, vector } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
+    const card = page ? pageCard(page, q, locale, vector) : null
+    // Одна цепочка порядка (#3289): место вопроса → условия по фактам → превосходная степень. В режиме
+    // страницы (#3290) найденное — только «ещё по теме»: порядок без групп и без строки о месте. Вопрос,
+    // который уводит со страницы, — обычный вопрос: полный отбор с группами.
+    const arranged = arrangeSources(
+      q,
+      items.map((item) => toSource(item)),
+      { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card },
+    )
+    return {
+      sources: arranged.sources.slice(0, AI_SOURCES_LIMIT),
+      degraded,
+      page: card,
+      noPlace: !card && arranged.noPlace,
+    }
   }
 
   /**
@@ -247,10 +362,8 @@ export function createApp(deps: AppDeps): http.Server {
    * не из подбора). Нет в индексе — `null`.
    */
   function lookupSource(ref: AiSourceRef, locale: Locale): AiSource | null {
-    const rows = index.rowsBySource.get(`${ref.type}:${ref.id}`)
-    if (!rows?.length) return null
-    const row = rows.find((candidate) => index.artifact.chunks[candidate].locale === locale) ?? rows[0]
-    return toSource(itemForRow(index, row, null))
+    const item = sourceItem(`${ref.type}:${ref.id}`, locale)
+    return item ? toSource(item) : null
   }
 
   const ask = createAskHandler({ ...deps.ask, retrieve, lookupSource, llmQueue, log })

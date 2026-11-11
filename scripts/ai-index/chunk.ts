@@ -36,6 +36,9 @@ export interface RawTravel {
   coordsMeTravel?: RawTravelCoord[] | null
   categories?: Array<number | string> | null
   month?: Array<number | string> | null
+  /** Факты карточки ассистента (#3287): число дней и id транспорта из словаря каталога. */
+  number_days?: number | string | null
+  transports?: Array<number | string> | null
   year?: number | string | null
   publish?: boolean | null
   moderation?: boolean | null
@@ -63,6 +66,11 @@ export interface RawQuest {
   lat?: number | string | null
   lng?: number | string | null
   tags?: Record<string, boolean> | string[] | null
+  /** Факты карточки ассистента (#3287) из списка `/api/quests/`. */
+  points?: number | string | null
+  duration_min?: number | null
+  difficulty?: string | null
+  pet_friendly?: boolean | null
   cover_url?: string | null
   intro?: { title?: string | null; story?: string | null; task?: string | null } | null
   steps?: RawQuestStep[] | null

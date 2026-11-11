@@ -6,6 +6,7 @@ import { AI_ASK_DAILY_LIMIT, AI_AUTHOR_DRAFT_DAILY_LIMIT, AI_MAP_INTENT_DAILY_LI
 import { defaultModelCacheDir } from '../ai-index/models.ts'
 import { DEFAULT_DEMAND_LOG_PATH } from './demandLog.ts'
 import { DEFAULT_DAY_TIME_ZONE } from './limits.ts'
+import { ASK_FRAGMENT_CHARS } from './search.ts'
 
 export interface AssistConfig {
   port: number
@@ -47,6 +48,14 @@ export interface AssistConfig {
   trustProxy: boolean
   /** Контур оценки (#3286): событие `trace` в потоке `/ai/ask` и адрес модели в `/ai/health`. В образе прода не задаётся. */
   evalTrace: boolean
+  /** Длина текстового фрагмента карточки `/ai/ask` после строки фактов (#3287), знаков; 0 — без фрагмента. */
+  askFragmentChars: { travel: number; quest: number }
+  /**
+   * Новые строки подсказки `/ai/ask` (#3289), которых модель не видела в обучении: «Почему подходит» в
+   * карточке и «материала о месте нет» перед вопросом. Обе включены; `0` выключает — для живого
+   * сравнения двух вариантов.
+   */
+  promptHints: { whyFits: boolean; noPlace: boolean }
 }
 
 function envNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -82,5 +91,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
     demandLogPath: env.AI_DEMAND_LOG || DEFAULT_DEMAND_LOG_PATH,
     trustProxy: env.AI_ASSIST_TRUST_PROXY !== '0',
     evalTrace: env.AI_ASSIST_EVAL_TRACE === '1',
+    askFragmentChars: {
+      travel: envNumber(env, 'AI_ASSIST_ASK_FRAGMENT_TRAVEL_CHARS', ASK_FRAGMENT_CHARS.travel),
+      quest: envNumber(env, 'AI_ASSIST_ASK_FRAGMENT_QUEST_CHARS', ASK_FRAGMENT_CHARS.quest),
+    },
+    promptHints: {
+      whyFits: env.AI_ASSIST_PROMPT_WHY_FITS !== '0',
+      noPlace: env.AI_ASSIST_PROMPT_NO_PLACE !== '0',
+    },
   }
 }

@@ -12,7 +12,9 @@
  */
 
 import type { AiSource, AiSourceType } from './types'
-import { AI_SOURCES_LIMIT, AI_SOURCES_LIMIT_PINNED } from './policy.ts'
+import { AI_PAGE_NEARBY_LIMIT, AI_SOURCES_LIMIT, AI_SOURCES_LIMIT_PINNED } from './policy.ts'
+import { mentionsAnyPlace } from './promptPlace.ts'
+import { namedPlaces } from './topicGate.ts'
 
 /** Ссылка на материал сайта: `id` — числовой PK статьи или квеста (как в индексе и `/ai/similar`). */
 export type AiSourceRef = {
@@ -67,3 +69,41 @@ export const pinSourceFirst = (
   const found = sources.find((source) => sourceKeyOf(source) === key)
   return [found ?? pinned, ...sources.filter((source) => sourceKeyOf(source) !== key)].slice(0, limit)
 }
+
+/**
+ * Вопрос уводит со страницы (#3290): в нём названо место, которого нет ни в названии, ни в тексте
+ * страницы — «а что в Гданьске?» со страницы статьи о Гродно. Такой вопрос идёт общим подбором, страница
+ * остаётся первой карточкой. Место, которое на странице есть («парковка у ярмарки в Гданьске» в статье о
+ * ярмарках Польши), режим страницы не снимает. Название места на другом письме («w Gdańsku» при русском
+ * тексте) на странице не узнаётся — такой вопрос тоже уходит в общий подбор.
+ */
+export const leavesPage = (query: string, pageText: string): boolean => {
+  const places = namedPlaces(query)
+  return places.length > 0 && !mentionsAnyPlace(places, pageText)
+}
+
+/**
+ * Источники хода, когда вопрос уводит со страницы (#3290, `leavesPage`): общий подбор как у обычного
+ * вопроса, а карточка страницы — последней, группой `nearby`: посетитель видит её под ответом, в
+ * подсказку модели она не идёт. Пока страница стояла в подсказке первой, модель называла её ответом на
+ * вопрос о другом месте — «Вот главное в Гданьске: Гродно за 1 день…» (замер 11.11.2026: страница
+ * первой — 3 верных ответа из 9, последней — 7, вне подсказки — 9). Страница, которую нашёл и подбор,
+ * остаётся его карточкой на своём месте.
+ */
+export const leftPageSources = (page: AiSource, found: readonly AiSource[], limit: number = AI_SOURCES_LIMIT): AiSource[] => {
+  const key = sourceKeyOf(page)
+  const general = found.slice(0, Math.max(0, limit))
+  return general.some((source) => sourceKeyOf(source) === key) ? general : [...general, { ...page, group: 'nearby' }]
+}
+
+/**
+ * Источники хода в режиме страницы (#3290): карточка страницы — группа `page`, найденное общим
+ * подбором — группа `nearby` (без самой страницы, не больше `limit`). В подсказку модели идёт только
+ * страница (`selectPromptSources`), соседние материалы посетитель видит под ответом как «Ещё по теме».
+ */
+export const pageSources = (page: AiSource, found: readonly AiSource[], limit: number = AI_PAGE_NEARBY_LIMIT): AiSource[] => {
+  const key = sourceKeyOf(page)
+  const nearby = found.filter((source) => sourceKeyOf(source) !== key).slice(0, Math.max(0, limit))
+  return [{ ...page, group: 'page' }, ...nearby.map((source): AiSource => ({ ...source, group: 'nearby' }))]
+}
+

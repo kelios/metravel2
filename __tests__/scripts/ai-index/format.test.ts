@@ -3,18 +3,23 @@ import path from 'path'
 
 import {
   CHUNKS_FILE,
+  FACTS_FILE,
+  INDEX_FORMAT_VERSION,
   MANIFEST_FILE,
   VECTORS_FILE,
   chunkId,
   decodeVectors,
   encodeVectors,
+  factsSha256,
   float16BitsToFloat32,
   float32ToFloat16Bits,
   readIndex,
   sourceSha256,
   verifyIndex,
+  writeFacts,
   writeIndex,
   type ChunkRecord,
+  type SourceFacts,
 } from '@/scripts/ai-index/format'
 
 import { makeTempDir } from '../cli-test-utils'
@@ -88,13 +93,18 @@ describe('ai-index format: артефакт', () => {
       built_at: '2026-10-18T00:00:00.000Z',
       source_sha256: sourceSha256(chunks),
       sources: { travel: 3, quest: 0 },
+      // #3287: версия формата и отпечаток записей фактов; без фактов файл пуст.
+      format_version: INDEX_FORMAT_VERSION,
+      facts: { count: 0, sha256: factsSha256([]) },
     })
+    expect(fs.readFileSync(path.join(dir, FACTS_FILE), 'utf8')).toBe('')
     expect(fs.statSync(path.join(dir, VECTORS_FILE)).size).toBe(3 * 4 * 2)
     expect(fs.readFileSync(path.join(dir, CHUNKS_FILE), 'utf8').trim().split('\n')).toHaveLength(3)
     expect(JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8'))).toEqual(manifest)
 
     const artifact = readIndex(dir)
     expect(artifact?.chunks).toEqual(chunks)
+    expect(artifact?.facts).toEqual([])
     expect(Array.from(artifact!.vectors)).toEqual([0, -0.25, 0.125, 1, 0.5, -0.25, 0.125, 1, 1, -0.25, 0.125, 1])
     expect(verifyIndex(dir)).toEqual({ ok: true, problems: [], manifest })
   })
@@ -124,6 +134,83 @@ describe('ai-index format: артефакт', () => {
     const swapped = [makeChunk(1), makeChunk(2, 'другой текст той же длины')]
     fs.writeFileSync(path.join(dir, CHUNKS_FILE), `${swapped.map((row) => JSON.stringify(row)).join('\n')}\n`)
     expect(() => readIndex(dir)).toThrow(/source_sha256/)
+  })
+
+  // #3287: факты источника — отдельный файл артефакта, одна строка на источник.
+  const questChunk = (sourceId: number, locale: string, text: string): ChunkRecord => ({
+    ...makeChunk(0, text),
+    id: chunkId('quest', sourceId, locale, text),
+    type: 'quest',
+    source_id: sourceId,
+    locale,
+  })
+  const FACTS: SourceFacts[] = [
+    { type: 'quest', source_id: 7, points: 9, duration_min: 90, difficulty: 'easy', pet_friendly: true, audience: 'kids', age: [8, 10], adult: true },
+    { type: 'travel', source_id: 101, number_days: 3, months: [11, 12], transports: ['Машина'] },
+    // Источника 999 нет среди фрагментов: записи о нём в артефакте не будет.
+    { type: 'travel', source_id: 999, number_days: 5 },
+    // Повтор источника (квест на второй локали) — одна запись.
+    { type: 'quest', source_id: 7, points: 1 },
+  ]
+
+  it('#3287: writeIndex пишет facts.jsonl — запись на источник индекса в порядке фрагментов, манифест несёт версию и отпечаток', () => {
+    const chunks = [makeChunk(1), questChunk(7, 'ru', 'квест ru'), questChunk(7, 'pl', 'квест pl'), makeChunk(2)]
+    const vectors = chunks.map(() => [1, 0])
+    const manifest = writeIndex(dir, { model: 'm', dim: 2, chunks, vectors, facts: FACTS })
+    const expected = [FACTS[1], FACTS[0]]
+    expect(manifest.format_version).toBe(2)
+    expect(manifest.facts).toEqual({ count: 2, sha256: factsSha256(expected) })
+    expect(fs.readFileSync(path.join(dir, FACTS_FILE), 'utf8').trim().split('\n').map((line) => JSON.parse(line))).toEqual(expected)
+    expect(readIndex(dir)?.facts).toEqual(expected)
+    expect(verifyIndex(dir)).toEqual({ ok: true, problems: [], manifest })
+  })
+
+  it('#3287: артефакт версии 1 (манифест без format_version и facts, файла фактов нет) читается без фактов', () => {
+    const chunks = [makeChunk(1), makeChunk(2)]
+    writeIndex(dir, { model: 'm', dim: 2, chunks, vectors: [[1, 0], [0, 1]], facts: FACTS })
+    const { format_version: _version, facts: _facts, ...legacy } = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), 'utf8'))
+    fs.writeFileSync(path.join(dir, MANIFEST_FILE), JSON.stringify(legacy))
+    fs.rmSync(path.join(dir, FACTS_FILE))
+    const artifact = readIndex(dir)
+    expect(artifact?.manifest.format_version).toBeUndefined()
+    expect(artifact?.chunks).toEqual(chunks)
+    expect(artifact?.facts).toEqual([])
+    expect(verifyIndex(dir).ok).toBe(true)
+  })
+
+  it('#3287: facts.jsonl от другой сборки — несогласованный артефакт: readIndex отказывает, verifyIndex называет файл', () => {
+    const chunks = [makeChunk(1), makeChunk(2)]
+    writeIndex(dir, { model: 'm', dim: 2, chunks, vectors: [[1, 0], [0, 1]], facts: [{ type: 'travel', source_id: 101, number_days: 3 }] })
+    fs.writeFileSync(path.join(dir, FACTS_FILE), `${JSON.stringify({ type: 'travel', source_id: 555, number_days: 1 })}\n`)
+    expect(() => readIndex(dir)).toThrow(/inconsistent: facts\.jsonl/)
+    const result = verifyIndex(dir)
+    expect(result.ok).toBe(false)
+    expect(result.problems.join('\n')).toMatch(/facts\.sha256/)
+    expect(result.problems.join('\n')).toMatch(/которых нет в chunks\.jsonl/)
+    fs.rmSync(path.join(dir, FACTS_FILE))
+    expect(() => readIndex(dir)).toThrow(/facts\.jsonl/)
+  })
+
+  it('#3287: writeFacts переводит готовый артефакт на формат с фактами, не трогая фрагменты, векторы и время сборки', () => {
+    const chunks = [makeChunk(1), questChunk(7, 'ru', 'квест ru')]
+    const before = writeIndex(dir, { model: 'm', dim: 2, chunks, vectors: [[1, 0], [0, 1]], builtAt: '2026-10-18T00:00:00.000Z' })
+    const vectorsBefore = fs.readFileSync(path.join(dir, VECTORS_FILE))
+    const chunksBefore = fs.readFileSync(path.join(dir, CHUNKS_FILE), 'utf8')
+    const after = writeFacts(dir, FACTS)
+    expect(after).toEqual({ ...before, facts: { count: 2, sha256: factsSha256([FACTS[1], FACTS[0]]) } })
+    expect(fs.readFileSync(path.join(dir, VECTORS_FILE)).equals(vectorsBefore)).toBe(true)
+    expect(fs.readFileSync(path.join(dir, CHUNKS_FILE), 'utf8')).toBe(chunksBefore)
+    expect(readIndex(dir)?.facts).toEqual([FACTS[1], FACTS[0]])
+    expect(verifyIndex(dir).ok).toBe(true)
+    // Файл фактов испорчен — та же команда его чинит.
+    fs.writeFileSync(path.join(dir, FACTS_FILE), '{"type":"travel","source_id":999}\n')
+    expect(() => readIndex(dir)).toThrow(/facts\.jsonl/)
+    expect(readIndex(dir, { skipFacts: true })?.facts).toEqual([])
+    writeFacts(dir, FACTS)
+    expect(readIndex(dir)?.facts).toEqual([FACTS[1], FACTS[0]])
+    const empty = makeTempDir('ai-index-format-empty-')
+    expect(() => writeFacts(empty, FACTS)).toThrow(/нет артефакта/)
+    fs.rmSync(empty, { recursive: true, force: true })
   })
 
   it('chunkId зависит от типа, источника, локали и текста', () => {

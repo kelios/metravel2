@@ -68,12 +68,24 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(parseAskSseEvent('event: text\ndata: {"text":"Привет"}')).toEqual({ name: 'text', data: { text: 'Привет' } })
     expect(parseAskSseEvent('event: done\ndata: {"status":"off_topic","reason":"offtopic_warning","strikes":2,"strikes_to_block":3}')).toEqual({
       name: 'done',
-      data: { status: 'off_topic', reason: 'offtopic_warning', strikes: 2, strikesToBlock: 3, removedLinks: 0, usage: null, remaining: null },
+      data: { status: 'off_topic', reason: 'offtopic_warning', strikes: 2, strikesToBlock: 3, removedLinks: 0, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: null, remaining: null },
     })
+    // #3291: счётчики стража содержания и флаг запасного ответа; мусор в них не ломает разбор.
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":0,"relabeled":2,"dropped_descriptions":1,"ungrounded_numbers":1,"fallback":true}')).toMatchObject({
+      name: 'done',
+      data: { status: 'done', relabeled: 2, droppedDescriptions: 1, ungroundedNumbers: 1, fallback: true },
+    })
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","relabeled":"много","fallback":"да"}')).toMatchObject({ data: { relabeled: 0, fallback: false } })
     expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":1,"remaining":18,"usage":{"prompt_tokens":100,"completion_tokens":20,"ttft_ms":50,"tokens_per_s":40}}')).toMatchObject({
       name: 'done',
       data: { status: 'done', removedLinks: 1, remaining: 18, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 } },
     })
+    // #3290: группа карточки доходит до экрана; незнакомое значение — обычная карточка.
+    const grouped = parseAskSseEvent(
+      `event: sources\ndata: ${JSON.stringify({ sources: [{ ...sourcePayload, group: 'page' }, { ...sourcePayload, source_id: 2, group: 'nearby' }, { ...sourcePayload, source_id: 3, group: 'pinned' }] })}`,
+    )
+    expect(grouped).toMatchObject({ name: 'sources', data: { sources: [{ source_id: '816', group: 'page' }, { source_id: '2', group: 'nearby' }, { source_id: '3' }] } })
+    expect((grouped as { data: { sources: Record<string, unknown>[] } }).data.sources[2]).not.toHaveProperty('group')
     // Неизвестный статус не ломает экран — ход завершается ошибкой; чужие события и битый JSON пропускаются.
     expect(parseAskSseEvent('event: done\ndata: {"status":"weird"}')).toMatchObject({ name: 'done', data: { status: 'error' } })
     expect(parseAskSseEvent('event: ping\ndata: {}')).toBeNull()
@@ -112,7 +124,7 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(result).toEqual({
       sources: [{ ...sourcePayload, source_id: '816' }],
       text: 'Загляните в [Ярмарки](https://metravel.by/travels/816)',
-      done: { status: 'done', reason: null, strikes: null, strikesToBlock: null, removedLinks: 1, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: 19 },
+      done: { status: 'done', reason: null, strikes: null, strikesToBlock: null, removedLinks: 1, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: 19 },
     })
     expect(cancel).toHaveBeenCalled()
   })

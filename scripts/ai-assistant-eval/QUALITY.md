@@ -66,8 +66,9 @@ en 4, be 3. Формулировка ответа свободная. `fixtures.
 | q33 | Квест вместо статей, белорусский | Квест по Лиде, статьи не предлагать |
 | q34 | Квест вместо статей, польский | Квест по Полоцку, 150 минут |
 
-Запуск на локальном `llama-server` (Node ≥22.6 с type stripping; на этом Mac
-Node 22 лежит отдельно от системного Node 20):
+Запуск на локальном `llama-server` (`npm run ai:assistant:quality` подключает
+загрузчик TypeScript `scripts/lib/ts-runtime.mjs` и идёт на Node 20 и 22, #3291;
+на этом Mac Node 22 лежит отдельно от системного Node 20):
 
 ```bash
 PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run ai:assistant:quality

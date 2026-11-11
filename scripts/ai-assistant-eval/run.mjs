@@ -269,7 +269,8 @@ export async function collectResults(cases, repeat, openCase, onResult = () => {
       for (const [index, question] of item.turns.entries()) {
         const observed = await ask(question)
         const expectation = turnExpectation(item, index)
-        const evaluation = scoreTurn(expectation, observed)
+        // Слой стража содержания (#3291): вопрос хода и прошлые вопросы диалога; в запись хода они не идут.
+        const evaluation = scoreTurn({ ...expectation, question, earlier: item.turns.slice(0, index).join(' ') }, observed)
         turns.push({ question, ...expectation, observed, eval: evaluation })
         const mark = evaluation.pass ? 'ok ' : 'FAIL'
         console.log(`${mark} ${id}#${index} [${observed.status ?? 'нет хода'}] ${question.slice(0, 60)}${evaluation.pass ? '' : ` — ${evaluation.failures.map((f) => f.check).join(', ')}`}`)

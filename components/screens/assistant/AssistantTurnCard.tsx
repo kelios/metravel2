@@ -60,6 +60,12 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
   const retry = useCallback(() => onRetry(turn.id), [onRetry, turn.id])
   const isWorking = turn.status === 'searching' || turn.status === 'streaming'
   const showSources = turn.sources.length > 0 && turn.status !== 'searching'
+  // Группа «Ещё по теме»: в режиме страницы (#3290) — соседние материалы; в общем подборе (#3289) —
+  // карточки, не прошедшие отбор по месту и условиям вопроса. Модель их не видела.
+  const mainSources = turn.sources.filter((source) => source.group !== 'nearby')
+  const nearbySources = turn.sources.filter((source) => source.group === 'nearby')
+  // Пустой ответ модели (#3291): вместо повтора вопроса — честная фраза; источники остаются ниже.
+  const answerText = turn.status === 'done' && turn.fallback ? i18nT('aiAssistStatic:ask.fallbackAnswer') : turn.answer
 
   let notice: string | null = null
   let noticeAction: 'retry' | 'catalog' | null = null
@@ -92,7 +98,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
       noticeAction = 'retry'
       break
     case 'done':
-      if (!turn.answer.trim()) {
+      // Запасной ответ стража (#3291) — не сбой модели: повтор не предлагается.
+      if (!turn.answer.trim() && !turn.fallback) {
         notice = i18nT('aiAssistStatic:ask.emptyAnswer')
         noticeAction = 'retry'
       }
@@ -117,9 +124,9 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
           </Text>
         ) : null}
 
-        {turn.answer ? (
+        {answerText ? (
           <AssistantAnswerText
-            text={turn.answer}
+            text={answerText}
             sources={turn.sources}
             style={styles.answerText}
             linkColor={colors.primaryDark}
@@ -169,10 +176,21 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
           </Text>
         ) : null}
 
-        {showSources ? (
+        {showSources && mainSources.length > 0 ? (
           <>
             <Text style={styles.sourcesTitle}>{i18nT('aiAssistStatic:ask.sourcesTitle')}</Text>
-            {turn.sources.map((source) => (
+            {mainSources.map((source) => (
+              <SourceRow key={`${source.type}-${source.source_id}`} source={source} styles={styles} colors={colors} />
+            ))}
+          </>
+        ) : null}
+
+        {showSources && nearbySources.length > 0 ? (
+          <>
+            <Text style={styles.sourcesTitle} testID="assistant-sources-nearby">
+              {i18nT('aiAssistStatic:ask.nearbyTitle')}
+            </Text>
+            {nearbySources.map((source) => (
               <SourceRow key={`${source.type}-${source.source_id}`} source={source} styles={styles} colors={colors} />
             ))}
           </>

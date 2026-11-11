@@ -15,8 +15,6 @@
  * (`@/utils/questTags`), служба берёт `tags` фрагмента индекса — там это список слагов.
  */
 
-import { detectIntent } from './retrievalQuery.ts'
-
 export type QuestAudienceKind = 'kids' | 'family'
 
 export type QuestAudience = {
@@ -47,14 +45,12 @@ const HEAD_RU: Record<QuestAudienceKind | 'any', string> = {
   any: 'Городской квест',
 }
 
-export type QuestCardLeadInput = { tags: readonly string[]; city?: string | null; country?: string | null }
-
 /**
- * Начало фрагмента карточки квеста: вид квеста с городом и страной, возраст, «Со взрослым».
- * Слова русские, как весь фрагмент: модель обучена на RU-карточках, ответ переводит сама.
+ * Начало фрагмента карточки квеста: вид квеста с городом и страной, возраст, «Со взрослым» — по
+ * аудитории (`questAudience` тегов каталога либо запись фактов индекса #3287). Слова русские, как весь
+ * фрагмент: модель обучена на RU-карточках, ответ переводит сама.
  */
-export const questCardLead = ({ tags, city, country }: QuestCardLeadInput): string[] => {
-  const audience = questAudience(tags)
+export const questAudienceLead = (audience: QuestAudience | null, city?: string | null, country?: string | null): string[] => {
   const cityName = String(city ?? '').trim()
   const countryName = String(country ?? '').trim()
   return [
@@ -127,28 +123,12 @@ export const cityNamedIn = (question: string, cities: ReadonlyArray<string | nul
 /**
  * Место карточки квеста при вопросе о детях: 2 — детский квест города из вопроса, 1 — семейный,
  * 0 — остальные. Вызывающий сначала проверяет `asksAboutChildren`.
+ * Нужно клиентскому подбору (`searchSiteMaterials`): он выбирает восемь карточек из всего каталога, и
+ * детский квест города должен в них попасть. Порядок уже найденных карточек — у экрана и у службы
+ * `/ai/ask` — задаёт общая цепочка `arrangeSources` (#3289) по записи фактов.
  */
 export const childrenRank = (question: string, tags: readonly string[], cities: ReadonlyArray<string | null | undefined>): 0 | 1 | 2 => {
   const audience = questAudience(tags)
   if (!audience || !cityNamedIn(question, cities)) return 0
   return audience.kind === 'kids' ? 2 : 1
-}
-
-/**
- * Подбор службы `/ai/ask`: при вопросе о детях детские, затем семейные квесты города из вопроса
- * встают первыми — в подсказку модели уходят первые карточки (`AI_PROMPT_SOURCES_LIMIT`).
- * Порядок остальных не меняется; без вопроса о детях и при просьбе о статье («статья про Несвиж
- * с детьми») список возвращается как есть — как у экрана (`searchSiteMaterials`).
- */
-export const liftForChildren = <T>(
-  question: string,
-  items: readonly T[],
-  describe: (item: T) => { tags: readonly string[]; cities: ReadonlyArray<string | null | undefined> } | null,
-): T[] => {
-  if (detectIntent(question) === 'travel' || !asksAboutChildren(question)) return [...items]
-  const ranked = items.map((item, index) => {
-    const quest = describe(item)
-    return { item, index, rank: quest ? childrenRank(question, quest.tags, quest.cities) : 0 }
-  })
-  return ranked.sort((a, b) => b.rank - a.rank || a.index - b.index).map((entry) => entry.item)
 }

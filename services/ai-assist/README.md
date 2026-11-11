@@ -20,7 +20,7 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | `POST /ai/suggest-tags` `{text, locale?}` (#2886) | `{countries, categories, transports, companions, over_nights_stay, confidence, degraded, neighbours, took_ms}` — подсказка словарных значений визарда статьи: текст → вектор → `AI_TAG_SUGGEST_NEIGHBOURS` (10) ближайших статей индекса (тот же `vectorSources`, что у `/ai/search`, очередь к эмбеддингу общая) → у каждой `GET /api/travels/<id>/` (id стран, категорий, транспорта, компаньонов, ночёвок) → голосование: значение проходит с `max(2, ⌈0.3·k⌉)` голосов из k ответивших статей и только если есть в словаре `GET /api/getFiltersTravel/` + `GET /api/countriesforsearch/`; `confidence` — средняя доля голосов принятых значений. Словарь и ответы статей — в памяти час (`TagCatalog`), отказы не кэшируются. `400 bad_request` — текст короче 300 знаков или кривая `locale`; `503 busy` — очередь к эмбеддингу; нет словаря или ни одной статьи → `200` с пустыми списками, `confidence: 0`, `degraded: true`. Модель не участвует: бюджет клиента 4 с не вмещает обработку промпта из 4000 знаков на CPU |
 | `POST /ai/near-route` `{points: [{lat, lng}], limit?: 1..12, locale?}` (#2911) | `{items, took_ms}` — материалы в коридоре маршрута планировщика: источники индекса с координатами не дальше 30 км от ближайшего сегмента ломаной (haversine до ближайшей точки сегмента; одна точка — расстояние до неё), ближние первыми, один фрагмент на источник (у квеста — локали `locale`, если есть), `items[]` формы `/ai/search` со `score: null` плюс `distance_km`. Без модели и эмбеддинга, как `/ai/similar`. `400 bad_request` — нет точек, больше 50, кривые координаты или `limit` вне 1..12 |
 | `POST /ai/intent` `{q, locale?}` (#2887) | `{categories, radius_km, center, constraints}` — фильтр карты из описания для строки «Опишите, что ищете» на `/map`: вопрос → `metravel-llm` с промптом набора `osm_intents` (`INTENT_PROMPT` из `scripts/ai-train/sets/osm_intents.py`, система — как у `/ai/ask`) → первый JSON-объект из ответа → TS-валидатор схемы `scripts/ai-train/osm_filter_schema.json` (`scripts/ai-assist/osmFilterSchema.ts`, порт `validate_filter()`/`extract_json()` с тестом эквивалентности Python-валидатору; enum'ы читаются из файла схемы, в образ он копируется). `categories` — `OsmPoiCategory` карты (attractions, culture, viewpoints, entertainment, religion, history), `radius_km` — 10/25/50/100/200, `center` — `{name}` или `null`, `constraints` — `{dogs, camper, kids, free}` (пустой объект, если модель опустила). `400 bad_request` — `q` короче 3 или длиннее 300 знаков, кривая `locale`; `422 {error: 'invalid_intent', detail}` — ответ без JSON или не по схеме (`detail` — ошибки валидатора); `429 limit` — `AI_MAP_INTENT_DAILY_LIMIT` (30) запросов/сутки/IP, тот же `AskLimits` с префиксом `ai-intent:v1`; `429 busy` — очередь к модели; `503 generator_unavailable` — нет `AI_LLM_URL` или модель не ответила. Неудачный запрос (422/429 busy/503) лимит не тратит |
-| `GET /ai/health` | `{ok, model, dim, count, index_built_at, index_age_days, sources: {travel, quest}, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` — `index_age_days` и `sources` (#3288) показывают пробе устаревший индекс: при возрасте больше 7 дней служба пишет предупреждение при старте. С `AI_ASSIST_EVAL_TRACE=1` (#3286) — ещё `eval_trace: true` и `llm_url`: приёмка сверяет, что служба смотрит на модель своей стороны |
+| `GET /ai/health` | `{ok, model, dim, count, index_built_at, index_age_days, sources: {travel, quest}, index_format_version, facts, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` — `index_age_days` и `sources` (#3288) показывают пробе устаревший индекс: при возрасте больше 7 дней служба пишет предупреждение при старте; `index_format_version` и `facts` (#3287) — версию формата артефакта и число записей фактов (`1` и `0` — индекс собран до #3287, карточки `/ai/ask` идут без чисел). С `AI_ASSIST_EVAL_TRACE=1` (#3286) — ещё `eval_trace: true` и `llm_url`: приёмка сверяет, что служба смотрит на модель своей стороны |
 
 `items[]`: `{type, source_id, title, url, snippet, score, city, country, lat, lng}`;
 `score` — косинус лучшего фрагмента (`null`, если источник пришёл только из
@@ -51,10 +51,10 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 
 | событие | данные |
 | --- | --- |
-| `sources` | `{sources: AiSource[], degraded, remaining}` — карточки промпта `{type, source_id, title, url, path, snippet, score}`; для отказа — `[]` |
-| `text` | `{text}` — накопленный текст после стража ссылок (не дельта: страж может убрать уже показанный адрес) |
+| `sources` | `{sources: AiSource[], degraded, remaining}` — карточки хода `{type, source_id, title, url, path, snippet, score, group?}`; для отказа — `[]`. `group` (#3290): в режиме страницы (тело с `source`) страница идёт с `group: page` и одна попадает в подсказку — её `snippet` несёт строку фактов и до трёх фрагментов текста под вопрос; найденное общим подбором — `group: nearby`, только для списка «Ещё по теме». Вопрос с местом, которого на странице нет, идёт общим подбором как обычный вопрос; карточка страницы остаётся в списке последней с `group: nearby` и в подсказку не попадает. Общий подбор (#3289): карточки, прошедшие отбор по месту и условиям вопроса, идут с `group: match`, остальные — `group: nearby` и в подсказку не попадают; если отбор ничего не отделил, поля нет |
+| `text` | `{text}` — накопленный текст после стража ссылок (не дельта: страж может убрать уже показанный адрес). Подпись ссылки с адресом карточки приводится к названию карточки уже в стриме; последний `text` идёт после стража содержания (#3291) — без пояснения от чужой карточки и без фразы с числом, которого нет в карточках; при запасном ответе он пуст |
 | `trace` | только при `AI_ASSIST_EVAL_TRACE=1` (#3286), один раз перед `done`, если модель ответила: `{prompt_sources: AiSource[], raw_text}` — карточки, ушедшие в подсказку модели после отбора по месту (#3315) и лимита (`selectPromptSources`), и ответ модели до стража ссылок (после остановки генератора на цикле и четвёртой рекомендации) |
-| `done` | `{status: done, removed_links, usage, remaining}` · `{status: off_topic, reason: offtopic_warning, strikes, strikes_to_block}` · `{status: off_topic, reason: model_refusal}` · `{status: no_sources}` · `{status: unavailable}` · `{status: error}` |
+| `done` | `{status: done, removed_links, relabeled?, dropped_descriptions?, ungrounded_numbers?, prompt_leaks?, fallback?, usage, remaining}` — счётчики стража содержания (#3291) приходят только ненулевыми; `prompt_leaks` — вырезано строк и фраз с эхом разметки подсказки («Материалы сайта:», «карточка [2]»); `fallback: true` — ответ пустой (повтор вопроса, фраза без ссылки и признания, остаток из одних вопросов после вырезаний): текста нет, экран показывает запасную фразу и источники · `{status: off_topic, reason: offtopic_warning, strikes, strikes_to_block}` · `{status: off_topic, reason: model_refusal}` · `{status: no_sources}` · `{status: unavailable}` · `{status: error}` |
 
 Событие `trace` нужно контуру оценки (`npm run ai:assistant:eval -- --provider ask`,
 `docs/features/ai-assistant.md` → «Путь службы `/ai/ask`»): по нему прогон
@@ -77,13 +77,19 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 `docs/features/ai-assistant.md` → «Размер подсказки модели».
 
 Карточка квеста (#3276) начинается тем же зачином, что на экране
-(`questCardLead` из `api/aiAssist/questAudience.ts`, теги — из фрагмента индекса):
+(`questFactsLine` из `api/aiAssist/sourceFacts.ts`, аудитория — из `facts.jsonl` либо тегов фрагмента индекса):
 «Детский городской квест по городу Брест (Беларусь). Возраст: 8–10 лет. Со
 взрослым. <фрагмент текста квеста>», «Семейный городской квест…» или «Городской
-квест…». Чисел точек, длительности и сложности в индексе нет, поэтому в карточке
-службы их нет. При вопросе о детях (RU/BE/UK/PL/EN) детские, затем семейные
-квесты города из вопроса встают первыми среди найденных (`liftForChildren`) и
-попадают в подсказку модели (просьба о статье их не поднимает); порядок остальных и ответ `/ai/search` не меняются.
+квест…». Дальше в строке фактов идут число точек, длительность, сложность и «Можно с
+собакой» из `facts.jsonl` индекса (#3287); у артефакта без фактов их нет. Порядок найденных карточек задаёт общая с экраном цепочка `arrangeSources`
+(`api/aiAssist/sourceSelection.ts`, #3289): место вопроса → условия по фактам каталога
+(дети и возраст, с собакой, без машины, сезон или месяц, сколько есть времени, вид
+материала; RU/BE/UK/PL/EN) → превосходная степень. Детские, затем семейные квесты
+города при вопросе о детях (#3276) — её частный случай; просьба о статье квесты не
+поднимает. Карточка с явным нарушением числового условия и карточки не того места
+уходят в `group: nearby` и в подсказку не попадают; карточка без нужного факта условие
+не нарушает. Совпавшие условия идут в карточку подсказки строкой «Почему подходит: …».
+Ответ `/ai/search` не меняется.
 
 Отказы до потока — JSON `{error, detail, …}`: `400 bad_request`;
 `429 offtopic_blocked` (`retry_after_sec`, `strikes`, `Retry-After` до полуночи) —
@@ -109,6 +115,17 @@ IP не пишется) — единственная запись на диск:
   строки `chunks.jsonl` = `size(vectors.f16) / (dim × 2)` и `source_sha256`;
   несогласованный набор (читатель попал между rename файлов) — повтор через
   секунду, три попытки, затем отказ старта.
+- Факты источников (#3287) — `facts.jsonl` рядом с `chunks.jsonl`: одна запись на
+  источник (`{type, source_id, points?, duration_min?, difficulty?, pet_friendly?,
+  audience?, age?, adult?, number_days?, months?, transports?, categories?}`),
+  `manifest.json` несёт `format_version: 2` и `facts: {count, sha256}`. По ним
+  `/ai/ask` строит строку фактов карточки и решает превосходную степень («самый
+  короткий квест в Минске»). Несовпавший `facts.jsonl` — та же несогласованность,
+  что у фрагментов: повтор чтения. Артефакт без `format_version` и без
+  `facts.jsonl` читается как прежде: служба стартует, карточки идут без чисел.
+  Перевод готового артефакта без пересчёта векторов —
+  `npm run ai:index -- facts --out <папка с raw и dist>`; какая служба на каком
+  артефакте, видно в `/ai/health` (`index_format_version`, `facts`).
 - Модель берётся из `manifest.model`; `AI_ASSIST_MODEL` закрепляет её явно (образ
   запекает одну модель), и при несовпадении старт завершается с сообщением, какой
   индекс и какая модель.
@@ -156,6 +173,8 @@ IP не пишется) — единственная запись на диск:
 | `AI_ASSIST_DAY_TZ` | `Europe/Minsk` | календарный день лимитов и блока «не по теме» |
 | `AI_DEMAND_LOG` | `logs/ai-demand.jsonl` (образ: `/app/logs/ai-demand.jsonl`) | журнал спроса |
 | `AI_ASSIST_TRUST_PROXY` | `1` | IP из `X-Real-IP`/последнего адреса `X-Forwarded-For`; `0` — только адрес сокета |
+| `AI_ASSIST_ASK_FRAGMENT_TRAVEL_CHARS` / `AI_ASSIST_ASK_FRAGMENT_QUEST_CHARS` | `120` / `60` (`ASK_FRAGMENT_CHARS`, `scripts/ai-assist/search.ts`) | длина текстового фрагмента карточки `/ai/ask` после строки фактов (#3287), знаков; `0` — карточка без текста. Таблица токенов по значениям — `docs/features/ai-assistant.md` → «Бюджет подсказки службы» |
+| `AI_ASSIST_PROMPT_WHY_FITS` / `AI_ASSIST_PROMPT_NO_PLACE` | включены | `0` выключает строку подсказки, которой модель не видела в обучении (#3289): «Почему подходит: …» в карточке / «О месте из вопроса на сайте материала нет…» перед вопросом. Порядок карточек и группы `match` / `nearby` от них не зависят. Нужны для живого сравнения двух вариантов подсказки |
 | `AI_ASSIST_EVAL_TRACE` | — | `1` — только для контура оценки (#3286): событие `trace` в потоке `/ai/ask`, `eval_trace` и `llm_url` в `/ai/health`. На проде и в образе не задаётся |
 
 ## Запуск на Mac

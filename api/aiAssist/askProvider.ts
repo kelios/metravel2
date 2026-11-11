@@ -17,7 +17,7 @@
 
 import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
 import type { AiSourceRef } from './sourceRef'
-import type { AiHistoryItem, AiSource, AiUsage } from './types'
+import { AI_SOURCE_GROUPS, type AiHistoryItem, type AiSource, type AiSourceGroup, type AiUsage } from './types'
 
 const DEFAULT_RETRY_AFTER_SEC = 30
 /**
@@ -63,6 +63,12 @@ export type AskDoneEvent = {
   strikes: number | null
   strikesToBlock: number | null
   removedLinks: number
+  /** Страж содержания (#3291): ответ пустой — экран показывает запасную фразу вместо текста. */
+  fallback: boolean
+  /** Счётчики стража содержания (#3291): заменённые подписи, убранные пояснения, фразы с числом без опоры. */
+  relabeled: number
+  droppedDescriptions: number
+  ungroundedNumbers: number
   usage: AiUsage | null
   remaining: number | null
 }
@@ -142,6 +148,8 @@ const toSource = (value: unknown): AiSource | null => {
     path,
     snippet: typeof raw.snippet === 'string' ? raw.snippet : '',
     score: typeof raw.score === 'number' ? raw.score : 0,
+    // Группа карточки (#3290, #3289): страница, «ещё по теме»; незнакомое значение — обычная карточка.
+    ...(AI_SOURCE_GROUPS.includes(raw.group as AiSourceGroup) ? { group: raw.group as AiSourceGroup } : {}),
   }
 }
 
@@ -190,6 +198,10 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
         strikes: toInt(payload.strikes),
         strikesToBlock: toInt(payload.strikes_to_block),
         removedLinks: toInt(payload.removed_links) ?? 0,
+        fallback: payload.fallback === true,
+        relabeled: toInt(payload.relabeled) ?? 0,
+        droppedDescriptions: toInt(payload.dropped_descriptions) ?? 0,
+        ungroundedNumbers: toInt(payload.ungrounded_numbers) ?? 0,
         usage: toUsage(payload.usage),
         remaining: toInt(payload.remaining),
       },
@@ -313,6 +325,10 @@ export class HttpAskClient implements AskClient {
         strikes: null,
         strikesToBlock: null,
         removedLinks: 0,
+        fallback: false,
+        relabeled: 0,
+        droppedDescriptions: 0,
+        ungroundedNumbers: 0,
         usage: null,
         remaining: null,
       }

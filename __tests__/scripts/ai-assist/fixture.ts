@@ -4,9 +4,11 @@
  */
 import { createHash } from 'crypto'
 
-import { chunkId, type ChunkRecord, writeIndex } from '@/scripts/ai-index/format'
-import { indexMaps, type LoadedIndex } from '@/scripts/ai-assist/index'
-import { readIndex } from '@/scripts/ai-index/format'
+import { chunkId, type ChunkRecord, type SourceFacts, writeIndex } from '@/scripts/ai-index/format'
+import { join } from 'path'
+
+import { indexMaps, type LoadedIndex, openChunkText } from '@/scripts/ai-assist/index'
+import { CHUNKS_FILE, readIndex } from '@/scripts/ai-index/format'
 
 import { makeTempDir } from '../cli-test-utils'
 
@@ -30,6 +32,8 @@ export interface Spec {
   title: string
   text: string
   city?: string | null
+  /** Страна источника; без неё — Польша, как у всех (#3289: отбор по месту вопроса). */
+  country?: string
   /** Теги каталога (у квеста — `kids`, `age-8-10`…, #3276); без них — пусто. */
   tags?: string[]
   /** Координаты источника (#2911, /ai/near-route); без них — Краков, как у всех. */
@@ -57,7 +61,7 @@ export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
       url: `https://metravel.by/${spec.type === 'travel' ? 'travels' : 'quests'}/${spec.sourceId}${locale === 'ru' ? '' : `-${locale}`}`,
       title: spec.title,
       city: spec.city ?? null,
-      country: 'Польша',
+      country: spec.country ?? 'Польша',
       lat: spec.lat === undefined ? 50.06 : spec.lat,
       lng: spec.lng === undefined ? 19.94 : spec.lng,
       month: [],
@@ -68,17 +72,20 @@ export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
   })
 }
 
-export function writeFixtureIndex(model = MODEL, specs: Spec[] = FIXTURE_CHUNKS): string {
+/** `facts` — записи `facts.jsonl` (#3287); без них артефакт собирается с пустым списком фактов. */
+export function writeFixtureIndex(model = MODEL, specs: Spec[] = FIXTURE_CHUNKS, facts: SourceFacts[] = []): string {
   const distDir = makeTempDir('ai-assist-')
   const chunks = fixtureChunks(specs)
-  writeIndex(distDir, { model, dim: DIM, chunks, vectors: chunks.map((chunk) => fakeVector(chunk.text)), builtAt: '2026-10-18T16:48:48.951Z' })
+  writeIndex(distDir, { model, dim: DIM, chunks, vectors: chunks.map((chunk) => fakeVector(chunk.text)), facts, builtAt: '2026-10-18T16:48:48.951Z' })
   return distDir
 }
 
 export function loadFixtureIndex(distDir = writeFixtureIndex()): LoadedIndex {
   const artifact = readIndex(distDir)
   if (!artifact) throw new Error(`fixture index missing at ${distDir}`)
-  return { artifact, ...indexMaps(artifact) }
+  // Полный текст строки с диска — как у `loadIndex` службы: сниппет в памяти короче фрагмента.
+  const readText = openChunkText(join(distDir, CHUNKS_FILE), artifact.chunks)
+  return { artifact, ...indexMaps(artifact), readText }
 }
 
 export const fakeEmbedQuery = async (q: string): Promise<Float32Array> => fakeVector(q)

@@ -53,7 +53,7 @@ describe('metravel-assist: search', () => {
     for (let i = 0; i < 25; i += 1) push(100 + i, `b${i}`, fakeVector(`статья ${i} горы`))
     const flat = new Float32Array(chunks.length * DIM)
     vectors.forEach((vector, row) => flat.set(vector, row * DIM))
-    const artifact: IndexArtifact = { manifest: { model: 'fake', dim: DIM, count: chunks.length, built_at: '', source_sha256: sourceSha256(chunks) }, chunks, vectors: flat }
+    const artifact: IndexArtifact = { manifest: { model: 'fake', dim: DIM, count: chunks.length, built_at: '', source_sha256: sourceSha256(chunks) }, chunks, vectors: flat, facts: [] }
     const index = { artifact, ...indexMaps(artifact) }
     // limit 20, type travel → первый скан 80 строк: 70 строк A + 10 других = 11 источников < 20.
     const hits = vectorSources(index, { vector: query, locale: 'ru', type: 'travel', limit: 20 })
@@ -72,7 +72,7 @@ describe('metravel-assist: search', () => {
     const vectors = new Float32Array(count * DIM)
     // Значения из 7 уровней: много равных скоров проверяют стабильность вставки.
     for (let i = 0; i < vectors.length; i += 1) vectors[i] = ((i * 7919) % 7) / 7
-    const artifact: IndexArtifact = { manifest: { model: 'fake', dim: DIM, count, built_at: '', source_sha256: '' }, chunks, vectors }
+    const artifact: IndexArtifact = { manifest: { model: 'fake', dim: DIM, count, built_at: '', source_sha256: '' }, chunks, vectors, facts: [] }
     const query = Float32Array.from({ length: DIM }, (_, i) => (i % 3) - 1)
     const scores = Array.from({ length: count }, (_, row) => {
       let dot = 0

@@ -173,6 +173,9 @@ describe('aiAssist retrieval (#2460)', () => {
     const royal = sources.find((s) => s.source_id === 'grodno-royal')
     expect(royal?.place).toEqual({ cities: ['Grodno', 'Гродно', 'Гродно'], countries: ['Беларусь'] })
     expect(sources.find((s) => s.type === 'travel')?.place).toEqual({ countries: ['Беларусь'] })
+    // #3289: запись фактов каталога едет с карточкой — по ней общая цепочка проверяет условия вопроса.
+    expect(royal?.facts).toEqual({ type: 'quest', source_id: 1, points: 8, duration_min: 90, difficulty: 'easy' })
+    expect(sources.find((s) => s.type === 'travel')?.facts).toEqual({ type: 'travel', source_id: 1 })
     // Квест Карловых Вар найден по слову названия и остаётся в списке источников, но не в подсказке.
     expect(sources.map((s) => s.source_id)).toContain('kv')
     // Статья о городе названа другим написанием («Гродно») — она тоже карточка места.

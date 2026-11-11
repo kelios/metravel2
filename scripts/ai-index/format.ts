@@ -1,18 +1,26 @@
 /**
  * Контракт артефакта смыслового индекса сайта (#2454).
  *
- * Артефакт — три файла в одной директории:
+ * Артефакт — четыре файла в одной директории:
  *   chunks.jsonl   — по одной записи ChunkRecord на строку, порядок = порядок векторов;
  *   vectors.f16    — N × dim чисел IEEE 754 binary16, little-endian, без заголовка;
+ *   facts.jsonl    — по одной записи SourceFacts на ИСТОЧНИК (не на фрагмент): проверяемые факты
+ *                    каталога для карточки ассистента (#3287, формат версии 2);
  *   manifest.json  — IndexManifest: модель, размерность, число записей, время сборки,
- *                    sha256 источника (детерминизм: те же chunks → тот же sha).
+ *                    sha256 источника (детерминизм: те же chunks → тот же sha), версия формата,
+ *                    число и sha256 записей фактов.
  *
  * Формат читают сервис metravel-assist (#2456) и MCP metravel-knowledge (#2455);
- * менять поля только с версией в manifest.model/dim и правкой этого файла.
+ * менять поля только с версией в manifest.format_version и правкой этого файла. Артефакт версии 1
+ * (без `format_version` и `facts.jsonl`) читается как прежде, фактов в нём нет.
  */
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+
+import { factsKey, type SourceFacts } from '../../api/aiAssist/sourceFacts.ts'
+
+export type { SourceFacts }
 
 export type ChunkType = 'travel' | 'quest'
 
@@ -51,6 +59,10 @@ export interface IndexManifest {
   source_sha256: string
   /** Число статей и квестов в индексе (#3288); у артефактов, собранных раньше, поля нет — считать `countSources`. */
   sources?: IndexSourceCounts
+  /** Версия формата артефакта (#3287): 2 — с `facts.jsonl`; поля нет — версия 1. */
+  format_version?: number
+  /** Записи фактов в `facts.jsonl`: число строк и их sha256. Поля нет — артефакт без фактов. */
+  facts?: { count: number; sha256: string }
 }
 
 export interface IndexArtifact {
@@ -58,11 +70,16 @@ export interface IndexArtifact {
   chunks: ChunkRecord[]
   /** Плоский массив count × dim, нормализованные (L2) векторы. */
   vectors: Float32Array
+  /** Факты источников; у артефакта версии 1 — пусто. */
+  facts: SourceFacts[]
 }
 
 export const CHUNKS_FILE = 'chunks.jsonl'
 export const VECTORS_FILE = 'vectors.f16'
+export const FACTS_FILE = 'facts.jsonl'
 export const MANIFEST_FILE = 'manifest.json'
+/** Версия формата, которую пишет `writeIndex`. */
+export const INDEX_FORMAT_VERSION = 2
 
 export function sha256Hex(input: string | Buffer): string {
   return createHash('sha256').update(input).digest('hex')
@@ -80,6 +97,35 @@ export function sourceSha256(chunks: ChunkRecord[]): string {
     hash.update('\n')
   }
   return hash.digest('hex')
+}
+
+/** Отпечаток записей фактов — тем же правилом, что у фрагментов. */
+export function factsSha256(facts: SourceFacts[]): string {
+  const hash = createHash('sha256')
+  for (const record of facts) {
+    hash.update(JSON.stringify(record))
+    hash.update('\n')
+  }
+  return hash.digest('hex')
+}
+
+/**
+ * Факты только тех источников, что есть среди фрагментов, по одной записи на источник, в порядке
+ * первого фрагмента источника: источник без текста в индекс не попадает, и карточки у него нет.
+ */
+export function factsForChunks(facts: SourceFacts[], chunks: Array<Pick<ChunkRecord, 'type' | 'source_id'>>): SourceFacts[] {
+  const byKey = new Map<string, SourceFacts>()
+  for (const record of facts) if (!byKey.has(factsKey(record))) byKey.set(factsKey(record), record)
+  const out: SourceFacts[] = []
+  const seen = new Set<string>()
+  for (const chunk of chunks) {
+    const key = factsKey(chunk)
+    if (seen.has(key)) continue
+    seen.add(key)
+    const record = byKey.get(key)
+    if (record) out.push(record)
+  }
+  return out
 }
 
 /** Сколько разных статей и квестов описывают фрагменты (квест на пяти локалях — один источник). */
@@ -181,7 +227,15 @@ export function writeJsonl(file: string, rows: unknown[]): void {
   fs.writeFileSync(file, toJsonl(rows))
 }
 
-export function readIndex(distDir: string): IndexArtifact | null {
+export interface ReadIndexOptions {
+  /**
+   * Не читать `facts.jsonl` (в артефакте будет пустой список). Для тех, кто факты перезаписывает:
+   * несовпавший файл фактов не должен стоить пересчёта векторов или мешать его же починке.
+   */
+  skipFacts?: boolean
+}
+
+export function readIndex(distDir: string, options: ReadIndexOptions = {}): IndexArtifact | null {
   const manifestFile = path.join(distDir, MANIFEST_FILE)
   const chunksFile = path.join(distDir, CHUNKS_FILE)
   const vectorsFile = path.join(distDir, VECTORS_FILE)
@@ -202,17 +256,35 @@ export function readIndex(distDir: string): IndexArtifact | null {
   if (sha !== manifest.source_sha256) {
     throw new Error(`index at ${distDir} is inconsistent: source_sha256 ${sha} ≠ manifest ${manifest.source_sha256}`)
   }
-  return { manifest, chunks, vectors }
+  return { manifest, chunks, vectors, facts: options.skipFacts ? [] : readFacts(distDir, manifest) }
+}
+
+/**
+ * Факты артефакта. Манифест без поля `facts` (версия 1) — пустой список: читатель работает без
+ * фактов. Манифест с фактами и несовпавший файл — та же несогласованность, что у фрагментов:
+ * файлы заменяются по одному, читатель повторит попытку.
+ */
+function readFacts(distDir: string, manifest: IndexManifest): SourceFacts[] {
+  if (!manifest.facts) return []
+  const facts = readJsonl<SourceFacts>(path.join(distDir, FACTS_FILE))
+  const sha = factsSha256(facts)
+  if (facts.length !== manifest.facts.count || sha !== manifest.facts.sha256) {
+    throw new Error(
+      `index at ${distDir} is inconsistent: facts.jsonl — ${facts.length} строк, sha256 ${sha}; manifest — ${manifest.facts.count} строк, sha256 ${manifest.facts.sha256}`,
+    )
+  }
+  return facts
 }
 
 export function writeIndex(
   distDir: string,
-  input: { model: string; dim: number; chunks: ChunkRecord[]; vectors: ArrayLike<number>[]; builtAt?: string },
+  input: { model: string; dim: number; chunks: ChunkRecord[]; vectors: ArrayLike<number>[]; facts?: SourceFacts[]; builtAt?: string },
 ): IndexManifest {
   if (input.vectors.length !== input.chunks.length) {
     throw new Error(`chunks (${input.chunks.length}) and vectors (${input.vectors.length}) differ in length`)
   }
   fs.mkdirSync(distDir, { recursive: true })
+  const facts = factsForChunks(input.facts ?? [], input.chunks)
   const manifest: IndexManifest = {
     model: input.model,
     dim: input.dim,
@@ -220,15 +292,39 @@ export function writeIndex(
     built_at: input.builtAt ?? new Date().toISOString(),
     source_sha256: sourceSha256(input.chunks),
     sources: countSources(input.chunks),
+    format_version: INDEX_FORMAT_VERSION,
+    facts: { count: facts.length, sha256: factsSha256(facts) },
   }
-  const tmpSuffix = `.tmp-${process.pid}`
-  const targets: Array<[string, Buffer | string]> = [
+  replaceFiles([
     [path.join(distDir, VECTORS_FILE), encodeVectors(input.vectors, input.dim)],
     [path.join(distDir, CHUNKS_FILE), toJsonl(input.chunks)],
+    [path.join(distDir, FACTS_FILE), toJsonl(facts)],
     [path.join(distDir, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`],
-  ]
+  ])
+  return manifest
+}
+
+/** Замена файлов через tmp + rename; манифест идёт последним — по нему читатель сверяет остальные. */
+function replaceFiles(targets: Array<[string, Buffer | string]>): void {
+  const tmpSuffix = `.tmp-${process.pid}`
   for (const [file, body] of targets) fs.writeFileSync(file + tmpSuffix, body)
   for (const [file] of targets) fs.renameSync(file + tmpSuffix, file)
+}
+
+/**
+ * Запись фактов в готовый артефакт без пересчёта векторов (#3287): фрагменты, векторы,
+ * `source_sha256` и время сборки не меняются, манифест получает версию формата и отпечаток фактов.
+ * Так артефакт версии 1 переводится на версию 2; обычная сборка пишет факты в `writeIndex`.
+ */
+export function writeFacts(distDir: string, facts: SourceFacts[]): IndexManifest {
+  const artifact = readIndex(distDir, { skipFacts: true })
+  if (!artifact) throw new Error(`нет артефакта индекса в ${distDir}: ожидались chunks.jsonl, vectors.f16, manifest.json`)
+  const kept = factsForChunks(facts, artifact.chunks)
+  const manifest: IndexManifest = { ...artifact.manifest, format_version: INDEX_FORMAT_VERSION, facts: { count: kept.length, sha256: factsSha256(kept) } }
+  replaceFiles([
+    [path.join(distDir, FACTS_FILE), toJsonl(kept)],
+    [path.join(distDir, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`],
+  ])
   return manifest
 }
 
@@ -247,5 +343,14 @@ export function verifyIndex(distDir: string): { ok: boolean; problems: string[];
   }
   const sha = sourceSha256(chunks)
   if (sha !== manifest.source_sha256) problems.push(`source_sha256 не совпадает: ${sha} ≠ ${manifest.source_sha256}`)
+  if (manifest.facts) {
+    const facts = readJsonl<SourceFacts>(path.join(distDir, FACTS_FILE))
+    if (facts.length !== manifest.facts.count) problems.push(`facts.jsonl: ${facts.length} строк, manifest.facts.count=${manifest.facts.count}`)
+    const factsSha = factsSha256(facts)
+    if (factsSha !== manifest.facts.sha256) problems.push(`facts.sha256 не совпадает: ${factsSha} ≠ ${manifest.facts.sha256}`)
+    const known = new Set(chunks.map((chunk) => factsKey(chunk)))
+    const foreign = facts.filter((record) => !known.has(factsKey(record))).length
+    if (foreign) problems.push(`facts.jsonl: ${foreign} записей об источниках, которых нет в chunks.jsonl`)
+  }
   return { ok: problems.length === 0, problems, manifest }
 }

@@ -9,12 +9,19 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { QUEST_LOCALES } from '../../utils/questLocaleRouting.js'
 import { buildQuestChunks, buildTravelChunks, type ChunkOptions, isPublishedTravel, type RawQuest, type RawTravel } from './chunk.ts'
-import { type ChunkRecord, type IndexSourceCounts, sha256Hex } from './format.ts'
+import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries } from './facts.ts'
+import { type ChunkRecord, type IndexSourceCounts, sha256Hex, type SourceFacts } from './format.ts'
 
 export const DEFAULT_API_BASE = 'https://metravel.by/api'
 export const USER_AGENT = 'metravel-ai-index/1.0 (+https://metravel.by)'
 export const DEFAULT_PAUSE_MS = 500
 export const TRAVEL_PAGE_SIZE = 50
+/**
+ * Версия набора полей raw-слепка. 2 (#3287) — статья несёт `number_days` и `transports`. Статья
+ * перечитывается только при смене `updated_at`, поэтому слепок прежней версии перечитывается
+ * целиком один раз; квест перечитывается всегда, и новые поля меняют sha его файла.
+ */
+export const RAW_FORMAT_VERSION = 2
 
 const TRAVEL_FIELDS: Array<keyof RawTravel> = [
   'id',
@@ -31,6 +38,8 @@ const TRAVEL_FIELDS: Array<keyof RawTravel> = [
   'coordsMeTravel',
   'categories',
   'month',
+  'number_days',
+  'transports',
   'year',
   'publish',
   'travel_image_thumb_url',
@@ -44,6 +53,8 @@ export interface ExportState {
   /** `${id}:${locale}` квеста → sha256 сохранённого payload. */
   quests: Record<string, string>
   exported_at?: string
+  /** `RAW_FORMAT_VERSION` последнего полного экспорта статей; нет поля — версия 1. */
+  raw_version?: number
 }
 
 export interface TravelListItem {
@@ -167,7 +178,7 @@ export function readState(rawDir: string): ExportState {
   const file = path.join(rawDir, 'state.json')
   if (!fs.existsSync(file)) return emptyState()
   const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<ExportState>
-  return { travels: parsed.travels ?? {}, quests: parsed.quests ?? {}, exported_at: parsed.exported_at }
+  return { travels: parsed.travels ?? {}, quests: parsed.quests ?? {}, exported_at: parsed.exported_at, raw_version: parsed.raw_version }
 }
 
 /**
@@ -246,8 +257,11 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
     if (options.limit && travelItems.length >= options.limit) break
   }
   summary.travels.listed = travelItems.length
+  // Слепок прежней версии полей: статьи перечитываются целиком, иначе новых полей в них не будет.
+  const staleRaw = (state.raw_version ?? 1) < RAW_FORMAT_VERSION
+  if (staleRaw && Object.keys(state.travels).length) log(`travels: слепок версии ${state.raw_version ?? 1}, нужна ${RAW_FORMAT_VERSION} — перечитываются все статьи`)
   const plan = planTravelExport(travelItems, state, {
-    full: options.full,
+    full: options.full || staleRaw,
     hasRaw: (id) => fs.existsSync(travelRawFile(rawDir, id)),
   })
   const listedById = new Map(travelItems.map((item) => [item.id, item]))
@@ -313,6 +327,7 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
         lat: (meta.lat ?? null) as number | null,
         lng: (meta.lng ?? null) as number | null,
         tags: (meta.tags ?? null) as RawQuest['tags'],
+        ...questFactFields(meta),
         cover_url: (detail.cover_url ?? meta.cover_url ?? null) as string | null,
         intro: pick(intro, ['title', 'story', 'task'] as never[]) as RawQuest['intro'],
         steps: steps as RawQuest['steps'],
@@ -344,13 +359,35 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
       summary.quests.removed += 1
     }
   }
+  // Словари транспорта и категорий — названия для записей фактов (#3287). Сбой словаря экспорт
+  // не роняет: остаётся прежний файл, факты без названий соберутся при следующем запуске.
+  try {
+    const dictionaries = parseDictionaries(await fetcher(`${apiBase}/getFiltersTravel/`))
+    fs.writeFileSync(path.join(rawDir, DICTIONARIES_FILE), `${JSON.stringify(dictionaries, null, 2)}\n`)
+  } catch (error) {
+    log(`dictionaries: словарь каталога не получен, остаётся прежний: ${String(error)}`)
+  }
+  // `--limit` читает только начало списка: слепок не полон, версия полей не подтверждается.
+  if (!options.limit) state.raw_version = RAW_FORMAT_VERSION
   state.exported_at = new Date().toISOString()
   writeState(rawDir, state)
   return summary
 }
 
+/** Поля фактов квеста из элемента списка `/api/quests/` — в raw-слепок (#3287). */
+export function questFactFields(meta: Record<string, unknown>): Pick<RawQuest, 'points' | 'duration_min' | 'difficulty' | 'pet_friendly'> {
+  return {
+    points: (meta.points ?? null) as RawQuest['points'],
+    duration_min: (meta.duration_min ?? null) as number | null,
+    difficulty: (meta.difficulty ?? null) as string | null,
+    pet_friendly: typeof meta.pet_friendly === 'boolean' ? meta.pet_friendly : null,
+  }
+}
+
 export interface CorpusChunks {
   chunks: ChunkRecord[]
+  /** Факты источников (#3287) из того же raw-слепка, что и фрагменты. */
+  facts: SourceFacts[]
   travels: number
   quests: number
 }
@@ -362,5 +399,5 @@ export function chunkRawCorpus(rawDir: string, options: ChunkOptions = {}, local
   const chunks: ChunkRecord[] = []
   for (const travel of travels) chunks.push(...buildTravelChunks(travel, {}, options))
   for (const quest of quests) chunks.push(...buildQuestChunks(quest, options))
-  return { chunks, travels: travels.length, quests: quests.length }
+  return { chunks, facts: buildCorpusFacts(travels, quests, readDictionaries(rawDir)), travels: travels.length, quests: quests.length }
 }

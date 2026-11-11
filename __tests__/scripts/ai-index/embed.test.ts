@@ -86,6 +86,7 @@ describe('ai-index embed: инкремент', () => {
       manifest: { model: 'fake-model', dim: 2, count: 2, built_at: '', source_sha256: '' },
       chunks: [makeChunk(2, 'озеро в лесу'), makeChunk(3, 'старый текст')],
       vectors: Float32Array.from([0.6, 0.8, 1, 0]),
+      facts: [],
     }
     const plan = planEmbedding(chunks, previous, 'fake-model')
     expect(plan.compute.map((c) => c.source_id)).toEqual([1])
@@ -132,6 +133,27 @@ describe('ai-index embed: инкремент', () => {
     const full = await runEmbed({ chunks: changed, distDir, embedder, full: true, log: () => {} })
     expect(full).toMatchObject({ computed: 3, reused: 0 })
   })
+
+  it('#3287: runEmbed пишет факты источников в артефакт; изменились только факты — векторы не пересчитываются', async () => {
+    const chunks = [makeChunk(1, 'замок над рекой'), makeChunk(7, 'квест в парке', 'quest')]
+    const calls: string[] = []
+    const embedder = fakeEmbedder(calls)
+    await runEmbed({ chunks, facts: [{ type: 'quest', source_id: 7, duration_min: 90 }], distDir, embedder, log: () => {} })
+    expect(readIndex(distDir)!.facts).toEqual([{ type: 'quest', source_id: 7, duration_min: 90 }])
+
+    calls.length = 0
+    const updated = await runEmbed({ chunks, facts: [{ type: 'quest', source_id: 7, duration_min: 120 }, { type: 'travel', source_id: 1, number_days: 2 }], distDir, embedder, log: () => {} })
+    expect(updated).toMatchObject({ computed: 0, reused: 2 })
+    expect(calls).toHaveLength(0)
+    expect(readIndex(distDir)!.facts).toEqual([{ type: 'travel', source_id: 1, number_days: 2 }, { type: 'quest', source_id: 7, duration_min: 120 }])
+
+    // Файл фактов от другой сборки (запись оборвалась между rename): векторы всё равно переиспользуются, факты чинятся.
+    fs.writeFileSync(`${distDir}/facts.jsonl`, '{"type":"travel","source_id":999}\n')
+    expect(() => readIndex(distDir)).toThrow(/facts\.jsonl/)
+    const repaired = await runEmbed({ chunks, facts: [{ type: 'quest', source_id: 7, duration_min: 120 }], distDir, embedder, log: () => {} })
+    expect(repaired).toMatchObject({ computed: 0, reused: 2 })
+    expect(readIndex(distDir)!.facts).toEqual([{ type: 'quest', source_id: 7, duration_min: 120 }])
+  })
 })
 
 describe('ai-index query: поиск и оценка', () => {
@@ -150,6 +172,7 @@ describe('ai-index query: поиск и оценка', () => {
       manifest: { model: 'fake-model', dim: DIM, count: chunks.length, built_at: '', source_sha256: '' },
       chunks,
       vectors: flat,
+      facts: [],
     }
     const hits = topK(await embedder.embedQuery('замок над рекой Неман'), artifact, 3)
     expect(hits).toHaveLength(3)

@@ -658,16 +658,44 @@ def first_sentence(text: str, limit: int = 160) -> str:
     return s if 20 <= len(s) <= limit else TRAVEL_BLURB_FALLBACK
 
 
-def travel_card(t: dict) -> dict:
-    """Card as retrieval.ts travelToSource builds it: «Страна, город. <начало описания>»."""
-    place = ", ".join(str(v).strip() for v in (t.get("countryName"), t.get("cityName")) if v and str(v).strip())
+MONTHS_RU = ("январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь")
+
+
+def positive_int(value) -> int:
+    """`parseInt` of the app's sourceFacts.ts: the leading digits of a value, 0 when there are none or the number is not positive."""
+    m = re.match(r"\s*\+?(\d+)", "" if value is None else str(value))
+    return int(m.group(1)) if m else 0
+
+
+def travel_facts_line(t: dict, facts: bool = False) -> str:
+    """Facts line of an article card — the string travelFactsLine builds in api/aiAssist/sourceFacts.ts
+    (#3287; a test compares the two): «Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь». Without `facts`
+    it is the place alone — the card editions 1–9 were built with."""
+    parts = [", ".join(str(v).strip() for v in (t.get("countryName"), t.get("cityName")) if v and str(v).strip())]
+    if facts:
+        days = positive_int(t.get("number_days"))
+        if days:
+            parts.append(f"Дней: {days}")
+        raw = t.get("month")
+        months = sorted({m for m in map(positive_int, raw) if 1 <= m <= 12}) if isinstance(raw, list) else []
+        if len(months) == len(MONTHS_RU):
+            parts.append("Месяцы: круглый год")
+        elif months:
+            parts.append(f"{'Месяцы' if len(months) > 1 else 'Месяц'}: {', '.join(MONTHS_RU[m - 1] for m in months)}")
+    return ". ".join(p for p in parts if p)
+
+
+def travel_card(t: dict, facts: bool = False) -> dict:
+    """Card as retrieval.ts travelToSource builds it: «Страна, город. <начало описания>»; `facts` (#3287) —
+    with the number of days and the months after the place."""
+    place = travel_facts_line(t)
     body = html_to_text(t.get("description"))
     body = re.sub(r"\s+", " ", body).strip()
     if len(body) > 320:
         cut = body[:320]
         space = cut.rfind(" ")
         body = (cut[:space] if space > 192 else cut) + "…"
-    snippet = ". ".join(p for p in (place, body) if p)
+    snippet = ". ".join(p for p in (travel_facts_line(t, facts), body) if p)
     blurb = first_sentence(html_to_text(t.get("meta_description")) or body)
     title = (t.get("name") or t.get("title") or "").strip()
     # `place` and `body` are what the card itself shows (edition 6 `page` answers use only them;
@@ -703,8 +731,10 @@ def quest_audience(tags) -> dict | None:
     return {"kind": kind, "age": (min(a for a, _ in ages), max(b for _, b in ages)) if ages else None, "adult": "adult-required" in slugs}
 
 
-def quest_card(q: dict, audience: bool = False) -> dict:
-    """Card as retrieval.ts questToSource builds it; `audience` (edition 8) — with the children's mark."""
+def quest_card(q: dict, audience: bool = False, facts: bool = False) -> dict:
+    """Card as retrieval.ts questToSource builds it; `audience` (edition 8) — with the children's mark;
+    `facts` (#3287) — with «Можно с собакой» after the fields editions 1–9 already carry. The snippet is the
+    string questFactsLine builds in api/aiAssist/sourceFacts.ts — a test compares the two."""
     city = (q.get("city_name") or "").strip()
     country = (q.get("country_name") or "").strip()
     points = quest_points(q)
@@ -722,6 +752,8 @@ def quest_card(q: dict, audience: bool = False) -> dict:
         parts.append(f"Длительность: {duration} мин")
     if difficulty:
         parts.append(f"Сложность: {difficulty}")
+    if facts and q.get("pet_friendly") is True:
+        parts.append("Можно с собакой")
     # buildQuestPath(city_alias, quest_id) — the address the assistant's cards carry.
     return {"type": "quest", "title": q["title"].strip(), "url": f"{SITE}/quests/{q['city_alias']}/{q['quest_id']}", "snippet": ". ".join(parts),
             "points": points, "duration": duration, "difficulty": difficulty, "country": country,

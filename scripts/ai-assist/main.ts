@@ -85,6 +85,9 @@ async function main(): Promise<void> {
       `счётчики ${redis ? 'redis' : 'в памяти'}, журнал ${config.demandLogPath}`,
   )
 
+  if (!config.promptHints.whyFits || !config.promptHints.noPlace) {
+    log(`/ai/ask: строки подсказки #3289 — «Почему подходит» ${config.promptHints.whyFits ? 'вкл' : 'ВЫКЛ'}, «материала о месте нет» ${config.promptHints.noPlace ? 'вкл' : 'ВЫКЛ'}`)
+  }
   if (config.evalTrace) log('⚠️ AI_ASSIST_EVAL_TRACE=1: /ai/ask отдаёт карточки подсказки и сырой ответ модели, /ai/health — адрес модели. Только для контура оценки')
 
   const server = createApp({
@@ -101,7 +104,9 @@ async function main(): Promise<void> {
       queueTimeoutMs: config.askQueueTimeoutMs,
       trustProxy: config.trustProxy,
       evalTrace: config.evalTrace ? { llmUrl: config.llmUrl } : null,
+      promptHints: config.promptHints,
     },
+    askFragmentChars: config.askFragmentChars,
     authorDraft: { limits: authorDraftLimits },
     mapIntent: { limits: mapIntentLimits },
     suggestTags: { catalog: tagCatalog },
