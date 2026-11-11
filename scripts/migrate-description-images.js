@@ -34,9 +34,13 @@
  *
  * Использование:
  *   node scripts/migrate-description-images.js --inventory
- *   node scripts/migrate-description-images.js --id 430 --dry-run
- *   node scripts/migrate-description-images.js --id 430
- *   node scripts/migrate-description-images.js --restore 430
+ *   node scripts/migrate-description-images.js --id=430 --dry-run
+ *   node scripts/migrate-description-images.js --id=430 --apply
+ *   node scripts/migrate-description-images.js --restore=430 --apply
+ *
+ * Без флага режима — пробный прогон; запись на прод (`--id`, `--shrink`, `--run`,
+ * `--restore`) — только с `--apply`; неизвестный флаг — отказ с кодом 2 (#3304).
+ * Значения передаются только как `--flag=value`.
  *
  * Токен: env METRAVEL_TOKEN или .secrets/mcp_token.json.
  */
@@ -1082,9 +1086,13 @@ async function shrinkOne(id, { token, dryRun, threshold = OVERSIZED_BYTES_PER_PI
   return { id, status: 'done', shrunk: uploaded.length, savedBytes }
 }
 
-async function restoreOne(id, token) {
+async function restoreOne(id, token, { dryRun = true } = {}) {
   const file = latestBackup(BACKUP_DIR, id)
   if (!file) throw new Error(`нет бэкапа для ${id}`)
+  if (dryRun) {
+    console.log(`   --dry-run: откат ${id} из ${path.basename(file)} не отправлен`)
+    return
+  }
   const before = JSON.parse(fs.readFileSync(file, 'utf8'))
   // Возвращаем все четыре тела, а не только описание: миграция теперь пишет и в
   // `plus`/`minus`/`recommendation`, и откат обязан покрывать тот же охват (#1855).
@@ -1119,7 +1127,7 @@ const writeShrunk = (list) =>
  * Журнал делает прогон возобновляемым, а первая же ошибка останавливает всё,
  * чтобы не размножать одну и ту же поломку на сотню статей.
  */
-async function runBatch(token, { limit, authorId, pauseMs }) {
+async function runBatch(token, { limit, authorId, pauseMs, dryRun = true }) {
   ensureDirs()
   if (!fs.existsSync(INVENTORY_FILE)) throw new Error('нет инвентаря — сначала `--inventory`')
   const inventory = JSON.parse(fs.readFileSync(INVENTORY_FILE, 'utf8'))
@@ -1135,6 +1143,12 @@ async function runBatch(token, { limit, authorId, pauseMs }) {
 
   console.log(`🚚 В очереди ${queue.length} статей (${queue.reduce((s, r) => s + r.legacyRefs, 0)} картинок)`)
   console.log('')
+  if (dryRun) {
+    // Пробный пакетный прогон только показывает очередь: по-статейная репетиция
+    // (`--id=<id> --dry-run`) скачивает мастера, и на сотне статей это нагрузка на прод.
+    console.log('   --dry-run: пакетный прогон не начат; запись — с --apply')
+    return
+  }
 
   let done = 0
   let migrated = 0
@@ -1253,11 +1267,16 @@ function printStatus() {
 }
 
 async function main() {
-  const argv = process.argv.slice(2)
-  const has = (flag) => argv.includes(flag)
+  const args = process.argv.slice(2)
+  const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, {
+    script: __filename,
+    valueFlags: ['id', 'restore', 'limit', 'author', 'pause', 'threshold'],
+    booleanFlags: ['inventory', 'status', 'audit', 'run', 'shrink'],
+  })
+  const has = (flag) => args.some((arg) => arg === flag)
   const valueOf = (name) => {
-    const i = argv.indexOf(`--${name}`)
-    return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : null
+    const found = args.find((arg) => arg.startsWith(`--${name}=`))
+    return found ? found.split('=').slice(1).join('=') || null : null
   }
 
   const token = readToken()
@@ -1279,15 +1298,16 @@ async function main() {
       limit,
       authorId: authorRaw == null ? null : Number(authorRaw),
       pauseMs: valueOf('pause') ? Number(valueOf('pause')) : 2500,
+      dryRun: isDryRun,
     })
   }
 
   const restoreId = valueOf('restore')
-  if (restoreId) return restoreOne(Number(restoreId), token)
+  if (restoreId) return restoreOne(Number(restoreId), token, { dryRun: isDryRun })
 
   const id = valueOf('id')
   if (id && has('--shrink')) {
-    const dryRun = has('--dry-run')
+    const dryRun = isDryRun
     const thresholdRaw = valueOf('threshold')
     const result = await shrinkOne(Number(id), {
       token,
@@ -1299,7 +1319,7 @@ async function main() {
   }
 
   if (id) {
-    const dryRun = has('--dry-run')
+    const dryRun = isDryRun
     const result = await migrateOne(Number(id), { token, dryRun })
     // Ручной прогон обязан попасть в журнал: иначе починенная вручную статья
     // остаётся помеченной `failed`, и `--status` показывает несуществующий долг.
@@ -1314,17 +1334,17 @@ async function main() {
 
   console.log('Использование:')
   console.log('  --inventory                        обход всех статей: бэкап payload + отчёт')
-  console.log('  --id <id> [--dry-run]              миграция одной статьи')
-  console.log('  --restore <id>                     откат статьи из последнего бэкапа')
-  console.log('  --run [--limit N] [--author <id>]  пакетный прогон по инвентарю')
-  console.log('       [--pause <ms>]                пауза между статьями, по умолчанию 2500')
-  console.log('  --id <id> --shrink [--dry-run]     пересайз раздутых кадров тела статьи')
-  console.log('       [--threshold <Б/px>]          порог «кадр раздут», по умолчанию 0.25')
+  console.log('  --id=<id> [--dry-run | --apply]    миграция одной статьи (без --apply — пробный прогон)')
+  console.log('  --restore=<id> --apply             откат статьи из последнего бэкапа')
+  console.log('  --run --apply [--limit=N] [--author=<id>]  пакетный прогон по инвентарю')
+  console.log('       [--pause=<ms>]                пауза между статьями, по умолчанию 2500')
+  console.log('  --id=<id> --shrink [--dry-run | --apply]  пересайз раздутых кадров тела статьи')
+  console.log('       [--threshold=<Б/px>]          порог «кадр раздут», по умолчанию 0.25')
   console.log('       ВНИМАНИЕ: опирается на ресайз в момент запроса (переходный, #1168);')
   console.log('       после перехода на предгенерацию выигрыш падает до ~10 % — не раскатывать')
   console.log('  --status                           сводка прогресса по журналу')
   console.log('  --audit                            контрольный обход прода: остатки legacy')
-  process.exit(has('--help') ? 0 : 2)
+  process.exit(2)
 }
 
 if (require.main === module) {

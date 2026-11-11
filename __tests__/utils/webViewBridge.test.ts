@@ -40,6 +40,20 @@ describe('webViewBridge', () => {
     expect(JSON.parse(serializeForInlineScript(html))).toBe(html)
   })
 
+  // #3305: `JSON.stringify(undefined)` строки не возвращает, и цепочка экранирования
+  // падала с «Cannot read properties of undefined». Результат обязан быть
+  // выражением JS при любом входе: одна такая ошибка в `app/+html.tsx` роняет
+  // оболочку каждой страницы.
+  it('emits the undefined expression for values JSON cannot represent', () => {
+    for (const value of [undefined, () => 1, Symbol('s')]) {
+      expect(serializeForInlineScript(value)).toBe('undefined')
+    }
+    // Внутри структуры поведение остаётся за JSON: ключ пропадает, элемент массива — null.
+    expect(serializeForInlineScript({ a: undefined, b: 1 })).toBe('{"b":1}')
+    expect(serializeForInlineScript([undefined])).toBe('[null]')
+    expect(serializeForInlineScript(null)).toBe('null')
+  })
+
   it('accepts JSON objects only and ignores executable-looking/non-object payloads', () => {
     expect(parseWebViewJsonObject('{"type":"READY"}')).toEqual({ type: 'READY' })
     expect(parseWebViewJsonObject('globalThis.pwned=true')).toBeNull()

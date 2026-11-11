@@ -25,6 +25,8 @@ const CURL_STUB = [
   '  [[ "$*" == *http_code* ]] && printf 000',
   '  exit 28',
   'fi',
+  // STUB_MARKER_BODY: хост отвечает на маркер 200, но телом без полного sha (#3305).
+  'if [[ "$url" == */.build-source.json && -n "${STUB_MARKER_BODY:-}" ]]; then printf "%s" "$STUB_MARKER_BODY"; exit 0; fi',
   'if [[ "$url" == */.build-source.json ]]; then printf \'{"sha":"%s"}\' "$STUB_SHA"; exit 0; fi',
   'if [[ "$url" == */health ]]; then printf "%s" "${STUB_HEALTH:-200}"; exit 0; fi',
   'printf 200',
@@ -86,6 +88,22 @@ describe('verify-live-release.sh', () => {
     expect(result.status).toBe(1)
     expect(result.attempts).toBe(1)
     expect(result.stdout).toContain(`❌ Релиз не опубликован: прод отдаёт sha ${'b'.repeat(40)}, ожидался ${SHA}`)
+  })
+
+  // #3305: маркер без полного sha раньше попадал в «хост не ответил», хотя хост
+  // ответил — и ответил не тем релизом. Повторы сохраняются: сразу после
+  // публикации маркер может ещё не быть на месте.
+  it.each([
+    ['a short sha', `{"sha":"${SHA.slice(0, 9)}"}`],
+    ['no sha field', '{"builtAt":"2026-11-11T12:00:00Z"}'],
+    ['an HTML shell instead of the marker', '<!doctype html><html><body>MeTravel</body></html>'],
+  ])('calls a marker with %s unpublished, not an unreachable host', (_label, body) => {
+    const result = verify({ STUB_MARKER_BODY: body })
+    expect(result.status).toBe(1)
+    expect(result.attempts).toBe(3)
+    expect(result.stdout).toContain('⚠️ Попытка 1 из 3: sha в маркере нет')
+    expect(result.stdout).toContain(`❌ Релиз не опубликован: /.build-source.json прода отвечает без полного sha за 3 попыток, ожидался ${SHA}`)
+    expect(result.stdout).not.toContain('Хост не ответил')
   })
 
   it('reports a published release whose smoke keeps failing', () => {

@@ -14,8 +14,9 @@
  * The actual write reuses scripts/seo-edit.js (composeDescription +
  * buildUpsertPayload + auto-rollback on regression).
  *
- *   node scripts/fix-travel-638.js --dry-run   # preview, writes report
+ *   node scripts/fix-travel-638.js --dry-run   # preview, writes report (default mode)
  *   node scripts/fix-travel-638.js --apply     # backup + PUT + verify
+ *   optional: --backup-dir=<dir>
  *
  * Token: METRAVEL_TOKEN env or ~/.metravel_token (same as seo-edit.js).
  */
@@ -33,12 +34,10 @@ const DEFAULT_BACKUP_DIR = path.join(__dirname, '.seo-backups')
 
 // ---------- args ----------
 const args = process.argv.slice(2)
-const has = (n) => args.includes(`--${n}`)
-const getArg = (n, d) => { const i = args.indexOf(`--${n}`); return i !== -1 && args[i + 1] ? args[i + 1] : d }
-const DRY = has('dry-run')
-const APPLY = has('apply')
+// #3304: режим и отказ на неизвестном флаге — общий помощник; значения только как `--flag=value`.
+const { isDryRun: DRY } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['backup-dir'] })
+const getArg = (n, d) => { const a = args.find((x) => x.startsWith(`--${n}=`)); return a ? a.split('=').slice(1).join('=') || d : d }
 const BACKUP_DIR = getArg('backup-dir', DEFAULT_BACKUP_DIR)
-if (!DRY && !APPLY) { console.error('ERROR: pass --dry-run or --apply'); process.exit(1) }
 
 // ---------- token ----------
 function loadToken() { return bodyMaintenanceSession({ origin: API }); }

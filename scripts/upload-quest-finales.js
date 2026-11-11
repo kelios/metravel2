@@ -9,8 +9,9 @@
  * Маппинг finaleId —
  * в scripts/generate-quest-finale-videos.js (сверен с прода по тексту финала).
  *
- * node scripts/upload-quest-finales.js [--dry-run] [--quest-id=...] [--posters-only]
+ * node scripts/upload-quest-finales.js [--dry-run | --apply] [--quest-id=...] [--posters-only]
  *   --posters-only — залить только постеры (включая 5 старых квестов с готовым видео)
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const { rethrowTerminalAuthError, createToolSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
@@ -20,8 +21,13 @@ const { QUESTS, EXISTING_VIDEO_QUESTS, ASSETS_DIR } = require('./generate-quest-
 
 const API_BASE = process.env.QUEST_API_BASE || 'https://metravel.by';
 
-const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+// Файл ещё и модуль (`patchFinale` берут тесты): загруженный через require, он не
+// читает чужой argv и в боевой режим не переходит.
+const isEntry = require.main === module;
+const args = isEntry ? process.argv.slice(2) : [];
+const { isDryRun } = isEntry
+    ? require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['quest-id'], booleanFlags: ['posters-only', 'video-only'] })
+    : { isDryRun: true };
 const postersOnly = args.includes('--posters-only');
 const videoOnly = args.includes('--video-only');
 const questIdArg = args.find(a => a.startsWith('--quest-id='));

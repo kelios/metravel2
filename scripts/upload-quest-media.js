@@ -7,11 +7,12 @@
  * для них нужны отдельные эндпоинты шагов и финала.
  *
  * Использование:
- *   node scripts/upload-quest-media.js [--dry-run] [--api-url=http://192.168.50.36] [--token=xxx]
+ *   node scripts/upload-quest-media.js [--dry-run | --apply] [--api-url=http://192.168.50.36] [--token=xxx]
  *
  * --dry-run   — только показать, что будет загружено
  * --api-url   — базовый URL бэкенда (по умолчанию http://192.168.50.36)
  * --token     — токен авторизации
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const fs = require('fs');
@@ -20,7 +21,7 @@ const path = require('path');
 const { describeQuestCoverVerdict, inspectQuestCover } = require('./lib/questCoverAspect');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token'] });
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'http://192.168.50.36';

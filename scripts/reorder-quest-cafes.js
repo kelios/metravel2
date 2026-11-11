@@ -12,15 +12,16 @@
  *
  * Запуск:
  *   node scripts/reorder-quest-cafes.js --dry-run
- *   node scripts/reorder-quest-cafes.js --api-url=https://metravel.by
+ *   node scripts/reorder-quest-cafes.js --apply --api-url=https://metravel.by
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 
 const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
-const isDryRun = args.includes('--dry-run')
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token', 'only'] })
 const apiUrlArg = args.find((a) => a.startsWith('--api-url='))
 const tokenArg = args.find((a) => a.startsWith('--token='))
 const onlyArg = args.find((a) => a.startsWith('--only=')) // CSV quest_id для точечного прогона

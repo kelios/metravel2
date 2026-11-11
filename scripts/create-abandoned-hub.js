@@ -5,8 +5,9 @@
  * из Минска, 566 автомаршруты, 480 Юцковские). Текст — scripts/abandoned-hub-content.html,
  * фото — только metravel.by из своих статей (address-image точек-доноров + gallery HD).
  *
- * node scripts/create-abandoned-hub.js [--publish] [--with-points] [--id=N] [--dry-run]
+ * node scripts/create-abandoned-hub.js [--publish] [--with-points] [--id=N] [--dry-run | --apply]
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token. Автор — Юля (id 1).
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +15,7 @@ const path = require('path');
 const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['id', 'token'], booleanFlags: ['publish', 'with-points'] });
 const doPublish = args.includes('--publish');
 const withPoints = args.includes('--with-points');
 const idArg = args.find(a => a.startsWith('--id='));

@@ -38,7 +38,7 @@
 | что | инструмент |
 |---|---|
 | точечная правка полей шага или `quest.title` | `node scripts/apply-quest-patches.js --dry-run …`, затем `--apply`; патч `{quest_id, step_db_id, step_id, changes:{…}}` или `{quest_id, quest_db_id, changes:{title}}`; поля только внутри `changes` (allowlist: task, hint, answer_pattern, lat, lng, maps_url, story, location, title, order, input_type), `answer_pattern` строкой; источник — в отчёте, не в патче |
-| сквозная переработка квеста в одну историю | снимок `scripts/.quest-review/<quest_id>.json` + `node scripts/update-quest-content.js --quest-id=<id> --data=… --dry-run`, затем без `--dry-run` |
+| сквозная переработка квеста в одну историю | снимок `scripts/.quest-review/<quest_id>.json` + `node scripts/update-quest-content.js --quest-id=<id> --data=… --dry-run`, затем `--apply` (без флага режима — пробный прогон, #3304) |
 | синк всего файла на прод | `scripts/sync-quest-to-prod.js --source-file=… --dry-run`, затем `--apply` — шлёт PATCH по ВСЕМ шагам, поэтому для точечных правок не годится; `quest.title` не патчит — его правят патчем квеста |
 | порядок шагов | только поле `order`, двухфазно (unique): патч `{quest_id, quest_db_id, reorder:[…все step_id]}` в `apply-quest-patches.js` (+10000, затем те же слоты; повтор безопасен), потом `sync-quest-data-from-prod.js` переносит порядок в файл (#2426). `sync-quest-to-prod.js --reorder` шлёт и все поля файла — только при нулевом дрейфе |
 | новая точка в живом квесте | патч `{quest_id, quest_db_id, after_step_id, create_step:{step_id, title, location, story, task, hint, answer_pattern, lat, lng, point_role?}}` тем же `apply-quest-patches.js`: POST с временным order, хвост сдвигается двухфазно, точка встаёт сразу за `after_step_id` (после финальной — нельзя); повтор пропускает уже созданный step_id. Data-файл: шаг вписать руками на то же место, затем `sync-quest-data-from-prod.js` — он только сверяет поля и новых шагов не добавляет |
@@ -71,7 +71,7 @@
    Каталог gitignored намеренно (#1448): снимок описывает прод на момент снятия
    и протухает после следующей правки; скрипт отказывается брать git-tracked
    файл, применённый снимок уезжает в `applied/`. Нужен снова — сними свежий.
-5. Применить: `update-quest-content.js --dry-run`, затем без него.
+5. Применить: `update-quest-content.js --dry-run`, затем `--apply`.
 6. Синхронизировать data-файл (`sync-quest-data-from-prod.js`), прогнать
    `npm run quest:gates -- --source=scripts/<city>-quest-data.js`.
 7. Проверить GET-ом: токены ответа не в task/hint, story богаче, нить есть,

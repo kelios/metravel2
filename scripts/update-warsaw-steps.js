@@ -5,13 +5,14 @@
  * по step_id. Не трогает story/координаты/медиа. Идемпотентно.
  *
  * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/update-warsaw-steps.js \
- *   --api-url=https://metravel.by --token=YOUR_TOKEN [--dry-run]
+ *   --api-url=https://metravel.by --token=YOUR_TOKEN [--dry-run | --apply]
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError, formatTokenError  } = require('./lib/metravel-tool-session')
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token'] });
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';

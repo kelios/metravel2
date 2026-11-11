@@ -59,10 +59,11 @@
   производная `src_square`/`square_320` из манифеста. Гейт
   `scripts/lib/questCoverAspect.js` отбивает кадр вне 1,30…1,80 во всех трёх
   скриптах заливки.
-- Заливка новой: `upload-missing-quest-covers-prod.js` (`--dry-run`, затем без
-  него; модуль не require-ить для проверки — он сразу исполняет main).
-  Перезалив существующей: `scripts/upload-quest-media-prod.js --quest-id=<id>`
-  (поле `cover_image`).
+- Заливка новой: `upload-missing-quest-covers-prod.js` (`--dry-run`, затем
+  `--apply`; без флага режима — пробный прогон, #3304; модуль не require-ить
+  для проверки — он сразу исполняет main).
+  Перезалив существующей: `scripts/upload-quest-media-prod.js --quest-id=<id>
+  --apply` (поле `cover_image`).
 
 ## 5. Финал-видео
 

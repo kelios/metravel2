@@ -8,7 +8,8 @@
  *   PATCH /api/quest-finales/{id}/ → video (file)
  *
  * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/upload-quest-media-prod.js \
- *   --api-url=https://metravel.by --token=YOUR_TOKEN --quest-id=warsaw-syrenka
+ *   --apply --api-url=https://metravel.by --token=YOUR_TOKEN --quest-id=warsaw-syrenka
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const fs = require('fs');
@@ -17,7 +18,7 @@ const path = require('path');
 const { assertQuestCoverAspect } = require('./lib/questCoverAspect');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token', 'quest-id'] });
 const apiUrlArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));
 const questIdArg = args.find(a => a.startsWith('--quest-id='));

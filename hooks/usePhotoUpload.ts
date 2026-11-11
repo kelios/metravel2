@@ -85,6 +85,13 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const uploadingRef = useRef(false);
   // Номер текущей загрузки: отмена или новая загрузка делают прежний ответ чужим.
   const uploadSeqRef = useRef(0);
+  // `loading` держат двое (#3312): передний план — открытый выбор или загрузка
+  // нового файла, владелец по uploadSeqRef, — и отложенная догрузка очереди
+  // (uploadingRef). Каждый снимает блокировку сохранения, только когда второй
+  // свободен; иначе догрузка старого файла открывала сохранение посреди выбора.
+  const foregroundBusyRef = useRef(false);
+  // Число явных отмен: отмена во время догрузки делает чужим и её ответ.
+  const cancelCountRef = useRef(0);
 
   const hasValidImage = Boolean(previewUrl || imageUri);
   const currentDisplayUrl = previewUrl ?? imageUri ?? '';
@@ -134,6 +141,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     const file = pendingUploadRef.current;
     pendingUploadRef.current = null;
     uploadingRef.current = true;
+    const cancelsAtStart = cancelCountRef.current;
+    const isCancelled = () => cancelsAtStart !== cancelCountRef.current;
 
     try {
       setLoading(true); setError(null); setUploadMessage(null);
@@ -151,6 +160,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
+      if (isCancelled()) return;
       if (!mountedRef.current) {
         if (deliversAfterUnmount(collection) && uploadedUrl) onUpload?.(uploadedUrl);
         return;
@@ -163,11 +173,12 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         onUpload?.(uploadedUrl);
       }
     } catch {
+      if (isCancelled()) return;
       pendingUploadRef.current = file;
       reportClientError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
     } finally {
       uploadingRef.current = false;
-      if (mountedRef.current) setLoading(false);
+      if (mountedRef.current && !foregroundBusyRef.current) setLoading(false);
     }
   }, [collection, idTravel, lastPreviewUrl, onUpload, reportClientError]);
 
@@ -251,6 +262,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   // доставляется, на экране снова прежнее фото, кнопки сохранения свободны.
   const cancelUpload = useCallback(() => {
     uploadSeqRef.current += 1;
+    cancelCountRef.current += 1;
+    foregroundBusyRef.current = false;
     if (!mountedRef.current) return;
     setLoading(false); setUploadProgress(0); setPreviewUrl(null); setUploadMessage(null); setError(null);
     setIsManuallySelected(false);
@@ -263,10 +276,15 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   const beginSelection = useCallback(() => {
     const seq = ++uploadSeqRef.current;
     const isCurrent = () => seq === uploadSeqRef.current;
+    foregroundBusyRef.current = true;
     setError(null); setLoading(true);
     return {
       isCurrent,
-      end: () => { if (isCurrent() && mountedRef.current) setLoading(false); },
+      end: () => {
+        if (!isCurrent()) return;
+        foregroundBusyRef.current = false;
+        if (mountedRef.current && !uploadingRef.current) setLoading(false);
+      },
     };
   }, []);
 
@@ -274,6 +292,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     if (!mountedRef.current) return;
     const seq = ++uploadSeqRef.current;
     const isCurrent = () => seq === uploadSeqRef.current;
+    foregroundBusyRef.current = true;
     try {
       setLoading(true); setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
       const normalizedId = (idTravel ?? '').toString();
@@ -363,7 +382,10 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setPreviewUrl(null);
       }
     } finally {
-      if (mountedRef.current && isCurrent()) { setLoading(false); setUploadProgress(0); }
+      if (isCurrent()) {
+        foregroundBusyRef.current = false;
+        if (mountedRef.current) { if (!uploadingRef.current) setLoading(false); setUploadProgress(0); }
+      }
     }
   }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError]);
 

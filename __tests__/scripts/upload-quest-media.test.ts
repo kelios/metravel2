@@ -11,7 +11,8 @@ beforeEach(() => {
   dir = makeTempDir('quest-media-test-');
   fs.mkdirSync(path.join(dir, 'scripts/lib'), { recursive: true });
   fs.copyFileSync(SCRIPT, path.join(dir, 'scripts/upload-quest-media.js'));
-  for (const lib of ['questCoverAspect.js', 'imageSize.js']) {
+  // one-off-write-mode и cli-contract — выбор режима (#3304): копия скрипта читает их рядом с собой.
+  for (const lib of ['questCoverAspect.js', 'imageSize.js', 'one-off-write-mode.js', 'cli-contract.js']) {
     fs.copyFileSync(path.join(ROOT, 'scripts/lib', lib), path.join(dir, 'scripts/lib', lib));
   }
   // Только IHDR: операторский гейт читает размер, содержимое файла не декодирует.
@@ -32,7 +33,8 @@ afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-function run(mode: string, args: string[] = []) {
+// Боевой путь — только с явным `--apply` (#3304); пробные прогоны передают свой набор флагов.
+function run(mode: string, args: string[] = ['--apply']) {
   const preload = path.join(dir, 'fetch.cjs');
   // Подменяется только транспорт; запускается настоящий CLI, FormData и exit code.
   fs.writeFileSync(preload, `
@@ -120,8 +122,8 @@ it('явно отклоняет видео, постер и картинки ш�
     .every((call: { fields: string[] }) => call.fields.join() === 'cover_image')).toBe(true);
 });
 
-it('dry-run сохраняет инвентаризацию и не выполняет сетевых запросов', () => {
-  const result = run('success', ['--dry-run']);
+it.each([[['--dry-run']], [[]]])('пробный прогон %j сохраняет инвентаризацию и не выполняет сетевых запросов', (args) => {
+  const result = run('success', args);
   expect(result.status).toBe(0);
   expect(result.calls).toEqual([]);
   expect(result.stdout).toContain('Режим: DRY RUN');

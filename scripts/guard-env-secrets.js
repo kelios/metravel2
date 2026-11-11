@@ -41,11 +41,17 @@ const KEY_FORMATS = [
   { reason: 'Slack token literal', pattern: /\bxox[abprs]-[A-Za-z0-9-]{20,}/ },
   { reason: 'Stripe live key literal', pattern: /\b[sr]k_live_[A-Za-z0-9]{20,}/ },
   { reason: 'Telegram bot token literal', pattern: /(?<![0-9A-Za-z_])\d{8,10}:AA[A-Za-z0-9_-]{33}(?![0-9A-Za-z_-])/ },
+  // #3305: идентификатор ключа доступа AWS (`AKIA…` — постоянный, `ASIA…` —
+  // временный). Сам по себе не секрет, но в presigned-ссылке, скопированной в
+  // тест, называет настоящий ключ аккаунта. Примеры из документации AWS
+  // оканчиваются на `EXAMPLE` (`AKIAIOSFODNN7EXAMPLE`) и пропускаются — ими и
+  // пишутся фикстуры.
+  { reason: 'AWS access key id literal', pattern: /(?<![A-Z0-9])(?:AKIA|ASIA)(?![A-Z0-9]{9}EXAMPLE(?![A-Z0-9]))[A-Z0-9]{16}(?![A-Z0-9])/ },
   // С телом ключа: одна строка-заголовок встречается в детекторах и шаблонах.
   { reason: 'private key block', pattern: /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:\\r|\\n|\s)*[A-Za-z0-9+/]{32,}/ },
 ]
 // Дешёвый отсев: построчный разбор нужен единицам файлов из тысяч.
-const KEY_FORMAT_HINT = /[0-9a-fA-F]{40}|gh[pousr]_|github_pat_|xox[abprs]-|[sr]k_live_|:AA[A-Za-z0-9_-]{33}|PRIVATE KEY-----/
+const KEY_FORMAT_HINT = /[0-9a-fA-F]{40}|gh[pousr]_|github_pat_|xox[abprs]-|[sr]k_live_|:AA[A-Za-z0-9_-]{33}|PRIVATE KEY-----|A[KS]IA[A-Z0-9]{16}/
 
 const normalizePath = (filePath) => filePath.split(path.sep).join('/')
 

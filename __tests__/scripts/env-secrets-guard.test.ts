@@ -72,6 +72,8 @@ describe('key literals in source files (#3211)', () => {
     ['Stripe live key', `stripe = "${'sk_live_'}${'a1B2'.repeat(6)}"`, 'Stripe live key'],
     ['Telegram bot token', `bot ${'1234567890'}:${'AA'}${'h'.repeat(33)}`, 'Telegram bot token'],
     ['private key block', `${'-----BEGIN '}PRIVATE KEY-----\\n${'MIIEvQIBADANBgkqhkiG9w0BAQEF'.repeat(2)}`, 'private key block'],
+    ['AWS access key id', `X-Amz-Credential=${'AKIA'}${'Q7ZXW2MB'.repeat(2)}%2F20260201%2Feu-north-1%2Fs3%2Faws4_request`, 'AWS access key id'],
+    ['temporary AWS access key id', `aws_access_key_id = ${'ASIA'}${'Q7ZXW2MB'.repeat(2)}`, 'AWS access key id'],
   ])('rejects a %s in any text file, markdown included', (_name, line, reason) => {
     const { status, output } = scanSource('notes.md', `# Runbook\n\n${line}\n`)
 
@@ -92,6 +94,18 @@ describe('key literals in source files (#3211)', () => {
 
     expect(findKeyLiterals(source)).toEqual([])
     expect(scanSource('pins.js', source).status).toBe(0)
+  })
+
+  // #3305: примеры из документации AWS оканчиваются на EXAMPLE — ими пишутся
+  // фикстуры presigned-ссылок; настоящий идентификатор ловится в любом окружении.
+  it('accepts the AWS documentation example key id and nothing shorter or longer by accident', () => {
+    const docExample = `${'AKIA'}IOSFODNN7EXAMPLE`
+    expect(findKeyLiterals(`const url = 'https://bucket.s3.amazonaws.com/a.jpg?X-Amz-Credential=${docExample}%2F20260201'`)).toEqual([])
+    expect(scanSource('fixture.test.ts', `const id = '${docExample}'\n`).status).toBe(0)
+    // Идентификатор-соседи IAM (`AIDA…`, `AROA…`) и обрывки ключами доступа не являются.
+    expect(findKeyLiterals(`${'AKIA'}SHORT ${'AIDA'}${'Q7ZXW2MB'.repeat(2)} X${'AKIA'}${'Q7ZXW2MB'.repeat(2)}`)).toEqual([])
+    // Окончание EXAMPLE не прикрывает строку, которая просто длиннее формата.
+    expect(findKeyLiterals(`id=${'AKIA'}${'Q7ZXW2MB'.repeat(2)} tail=EXAMPLE`)).toEqual([{ line: 1, reason: 'AWS access key id literal' }])
   })
 
   it('keeps flagging a key whose name merely contains a git word', () => {

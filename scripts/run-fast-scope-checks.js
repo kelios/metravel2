@@ -406,6 +406,14 @@ const main = () => {
       process.exit(questDataSourcesGuardStatus)
     }
 
+    // Скрипт, пишущий на прод, не пишет без `--apply` (#3304). Гейт безусловный
+    // по той же причине, что и выше: нарушение приносит НОВЫЙ файл — копия старого
+    // шаблона с ручным `args.includes('--dry-run')`, — а не правка существующего.
+    const prodWriteModeGuardStatus = runCommand('npm', ['run', 'guard:prod-write-mode'])
+    if (prodWriteModeGuardStatus !== 0) {
+      process.exit(prodWriteModeGuardStatus)
+    }
+
     // #2221: дерево `ios/` закоммичено, и guard сверяет его с app.json и
     // eas.json, но до сборки кандидата его никто не запускал — коммит #2142
     // добавил тёмную тройку сплэша, и гейт простоял красным до подготовки

@@ -11,15 +11,16 @@
  *
  * Запуск:
  *   node scripts/add-quest-spots.js --dry-run
- *   node scripts/add-quest-spots.js --api-url=https://metravel.by
+ *   node scripts/add-quest-spots.js --apply --api-url=https://metravel.by
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 
 const { rethrowTerminalAuthError, createToolSession, publicRequest, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
-const isDryRun = args.includes('--dry-run')
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token'] })
 const apiUrlArg = args.find((a) => a.startsWith('--api-url='))
 const tokenArg = args.find((a) => a.startsWith('--token='))
 const API = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by'

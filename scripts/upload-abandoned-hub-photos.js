@@ -5,13 +5,15 @@
  * (только metravel.by, из точек статей-доноров) и POST /api/upload
  * collection=travelImageAddress id=<pointId>. Обложка: collection=travelMainImage.
  *
- * METRAVEL_TOKEN=... node scripts/upload-abandoned-hub-photos.js --travel-id=682 [--cover-only|--points-only]
+ * METRAVEL_TOKEN=... node scripts/upload-abandoned-hub-photos.js --travel-id=682 [--cover-only|--points-only] [--dry-run | --apply]
+ * Без флага режима — пробный прогон (скачивание и план, без POST /api/upload); запись — только `--apply` (#3304).
  */
 const { rethrowTerminalAuthError, bodyMaintenanceSession, TokenError, formatTokenError  } = require('./lib/metravel-tool-session');
 const fs = require('fs');
 const path = require('path');
 
 const args = process.argv.slice(2);
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['travel-id'], booleanFlags: ['cover-only', 'points-only'] });
 const idArg = args.find(a => a.startsWith('--travel-id='));
 const TRAVEL_ID = idArg ? Number(idArg.split('=')[1]) : null;
 const coverOnly = args.includes('--cover-only');
@@ -33,6 +35,7 @@ async function download(url) {
 }
 
 async function upload(collection, id, buf, filename, mime) {
+    if (isDryRun) return `[DRY] POST /api/upload collection=${collection} id=${id} (${filename}, ${mime}) не отправлен`;
     const form = new FormData();
     form.append('file', new File([buf], filename, { type: mime }));
     form.append('collection', collection);
@@ -74,7 +77,7 @@ async function main() {
                 const buf = await download(p.sourceImage);
                 const { ext, mime } = sniff(buf);
                 await upload('travelImageAddress', remote.id, buf, nameOf(p.sourceImage, ext), mime);
-                console.log(`  ✅ ${p.address} → point ${remote.id} (${(buf.length / 1024).toFixed(0)} KB)`);
+                console.log(`  ${isDryRun ? '[DRY]' : '✅'} ${p.address} → point ${remote.id} (${(buf.length / 1024).toFixed(0)} KB)`);
                 ok++;
             } catch (e) {
               rethrowTerminalAuthError(e); console.error(`  ❌ ${p.address}: ${formatTokenError(e)}`); fail++; }
@@ -87,7 +90,7 @@ async function main() {
         const buf = await download(COVER_URL);
         const { ext, mime } = sniff(buf);
         const res = await upload('travelMainImage', TRAVEL_ID, buf, nameOf(COVER_URL, ext), mime);
-        console.log(`cover: ✅ ${res}`);
+        console.log(`cover: ${isDryRun ? '' : '✅ '}${res}`);
     }
 }
 main().catch(e => { console.error('Fatal:', formatTokenError(e)); process.exit(1); });

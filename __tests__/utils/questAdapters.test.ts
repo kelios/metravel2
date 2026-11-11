@@ -321,7 +321,7 @@ describe('questAdapters', () => {
     });
 
     it('does not strip S3 signed parameters from already-valid URLs', () => {
-      const signedUrl = 'https://metravelprod.s3.amazonaws.com/quests/5/poster/video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJ2XBPKC6ITB3S5RQ%2F20260224%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20260224T184046Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=abc123';
+      const signedUrl = 'https://metravelprod.s3.amazonaws.com/quests/5/poster/video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20260224%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20260224T184046Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=abc123';
       expect(fixMediaUrl(signedUrl)).toBe(signedUrl);
     });
 

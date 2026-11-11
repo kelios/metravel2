@@ -72,7 +72,9 @@ npm run quest:scan-media-gaps -- --quest-id=a,b,c   # только партия
    ```bash
    node scripts/upload-quest-finales.js --dry-run --quest-id=<quest_id>
    ```
-5. **При разрешённой публикации залей только проверенные targets.** Используй
+5. **При разрешённой публикации залей только проверенные targets:** та же
+   команда с `--apply` вместо `--dry-run` (без флага режима скрипт делает
+   пробный прогон, #3304). Используй
    версию `scripts/upload-quest-finales.js`, подключённую к общему
    `scripts/lib/metravel-token.js`: она проверяет ожидаемую identity через
    protected `/me/` и не передаёт токен через stdout/argv. Вывод
@@ -115,7 +117,7 @@ Protected `/me/` подтверждает identity, а DRF `OPTIONS`/read-only v
 
 Если видео есть, а постера нет — `generate-quest-finale-videos.js
 --posters-existing` извлечёт кадр из прод-видео в `poster.jpg`, затем
-`upload-quest-finales.js --posters-only`.
+`upload-quest-finales.js --posters-only` (`--dry-run`, затем `--apply`).
 
 ## Окружение / macOS (проверено на практике)
 

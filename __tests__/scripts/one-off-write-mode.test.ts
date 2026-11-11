@@ -45,6 +45,17 @@ describe('one-off quest write mode (#3211)', () => {
     expect(stderr).toHaveBeenCalledWith(expect.stringContaining('[migrate-fixture-quest]'))
   })
 
+  // #3304: у `create-*-guide.js` и `upload-quest-*.js` есть свои переключатели без значения.
+  it('accepts declared boolean switches and still refuses undeclared ones', () => {
+    const withSwitches = { ...options, booleanFlags: ['publish', 'with-points'] }
+    expect(resolveOneOffWriteMode(['--publish', '--with-points'], withSwitches)).toEqual({ isDryRun: true })
+    expect(resolveOneOffWriteMode(['--apply', '--publish'], withSwitches)).toEqual({ isDryRun: false })
+    expect(() => resolveOneOffWriteMode(['--apply', '--publsh'], withSwitches)).toThrow('exit 2')
+    expect(() => resolveOneOffWriteMode(['--apply', '--publish=yes'], withSwitches)).toThrow('exit 2')
+    expect(() => resolveOneOffWriteMode(['--help'], withSwitches)).toThrow('exit 0')
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining('[--publish] [--with-points]'))
+  })
+
   it('answers --help with the usage and does not run', () => {
     expect(() => resolveOneOffWriteMode(['--help', '--apply'], options)).toThrow('exit 0')
     expect(stdout).toHaveBeenCalledWith(expect.stringContaining('--dry-run | --apply'))

@@ -8,8 +8,9 @@
 # публикации одноядерный прод ~25 с не отвечал на /health и статику (выкат
 # 34f885d84, 17.10.2026), а через минуту всё было 200. Повтор ограничен, как у
 # бэкенд-выката: 10–15 с между попытками. Итог различает «релиз не опубликован»
-# (прод ответил чужим sha — повтор не поможет) и «хост не ответил» (sha не
-# получен — релиз мог быть опубликован, это недоступность, а не откат).
+# (прод ответил чужим sha — повтор не поможет; либо маркер все попытки отвечал
+# без полного sha, #3305) и «хост не ответил» (ответа нет — релиз мог быть
+# опубликован, это недоступность, а не откат).
 set -Euo pipefail
 
 SHA="${1:?usage: verify-live-release.sh <sha>}"
@@ -21,8 +22,9 @@ DELAY="${VERIFY_LIVE_RETRY_DELAY:-12}"
 # Тот же чтец, что у гейта источника перед выкатом (#3272): «до» и «после»
 # одного выката читают /.build-source.json одним кодом.
 LIVE_BUILD_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/live-build-source.js"
-live_sha() {
-  node "$LIVE_BUILD_SOURCE" "$ORIGIN" 2>/dev/null || true
+# Печатает sha, `no-sha` (хост ответил, полного sha в маркере нет) либо пусто.
+live_state() {
+  node "$LIVE_BUILD_SOURCE" --state "$ORIGIN" 2>/dev/null || true
 }
 
 # Печатает строки кодов; код возврата 0 — все три URL ответили 200.
@@ -37,10 +39,13 @@ smoke() {
 }
 
 seen=''
+state=''
 smoke_output=''
 smoke_failed=0
 for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
-  seen="$(live_sha)"
+  state="$(live_state)"
+  seen=''
+  [[ "$state" == "no-sha" ]] || seen="$state"
   if [[ -n "$seen" && "$seen" != "$SHA" ]]; then
     echo "❌ Релиз не опубликован: прод отдаёт sha $seen, ожидался $SHA"
     exit 1
@@ -57,13 +62,15 @@ for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
     exit 0
   fi
   if ((attempt < ATTEMPTS)); then
-    echo "⚠️ Попытка $attempt из $ATTEMPTS: sha ${seen:-не получен}, смоук $([[ "$smoke_failed" == "0" ]] && echo 200 || echo 'не 200') — повтор через $DELAY с"
+    echo "⚠️ Попытка $attempt из $ATTEMPTS: sha ${seen:-$([[ "$state" == "no-sha" ]] && echo 'в маркере нет' || echo 'не получен')}, смоук $([[ "$smoke_failed" == "0" ]] && echo 200 || echo 'не 200') — повтор через $DELAY с"
     sleep "$DELAY"
   fi
 done
 
 printf '%s\n' "$smoke_output"
-if [[ -z "$seen" ]]; then
+if [[ "$state" == "no-sha" ]]; then
+  echo "❌ Релиз не опубликован: /.build-source.json прода отвечает без полного sha за $ATTEMPTS попыток, ожидался $SHA"
+elif [[ -z "$seen" ]]; then
   echo "❌ Хост не ответил на /.build-source.json за $ATTEMPTS попыток — релиз $SHORT мог быть опубликован, это недоступность прода"
 else
   echo "❌ Релиз $SHORT опубликован, но смоук прода не прошёл за $ATTEMPTS попыток"

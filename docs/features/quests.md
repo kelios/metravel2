@@ -1585,7 +1585,10 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   (отдельный `migrate-<city>-quest.js` — только для нестандартной логики; такие
   разовые скрипты и `reorder-quest-steps-prod.js` без флага режима делают
   пробный прогон, пишут на прод только с `--apply`, а неизвестный флаг — отказ:
-  `scripts/lib/one-off-write-mode.js`, #3211),
+  `scripts/lib/one-off-write-mode.js`, #3211; с #3304 то же правило у
+  `update-quest-content.js`, `upload-quest-*.js`, `add-quest-*.js`,
+  `fix-quest-*.js` и остальных разовых скриптов, а `npm run guard:prod-write-mode`
+  в `check:fast` перечисляет пишущие скрипты и краснеет на новом без `--apply`),
   гейт data-файла `npm run quest:gates -- --source=…`, итоговая оценка
   независимого ревью ≥8/10 перед заливкой (скилл `metravel-quest` →
   `references/quality-score.md`, правило владельца 09.11.2026),

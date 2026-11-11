@@ -5,8 +5,9 @@
  * scripts/brest-guide-points.json для Мастера; в payload пускаются только если
  * --with-points, т.к. точки требуют непустой image).
  *
- * node scripts/create-brest-guide.js [--publish] [--with-points] [--id=N] [--dry-run]
+ * node scripts/create-brest-guide.js [--publish] [--with-points] [--id=N] [--dry-run | --apply]
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token.
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +15,7 @@ const path = require('path');
 const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['id', 'token'], booleanFlags: ['publish', 'with-points'] });
 const doPublish = args.includes('--publish');
 const withPoints = args.includes('--with-points');
 const idArg = args.find(a => a.startsWith('--id='));

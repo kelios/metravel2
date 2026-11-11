@@ -236,6 +236,8 @@
     "quest:sync-from-prod": "node scripts/sync-quest-data-from-prod.js",
     "guard:quest-data-sources": "node scripts/guard-quest-data-sources.js",
     "guard:quest-data-sources:json": "node scripts/guard-quest-data-sources.js --json",
+    "guard:prod-write-mode": "node scripts/guard-prod-write-mode.js",
+    "guard:prod-write-mode:json": "node scripts/guard-prod-write-mode.js --json",
     "guard:quest-answer-eval": "node scripts/guard-quest-answer-eval.js",
     "guard:quest-answer-eval:json": "node scripts/guard-quest-answer-eval.js --json",
     "guard:advent-config": "node scripts/validate-advent-config.mjs data/advent/2026.json",

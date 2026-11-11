@@ -4,8 +4,9 @@
  * Текст — scripts/weekend-minsk-hub-content.html (13 маршрутов + 2 смежных хаба).
  * Точек нет (как у путеводителя по Минску, id 646) — хаб-навигатор по ссылкам.
  *
- * node scripts/create-weekend-minsk-hub.js [--publish] [--id=N] [--dry-run]
+ * node scripts/create-weekend-minsk-hub.js [--publish] [--id=N] [--dry-run | --apply]
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token. Создавать ТОЛЬКО токеном Юли (id 1).
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +14,7 @@ const path = require('path');
 const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['id', 'token'], booleanFlags: ['publish'] });
 const doPublish = args.includes('--publish');
 const idArg = args.find(a => a.startsWith('--id='));
 const tokenArg = args.find(a => a.startsWith('--token='));

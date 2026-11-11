@@ -118,10 +118,21 @@ describe('build-prod.sh planned-load wiring', () => {
   const source = readCanonicalDeploy()
 
   it('opens the window right after the source gate, before any prod contact', () => {
-    const gate = source.indexOf('assert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"\nopen_planned_load_window')
+    const gate = source.indexOf('\nassert_deployable_source "$ENV" "$ALLOW_DIRTY" "$DEPLOY"\n')
+    const open = source.indexOf('\nopen_planned_load_window\n', gate)
     expect(gate).toBeGreaterThan(0)
+    expect(open).toBeGreaterThan(gate)
+    // Между гейтом источника и окном — только выход «ревизия уже на проде»: без
+    // сборки нет нагрузки, и окно не открывается. Любая другая строка здесь —
+    // работа до объявления окна.
+    expect(source.slice(gate, open).split('\n').filter(Boolean).slice(1)).toEqual([
+      'if [[ "$SOURCE_ALREADY_LIVE" == "1" ]]; then',
+      expect.stringContaining('уже на проде'),
+      '  exit 0',
+      'fi',
+    ])
     for (const firstContact of ['start_prod_media_checks\n', 'stage "экспорт Metro"']) {
-      expect(source.indexOf(firstContact, gate)).toBeGreaterThan(gate)
+      expect(source.indexOf(firstContact, open)).toBeGreaterThan(open)
     }
   })
 

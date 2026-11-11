@@ -8,9 +8,10 @@
  *
  * Usage:
  *   node scripts/upload-missing-quest-covers-prod.js --dry-run --api-url=https://metravel.by
- *   node scripts/upload-missing-quest-covers-prod.js --api-url=https://metravel.by --token=YOUR_TOKEN
+ *   node scripts/upload-missing-quest-covers-prod.js --apply --api-url=https://metravel.by --token=YOUR_TOKEN
  *
  * You can also pass the token through QUEST_UPLOAD_TOKEN to keep it out of shell history.
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const fs = require('fs');
@@ -19,7 +20,7 @@ const path = require('path');
 const { assertQuestCoverAspect } = require('./lib/questCoverAspect');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token', 'quest-id'] });
 const apiUrlArg = args.find((arg) => arg.startsWith('--api-url='));
 const tokenArg = args.find((arg) => arg.startsWith('--token='));
 const onlyQuestIdArg = args.find((arg) => arg.startsWith('--quest-id='));

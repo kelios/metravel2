@@ -76,20 +76,10 @@ const TRAVEL_ID = 480;
  * Так наоборот было ровно до SEO-OPS-001 (#1107/#1325/#1389/#1390): скрипт
  * искал `--dry-run` в argv, и любая опечатка (`--dry-ryn`) отвечала умолчанием,
  * а умолчанием была запись в живой прод. Неизвестный флаг здесь — стоп, а не
- * молчаливое согласие.
+ * молчаливое согласие. С #3304 правило держит общий помощник, а не своя копия.
  */
-const KNOWN_FLAGS = new Set(['--apply', '--dry-run']);
-const argv = process.argv.slice(2);
-const unknownFlags = argv.filter((a) => !KNOWN_FLAGS.has(a));
-if (unknownFlags.length) {
-  console.error(`Неизвестный аргумент: ${unknownFlags.join(' ')}. Допустимо только --apply или --dry-run.`);
-  process.exit(2);
-}
-if (argv.includes('--apply') && argv.includes('--dry-run')) {
-  console.error('--apply и --dry-run взаимоисключающие.');
-  process.exit(2);
-}
-const isDryRun = !argv.includes('--apply');
+const args = process.argv.slice(2);
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename });
 
 const CAT_RUINS = 114; // Руины
 const CAT_HOUSE = 36; // Дом

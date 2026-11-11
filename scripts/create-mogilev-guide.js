@@ -9,8 +9,9 @@
  * сохраняются как есть (points ниже начинаются с них, с их реальными id/image).
  * Новые точки добавляются без id — бэк создаст их при сохранении.
  *
- * node scripts/create-mogilev-guide.js [--publish] [--with-points] [--id=154] [--dry-run]
+ * node scripts/create-mogilev-guide.js [--publish] [--with-points] [--id=154] [--dry-run | --apply]
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token.
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,7 +19,7 @@ const path = require('path');
 const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['id', 'token'], booleanFlags: ['publish', 'with-points'] });
 const doPublish = args.includes('--publish');
 const withPoints = args.includes('--with-points');
 const idArg = args.find(a => a.startsWith('--id='));

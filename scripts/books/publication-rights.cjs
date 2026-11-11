@@ -2,7 +2,8 @@
 // exact files and source evidence without inferring rights from a public URL.
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
+// PDF целиком уходит в stdin `pdftotext`: синхронный pipe на большом входе виснет на macOS (#2844).
+const {spawnSyncWithStdin} = require('../lib/runSyncWithStdin');
 const {createHash} = require('node:crypto');
 const audit = require('../../data/travelBooks/publication-rights-audit.json');
 
@@ -57,7 +58,7 @@ async function readCreditText(artifactRoot, artifact) {
   if (!artifactRoot || !artifact.id.endsWith('.pdf')) throw new Error('Required attribution needs an exact published PDF: ' + artifact.id);
   const bytes = await regularFile(await fs.realpath(artifactRoot), artifact.id);
   if (digest(bytes) !== artifact.sha256) throw new Error('Attribution PDF differs from its publication checksum: ' + artifact.id);
-  const text = spawnSync('pdftotext', ['-layout', '-', '-'], {input: bytes, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 30_000});
+  const text = spawnSyncWithStdin('pdftotext', ['-layout', '-', '-'], {input: bytes, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 30_000});
   if (text.error || text.status !== 0) throw new Error('Could not inspect printed attribution: ' + artifact.id);
   return normalText(text.stdout);
 }

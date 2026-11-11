@@ -34,7 +34,9 @@ const { findRoleMismatches, endsWithOptional } = require('./lib/questPointRoles'
 const { rethrowTerminalAuthError, createToolSession, TokenError  } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2)
-const apply = args.includes('--apply')
+// #3304: режим — общий помощник; опечатка во флаге — отказ с кодом 2, а не молчаливый отчёт.
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'quest-id', 'token'] })
+const apply = !isDryRun
 const get = (key, fallback) => {
   const found = args.find((arg) => arg.startsWith(`--${key}=`))
   return found ? found.split('=').slice(1).join('=') : fallback

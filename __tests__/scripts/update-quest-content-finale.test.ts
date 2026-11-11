@@ -164,7 +164,8 @@ describe('update-quest-content: резолв pk финала (#1458)', () => {
   // ни в ассерт, ни в уборку.
   const archivedFiles = () => (fs.existsSync(APPLIED_DIR) ? fs.readdirSync(APPLIED_DIR) : [])
 
-  const run = (snapshot: string, questId: string, extra: string[] = []) => {
+  // Запись — только с явным `--apply` (#3304); пробный прогон передаёт свой флаг.
+  const run = (snapshot: string, questId: string, extra: string[] = ['--apply']) => {
     const before = archivedFiles()
     const result = runNodeCli([SCRIPT, `--quest-id=${questId}`, `--data=${snapshot}`, `--api-url=${origin}`, '--token=test', ...extra])
     created.push(...archivedFiles().filter((name) => !before.includes(name)))

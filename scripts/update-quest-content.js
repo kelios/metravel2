@@ -8,7 +8,7 @@
  * Сопоставление по step_id: данные ревью matched к шагам прода по step_id
  * (intro — по is_intro/step_id='intro'). DB-id берётся из bundle.
  *
- *   node scripts/update-quest-content.js --quest-id=<id> --data=scripts/.quest-review/<id>.json [--dry-run]
+ *   node scripts/update-quest-content.js --quest-id=<id> --data=scripts/.quest-review/<id>.json [--dry-run | --apply]
  *
  * Жизненный цикл снимка (#1448): снимок описывает ЖИВОЙ прод на момент снятия и
  * протухает сразу после следующей правки, поэтому в репозитории он не хранится.
@@ -20,6 +20,7 @@
  * Формат data-файла (JSON): { intro?: Step, steps: Step[], finale?: { text } }
  *   Step: { step_id, title?, location?, story?, task?, hint?, answer_pattern?:{type,value},
  *           lat?, lng?, maps_url?, input_type? } — присылаются только меняемые поля.
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 
 const { execFileSync } = require('child_process');
@@ -31,7 +32,7 @@ const { resolveFinalePk: resolveSharedFinalePk, FinalePkError } = require('./lib
 const { createToolSession, publicRequest, TokenError, formatTokenError } = require('./lib/metravel-tool-session')
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'quest-id', 'data', 'token'] });
 const get = (k, d) => { const a = args.find(x => x.startsWith(`--${k}=`)); return a ? a.split('=').slice(1).join('=') : d; };
 const API_BASE = get('api-url', 'https://metravel.by');
 const QUEST_ID = get('quest-id');

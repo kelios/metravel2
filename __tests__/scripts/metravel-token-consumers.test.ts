@@ -39,7 +39,7 @@ function runConsumer(script: string, args: string[], identity: number, failure?:
 
 test.each([
   ['scripts/migrate-amsterdam-quest.js', 1, ['--apply']],
-  ['scripts/create-brest-guide.js', 104, []],
+  ['scripts/create-brest-guide.js', 104, ['--apply']],
 ])('actual %s consumer refuses a different actor before content or login', (script, identity, args) => {
   const run = runConsumer(String(script), args as string[], Number(identity))
   expect(run.status).toBe(1)

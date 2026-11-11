@@ -1,6 +1,7 @@
 // One-off: fix miscategorized point #343 «Thai Hoa Temple» (travel #129 «Наш Вьетнам»)
 // АЭРОПОРТ (cat 8) -> Храм (cat 141). Board task #803 (F-3).
 // Reuses seo-edit's safe upsert builder; backs up before write and verifies after.
+// Без флага режима — пробный прогон (GET и бэкап, без PUT); запись — только `--apply` (#3304).
 const { bodyMaintenanceSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 const path = require('path');
 const { buildUpsertPayload } = require('./seo-edit.js');
@@ -11,6 +12,9 @@ const POINT_ID = 343;
 const WRONG_CAT = 8;   // Аэропорт
 const RIGHT_CAT = 141; // Храм
 const fs = require('fs');
+
+const args = process.argv.slice(2);
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename });
 
 async function req(method, urlPath, data) {
  const response = await bodyMaintenanceSession({ origin: API_BASE, order: ['env'] }).request(`${API_BASE}${urlPath}`, { method, ...(data != null ? { json: data } : {}) });
@@ -40,6 +44,7 @@ async function req(method, urlPath, data) {
   console.log(`sending: point ${POINT_ID} categories = ${JSON.stringify(p.categories)}`);
 
   const payload = buildUpsertPayload(detail, {}); // keeps existing description/meta
+  if (isDryRun) { console.log('[DRY] PUT /travels/upsert/ не отправлен'); return; }
   const put = await req('PUT', '/travels/upsert/', payload);
   console.log(`PUT /travels/upsert/ -> HTTP ${put.status}`);
   if (put.status !== 200 && put.status !== 201) { console.error(formatTokenError(new TokenError('response', {status: put.status}))); process.exit(1); }

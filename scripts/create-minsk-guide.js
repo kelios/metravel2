@@ -4,8 +4,9 @@
  * Текст — scripts/minsk-guide-content.html, точки — ниже. Обложку/галерею
  * автор добавляет потом в Мастере и публикует.
  *
- * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/create-minsk-guide.js [--publish] [--dry-run]
+ * NODE_TLS_REJECT_UNAUTHORIZED=0 node scripts/create-minsk-guide.js [--publish] [--dry-run | --apply]
  * Токен: --token=, env METRAVEL_TOKEN или ~/.metravel_token.
+ * Без флага режима — пробный прогон; боевая запись — только `--apply` (#3304).
  */
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +14,7 @@ const path = require('path');
 const { createToolSession, TokenError, formatTokenError, parseResponseJson } = require('./lib/metravel-tool-session');
 
 const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
+const { isDryRun } = require('./lib/one-off-write-mode').resolveOneOffWriteMode(args, { script: __filename, valueFlags: ['api-url', 'token'], booleanFlags: ['publish'] });
 const doPublish = args.includes('--publish');
 const apiArg = args.find(a => a.startsWith('--api-url='));
 const tokenArg = args.find(a => a.startsWith('--token='));

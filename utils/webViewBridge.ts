@@ -14,9 +14,14 @@ export const parseWebViewJsonObject = (raw: unknown): Record<string, unknown> | 
   }
 }
 
-/** Serialize data embedded inside a script element without allowing `</script>` breakout. */
+/**
+ * Serialize data embedded inside a script element without allowing `</script>` breakout.
+ * A value JSON cannot represent (`undefined`, a function, a symbol) becomes the
+ * `undefined` expression: `JSON.stringify` returns no string for it, and the
+ * escaping chain used to throw on that instead of emitting anything (#3305).
+ */
 export const serializeForInlineScript = (value: unknown): string =>
-  JSON.stringify(value)
+  ((JSON.stringify(value) as string | undefined) ?? 'undefined')
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026')

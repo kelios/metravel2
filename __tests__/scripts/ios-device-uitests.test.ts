@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { makeTempDir, runCli } from './cli-test-utils';
 
 const {
@@ -9,7 +9,12 @@ const {
 
 const ROOT = path.resolve(__dirname, '../..');
 const plist = require('@expo/plist').default;
-const deviceEnv = { IOS_QA_DEVICE: '00000000-0000000000000001' };
+// Идентификатор выдуманного устройства свой у каждого прогона (#3303). Замок
+// устройства — файл `.codex-temp/ops/native-device-<хеш id>.lock` в общем корне
+// для всех чекаутов и worktree: с одним постоянным id два одновременных прогона
+// (соседняя сессия, временный worktree) отвечали друг другу «Native device is
+// reserved», и набор краснел без единого дефекта в коде.
+const deviceEnv = { IOS_QA_DEVICE: `${randomBytes(4).toString('hex')}-${randomBytes(8).toString('hex')}`.toUpperCase() };
 const assertion = { op: 'waitUntil', id: 'stable-element', state: 'hittable', timeout: 5 };
 let temp: string;
 
@@ -238,7 +243,9 @@ if (program === 'xcodebuild') {
       const cacheFile = path.join(temp, 'cache-path');
       if (fs.existsSync(cacheFile)) fs.rmSync(fs.readFileSync(cacheFile, 'utf8'), { recursive: true, force: true });
     }
-  });
+  // Шесть запусков main(), в каждом — несколько дочерних процессов-заглушек: на
+  // занятой машине это дольше общих 5 с, и набор краснел таймаутом (#3303).
+  }, 60_000);
 
   test('current Swift driver validates before activation and has bounded exact assertions', () => {
     const swift = fs.readFileSync(path.join(ROOT, 'tools/ios-device-uitests/MetravelDeviceUITests/RunScriptTests.swift'), 'utf8');

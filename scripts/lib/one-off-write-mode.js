@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * Режим записи разовых квестовых скриптов — #3211.
+ * Режим записи разовых скриптов, пишущих на прод, — #3211, #3304.
  *
  * `migrate-<город>-quest.js` и `reorder-quest-steps-prod.js` читали аргументы
  * руками: `args.includes('--dry-run')`. Запуск без флагов писал на прод, а
@@ -13,15 +13,21 @@
  *   - без флага режима — пробный прогон, на прод ничего не уходит;
  *   - боевая запись — только явный `--apply`;
  *   - неизвестный или недописанный аргумент — отказ с кодом 2 до первого запроса.
+ *
+ * #3304 распространил то же правило на остальные разовые скрипты (`create-*-guide`,
+ * `upload-quest-*`, `fix-*` и подобные): у них есть собственные переключатели без
+ * значения (`--publish`, `--posters-only`), поэтому помощник принимает и
+ * `booleanFlags`. Перечень пишущих скриптов и их способ выбора режима держит
+ * `scripts/guard-prod-write-mode.js`.
  */
 
 const path = require('node:path')
 
 const { HelpRequested, UsageError, parseCliTokens } = require('./cli-contract')
 
-function resolveOneOffWriteMode(tokens, { script, valueFlags = [] }) {
+function resolveOneOffWriteMode(tokens, { script, valueFlags = [], booleanFlags = [] }) {
   const name = path.basename(script, '.js')
-  const usage = `Usage: node scripts/${name}.js [--dry-run | --apply]${valueFlags.map((flag) => ` [--${flag}=<value>]`).join('')}
+  const usage = `Usage: node scripts/${name}.js [--dry-run | --apply]${booleanFlags.map((flag) => ` [--${flag}]`).join('')}${valueFlags.map((flag) => ` [--${flag}=<value>]`).join('')}
 
   --dry-run   пробный прогон (режим по умолчанию): на прод ничего не пишется
   --apply     боевая запись на прод`
@@ -32,6 +38,7 @@ function resolveOneOffWriteMode(tokens, { script, valueFlags = [] }) {
     flags: {
       'dry-run': { type: 'boolean' },
       apply: { type: 'boolean' },
+      ...Object.fromEntries(booleanFlags.map((flag) => [flag, { type: 'boolean' }])),
       ...Object.fromEntries(valueFlags.map((flag) => [flag, { type: 'string', allowLeadingDash: true }])),
     },
   }
