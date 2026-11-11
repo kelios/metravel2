@@ -27,6 +27,8 @@ const HOST_ONLY_RESOLVER_CONSUMERS: Record<string, string> = {
   'utils/externalLinks.ts':
     'normalizeHttpOrInternalUrl: проверка «адрес нашего сайта» при вводе ссылки, не навигация',
   'components/home/HomeHero.tsx': 'только web-ветка (SPA-переход); native — openExternalUrl',
+  'components/home/HomeHeroPopularSection.tsx':
+    'только web: путь для `<a href>` карточки (#3218), переход — onOpenArticle из HomeHero; native — Pressable → openExternalUrl',
   'components/trips/planning/TripPlanLinkedText.tsx':
     'признак internal для web (та же вкладка); нажатие на native — handleRichTextLinkPress',
 }
