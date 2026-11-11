@@ -11,6 +11,11 @@
  *   npm run ai:assistant:eval -- --model-url http://127.0.0.1:8090 --label v3
  *   npm run ai:assistant:eval -- --base http://localhost:8085 --tree .codex-temp/wt-eval-base --label before
  *   npm run ai:assistant:eval -- --report <папка>     # пересчитать проверки и отчёт (+ judge.jsonl судьи)
+ *   npm run ai:assistant:eval -- --provider ask --ask-url http://127.0.0.1:8787 --cases scripts/ai-assistant-eval/cases.live.jsonl
+ *
+ * `--provider ask` (#3286) — путь службы `/ai/ask`, который получит посетитель на проде: вопрос
+ * уходит в службу клиентом экрана, Playwright и Metro не нужны (`ask-path.mjs`). Служба запущена с
+ * `AI_ASSIST_EVAL_TRACE=1`; `--model-url` здесь — сверка, что служба смотрит на эту модель.
  *
  * Нужен локальный стек: прокси прод-API, `llama-server`, Metro с ассистентом
  * (`docs/features/ai-assistant.md` → «Контур оценки»). Результат — в
@@ -23,8 +28,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { createAskSession, inspectAskService, loadAskProvider } from './ask-path.mjs'
 import { EXPECTS, evaluateTurn, parseCards, parseSse, primaryLayer } from './checks.mjs'
-import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from './report.mjs'
+import { parseJudgeLines, renderJudgeTask, renderReport, summarize, validateQualityJudges } from './report.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -42,7 +48,9 @@ const parseArgs = (argv) => {
     const [flag, inline] = argv[i].split('=', 2)
     const value = () => inline ?? argv[++i]
     if (flag === '--base') args.baseUrl = value()
-    else if (flag === '--model-url') args.modelUrl = value()
+    else if (flag === '--model-url') args.modelUrl = args.expectModelUrl = value()
+    else if (flag === '--provider') args.provider = value()
+    else if (flag === '--ask-url') args.askUrl = value()
     else if (flag === '--cases') args.cases = value()
     else if (flag === '--only') args.only = new Set(value().split(','))
     else if (flag === '--group') args.group = new Set(value().split(','))
@@ -56,10 +64,15 @@ const parseArgs = (argv) => {
   }
   // `--report` без `--cases` берёт набор самого прогона; новый прогон — набор по умолчанию.
   if (!args.cases && !args.report) args.cases = DEFAULT_CASES
+  if (args.provider !== undefined && args.provider !== 'ask') throw new Error(`--provider: только ask; получено ${args.provider}`)
+  if (args.askUrl && args.provider !== 'ask') throw new Error('--ask-url нужен только с --provider ask')
+  if (args.provider === 'ask') args.askUrl = (args.askUrl ?? 'http://127.0.0.1:8787').replace(/\/+$/, '')
   args.baseUrl = args.baseUrl.replace(/\/+$/, '')
   args.modelUrl = args.modelUrl.replace(/\/+$/, '')
   return args
 }
+
+export { parseArgs as parseRunArgs }
 
 export const loadCases = (file) => {
   const cases = []
@@ -72,6 +85,8 @@ export const loadCases = (file) => {
     if (!item.id || seen.has(item.id)) throw new Error(`${file}:${index + 1}: нет id или повтор ${item.id}`)
     if (!turns.length || turns.some((turn) => !String(turn ?? '').trim())) throw new Error(`${item.id}: пустой вопрос`)
     if (expects.length !== turns.length || expects.some((value) => !EXPECTS.includes(value))) throw new Error(`${item.id}: expect по ходам — одно из ${EXPECTS.join('/')}`)
+    // Страница, с которой задан вопрос (#2897): в пути службы уходит в запрос полем `source`.
+    if (item.source !== undefined && !(['travel', 'quest'].includes(item.source?.type) && Number.isInteger(item.source?.id) && item.source.id > 0)) throw new Error(`${item.id}: source — {type: travel|quest, id: положительное целое}`)
     seen.add(item.id)
     cases.push({ ...item, turns, expects, locale: item.locale ?? item.lang ?? 'ru', lang: item.lang ?? 'ru' })
   }
@@ -99,7 +114,9 @@ const writeReport = (outDir, meta, results) => {
   const { judges, errors } = fs.existsSync(judgeFile) ? parseJudgeLines(fs.readFileSync(judgeFile, 'utf8')) : { judges: new Map(), errors: [] }
   // Вердикт на ход, которого в прогоне нет, — ошибка судьи (опечатка в key), а не лишняя строка.
   const known = new Set(results.flatMap((result) => result.turns.map((_, index) => `${result.id}#${index}`)))
-  for (const key of judges.keys()) if (!known.has(key)) errors.push(`${key}: неизвестный ход судьи`)
+  // Путь службы оценивается полезностью: вердикт без трёх оценок в отчёт не попадает.
+  if (meta.provider === 'ask') errors.push(...validateQualityJudges(results, judges))
+  else for (const key of judges.keys()) if (!known.has(key)) errors.push(`${key}: неизвестный ход судьи`)
   if (errors.length) throw new Error(`judge.jsonl: ${errors.join('; ')}`)
   fs.writeFileSync(path.join(outDir, 'report.md'), renderReport(meta, results, judges))
   return summarize(results, judges)
@@ -236,66 +253,109 @@ const scoreTurn = (expectation, observed) => {
   return { ...evaluation, primaryLayer: evaluation.pass ? null : primaryLayer(evaluation.failures) }
 }
 
-async function runCases(args) {
+/**
+ * Прогон набора. `openCase` открывает диалог одного вопроса (свежий экран или свой адрес посетителя
+ * у службы) и возвращает «задать вопрос → наблюдение хода»; проверки и запись — общие для обоих путей.
+ */
+export async function collectResults(cases, repeat, openCase, onResult = () => {}) {
+  const results = []
+  let sequence = 0
+  for (let round = 0; round < repeat; round += 1) {
+    for (const item of cases) {
+      const id = repeat > 1 ? `${item.id}@${round + 1}` : item.id
+      const ask = await openCase(item, sequence)
+      sequence += 1
+      const turns = []
+      for (const [index, question] of item.turns.entries()) {
+        const observed = await ask(question)
+        const expectation = turnExpectation(item, index)
+        const evaluation = scoreTurn(expectation, observed)
+        turns.push({ question, ...expectation, observed, eval: evaluation })
+        const mark = evaluation.pass ? 'ok ' : 'FAIL'
+        console.log(`${mark} ${id}#${index} [${observed.status ?? 'нет хода'}] ${question.slice(0, 60)}${evaluation.pass ? '' : ` — ${evaluation.failures.map((f) => f.check).join(', ')}`}`)
+      }
+      const result = { id, group: item.group, lang: item.lang, locale: item.locale, turns }
+      results.push(result)
+      onResult(result)
+    }
+  }
+  return results
+}
+
+/** Путь экрана: Playwright задаёт вопрос на `/assistant`, запрос к модели перехватывается. */
+async function openScreenDriver(args) {
   const { chromium } = await import('playwright')
+  const browser = await chromium.launch({ headless: !args.headed })
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const calls = []
+  await installModelRoute(context, args.modelUrl, calls)
+  const page = await context.newPage()
+  return {
+    openCase: async (item) => {
+      await openFreshScreen(page, args.baseUrl, item.locale)
+      return (question) => askTurn(page, question, calls)
+    },
+    close: () => browser.close(),
+  }
+}
+
+/** Путь службы (#3286): клиент экрана шлёт вопрос в `/ai/ask`, каждый вопрос набора — со своего адреса посетителя. */
+async function openAskDriver(args) {
+  const { createAskClient } = await loadAskProvider()
+  // Метка прогона в адресе: счётчики службы за день не складываются между прогонами.
+  const run = Date.now().toString(16).padStart(12, '0')
+  return {
+    openCase: (item, sequence) =>
+      createAskSession({ createAskClient, askUrl: args.askUrl, locale: item.locale, source: item.source ?? null, visitor: `2001:db8:${run.slice(0, 4)}:${run.slice(4, 8)}:${run.slice(8, 12)}::${sequence.toString(16)}` }),
+    close: async () => {},
+  }
+}
+
+async function runCases(args) {
+  const viaService = args.provider === 'ask'
   const cases = loadCases(args.cases).filter((item) => (!args.only || args.only.has(item.id)) && (!args.group || args.group.has(item.group)))
   if (!cases.length) throw new Error('нет вопросов под фильтр')
   const tree = path.resolve(ROOT, args.tree ?? '.')
+  // Старый Node, служба без события `trace` или на чужой модели — замера нет: отказ до первого вопроса.
+  if (viaService) await loadAskProvider()
+  const service = viaService ? await inspectAskService(args.askUrl, args.expectModelUrl ?? null, fetchJson) : null
+  const modelUrl = service?.llmUrl ?? args.modelUrl
   const outDir = path.resolve(ROOT, args.out ?? `.codex-temp/ai-assistant-eval/${stamp()}${args.label ? `-${args.label}` : ''}`)
   fs.mkdirSync(outDir, { recursive: true })
 
-  const models = await fetchJson(`${args.modelUrl}/v1/models`).catch((error) => {
+  const models = await fetchJson(`${modelUrl}/v1/models`).catch((error) => {
     console.warn(`[eval] модель недоступна: ${error.message} — ходы будут помечены «инфраструктура»`)
     return null
   })
   const meta = {
     label: args.label ?? null,
     startedAt: new Date().toISOString(),
-    baseUrl: args.baseUrl,
-    modelUrl: args.modelUrl,
+    ...(viaService ? { provider: 'ask', askUrl: args.askUrl, index: { builtAt: service.indexBuiltAt, count: service.indexCount } } : { baseUrl: args.baseUrl }),
+    modelUrl,
     model: models?.data?.[0]?.id ?? models?.models?.[0]?.name ?? null,
     // Metro отдаёт рабочее дерево с горячей перезагрузкой: незакоммиченные правки ассистента входят
     // в замер, а правка посреди прогона его портит. Замер «до» — Metro из отдельного worktree (`--tree`).
+    // Служба код на лету не перечитывает: её правки входят в замер после перезапуска.
     tree: path.relative(ROOT, tree) || '.',
     gitSha: git(tree, 'rev-parse', '--short', 'HEAD'),
-    dirty: git(tree, 'status', '--short', '--', 'api/aiAssist', 'components/screens/assistant', 'i18n/locales')?.split('\n').filter(Boolean) ?? [],
+    dirty: git(tree, 'status', '--short', '--', 'api/aiAssist', ...(viaService ? ['scripts/ai-assist', 'scripts/ai-index'] : ['components/screens/assistant', 'i18n/locales']))?.split('\n').filter(Boolean) ?? [],
     cases: path.relative(ROOT, args.cases),
     repeat: args.repeat,
   }
-  const browser = await chromium.launch({ headless: !args.headed })
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
-  const calls = []
-  await installModelRoute(context, args.modelUrl, calls)
-  const page = await context.newPage()
-  const results = []
+  const driver = viaService ? await openAskDriver(args) : await openScreenDriver(args)
   const resultsFile = path.join(outDir, 'results.jsonl')
   fs.writeFileSync(resultsFile, '')
   const started = Date.now()
+  let results
   try {
-    for (let round = 0; round < args.repeat; round += 1) {
-      for (const item of cases) {
-        const id = args.repeat > 1 ? `${item.id}@${round + 1}` : item.id
-        await openFreshScreen(page, args.baseUrl, item.locale)
-        const turns = []
-        for (const [index, question] of item.turns.entries()) {
-          const observed = await askTurn(page, question, calls)
-          const expectation = turnExpectation(item, index)
-          const evaluation = scoreTurn(expectation, observed)
-          turns.push({ question, ...expectation, observed, eval: evaluation })
-          const mark = evaluation.pass ? 'ok ' : 'FAIL'
-          console.log(`${mark} ${id}#${index} [${observed.status ?? 'нет хода'}] ${question.slice(0, 60)}${evaluation.pass ? '' : ` — ${evaluation.failures.map((f) => f.check).join(', ')}`}`)
-        }
-        const result = { id, group: item.group, lang: item.lang, locale: item.locale, turns }
-        results.push(result)
-        fs.appendFileSync(resultsFile, `${JSON.stringify(result)}\n`)
-      }
-    }
+    results = await collectResults(cases, args.repeat, driver.openCase, (result) => fs.appendFileSync(resultsFile, `${JSON.stringify(result)}\n`))
   } finally {
-    await browser.close()
+    await driver.close()
   }
   meta.durationSec = Math.round((Date.now() - started) / 1000)
   fs.writeFileSync(path.join(outDir, 'meta.json'), `${JSON.stringify(meta, null, 2)}\n`)
-  fs.writeFileSync(path.join(outDir, 'judge-task.md'), renderJudgeTask(fs.readFileSync(path.join(HERE, 'JUDGE.md'), 'utf8'), results, path.relative(ROOT, outDir)))
+  // Путь службы оценивается полезностью: судья ставит три оценки на каждый ход.
+  fs.writeFileSync(path.join(outDir, 'judge-task.md'), renderJudgeTask(fs.readFileSync(path.join(HERE, 'JUDGE.md'), 'utf8'), results, path.relative(ROOT, outDir), { scores: viaService }))
   const summary = writeReport(outDir, meta, results)
   console.log(`\n${summary.passed}/${summary.turns} ходов прошли. Отчёт: ${path.relative(ROOT, path.join(outDir, 'report.md'))}`)
 }

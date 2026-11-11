@@ -266,13 +266,22 @@ export const checkSources = (sources, expectSources) => {
  * Когда карточек места в подсказке нет вовсе, виноват подбор — это `irrelevant_sources`.
  */
 export const findOffPlaceCards = (raw, cards, expectSources) => {
-  if (!expectSources?.pattern || !cards?.length) return []
-  const place = new RegExp(expectSources.pattern, 'iu')
-  const fits = (card) => place.test(`${card.title ?? ''} ${card.snippet ?? ''} ${card.url ?? ''}`)
-  if (!cards.some(fits)) return []
+  const split = splitPlaceCards(cards, expectSources)
+  if (!split?.own.length) return []
   const pathOf = (url) => normalizeUrl(url).replace(/^[^/]+/, '')
   const named = new Set(findUrls(raw).map(pathOf))
-  return cards.filter((card) => named.has(pathOf(card.url)) && !fits(card))
+  return split.foreign.filter((card) => named.has(pathOf(card.url)))
+}
+
+/**
+ * Карточки подсказки по месту вопроса (`expect_sources.pattern`): свои — подходят названием,
+ * фрагментом или адресом, остальные — чужие. Без ожидания места и без карточек — `null`.
+ */
+export function splitPlaceCards(cards, expectSources) {
+  if (!expectSources?.pattern || !cards?.length) return null
+  const place = new RegExp(expectSources.pattern, 'iu')
+  const fits = (card) => place.test(`${card.title ?? ''} ${card.snippet ?? ''} ${card.url ?? ''}`)
+  return { own: cards.filter(fits), foreign: cards.filter((card) => !fits(card)) }
 }
 
 const fail = (failures, check, layer, detail) => failures.push({ check, layer, detail })
@@ -291,6 +300,9 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
   const status = observed.status
   const links = observed.linkLabels ?? []
   const metrics = { status, answerChars: answer.length, links: links.length, sources: observed.sources?.length ?? 0, modelMs: call?.ms ?? null }
+  // Состав подсказки по месту вопроса (#3315): отчёт считает ходы, где рядом с карточками места стоят чужие.
+  const placeCards = splitPlaceCards(cards, expectSources)
+  if (placeCards) Object.assign(metrics, { placeCards: placeCards.own.length, foreignCards: placeCards.foreign.length })
 
   if (expect === 'blocked') {
     // Экран без поля ввода (упал, не догрузился) — не блокировка посетителя.

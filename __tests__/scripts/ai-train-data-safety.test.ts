@@ -154,6 +154,25 @@ describe('ai-train exact preparation and evaluation isolation', () => {
     expect(valid.status).toBe(0);
   });
 
+  // #3319: новые оценочные файлы (cases.holdout-2026-11.jsonl, cases.live.jsonl) пишет независимый агент; защита читает
+  // шаблон cases*.jsonl, а не список имён — вопрос, реплика истории, эталонный ответ и хеш файла подхватываются сами.
+  it('picks up every cases*.jsonl by pattern: a new file protects its questions, history turns and references, and is hashed', () => {
+    const { directory, setup } = protectionInputs();
+    fs.writeFileSync(path.join(directory, 'cases.live.jsonl'), JSON.stringify({ q: 'Живой вопрос про обход крепостных стен', history: [{ role: 'user', text: 'Реплика истории живого набора' }, { role: 'assistant', text: 'Ответ истории' }] }) + '\n');
+    fs.writeFileSync(path.join(directory, 'cases.holdout-2026-11.jsonl'), JSON.stringify({ turns: ['Первый ход свежего среза', 'Второй ход свежего среза'], reference_answer: 'Эталон свежего среза про обход стен' }) + '\n');
+    const result = python(`${setup}
+for q in ('Живой вопрос про обход крепостных стен!', 'Реплика истории живого набора', 'Первый ход свежего среза', 'Второй ход свежего среза'):
+    assert a.is_contour_question(q), q
+    assert a.holdout_violation([{'role': 'user', 'content': 'Материалы сайта: x\\nВопрос посетителя: ' + q}]), q
+assert a.holdout_violation([{'role': 'assistant', 'content': 'Эталон свежего среза про обход стен'}])
+assert a.holdout_violation([{'role': 'user', 'content': 'Совсем другой вопрос про велосипеды'}]) is None
+names = sorted(k for k in a.holdout_provenance() if k.startswith('cases'))
+assert 'cases.live.jsonl' in names and 'cases.holdout-2026-11.jsonl' in names, names
+print('ok')`);
+    expect(result.stderr).toBe('');
+    expect(result.stdout.trim()).toBe('ok');
+  });
+
   it('accepts exactly 1024 full-template tokens intact and drops a 1025-token record with provenance', () => {
     const data = input({ train: [row('boundary', 1024), row('overflow', 1025)] });
     const original = fs.readFileSync(path.join(data, 'train.jsonl'), 'utf8').split('\n')[0];

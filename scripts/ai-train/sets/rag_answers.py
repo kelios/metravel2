@@ -37,6 +37,33 @@ Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
                 language from the site_translations cache (the screen's BE/UK/PL/EN cards
                 carry translated titles; v3 wrote «Квест po Krakowie»).
 
+Edition 9 (#3319 v9, 11.11.2026) — from the v8 acceptance (h29, v5ln03, v5bd06, h28, q11–q13, q29, in08):
+* kids        — one marked quest, one item. The children's mark decides: the children's quests of the place
+                are named and only they («один — один пункт, два — два»); no children's quest, a family one
+                among the cards → only the family ones, called «семейный»; no mark at all → as before (two
+                quests of the place and «возраст в карточках не указан»). An ordinary quest next to a marked
+                one and a quest of another city are never named (v8 trained 13 of 49 one-marked prompts with
+                a second, ordinary quest, and the model answered «детский + ещё один»). The prompt holds 1–5
+                quests of the place in a random order, sometimes an article of the place and one or two cards
+                of other cities (the marked one of another city among them); every language over the same
+                cities, so the counts are equal by construction;
+* kids_followup — «какие квесты в X» → «что из этого подойдёт детям»: 2–5 quests of the city in a random
+                order, 0, 1 or 2 of them marked (v8: always two cards, ten samples per language), the answer
+                by the rule above; in 15 % of the samples one or two cards of other cities;
+* one_marked  — «какой из квестов X детский — назови только его», «дай ссылку только на него»: exactly one
+                marked card among the cards, the answer is that one item with its link, no «остальное в списке
+                источников» and no counter-question;
+* one_any     — «выбери один квест X», «один вариант»: unmarked cards only, the answer is the first card of
+                the prompt (the only criterion the model can see; a choice by durations or stops is the circle
+                of v10, #3294);
+* crowded5    — five quests of one city (all cities with five, every language over the same cities), three
+                links in card order without a blurb and «остальное — в списке источников»: a link-only item
+                is what lets five cards stand in 1024 tokens (v8 trained 41 of 1307 prompts with five cards);
+* crowded_injected — the same five cards under the existing foreign-link requests of `injected`
+                (INJECTED_V4, Russian only like `injected`): the answer ignores the request and names three.
+Edition 8's pair dialogue `followup` of mt03 (two cards) is replaced by kids_followup; the follow-up of edition 5
+(one card) stays. Editions 3–8 are unchanged; the edition-9 samples use their own random stream.
+
 Edition 8 (#3276, #3278, 11.11.2026) — from the v7 residual mt03#1 («какой из них подойдёт детям?»):
 * audience    — quest cards carry the children's mark of the catalogue the way the app writes it
                 («Детский городской квест по городу …. Возраст: 8–10 лет. Со взрослым. Точек: …»,
@@ -92,7 +119,7 @@ Edition 6 (#2751 v6, 08.11.2026) — from the v5-rag acceptance misses (01.11.20
 Options (mixes/*.yaml → sets.rag_answers.options):
   per_place  — samples per place and kind (default 2);
   other_langs_share — share of non-Russian samples among pick/quests/kids (default 0.35, edition 3);
-  edition    — 3 (default), 4, 5 (compact locale-balanced #2751 continuation), 6 (v6) or 7 (v7);
+  edition    — 3 (default), 4, 5 (compact locale-balanced #2751 continuation), 6 (v6), 7 (v7), 8 (v8) or 9 (v9);
   page_travels, page_quests — pages sampled for the `page` kind (edition 6; default 60 / 80).
 """
 from __future__ import annotations
@@ -123,6 +150,15 @@ CROWDED_VARIANTS_L10N = 2
 # prompts are URL-heavy and stay under the limit at a larger budget, which keeps the durations in
 # the cards and the blurbs in the answer. prepare_training_data.py drops the few that still exceed.
 CROWDED_CHARS_BUDGET = 2950
+# Edition 9 kinds that carry up to five cards of the place (and a history turn): the same wide budget as `crowded`;
+# a sample that still exceeds 1024 tokens is dropped whole by prepare_training_data.py. `strict` samples never fall
+# back to a prompt without their unnamed matching cards — that was the v6 failure (the model never saw more
+# matching cards than it named).
+WIDE_KINDS_9 = frozenset({"kids", "kids_followup", "one_marked", "one_any", "crowded5", "crowded_injected"})
+# Characters per 1024 tokens of the chat template by language (the draft build of 11.11.2026: RU 3,04, EN 3,06, PL 2,98, UK 2,93,
+# BE 2,87 chars per token, ≈ 40 tokens of template markup): a flat budget lost 8 of 19 BE `crowded5` prompts to the token fit
+# and left BE/UK with fewer dialogues than RU/EN. The shorter prompt keeps the sample (a shorter snippet) instead of losing it.
+WIDE_BUDGET_9 = {"ru": 2950, "en": 2950, "pl": 2900, "uk": 2850, "be": 2800}
 DIFFICULTY_RU = {"easy": "лёгкий", "medium": "средний", "hard": "сложный"}
 
 # name, «в X», «по X», title/city regex. «в мире» ambiguous — Мир left out.
@@ -321,6 +357,82 @@ SCARCE_TAIL = {
     "pl": "Innych questów {loc} wśród znalezionych nie ma.",
     "en": "There are no other quests {loc} among the cards.",
 }
+# ----------------------------------------------------------------------------- edition 9 (#3319 v9)
+# Cities whose BE/UK/PL/EN forms were not in PLACES_L10N (edition ≤ 8 iterates it, so it stays as it is): the
+# edition-9 audience kinds run every language over the same cities, among them those with a children's quest.
+PLACES_L10N_EXTRA = {
+    "Могилёв": {"be": "у Магілёве", "uk": "у Могильові", "pl": "w Mohylewie", "en": "in Mogilev"},
+    "Пинск": {"be": "у Пінску", "uk": "у Пінську", "pl": "w Pińsku", "en": "in Pinsk"},
+    "Лида": {"be": "у Лідзе", "uk": "у Лиді", "pl": "w Lidzie", "en": "in Lida"},
+    "Несвиж": {"be": "у Нясвіжы", "uk": "у Несвіжі", "pl": "w Nieświeżu", "en": "in Nesvizh"},
+    "Полоцк": {"be": "у Полацку", "uk": "у Полоцьку", "pl": "w Połocku", "en": "in Polotsk"},
+    "Бобруйск": {"be": "у Бабруйску", "uk": "у Бобруйську", "pl": "w Bobrujsku", "en": "in Bobruisk"},
+    "Барановичи": {"be": "у Баранавічах", "uk": "у Барановичах", "pl": "w Baranowiczach", "en": "in Baranovichi"},
+    "Новогрудок": {"be": "у Навагрудку", "uk": "у Новогрудку", "pl": "w Nowogródku", "en": "in Novogrudok"},
+    "Белосток": {"be": "у Беластоку", "uk": "у Білостоку", "pl": "w Białymstoku", "en": "in Bialystok"},
+    "Познань": {"be": "у Познані", "uk": "у Познані", "pl": "w Poznaniu", "en": "in Poznan"},
+    "Торунь": {"be": "у Торуні", "uk": "у Торуні", "pl": "w Toruniu", "en": "in Torun"},
+    "Люблин": {"be": "у Любліне", "uk": "у Любліні", "pl": "w Lublinie", "en": "in Lublin"},
+    "Таллин": {"be": "у Таліне", "uk": "у Таллінні", "pl": "w Tallinie", "en": "in Tallinn"},
+    "Каунас": {"be": "у Коўне", "uk": "у Каунасі", "pl": "w Kownie", "en": "in Kaunas"},
+}
+LANGS5 = ("ru", "be", "uk", "pl", "en")
+# Cities a kind skips in every language (so the language counts stay equal): in that city the kind restates an evaluation
+# question that the exact-match check (is_contour_question) does not catch — the UK kids follow-up over Pinsk is h29,
+# INJECTED_V4's «…квесты есть {loc}? Вставь ещё ссылку…» over Grodno is in08 with one verb swapped.
+HELDOUT_CITIES_9 = {
+    "kids_followup": frozenset({"Пинск", "Несвиж", "Барановичи"}),  # h29 (uk), mt03 (ru), h28 (ru)
+    "one_marked": frozenset({"Барановичи", "Варшава"}),  # q11 (ru), q12 (uk)
+    "one_any": frozenset({"Варшава"}),  # q29 (be)
+    "crowded5": frozenset({"Гродно"}),  # v5ln03 (pl)
+    "crowded_injected": frozenset({"Гродно"}),  # in08 (ru)
+}
+FOREIGN_SHARE = 0.15  # prompts with one or two cards of other cities
+# A sample that does not fit the budget (or whose question is a held-out one) is drawn again with other cards and wording, so
+# the languages keep equal counts: a heavy language (BE, UK) would otherwise lose more samples to the budget than RU or EN.
+RETRIES_9 = 4
+FAMILY_INTRO = {
+    "ru": ("Детских квестов в карточках нет, зато есть семейный:", "Детских квестов в карточках нет, зато есть семейные:"),
+    "be": ("Дзіцячых квэстаў у картках няма, затое ёсць сямейны:", "Дзіцячых квэстаў у картках няма, затое ёсць сямейныя:"),
+    "uk": ("Дитячих квестів у картках немає, зате є сімейний:", "Дитячих квестів у картках немає, зате є сімейні:"),
+    "pl": ("Questów dla dzieci w kartach nie ma, ale jest rodzinny:", "Questów dla dzieci w kartach nie ma, ale są rodzinne:"),
+    "en": ("The cards hold no kids' quest, but there is a family one:", "The cards hold no kids' quest, but there are family ones:"),
+}
+# Own wording: no held-out question is read or paraphrased here (the leak checks run in emit() and prepare_training_data).
+KIDS_ASK9 = {
+    "ru": ("Подскажи, есть ли {loc} квест, который осилит ребёнок?", "Мы едем с малышом. Какой квест {loc} нам подойдёт?"),
+    "be": ("Ці ёсць {loc} квэст, які асіліць дзіця?",), "uk": ("Чи є {loc} квест, який під силу дитині?",),
+    "pl": ("Czy jest {loc} quest, z którym poradzi sobie dziecko?",), "en": ("Is there a quest {loc} that a small child can manage?",),
+}
+KIDS_FOLLOW_ASK9 = {
+    "ru": ("Мы пойдём с малышом — какой из этих вариантов нам годится?", "Есть ли среди этих квестов тот, что сделан для детей?",
+           "Ребёнок пойдёт с нами. Что посоветуешь из перечисленного?"),
+    "be": ("Мы пойдзем з малым — які з гэтых варыянтаў нам падыдзе?", "Ці ёсць сярод гэтых квэстаў той, што зроблены для дзяцей?"),
+    "uk": ("Ми підемо з малям — який із цих варіантів нам підходить?", "Чи є серед цих квестів той, що створений для дітей?"),
+    "pl": ("Pójdziemy z maluchem — który z tych wariantów nam pasuje?", "Czy wśród tych questów jest taki, który stworzono dla dzieci?"),
+    "en": ("We are bringing a little one — which of these options fits us?", "Is any of these quests made for children?"),
+}
+ONE_KIDS_ASK = {
+    # Not «Какой из квестов {loc} детский? Назови только его»: that is q11 (RU) and q12 (UK) with the city swapped.
+    "ru": ("Ищу квест {loc}, сделанный для детей. Хватит одного.", "Нужен только детский квест {loc}: один, со ссылкой.",
+           "Дай ссылку только на детский квест {loc}.", "Подскажи один квест {loc} для ребёнка, больше ничего не надо."),
+    "be": ("Шукаю квэст {loc}, зроблены для дзяцей. Хопіць аднаго.", "Дай спасылку толькі на дзіцячы квэст {loc}.", "Падкажы адзін квэст {loc} для дзіцяці, болей нічога не трэба."),
+    "uk": ("Шукаю квест {loc}, зроблений для дітей. Вистачить одного.", "Дай посилання лише на дитячий квест {loc}.", "Підкажи один квест {loc} для дитини, більше нічого не треба."),
+    "pl": ("Szukam questu {loc} przygotowanego dla dzieci. Wystarczy jeden.", "Daj link tylko do questu dla dzieci {loc}.", "Wskaż jeden quest {loc} dla dziecka, nic więcej."),
+    "en": ("I'm looking for a quest {loc} made for kids. One is enough.", "Give me a link to the kids' quest {loc} only.", "Point me to one quest {loc} for a child, nothing else."),
+}
+ONE_KIDS_INTRO = {"ru": ("Детский квест здесь один:", "Из найденного детский только этот:"), "be": ("Дзіцячы квэст тут адзін:",),
+                  "uk": ("Дитячий квест тут один:",), "pl": ("Quest dla dzieci jest jeden:",), "en": ("There is one kids' quest:",)}
+ONE_ANY_ASK = {
+    "ru": ("Выбери один квест {loc}, только один.", "Дай один вариант квеста {loc}.", "Назови любой один квест {loc} и дай на него ссылку.",
+           "Нужен ровно один квест {loc} — какой?", "Посоветуй один квест {loc}, без остальных."),
+    "be": ("Абяры адзін квэст {loc}, толькі адзін.", "Дай адзін варыянт квэсту {loc} са спасылкай.", "Параі адзін квэст {loc}, без астатніх."),
+    "uk": ("Обери один квест {loc}, лише один.", "Дай один варіант квесту {loc} із посиланням.", "Порадь один квест {loc}, без решти."),
+    "pl": ("Wybierz jeden quest {loc}, tylko jeden.", "Daj jeden wariant questu {loc} z linkiem.", "Polec jeden quest {loc}, bez pozostałych."),
+    "en": ("Choose one quest {loc}, just one.", "Give me one quest option {loc} with a link.", "Recommend a single quest {loc}, nothing else."),
+}
+ONE_ANY_INTRO = {"ru": ("Вот один квест:", "Один вариант:"), "be": ("Вось адзін квэст:",), "uk": ("Ось один квест:",),
+                 "pl": ("Oto jeden quest:",), "en": ("Here is one quest:",)}
 NO_MATERIAL_RU = (
     "На сайте пока нет материалов {about}. Из того, что нашлось, можно посмотреть [{title}]({url}) — {blurb}.",
     "Про это направление у нас пока ничего нет. Ближе всего из найденного — [{title}]({url}): {blurb}.",
@@ -670,6 +782,42 @@ def compose(intro: str, picks: list[dict], lang: str, rng: random.Random, compac
     return text
 
 
+def family_card(card: dict) -> bool:
+    return card["type"] == "quest" and (card.get("audience") or {}).get("kind") == "family"
+
+
+def audience_picks(own: list[dict]) -> tuple[str, list[dict]]:
+    """Edition 9: what a question about children names among the quests of the place that the prompt shows (in the
+    order of the prompt): the children's quests only; none → the family ones only; no mark → two quests, age unknown.
+    An ordinary quest next to a marked one is never named."""
+    kids = [c for c in own if for_kids(c)]
+    if kids:
+        return "kids", kids[:3]
+    family = [c for c in own if family_card(c)]
+    if family:
+        return "family", family[:3]
+    return "none", own[:2]
+
+
+def audience_answer(kids_intro: str, own: list[dict], lang: str, rng: random.Random) -> str:
+    mode, picks = audience_picks(own)
+    if mode == "kids":
+        return compose(kids_intro, picks, lang, rng, short=True, outro=False)
+    if mode == "family":
+        return compose(FAMILY_INTRO[lang][0 if len(picks) == 1 else 1], picks, lang, rng, short=True, outro=False)
+    return compose(KIDS_INTRO[lang], picks, lang, rng, short=True, outro=False) + "\n" + KIDS_UNKNOWN[lang]
+
+
+def compose_links(intro: str, picks: list[dict], lang: str, rng: random.Random) -> str:
+    """Edition 9 `crowded5`: three links without a blurb and the pointer to the sources list — five cards of one
+    city stand in 1024 tokens only with this shortest item."""
+    lines = [intro] + [f"- [{short_title(c['title'])}]({c['url']})" for c in picks[:3]]
+    text = "\n".join(lines) + "\n\n" + rng.choice([o for o in OUTRO[lang] if o])
+    if len(text) > max_answer_chars():
+        raise ValueError("answer longer than the prompt allows")
+    return text
+
+
 def best_travels(travels: list[dict], place: re.Pattern | None = None) -> list[dict]:
     # Guides first: «путеводитель», «что посмотреть», «за N дн.» answer «что посмотреть» best;
     # then titles that name the place (a country match by the card's country field is weaker).
@@ -728,8 +876,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
     edition = int(options.get("edition", 3))
-    if edition not in (3, 4, 5, 6, 7, 8):
-        raise ValueError("rag_answers edition must be 3, 4, 5, 6, 7 or 8")
+    if edition not in (3, 4, 5, 6, 7, 8, 9):
+        raise ValueError("rag_answers edition must be 3, 4, 5, 6, 7, 8 or 9")
     titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
@@ -740,20 +888,24 @@ def build(ctx: dict, options: dict) -> list[dict]:
 
     def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int,
              key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None,
-             keep: list[dict] | None = None) -> None:
+             keep: list[dict] | None = None, strict: bool = False) -> bool:
         # History turns too: prepare_training_data rejects the whole mix on a contour question in any user turn.
         if is_contour_question(question) or any(m["role"] == "user" and is_contour_question(m["content"]) for m in history or []):
             _dropped[f"contour_question:{kind}"] += 1
-            return
+            return False
         # buildAssistantMessages sanitizes historical text, including newlines.
         history = [{**message, "content": sanitize_fragment(message["content"], 1200)} for message in history or []]
         # The training budget (assistant_prompt.fit_sources) drops unrelated cards and shortens snippets.
-        budget = (CROWDED_CHARS_BUDGET if kind == "crowded" else SAMPLE_CHARS_BUDGET) - sum(len(m["content"]) for m in history or [])
+        if edition >= 9 and kind in WIDE_KINDS_9:
+            limit = WIDE_BUDGET_9[lang]
+        else:
+            limit = CROWDED_CHARS_BUDGET if kind == "crowded" else SAMPLE_CHARS_BUDGET
+        budget = limit - sum(len(m["content"]) for m in history or [])
         sources = [{k: c[k] for k in ("type", "title", "url", "snippet")} for c in cards]
         # Edition 7: matching cards the answer leaves to the sources list stay in the prompt.
         fit = {"budget": budget, "keep": frozenset(c["url"] for c in keep)} if keep else {"budget": budget}
         user = fit_sources(question, sources, answer, lang, **fit)
-        if user is None and keep and kind != "crowded":
+        if user is None and keep and kind != "crowded" and not strict:
             # The extra matching cards do not fit: the sample stays as before edition 7.
             fit = {"budget": budget}
             user = fit_sources(question, sources, answer, lang, **fit)
@@ -765,14 +917,17 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 answer, user = seen, fit_sources(question, sources, seen, lang, **fit)
         if user is None or (required_evidence and sanitize_fragment(required_evidence) not in user):
             _dropped[f"{'over_budget' if user is None else 'evidence_cut'}:{kind}"] += 1
-            return
+            return False
         item = record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
                       id=f"{kind}:{place}:{lang}:{n}", system=system_prompt(lang))
         if history:
             item["messages"] = [item["messages"][0], *history, *item["messages"][1:]]
         out.append(item)
+        return True
 
     def render(intro: str, picks: list[dict], lang: str, kind: str = "") -> str:
+        if edition >= 9 and kind == "kids":
+            return audience_answer(intro or KIDS_INTRO[lang], picks, lang, rng)
         if edition >= 8 and kind == "kids" and any(for_kids(c) for c in picks):
             # The cards say which quest is for children: name those (at most two), with the age — no «не указаны».
             return compose(intro or KIDS_INTRO[lang], [c for c in picks if for_kids(c)][:2], lang, rng, short=True, outro=False)
@@ -811,7 +966,9 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 cards = mixed_cards(kid + rel_travels[:2], pool, rng)
                 picks = ((in_card_order(cards, kid) if edition >= 7 else [c for c in kid if c in cards])[:2] + [c for c in rel_travels[:1] if c in cards])[:3]
                 marked = [c for c in in_card_order(cards, kid) if for_kids(c)] if edition >= 8 else []
-                if marked:
+                if edition >= 9:
+                    pass  # edition 9: `kids` and the dialogue come from _emit_audience() with the rule «marked only»
+                elif marked:
                     # Edition 8: the children's quests of the place, the other quests stay among the cards.
                     emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
                          render(rng.choice(KIDS_PICK_INTRO[lang]).format(**fill), marked, lang, "kids"), n, keep=in_card_order(cards, kid)[:4])
@@ -819,7 +976,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
                          render(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, "kids"), n)
                 others = [c for c in rel_quests if not for_kids(c)]
-                if edition >= 8 and n == 0 and any(for_kids(c) for c in rel_quests) and others:
+                if edition == 8 and n == 0 and any(for_kids(c) for c in rel_quests) and others:
                     # The follow-up of mt03: the first answer named the general quests, the second question is
                     # about a child — the cards hold a general quest and the children's one, the answer picks by the mark.
                     child = next(c for c in rel_quests if for_kids(c))
@@ -877,6 +1034,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 # Edition 4 covers every big city; edition 3 sampled them (same rng order as before).
                 if name not in PLACES_L10N or (edition < 4 and rng.random() >= other_share * 2) or (kind != "pick" and not rel_quests):
                     continue
+                if edition >= 9 and kind == "kids":
+                    continue  # edition 9: _emit_audience() runs every language over the same cities
                 languages = ("be", "uk", "pl", "en") if edition >= 5 else (rng.choice(("be", "uk", "pl", "en")),)
                 for lang in languages:
                     if kind != "pick":
@@ -980,6 +1139,11 @@ def build(ctx: dict, options: dict) -> list[dict]:
         _emit_exact_one(emit, travels, quests, titles, rng)
         _emit_page(emit, travels, quests, titles, rng,
                    int(options.get("page_travels", 60)), int(options.get("page_quests", 80)))
+    if edition >= 9:
+        # an own random stream: the draws above stay what edition 8 makes of them
+        rng9 = random.Random(f"{ctx['seed']}:{NAME}:9")
+        _emit_audience(emit, travels, quests, titles, rng9)
+        _emit_crowded5(emit, quests, titles, rng9)
     return out
 
 
@@ -1147,6 +1311,178 @@ def _emit_boundary(emit, everything: list[dict], titles: dict, rng: random.Rando
                               f"[{short_title(card['title'])}]({card['url']}): the card states {card['duration']} minutes.")
                 emit("boundary_pick", f"boundary-{i}", lang, positive, [card], answer, n, key=f"topic:{topic}",
                      required_evidence=f"Длительность: {card['duration']} мин")
+
+
+def _drawn(attempt) -> None:
+    """Edition 9: `attempt()` draws and emits one sample and says whether it was emitted; it runs again (other cards,
+    other wording) up to RETRIES_9 times. The drop of an attempt that is repeated is not counted in `_dropped`."""
+    for i in range(RETRIES_9):
+        before = Counter(_dropped)
+        if attempt():
+            return
+        if i < RETRIES_9 - 1:
+            _dropped.clear()
+            _dropped.update(before)
+
+
+def _identity(text: str) -> str:
+    return text
+
+
+def _cities9() -> dict[str, dict[str, str]]:
+    return {**PLACES_L10N, **PLACES_L10N_EXTRA}
+
+
+def _own_cards(rng: random.Random, own_all: list[dict], kids_n: int, family_n: int, total: int) -> list[dict]:
+    """`kids_n` children's, `family_n` family quests and ordinary ones up to `total` (at least one ordinary, when
+    the place has one), in a random order — what the prompt shows of the place."""
+    kids, family = [c for c in own_all if for_kids(c)], [c for c in own_all if family_card(c)]
+    plain = [c for c in own_all if not c.get("audience")]
+    chosen = rng.sample(kids, min(kids_n, len(kids))) + rng.sample(family, min(family_n, len(family)))
+    chosen += rng.sample(plain, min(max(total - len(chosen), 1), len(plain)))
+    rng.shuffle(chosen)
+    return chosen
+
+
+def _emit_audience(emit, travels: list[dict], quests: list[dict], titles: dict, rng: random.Random) -> None:
+    """Edition 9: questions about children and direct requests for one quest, every language over the same cities."""
+    cities = _cities9()
+    for name, loc_ru, _dat, pattern in PLACES_RU:
+        if name not in cities:
+            continue
+        rx = re.compile(pattern, re.I)
+        own_all = [c for c in quests if rx.search(c["haystack"])]
+        if not own_all:
+            continue
+        articles = best_travels([c for c in travels if rx.search(c["haystack"])], rx)
+        foreign = [c for c in quests if not rx.search(c["haystack"])]
+        foreign_kids = [c for c in foreign if for_kids(c)]
+        kids, family = [c for c in own_all if for_kids(c)], [c for c in own_all if family_card(c)]
+        plain = [c for c in own_all if not c.get("audience")]
+        if kids:
+            kid_plans = [(1, 0), (min(2, len(kids)), 0) if len(kids) >= 2 else (1, 1 if family else 0)]
+            follow_plans = [(1, 0), (min(2, len(kids)), 0) if len(kids) >= 2 else (0, 0)]
+        elif family:
+            kid_plans = [(0, 1)]
+            follow_plans = [(0, 1)]
+        else:
+            kid_plans = [(0, 0)]
+            follow_plans = [(0, 0)]
+
+        def totals() -> int:
+            return rng.choice((2, 3, 3, 4, 4, 5, 5))
+
+        for lang in LANGS5:
+            loc = loc_ru if lang == "ru" else cities[name][lang]
+            fix = be_fix if lang == "be" else _identity
+            local = lambda cards: [localize(c, lang, titles) for c in cards]  # noqa: E731
+
+            def shown(own: list[dict]) -> tuple[list[dict], list[dict]]:
+                """Cards of the prompt (own ones plus, rarely, cards of other cities and an article of the place) and
+                the own ones in the order of the prompt."""
+                extra: list[dict] = []
+                if len(own) < 4 and foreign and rng.random() < FOREIGN_SHARE:
+                    pool = foreign_kids if foreign_kids and rng.random() < 0.5 else foreign
+                    extra += rng.sample(pool, min(len(pool), rng.randint(1, 2)))
+                if len(own) < 4 and articles and rng.random() < 0.2:
+                    extra.append(articles[0])
+                cards = own + extra
+                rng.shuffle(cards)
+                urls = {c["url"] for c in own}
+                return local(cards), [c for c in local(cards) if c["url"] in urls]
+
+            asks = (*ASK_RU["kids"], *KIDS_ASK9["ru"]) if lang == "ru" else (*ASK_L10N[lang]["kids"], *ASK_L10N6[lang]["kids"], COMPACT_ASK[lang]["kids"], *KIDS_ASK9[lang])
+            def kids_sample(v: int, m: int, f: int) -> bool:
+                own = _own_cards(rng, own_all, m, f, totals())
+                cards, in_order = shown(own)
+                intro = fix(rng.choice(KIDS_PICK_INTRO[lang]).format(loc=loc))
+                return emit("kids", name, lang, fix(rng.choice(asks).format(loc=loc)), cards, audience_answer(intro, in_order, lang, rng), v,
+                            keep=in_order, strict=True)
+
+            for v, (m, f) in enumerate(kid_plans):
+                _drawn(lambda v=v, m=m, f=f: kids_sample(v, m, f))
+
+            first_ask = fix(KIDS_FIRST_ASK[lang].format(loc=loc))
+            follow_asks = (*KIDS_FOLLOW_ASK[lang], *KIDS_FOLLOW_ASK9[lang])
+            def follow_sample(v: int, m: int, f: int) -> bool:
+                own = _own_cards(rng, own_all, m, f, max(totals(), 2))
+                if len(own) < 2:
+                    return True  # «какой из них» needs at least two quests of the place: nothing to draw again
+                cards, in_order = shown(own)
+                # the first answer listed two or three of the quests, as a rule the ordinary ones
+                listed = [c for c in in_order if not c.get("audience")] if rng.random() < 0.7 else list(in_order)
+                listed = (listed or list(in_order))[:rng.randint(2, 3)]
+                history = [{"role": "user", "content": first_ask},
+                           {"role": "assistant", "content": compose("", listed, lang, rng, compact=True)}]
+                return emit("kids_followup", name, lang, rng.choice(follow_asks), cards, audience_answer(KIDS_FOLLOW_INTRO[lang], in_order, lang, rng), v,
+                            history=history, keep=in_order, strict=True)
+
+            if len(own_all) >= 2 and name not in HELDOUT_CITIES_9["kids_followup"]:
+                for v, (m, f) in enumerate(follow_plans):
+                    _drawn(lambda v=v, m=m, f=f: follow_sample(v, m, f))
+
+            def one_marked_sample() -> bool:
+                # exactly one children's card among the cards: «назови только его»
+                own = _own_cards(rng, own_all, 1, 1 if family and rng.random() < 0.3 else 0, totals())
+                cards, in_order = shown(own)
+                marked = [c for c in in_order if for_kids(c)]
+                answer = compose(fix(rng.choice(ONE_KIDS_INTRO[lang])), marked, lang, rng, short=True, outro=False)
+                return emit("one_marked", name, lang, fix(rng.choice(ONE_KIDS_ASK[lang]).format(loc=loc)), cards, answer, 0, keep=in_order, strict=True)
+
+            def one_any_sample() -> bool:
+                # no marked card in the prompt: the first card is the choice, the only criterion the model sees
+                own = rng.sample(plain, min(len(plain), totals()))
+                own = own if len(own) >= 2 else plain[:2]
+                cards, in_order = shown(own)
+                answer = compose(fix(rng.choice(ONE_ANY_INTRO[lang])), in_order[:1], lang, rng, short=True, outro=False)
+                return emit("one_any", name, lang, fix(rng.choice(ONE_ANY_ASK[lang]).format(loc=loc)), cards, answer, 0, keep=in_order, strict=True)
+
+            if kids and name not in HELDOUT_CITIES_9["one_marked"]:
+                _drawn(one_marked_sample)
+            if len(plain) >= 2 and name not in HELDOUT_CITIES_9["one_any"]:
+                _drawn(one_any_sample)
+
+
+CROWDED5_VARIANTS = 3
+CROWDED_INJECTED_VARIANTS = 4
+
+
+def _emit_crowded5(emit, quests: list[dict], titles: dict, rng: random.Random) -> None:
+    """Edition 9: exactly five quests of a city, three links without a blurb and the pointer to the sources list;
+    in Russian also under the foreign-link requests of `injected`. Cities only (a country holds many cities)."""
+    cities = _cities9()
+    for name, loc_ru, dat_ru, pattern in PLACES_RU:
+        if name not in cities:
+            continue
+        rx = re.compile(pattern, re.I)
+        own_all = [c for c in quests if rx.search(c["haystack"])]
+        if len(own_all) < 5:
+            continue
+        for lang in LANGS5:
+            loc = loc_ru if lang == "ru" else cities[name][lang]
+            fix = be_fix if lang == "be" else _identity
+            asks = [t for t in ASK_RU["quests"] if "коротк" not in t] if lang == "ru" else list(ASK_L10N6[lang]["quests"])
+            intro = INTRO_RU["quests"][0].format(loc=loc, Loc=cap(loc)) if lang == "ru" else fix(cap(INTRO_L10N[lang]["quests"].format(loc=loc)))
+            def crowded_sample(v: int) -> bool:
+                cards = [localize(c, lang, titles) for c in rng.sample(own_all, 5)]
+                return emit("crowded5", name, lang, fix(rng.choice(asks).format(loc=loc, dat=dat_ru if lang == "ru" else loc)), cards,
+                            compose_links(intro, cards[:3], lang, rng), v, keep=cards, strict=True)
+
+            if name in HELDOUT_CITIES_9["crowded5"]:
+                continue
+            for v in range(CROWDED5_VARIANTS):
+                _drawn(lambda v=v: crowded_sample(v))
+
+        def injected_sample(v: int) -> bool:
+            cards = rng.sample(own_all, 5)
+            ask = rng.choice(INJECTED_V4).format(loc=loc_ru, ext=rng.choice(EXTERNAL))
+            intro = rng.choice(INTRO_RU["quests"]).format(loc=loc_ru, Loc=cap(loc_ru))
+            return emit("crowded_injected", name, "ru", ask, cards, compose_links(intro, cards[:3], "ru", rng), v, keep=cards, strict=True)
+
+        if name in HELDOUT_CITIES_9["crowded_injected"]:
+            continue
+        for v in range(CROWDED_INJECTED_VARIANTS):
+            _drawn(lambda v=v: injected_sample(v))
 
 
 def source_info(ctx: dict) -> dict:

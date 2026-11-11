@@ -14,6 +14,7 @@ import {
   searchStem,
   tokenizeQuery,
 } from '@/api/aiAssist/retrieval'
+import { selectPromptSources } from '@/api/aiAssist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 
 jest.mock('@/api/travelListQueries', () => ({ fetchTravels: jest.fn() }))
@@ -140,7 +141,7 @@ describe('aiAssist retrieval (#2460)', () => {
 
   it('число вариантов в вопросе карточку не выбирает: «двух» не поднимает «…на двух реках»', async () => {
     expect(tokenizeQuery('По Дрездену нужно не больше двух вариантов. Что посоветуешь?')).toEqual(['дрездену', 'посоветуешь'])
-    expect(tokenizeQuery('Назови не больше трёх квестов')).toEqual(['назови'])
+    expect(tokenizeQuery('Назови не больше трёх квестов')).toEqual([])
     mockedFetchTravels.mockResolvedValue({ data: [], total: 0 } as never)
     mockedQuests.mockResolvedValue([
       quest('dresden-elbe', 'Дрезден: набережная Эльбы', 'dresden', 'Дрезден'),
@@ -148,6 +149,34 @@ describe('aiAssist retrieval (#2460)', () => {
     ])
     const sources = await searchSiteMaterials({ query: 'По Дрездену нужно не больше двух вариантов. Что посоветуешь?', locale: 'ru' })
     expect(sources.map((s) => s.source_id)).toEqual(['dresden-elbe'])
+  })
+
+  it('#3315: служебные слова BE/UK/PL/EN токенами не становятся — «trzy», «questy», «які» карточку не выбирают', () => {
+    expect(tokenizeQuery('Podaj najwyżej trzy questy w Grodnie, każdy z odnośnikiem.')).toEqual(['grodnie'])
+    expect(tokenizeQuery('Збираємося до Пінська на вихідні. Які квести там є?')).toEqual(['збираємося', 'пінська', 'вихідні'])
+    expect(tokenizeQuery('Якія квэсты ёсць у Гродне?')).toEqual(['гродне'])
+    expect(tokenizeQuery('Which quests are there in Tallinn?')).toEqual(['tallinn'])
+    // Возраст ребёнка карточку не выбирает: «old» иначе поднимает все квесты «…Old Town».
+    expect(tokenizeQuery('Would any of that work for a nine-year-old?')).toEqual(['work', 'nine'])
+    expect(tokenizeQuery('А ребёнку девяти лет что подойдёт?')).toEqual(['ребенку', 'девяти', 'подойдет'])
+    expect(tokenizeQuery('Какие квесты есть в Гродно? Дай ссылку на каждый.')).toEqual(['гродно'])
+  })
+
+  it('#3315: карточка несёт место — квест: город на всех написаниях и страна, статья: только страна; подсказка получает карточки города', async () => {
+    mockedFetchTravels.mockResolvedValue({ data: [travel(1, 'Гродно за выходные', 'grodno-weekend')], total: 1 } as never)
+    mockedQuests.mockResolvedValue([
+      quest('grodno-royal', 'Quest po Grodnie: królewskie miasto', 'grodno', 'Гродно', { city_name_localized: 'Grodno', city_name_canonical: 'Гродно', country_name: 'Беларусь' }),
+      quest('kv', 'Quest po Karlowych Warach: trzynaste źródło w Grodnie nie bije', 'karlovy-vary', 'Карловы Вары', { city_name_localized: 'Karlowe Wary', country_name: 'Чехия' }),
+    ])
+    const query = 'Podaj najwyżej trzy questy w Grodnie, każdy z odnośnikiem.'
+    const sources = await searchSiteMaterials({ query, locale: 'pl' })
+    const royal = sources.find((s) => s.source_id === 'grodno-royal')
+    expect(royal?.place).toEqual({ cities: ['Grodno', 'Гродно', 'Гродно'], countries: ['Беларусь'] })
+    expect(sources.find((s) => s.type === 'travel')?.place).toEqual({ countries: ['Беларусь'] })
+    // Квест Карловых Вар найден по слову названия и остаётся в списке источников, но не в подсказке.
+    expect(sources.map((s) => s.source_id)).toContain('kv')
+    // Статья о городе названа другим написанием («Гродно») — она тоже карточка места.
+    expect(selectPromptSources(sources, 8, query).map((s) => s.source_id).sort()).toEqual(['1', 'grodno-royal'])
   })
 
   it('HTML описания превращается в короткий абзац', () => {

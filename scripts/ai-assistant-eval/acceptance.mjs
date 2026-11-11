@@ -8,12 +8,14 @@
  *   share_at_least     — доля не ниже `passes`/`of` (порог «9 из 10» на срезе из 44 случаев — 40);
  *   not_below_base     — доля кандидата не ниже доли базы;
  *   each_turn_at_least — каждый ход каждого вопроса прошёл не меньше `passes` повторов;
+ *   usefulness_at_least — средняя полезность судьи (0–2) не ниже `mean`, доля ходов с полезностью 0
+ *                        не выше `zero_share_max` (#3286; только строка с судьёй);
  *   report_only        — в отчёте без порога.
  * Замер с `judge: true` считается только по ходам с вердиктом судьи; пока судья не оценил нужное
  * число ходов, строка «не оценено», а приёмка — неполная.
  */
 
-import { effectivePass, judgeAgreement, judgeKey } from './report.mjs'
+import { addUsefulness, effectivePass, emptyUsefulness, formatUsefulness, judgeAgreement, judgeKey } from './report.mjs'
 
 export const baseCaseId = (id) => String(id).replace(/@\d+$/, '')
 const share = (stats) => (stats.turns ? stats.passed / stats.turns : 0)
@@ -25,7 +27,7 @@ const cell = (stats) => `${stats.passed}/${stats.turns}`
  */
 export function tallyTurns(runs, { withJudge = false, only = null } = {}) {
   const byKey = new Map()
-  const stats = { passed: 0, turns: 0, judged: 0, total: 0, withoutModel: 0, byKey }
+  const stats = { passed: 0, turns: 0, judged: 0, total: 0, withoutModel: 0, usefulness: emptyUsefulness(), byKey }
   for (const { results, judges = new Map() } of runs) {
     for (const result of results) {
       const id = baseCaseId(result.id)
@@ -34,6 +36,7 @@ export function tallyTurns(runs, { withJudge = false, only = null } = {}) {
         stats.total += 1
         const judge = judges.get(judgeKey(result.id, index))
         if (judge) stats.judged += 1
+        addUsefulness(stats.usefulness, judge)
         if (withJudge && !judge) continue
         const key = `${id}#${index}`
         const entry = byKey.get(key) ?? { passed: 0, turns: 0 }
@@ -81,6 +84,13 @@ export function evaluateRule(rule, base, candidate, { repeat = 1 } = {}) {
     if (!base.turns) return { passed: 'pending', threshold: 'не ниже базы', note: 'замера базы нет' }
     return { passed: share(candidate) + 1e-9 >= share(base), threshold: 'не ниже базы', note: '' }
   }
+  if (rule.type === 'usefulness_at_least') {
+    const threshold = `средняя ≥ ${String(rule.mean).replace('.', ',')} из 2; нулей ≤ ${Math.round(rule.zero_share_max * 100)} %`
+    const { count, sum, zeros } = candidate.usefulness ?? emptyUsefulness()
+    // Вердикт без оценки полезности в среднюю не входит — строка ждёт, пока оценены все ходы.
+    if (count < candidate.turns) return { passed: 'pending', threshold, note: `оценка полезности есть у ${count} из ${candidate.turns} ходов` }
+    return { passed: sum / count + 1e-9 >= rule.mean && zeros / count <= rule.zero_share_max + 1e-9, threshold, note: '' }
+  }
   if (rule.type === 'each_turn_at_least') {
     const short = [...candidate.byKey].filter(([, entry]) => entry.turns < repeat).map(([key]) => key)
     const failing = [...candidate.byKey].filter(([, entry]) => entry.passed < rule.passes).map(([key, entry]) => `${key} ${entry.passed}/${entry.turns}`)
@@ -91,7 +101,7 @@ export function evaluateRule(rule, base, candidate, { repeat = 1 } = {}) {
   throw new Error(`неизвестное правило порога ${rule.type}`)
 }
 
-const EMPTY = { passed: 0, turns: 0, judged: 0, total: 0, withoutModel: 0, byKey: new Map() }
+const EMPTY = { passed: 0, turns: 0, judged: 0, total: 0, withoutModel: 0, usefulness: emptyUsefulness(), byKey: new Map() }
 
 /**
  * Таблица приёмки. `artifacts`: `{contour: {base: {run: {results, judges}}, candidate: …},
@@ -103,13 +113,15 @@ export function buildAcceptance(thresholds, artifacts) {
   const sides = ['base', 'candidate']
   for (const row of thresholds.rows) {
     const out = { id: row.id, title: row.title, base: '—', candidate: '—', threshold: '', passed: null, note: '' }
-    const notes = []
+    // Примечание строки из файла порогов: что это за срез и чем он не является.
+    const notes = row.note ? [row.note] : []
     let stats = { base: EMPTY, candidate: EMPTY }
     if (row.kind === 'contour' || row.kind === 'quality') {
       const only = row.only === 'targets' ? new Set(thresholds.targets) : null
       const runsOf = (side) => (row.kind === 'quality' ? artifacts.quality?.[side] ?? [] : [artifacts.contour?.[side]?.[row.run]].filter(Boolean))
       stats = Object.fromEntries(sides.map((side) => [side, tallyTurns(runsOf(side), { withJudge: Boolean(row.judge), only })]))
-      for (const side of sides) if (stats[side].turns) out[side] = cell(stats[side])
+      // Строка полезности показывает оба числа правила — среднюю и долю нулей — у базы и у кандидата.
+      for (const side of sides) if (stats[side].turns) out[side] = row.rule.type === 'usefulness_at_least' ? formatUsefulness(stats[side].usefulness) : cell(stats[side])
       if (row.judge) {
         // Судья обязателен: строка считается только когда оценено нужное число повторов у обеих сторон.
         const judgeRepeats = Math.min(row.judgeRepeats ?? repeat, repeat)
@@ -177,6 +189,10 @@ export function renderAcceptance(meta, acceptance) {
     lines.push(`- ${title}: \`${model.file ?? model.model ?? '?'}\`${model.sha256 ? `, sha256 \`${model.sha256}\`` : ''} (${model.url ?? '?'}).`)
   }
   lines.push(`- Код: \`${meta.gitSha ?? '?'}\`${meta.dirty?.length ? `, незакоммиченные правки: ${meta.dirty.length} файлов` : ''}; пороги: \`${meta.thresholds ?? '?'}\`${meta.inventoryHash ? `, опись оценочных входов \`${meta.inventoryHash.slice(0, 12)}\`` : ''}.`)
+  if (meta.ask) {
+    const side = (name) => `${meta.ask[name].url} → модель ${meta.ask[name].llmUrl}`
+    lines.push(`- Путь службы \`/ai/ask\` (#3286): база ${side('base')}, кандидат ${side('candidate')}; индекс от ${meta.ask.base.indexBuiltAt ?? '?'}, фрагментов ${meta.ask.base.indexCount ?? '?'}. Вопрос уходит в службу клиентом экрана, сам экран в этих прогонах не участвует.`)
+  }
   lines.push(`- Слепые метки судьи: ${meta.blind ? `${Object.entries(meta.blind).map(([label, side]) => `${label} — ${side === 'base' ? 'база' : 'кандидат'}`).join(', ')} (судье не сообщаются)` : 'не назначены'}.`, '')
   lines.push('| замер | база | кандидат | порог | пройдено | примечание |', '| --- | --- | --- | --- | --- | --- |')
   for (const row of acceptance.rows) {
@@ -209,7 +225,11 @@ export function validateThresholds(thresholds) {
     if (row.kind === 'contour' && !thresholds.runs?.[row.run]) errors.push(`${row.id}: прогон ${row.run} не описан в runs`)
     if (row.kind === 'slice' && !row.slice) errors.push(`${row.id}: нет slice`)
     const rule = row.rule ?? {}
-    if (!['all', 'share_at_least', 'not_below_base', 'each_turn_at_least', 'report_only'].includes(rule.type)) errors.push(`${row.id}: неизвестное правило ${rule.type}`)
+    if (!['all', 'share_at_least', 'not_below_base', 'each_turn_at_least', 'usefulness_at_least', 'report_only'].includes(rule.type)) errors.push(`${row.id}: неизвестное правило ${rule.type}`)
+    if (rule.type === 'usefulness_at_least') {
+      if (!(typeof rule.mean === 'number' && rule.mean > 0 && rule.mean <= 2 && typeof rule.zero_share_max === 'number' && rule.zero_share_max >= 0 && rule.zero_share_max <= 1)) errors.push(`${row.id}: usefulness_at_least — mean от 0 до 2, zero_share_max от 0 до 1`)
+      if (row.kind !== 'contour' || row.judge !== true) errors.push(`${row.id}: usefulness_at_least — только прогон контура с judge: true`)
+    }
     if (rule.type === 'share_at_least' && !(Number.isInteger(rule.passes) && Number.isInteger(rule.of) && rule.passes > 0 && rule.passes <= rule.of)) errors.push(`${row.id}: share_at_least — passes ≤ of`)
     if (rule.type === 'each_turn_at_least' && !(Number.isInteger(rule.passes) && rule.passes >= 1 && rule.passes <= thresholds.repeat)) errors.push(`${row.id}: each_turn_at_least — passes от 1 до repeat`)
   }
@@ -217,6 +237,7 @@ export function validateThresholds(thresholds) {
   for (const [name, run] of Object.entries(thresholds.runs ?? {})) {
     if (!run.cases) errors.push(`runs.${name}: нет cases`)
     if (run.only !== undefined && run.only !== 'targets') errors.push(`runs.${name}: only — только "targets"`)
+    if (run.provider !== undefined && run.provider !== 'ask') errors.push(`runs.${name}: provider — только "ask"`)
   }
   return errors
 }

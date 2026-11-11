@@ -18,6 +18,17 @@ export type AiSource = {
   /** Текстовый фрагмент карточки для промпта (данные, не инструкции). */
   snippet: string
   score: number
+  /**
+   * Место материала для отбора карточек подсказки (#3315, `promptPlace.ts`): названия города на всех
+   * известных написаниях и страны. У квеста город — из каталога; у статьи заполняется только страна.
+   * Служебное поле: в подсказку и в поток `/ai/ask` не попадает.
+   */
+  place?: AiSourcePlace
+}
+
+export type AiSourcePlace = {
+  cities?: ReadonlyArray<string | null | undefined>
+  countries?: ReadonlyArray<string | null | undefined>
 }
 
 export type AiHistoryRole = 'user' | 'assistant'

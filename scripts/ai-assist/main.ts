@@ -85,6 +85,8 @@ async function main(): Promise<void> {
       `счётчики ${redis ? 'redis' : 'в памяти'}, журнал ${config.demandLogPath}`,
   )
 
+  if (config.evalTrace) log('⚠️ AI_ASSIST_EVAL_TRACE=1: /ai/ask отдаёт карточки подсказки и сырой ответ модели, /ai/health — адрес модели. Только для контура оценки')
+
   const server = createApp({
     index,
     modelKey: spec.key,
@@ -92,7 +94,14 @@ async function main(): Promise<void> {
     lexical,
     cache,
     queueTimeoutMs: config.queueTimeoutMs,
-    ask: { generator, limits, demandLog, queueTimeoutMs: config.askQueueTimeoutMs, trustProxy: config.trustProxy },
+    ask: {
+      generator,
+      limits,
+      demandLog,
+      queueTimeoutMs: config.askQueueTimeoutMs,
+      trustProxy: config.trustProxy,
+      evalTrace: config.evalTrace ? { llmUrl: config.llmUrl } : null,
+    },
     authorDraft: { limits: authorDraftLimits },
     mapIntent: { limits: mapIntentLimits },
     suggestTags: { catalog: tagCatalog },

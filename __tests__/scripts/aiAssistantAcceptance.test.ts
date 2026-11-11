@@ -4,7 +4,7 @@ import path from 'node:path'
 import { buildInventory, loadArtifacts, parseAcceptArgs, planRuns, writeJudgePackages } from '../../scripts/ai-assistant-eval/accept.mjs'
 import { buildAcceptance, evaluateRule, renderAcceptance, tallySlices, tallyTurns, validateThresholds } from '../../scripts/ai-assistant-eval/acceptance.mjs'
 import { MAX_REFUSAL_CHARS, evaluateTurn, findOffPlaceCards, primaryLayer } from '../../scripts/ai-assistant-eval/checks.mjs'
-import { judgeAgreement, parseJudgeLines, renderJudgeAgreement, renderJudgeTask, renderReport } from '../../scripts/ai-assistant-eval/report.mjs'
+import { judgeAgreement, parseJudgeLines, promptPlaceMix, renderJudgeAgreement, renderJudgeTask, renderReport } from '../../scripts/ai-assistant-eval/report.mjs'
 import { loadCases, rebuildReport } from '../../scripts/ai-assistant-eval/run.mjs'
 import { makeTempDir, removeDir } from './cli-test-utils'
 
@@ -53,6 +53,27 @@ describe('автопроверка «названа карточка не тог
     const result = evaluateTurn({ expect: 'answer', lang: 'ru', expectSources: gdansk }, observed(raw))
     expect(checksOf(result)).toEqual(['irrelevant_sources'])
     expect(primaryLayer(result.failures)).toBe('retrieval')
+  })
+
+  it('#3286: отчёт считает ходы, где рядом с карточками места в подсказке стоят чужие (Done gate #3315)', () => {
+    const raw = 'Начните с [маршрута](https://metravel.by/travels/krakow-two-days).'
+    const turnOf = (cards: typeof CARDS, expectSources: typeof KRAKOW | null) => {
+      const seen = { ...observed(raw), modelCall: { text: raw, cards, finishReason: 'stop', ms: 900 } }
+      return { question: 'q', expect: 'answer', observed: seen, eval: evaluateTurn({ expect: 'answer', lang: 'ru', expectSources }, seen) }
+    }
+    const mixed = turnOf(CARDS, KRAKOW)
+    expect(mixed.eval.metrics).toMatchObject({ placeCards: 2, foreignCards: 1 })
+    const clean = turnOf([CARDS[0], CARDS[2]], KRAKOW)
+    expect(clean.eval.metrics).toMatchObject({ placeCards: 2, foreignCards: 0 })
+    const foreignOnly = turnOf([CARDS[1]], KRAKOW)
+    expect(foreignOnly.eval.metrics).toMatchObject({ placeCards: 0, foreignCards: 1 })
+    // Без ожидания места ход в счёт не идёт.
+    const free = turnOf(CARDS, null)
+    expect(free.eval.metrics.placeCards).toBeUndefined()
+    const results = [mixed, clean, foreignOnly, free].map((turn, index) => ({ id: `p0${index + 1}`, group: 'on_topic', lang: 'ru', turns: [turn] }))
+    expect(promptPlaceMix(results)).toEqual({ checked: 3, withPlace: 2, mixed: ['p01#0'] })
+    const report = renderReport({ startedAt: 't', baseUrl: 'http://localhost:8081', modelUrl: 'http://127.0.0.1:8080' }, results)
+    expect(report).toContain('Подсказка модели по месту вопроса (#3315): ходов с ожиданием места и карточками в подсказке — 3; карточки места дошли до модели — 2; рядом с ними чужие карточки — 1 (p01#0).')
   })
 
   it('без ожидания места и без ссылок проверка молчит', () => {
@@ -115,6 +136,42 @@ describe('судья: сырой ответ, слепые метки и свер
     expect(task).toContain('Прогон B.')
     expect(task).toContain('accept/judge/B/targets/judge.jsonl')
     expect(task).not.toMatch(/v7|v4|gguf/i)
+  })
+
+  it('#3286: у второго хода диалога в задании стоят реплики предыдущих ходов', () => {
+    const turnOf = (question: string, shown: string, extra: Record<string, unknown> = {}) => ({ question, expect: 'answer', observed: observed(shown, shown, extra), eval: { pass: true, failures: [], warnings: [], metrics: {}, primaryLayer: null } })
+    const dialogue = [{
+      id: 'mt01', group: 'multi_turn', lang: 'ru',
+      turns: [turnOf('Какие квесты есть в Гродно?', 'В Гродно есть квест «Тайны Коложи».'), turnOf('А какой из них подойдёт детям?', '', { status: 'no_sources', answerText: '' }), turnOf('А самый короткий?', 'Самый короткий — «Тайны Коложи».')],
+    }]
+    const task = renderJudgeTask('# Судья', dialogue, 'out')
+    const [, first, second, third] = task.split('### ')
+    expect(first).not.toContain('Предыдущие реплики диалога')
+    expect(second).toContain('Предыдущие реплики диалога:\n\n```text\nПосетитель: Какие квесты есть в Гродно?\nАссистент: В Гродно есть квест «Тайны Коложи».\n```')
+    // Ход без ответа виден судье статусом, а не пустой строкой.
+    expect(third).toContain('Посетитель: А какой из них подойдёт детям?\nАссистент: (ответа нет, статус хода no_sources)')
+    expect(third).toContain('Вопрос: А самый короткий?')
+  })
+
+  it('#3286: задание пути службы просит три оценки, даёт карточки службы целиком и страницу-источник', () => {
+    const snippet = `Городской квест по городу Гродно (Беларусь). ${'Подробности маршрута. '.repeat(12)}Финал у Коложи.`
+    const seen = {
+      ...observed('Сырой [квест](https://metravel.by/quests/grodno) и https://evil.example', 'Показанный квест'),
+      modelCall: { provider: 'ask', text: 'Сырой [квест](https://metravel.by/quests/grodno) и https://evil.example', cards: [{ n: 1, type: 'quest', title: 'Тайны Коложи', url: 'https://metravel.by/quests/grodno', snippet }] },
+      request: { history: [], source: { type: 'quest', id: 7 } },
+    }
+    const live = [{ id: 'lv01', group: 'page', lang: 'ru', turns: [{ question: 'Сколько длится квест?', expect: 'answer', observed: seen, eval: { pass: true, failures: [], warnings: [], metrics: {}, primaryLayer: null } }] }]
+    const task = renderJudgeTask('# Судья', live, null, { blind: { label: 'A', judgeFile: 'accept/judge/A/live/judge.jsonl' }, scores: true })
+    expect(task).toContain('добавь три оценки 0–2 — `instruction`, `usefulness`, `language`')
+    expect(task).toContain('Вопрос задан со страницы квеста (id 7)')
+    expect(task).toContain('Карточки службы (ушли в подсказку модели):')
+    expect(task).toContain('Финал у Коложи.')
+    expect(task).toContain('Показанный квест')
+    expect(task).toContain('Сырой ответ модели (до стража ссылок; ссылки — как их написала модель):')
+    // Обычное задание экрана трёх оценок не просит и режет фрагмент карточки.
+    const plain = renderJudgeTask('# Судья', live, 'out')
+    expect(plain).not.toContain('добавь три оценки')
+    expect(plain).not.toContain('Финал у Коложи.')
   })
 
   it('сверка автопроверок с судьёй — строка отчёта и без судьи, и с ним', () => {
@@ -198,6 +255,75 @@ describe('таблица приёмки (#3267)', () => {
     expect(text).toContain('A — кандидат, B — база (судье не сообщаются)')
   })
 
+  describe('строка «живые вопросы, путь службы» — полезность по судье (#3286)', () => {
+    const live = {
+      ...small,
+      runs: { ...small.runs, live: { cases: 'cases.live.jsonl', repeat: 1, provider: 'ask' } },
+      rows: [{ id: 'live_service', title: 'живые вопросы, путь службы', kind: 'contour', run: 'live', judge: true, note: 'экран не участвует', rule: { type: 'usefulness_at_least', mean: 1.6, zero_share_max: 0.1 } }],
+    }
+    /** Прогон живых вопросов ×1: `scores[i]` — полезность хода, `null` — вердикт без оценки, `undefined` — без вердикта. */
+    const liveRun = (scores: (number | null | undefined)[]) => {
+      const results = scores.map((_, index) => ({ id: `lv${String(index + 1).padStart(2, '0')}`, group: 'weekend', turns: [passTurn(true)] }))
+      const lines = scores.flatMap((score, index) => (score === undefined ? [] : [JSON.stringify({ key: `${results[index].id}#0`, verdict: score === 2 ? 'pass' : 'fail', ...(score === null ? {} : { instruction: 2, usefulness: score, language: 2 }) })]))
+      return { results, judges: parseJudgeLines(lines.join('\n')).judges }
+    }
+    const tableOf = (base: (number | null | undefined)[], candidate: (number | null | undefined)[]) =>
+      buildAcceptance(live, { contour: { base: { live: liveRun(base) }, candidate: { live: liveRun(candidate) } }, quality: { base: [], candidate: [] }, slices: null }).rows[0]
+    const twenty = (zeros: number, ones: number) => [...Array(zeros).fill(0), ...Array(ones).fill(1), ...Array(20 - zeros - ones).fill(2)]
+
+    it('порог записан в файле порогов: средняя не ниже 1,6 из 2 и нулей не больше 10 %', () => {
+      const row = thresholds.rows.find((item: { id: string }) => item.id === 'live_service')
+      expect(row).toMatchObject({ kind: 'contour', run: 'live', judge: true, rule: { type: 'usefulness_at_least', mean: 1.6, zero_share_max: 0.1 } })
+      expect(thresholds.runs.live).toEqual({ cases: 'cases.live.jsonl', repeat: 1, provider: 'ask' })
+    })
+
+    it('в таблице — средняя и доля нулей у базы и у кандидата; оба условия правила обязательны', () => {
+      // 20 ходов: один ноль и пять единиц — средняя 1,65, нулей 5 %.
+      const passed = tableOf(twenty(4, 10), twenty(1, 5))
+      expect(passed).toMatchObject({ base: '1,10 из 2; нулей 4/20 (20 %)', candidate: '1,65 из 2; нулей 1/20 (5 %)', threshold: 'средняя ≥ 1,6 из 2; нулей ≤ 10 %', passed: true })
+      expect(passed.note).toContain('экран не участвует')
+      // Средняя 1,6 ровно на пороге, нулей 10 % — проходит; на один ноль больше — нет.
+      expect(tableOf(twenty(0, 0), twenty(2, 4))).toMatchObject({ candidate: '1,60 из 2; нулей 2/20 (10 %)', passed: true })
+      expect(tableOf(twenty(0, 0), twenty(3, 0))).toMatchObject({ candidate: '1,70 из 2; нулей 3/20 (15 %)', passed: false })
+      // Нулей нет, но средняя ниже порога.
+      expect(tableOf(twenty(0, 0), twenty(0, 9))).toMatchObject({ candidate: '1,55 из 2; нулей 0/20 (0 %)', passed: false })
+    })
+
+    it('судья обязателен: без вердиктов и без оценки полезности строка не оценена, приёмка неполная', () => {
+      expect(tableOf([2, 2, 2], [2, 2, undefined])).toMatchObject({ passed: 'pending', threshold: 'судья обязателен' })
+      const withoutScore = tableOf([2, 2, 2], [2, 2, null])
+      expect(withoutScore).toMatchObject({ passed: 'pending' })
+      expect(withoutScore.note).toContain('оценка полезности есть у 2 из 3 ходов')
+      const acceptance = buildAcceptance(live, { contour: { base: {}, candidate: {} }, quality: { base: [], candidate: [] }, slices: null })
+      expect(acceptance.verdict).toBe('incomplete')
+    })
+
+    it('правило полезности — только у строки контура с судьёй; провайдер прогона — только ask', () => {
+      expect(validateThresholds(live)).toEqual([])
+      expect(validateThresholds({ ...live, rows: [{ ...live.rows[0], judge: false }] })).toEqual(['live_service: usefulness_at_least — только прогон контура с judge: true'])
+      expect(validateThresholds({ ...live, rows: [{ ...live.rows[0], rule: { type: 'usefulness_at_least', mean: 3, zero_share_max: 0.1 } }] })).toEqual(['live_service: usefulness_at_least — mean от 0 до 2, zero_share_max от 0 до 1'])
+      expect(validateThresholds({ ...live, runs: { ...live.runs, live: { cases: 'cases.live.jsonl', provider: 'screen' } } })).toEqual(['runs.live: provider — только "ask"'])
+    })
+  })
+
+  it('#3286: прежний отложенный срез назван регрессионным, свежий — отдельная строка с тем же правилом', () => {
+    const rowOf = (id: string) => thresholds.rows.find((item: { id: string }) => item.id === id)
+    expect(rowOf('holdout')).toMatchObject({ run: 'holdout', rule: { type: 'not_below_base' } })
+    expect(rowOf('holdout').title).toContain('регрессионный срез')
+    expect(rowOf('holdout').note).toMatch(/h29, v5ln03, v5bd06.*отложенным свидетельством он больше не считается/)
+    expect(rowOf('holdout_fresh')).toMatchObject({ id: 'holdout_fresh', title: 'экран: свежие отложенные вопросы ×3', kind: 'contour', run: 'holdout_fresh', rule: { type: 'not_below_base' } })
+    // Подбор правили по пробному прогону этого среза до заморозки описи — таблица говорит об этом сама.
+    expect(rowOf('holdout_fresh').note).toMatch(/подбор настраивался по этому срезу до заморозки/)
+    expect(thresholds.runs.holdout).toEqual({ cases: 'cases.holdout.jsonl', repeat: 3 })
+    expect(thresholds.runs.holdout_fresh).toEqual({ cases: 'cases.holdout-2026-11.jsonl', repeat: 3 })
+    // Примечание строки доходит до таблицы.
+    const regression = { ...small, runs: { holdout: { cases: 'cases.holdout.jsonl', repeat: 3 } }, rows: [rowOf('holdout')] }
+    const run = contourRun({ h01: [true, true, true] })
+    const table = buildAcceptance(regression, { contour: { base: { holdout: run }, candidate: { holdout: run } }, quality: { base: [], candidate: [] }, slices: null })
+    expect(table.rows[0]).toMatchObject({ passed: true, threshold: 'не ниже базы' })
+    expect(table.rows[0].note).toContain('срез регрессионный')
+  })
+
   it('ход, прошедший без ответа модели, считается отдельно', () => {
     const run = { results: [{ id: 'bd01@1', group: 'borderline', turns: [passTurn(true, false)] }, { id: 'bd01@2', group: 'borderline', turns: [passTurn(true)] }], judges: new Map() }
     expect(tallyTurns([run])).toMatchObject({ passed: 2, turns: 2, withoutModel: 1 })
@@ -223,7 +349,9 @@ describe('команда приёмки и опись оценочных вхо�
     const norm = (text: string) => text.toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
     const seen = new Map<string, string>()
     const repeats: string[] = []
-    for (const file of ['cases.jsonl', 'cases.holdout.jsonl', 'cases.quality.jsonl', 'cases.complex.jsonl']) {
+    // Живые вопросы и свежий отложенный срез (#3286) сверяются с остальными, как только файлы лежат в репозитории.
+    const fresh = ['cases.live.jsonl', 'cases.holdout-2026-11.jsonl'].filter((file) => fs.existsSync(path.join(EVAL, file)))
+    for (const file of ['cases.jsonl', 'cases.holdout.jsonl', 'cases.quality.jsonl', 'cases.complex.jsonl', ...fresh]) {
       for (const item of readLines(path.join(EVAL, file))) {
         for (const question of (item.turns ?? [item.q]) as string[]) {
           const key = norm(question)
@@ -245,23 +373,68 @@ describe('команда приёмки и опись оценочных вхо�
     ]))
   })
 
-  it('план прогонов: одинаковые входы для базы и кандидата, целевые вопросы есть в наборе', () => {
-    const plan = (side: string, url: string) => planRuns(thresholds, side, url, `/out/${side}`, 'http://localhost:8081')
-    const base = plan('base', 'http://127.0.0.1:8080')
-    const candidate = plan('candidate', 'http://127.0.0.1:8090')
-    const shape = (runs: { name: string; expected: number; command: string[] }[], url: string, side: string) => runs.map((run) => [run.name, run.expected, run.command.slice(1).join(' ').replaceAll(url, '<model>').replaceAll(`/out/${side}`, '<out>')])
-    expect(shape(base, 'http://127.0.0.1:8080', 'base')).toEqual(shape(candidate, 'http://127.0.0.1:8090', 'candidate'))
-    expect(base.map((run) => run.name)).toEqual(['targets', 'holdout', 'offtopic', 'quality-1', 'quality-2', 'quality-3'])
-    const targets = base[0]
-    expect(targets.expected).toBe(thresholds.targets.length * 3)
-    expect(targets.command.join(' ')).toContain(`--only ${thresholds.targets.join(',')}`)
-    expect(base[2].command.join(' ')).toContain('--group off_topic,injection')
+  describe('план прогонов', () => {
+    // Наборы читаются из папки: настоящие файлы контура плюс заглушки для наборов #3286, пока их пишут.
+    let casesDir: string
+    beforeAll(() => {
+      casesDir = makeTempDir('ai-accept-cases-', { root: path.join(ROOT, '.codex-temp') })
+      for (const name of fs.readdirSync(EVAL).filter((file) => /^cases.*\.jsonl$/.test(file))) fs.copyFileSync(path.join(EVAL, name), path.join(casesDir, name))
+      const stub = (name: string, lines: object[]) => { if (!fs.existsSync(path.join(casesDir, name))) fs.writeFileSync(path.join(casesDir, name), lines.map((line) => JSON.stringify(line)).join('\n') + '\n') }
+      stub('cases.live.jsonl', [{ id: 'lv01', group: 'weekend', lang: 'ru', q: 'Куда съездить на выходные из Минска?', expect: 'answer' }, { id: 'lv02', group: 'page', lang: 'ru', q: 'Сколько дней занимает поездка?', expect: 'answer', source: { type: 'travel', id: 816 } }])
+      stub('cases.holdout-2026-11.jsonl', [{ id: 'hf01', group: 'on_topic', lang: 'ru', q: 'Что посмотреть в Несвиже за день?', expect: 'answer' }])
+    })
+    afterAll(() => removeDir(casesDir))
+    const count = (name: string) => readLines(path.join(casesDir, name)).length
+
+    it('одинаковые входы для базы и кандидата, целевые вопросы есть в наборе', () => {
+      const plan = (side: string, url: string) => planRuns(thresholds, side, url, `/out/${side}`, 'http://localhost:8081', { casesDir })
+      const base = plan('base', 'http://127.0.0.1:8080')
+      const candidate = plan('candidate', 'http://127.0.0.1:8090')
+      const shape = (runs: { name: string; expected: number; command: string[] }[], url: string, side: string) => runs.map((run) => [run.name, run.expected, run.command.slice(1).join(' ').replaceAll(url, '<model>').replaceAll(`/out/${side}`, '<out>')])
+      expect(shape(base, 'http://127.0.0.1:8080', 'base')).toEqual(shape(candidate, 'http://127.0.0.1:8090', 'candidate'))
+      // Без адреса службы прогон живых вопросов в план не входит.
+      expect(base.map((run) => run.name)).toEqual(['targets', 'holdout', 'holdout_fresh', 'offtopic', 'quality-1', 'quality-2', 'quality-3'])
+      const targets = base[0]
+      expect(targets.expected).toBe(thresholds.targets.length * 3)
+      expect(targets.command.join(' ')).toContain(`--only ${thresholds.targets.join(',')}`)
+      expect(base[3].command.join(' ')).toContain('--group off_topic,injection')
+      // Свежий отложенный срез — тот же экран и те же три повтора, что у прежнего.
+      expect(base[2]).toMatchObject({ kind: 'contour', expected: count('cases.holdout-2026-11.jsonl') * 3 })
+      expect(base[2].command.join(' ')).toContain(`--base http://localhost:8081 --model-url http://127.0.0.1:8080 --cases ${path.join(casesDir, 'cases.holdout-2026-11.jsonl')} --repeat 3`)
+    })
+
+    it('#3286: с --provider ask в плане есть прогон живых вопросов через службу своей стороны', () => {
+      const plan = (side: string) => planRuns(thresholds, side, `<${side}-url>`, `/out/${side}`, 'http://localhost:8081', { casesDir, askUrl: `<${side}-ask-url>` })
+      const live = plan('base').find((run: { name: string }) => run.name === 'live')
+      expect(live).toMatchObject({ kind: 'ask', side: 'base', dir: '/out/base/live', expected: count('cases.live.jsonl') })
+      const command = live.command.slice(1).join(' ')
+      expect(command).toContain('--experimental-strip-types')
+      expect(command).toContain(`run.mjs --provider ask --ask-url <base-ask-url> --model-url <base-url> --cases ${path.join(casesDir, 'cases.live.jsonl')} --repeat 1 --out /out/base/live`)
+      expect(command).not.toContain('--base ')
+      expect(plan('candidate').find((run: { name: string }) => run.name === 'live').command.join(' ')).toContain('--ask-url <candidate-ask-url> --model-url <candidate-url>')
+      expect(plan('base').map((run: { name: string }) => run.name)).toEqual(['targets', 'holdout', 'holdout_fresh', 'offtopic', 'live', 'quality-1', 'quality-2', 'quality-3'])
+    })
+
+    it('набора вопросов нет в папке — ошибка называет прогон и файл', () => {
+      const empty = makeTempDir('ai-accept-empty-', { root: path.join(ROOT, '.codex-temp') })
+      try {
+        expect(() => planRuns(thresholds, 'base', 'u', '/out/base', 's', { casesDir: empty })).toThrow('runs.targets: нет набора вопросов cases.jsonl')
+      } finally {
+        removeDir(empty)
+      }
+    })
   })
 
   it('аргументы команды: неизвестный флаг и неизвестный --skip — ошибка', () => {
     expect(parseAcceptArgs(['--base-url', 'http://127.0.0.1:8080/', '--skip', 'slices']).baseUrl).toBe('http://127.0.0.1:8080')
     expect(() => parseAcceptArgs(['--oops'])).toThrow('неизвестный флаг --oops')
     expect(() => parseAcceptArgs(['--skip', 'judge'])).toThrow('--skip')
+  })
+
+  it('#3286: --provider ask принимает адреса двух служб; без него адреса служб — ошибка', () => {
+    expect(parseAcceptArgs(['--provider', 'ask', '--base-ask-url', 'http://127.0.0.1:8787/', '--candidate-ask-url=http://127.0.0.1:8788'])).toMatchObject({ provider: 'ask', baseAskUrl: 'http://127.0.0.1:8787', candidateAskUrl: 'http://127.0.0.1:8788' })
+    expect(() => parseAcceptArgs(['--provider', 'llamacpp'])).toThrow('--provider: только ask')
+    expect(() => parseAcceptArgs(['--base-ask-url', 'http://127.0.0.1:8787'])).toThrow('только с --provider ask')
   })
 
   describe('папка приёмки', () => {
@@ -280,6 +453,28 @@ describe('команда приёмки и опись оценочных вхо�
       const task = fs.readFileSync(path.join(dir, 'judge/A/targets/judge-task.md'), 'utf8')
       expect(task).toContain('Прогон A.')
       expect(task).not.toMatch(/candidate|кандидат|base\/|база/i)
+    })
+
+    it('#3286: задание судье по живым вопросам просит три оценки, а вердикт без них в таблицу не попадает', () => {
+      const seen = { ...observed('сырой', 'показанный'), modelCall: { provider: 'ask', text: 'сырой', cards: CARDS } }
+      const result = { id: 'lv01', group: 'weekend', lang: 'ru', turns: [{ question: 'вопрос', expect: 'answer', observed: seen, eval: { pass: true, failures: [], warnings: [], metrics: {}, primaryLayer: null } }] }
+      for (const side of ['base', 'candidate']) {
+        fs.mkdirSync(path.join(dir, side, 'live'), { recursive: true })
+        fs.writeFileSync(path.join(dir, side, 'live', 'results.jsonl'), `${JSON.stringify(result)}\n`)
+      }
+      const written = writeJudgePackages(dir, thresholds, { A: 'base', B: 'candidate' })
+      expect(written.map((file: string) => path.relative(path.relative(ROOT, dir), file)).sort()).toEqual(['judge/A/live/judge-task.md', 'judge/B/live/judge-task.md'])
+      const task = fs.readFileSync(path.join(dir, 'judge/B/live/judge-task.md'), 'utf8')
+      expect(task).toContain('добавь три оценки 0–2')
+      expect(task).toContain('## Три оценки')
+      expect(task).toContain('Карточки службы (ушли в подсказку модели):')
+      expect(task).not.toMatch(/candidate|кандидат|base\/|база/i)
+
+      fs.writeFileSync(path.join(dir, 'candidate', 'live', 'judge.jsonl'), `${JSON.stringify({ key: 'lv01#0', verdict: 'pass' })}\n`)
+      expect(() => loadArtifacts(dir, thresholds)).toThrow('нужны все три оценки качества')
+      fs.writeFileSync(path.join(dir, 'candidate', 'live', 'judge.jsonl'), `${JSON.stringify({ key: 'lv01#0', verdict: 'fail', layer: 'model', instruction: 2, usefulness: 1, language: 2 })}\n`)
+      const artifacts = loadArtifacts(dir, thresholds)
+      expect(tallyTurns([artifacts.contour.candidate.live], { withJudge: true }).usefulness).toEqual({ count: 1, sum: 1, zeros: 0 })
     })
 
     // Пересборка quality.mjs идёт без проверки кода выхода: неполный вердикт отсекает сама загрузка.

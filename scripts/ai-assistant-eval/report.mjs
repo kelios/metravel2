@@ -16,6 +16,16 @@ export const GROUP_RU = {
   off_topic: 'не по теме',
   injection: 'попытки сломать',
   escalation: 'эскалация',
+  // Живые вопросы пути службы (`cases.live.jsonl`, #3286).
+  weekend: 'выходные',
+  kids: 'с детьми',
+  dog: 'с собакой',
+  no_car: 'без машины',
+  bike: 'велосипед',
+  season: 'сезон',
+  duration: 'длительность',
+  site_help: 'о сайте',
+  page: 'со страницы материала',
 }
 
 const pct = (part, total) => (total ? `${Math.round((part / total) * 100)} %` : '—')
@@ -80,6 +90,40 @@ export function validateQualityJudges(results, judges) {
   return errors
 }
 
+/** Полезность судьи (0–2) по ходам: число оценок, сумма и число нулей — для отчёта и правила приёмки (#3286). */
+export const emptyUsefulness = () => ({ count: 0, sum: 0, zeros: 0 })
+
+export const addUsefulness = (total, judge) => {
+  if (![0, 1, 2].includes(judge?.usefulness)) return total
+  total.count += 1
+  total.sum += judge.usefulness
+  if (judge.usefulness === 0) total.zeros += 1
+  return total
+}
+
+const decimal = (value, digits = 2) => value.toFixed(digits).replace('.', ',')
+
+export const formatUsefulness = (total) =>
+  total?.count ? `${decimal(total.sum / total.count)} из 2; нулей ${total.zeros}/${total.count} (${pct(total.zeros, total.count)})` : '—'
+
+/**
+ * Состав подсказки по месту вопроса (#3315): у скольких ходов с ожиданием места (`expect_sources`)
+ * карточки места дошли до модели и у скольких рядом с ними стоят чужие. Числа — из метрик хода
+ * (`splitPlaceCards` в `checks.mjs`), поэтому `--report` пересчитывает их и для старого прогона.
+ */
+export function promptPlaceMix(results) {
+  const mix = { checked: 0, withPlace: 0, mixed: [] }
+  for (const result of results) for (const [index, turn] of result.turns.entries()) {
+    const { placeCards, foreignCards } = turn.eval.metrics ?? {}
+    if (placeCards === undefined) continue
+    mix.checked += 1
+    if (!placeCards) continue
+    mix.withPlace += 1
+    if (foreignCards) mix.mixed.push(judgeKey(result.id, index))
+  }
+  return mix
+}
+
 export function summarize(results, judges = new Map()) {
   const byGroup = new Map()
   const byLayer = Object.fromEntries(LAYERS.map((layer) => [layer, 0]))
@@ -112,13 +156,25 @@ export function renderReport(meta, results, judges = new Map()) {
   const lines = []
   const fixedContext = meta.mode === 'fixed_context'
   let qualityComplete = false
-  lines.push(`# Оценка ассистента ${fixedContext ? 'на фиксированных материалах' : '/assistant'} — ${meta.label ?? meta.startedAt}`, '')
-  const target = fixedContext ? 'фиксированные карточки, рабочий промпт и генератор; без поиска и UI' : `экран: ${meta.baseUrl}/assistant`
+  const viaService = meta.provider === 'ask'
+  lines.push(`# Оценка ассистента ${fixedContext ? 'на фиксированных материалах' : viaService ? '/ai/ask (путь службы)' : '/assistant'} — ${meta.label ?? meta.startedAt}`, '')
+  const target = fixedContext
+    ? 'фиксированные карточки, рабочий промпт и генератор; без поиска и UI'
+    : viaService
+      ? `служба: ${meta.askUrl}/ai/ask (запрос клиентом экрана, сам экран не участвует); индекс от ${meta.index?.builtAt ?? '?'}, фрагментов ${meta.index?.count ?? '?'}`
+      : `экран: ${meta.baseUrl}/assistant`
   lines.push(`- Модель: \`${meta.model ?? '?'}\` (${meta.modelUrl}); ${target}; дерево \`${meta.tree ?? '.'}\`, коммит \`${meta.gitSha ?? '?'}\`.`)
   if (meta.dirty?.length) lines.push(`- Незакоммиченные правки в замере: ${meta.dirty.map((item) => `\`${item.trim()}\``).join(', ')}.`)
   lines.push(`- Начало ${meta.startedAt}, длительность ${meta.durationSec ?? '?'} с; вопросов ${results.length}, ходов ${summary.turns}.`)
   lines.push(`- Судья: ${judges.size ? `${judges.size} вердиктов` : 'не прогнан (задание — judge-task.md)'}.`)
-  lines.push(`- ${renderJudgeAgreement(judgeAgreement(results, judges))}`, '')
+  lines.push(`- ${renderJudgeAgreement(judgeAgreement(results, judges))}`)
+  if (!fixedContext) {
+    const mix = promptPlaceMix(results)
+    lines.push(`- Подсказка модели по месту вопроса (#3315): ходов с ожиданием места и карточками в подсказке — ${mix.checked}; карточки места дошли до модели — ${mix.withPlace}; рядом с ними чужие карточки — ${mix.mixed.length}${mix.mixed.length ? ` (${mix.mixed.join(', ')})` : ''}.`)
+    const usefulness = results.reduce((total, result) => result.turns.reduce((sum, _, index) => addUsefulness(sum, judges.get(judgeKey(result.id, index))), total), emptyUsefulness())
+    if (usefulness.count) lines.push(`- Полезность по судье: ${formatUsefulness(usefulness)}; оценено ${usefulness.count}/${summary.turns} ходов.`)
+  }
+  lines.push('')
   if (fixedContext) {
     lines.push('- Приоритет оценки: 1) следование запросу; 2) полезность и точность; 3) язык и естественность.')
     lines.push('- Автопроверки ищут обязательные факты и ссылки. Смысл, отрицания и естественность требуют отдельного вердикта судьи; эталон не сравнивается посимвольно.', '')
@@ -180,20 +236,34 @@ export function renderReport(meta, results, judges = new Map()) {
   return lines.join('\n')
 }
 
+const shownAnswer = (turn) => (turn.observed.answerText || turn.observed.notice || '').trim()
+
 /**
  * Задание судье: рубрика (`JUDGE.md`) + по каждому ходу вопрос, карточки, сырой ответ модели и
- * показанный ответ. `blind` (#3267) — слепая метка прогона: в задании нет ни пути прогона, ни имени
- * модели, вердикты пишутся рядом с заданием, а соответствие меток версиям хранит команда приёмки.
+ * показанный ответ; у второго и следующих ходов диалога — реплики предыдущих. `blind` (#3267) —
+ * слепая метка прогона: в задании нет ни пути прогона, ни имени модели, вердикты пишутся рядом с
+ * заданием, а соответствие меток версиям хранит команда приёмки. `scores` (#3286) — прогон
+ * оценивается полезностью: судья ставит три оценки на каждый ход, карточки даны целиком.
  */
-export function renderJudgeTask(rubric, results, outDir, { blind = null } = {}) {
+export function renderJudgeTask(rubric, results, outDir, { blind = null, scores = false } = {}) {
   const where = blind
     ? `Прогон ${blind.label}. Какая модель отвечала, не сообщается и для оценки не нужно. Вердикты — в \`${blind.judgeFile}\`; отчёт пересобирает координатор.`
     : `Папка прогона: \`${outDir}\`. Вердикты — в \`${outDir}/judge.jsonl\`.`
-  const lines = [rubric.trim(), '', where, '', '---', '']
+  const lines = [rubric.trim(), '', where, '']
+  if (scores) lines.push('В этом прогоне к каждой строке вердикта добавь три оценки 0–2 — `instruction`, `usefulness`, `language` (раздел «Три оценки» рубрики). Обязательны все три; `pass` допустим только при instruction=2, usefulness=2 и language≥1.', '')
+  lines.push('---', '')
   for (const result of results) {
     for (const [index, turn] of result.turns.entries()) {
+      const viaService = turn.observed.modelCall?.provider === 'ask'
       lines.push(`### ${judgeKey(result.id, index)} — группа «${GROUP_RU[result.group] ?? result.group}», ожидание \`${turn.expect}\`, язык ${result.lang}`)
       lines.push('', `Вопрос: ${turn.question}`, '')
+      const page = turn.observed.request?.source
+      if (page) lines.push(`Вопрос задан со страницы ${page.type === 'quest' ? 'квеста' : 'статьи'} (id ${page.id}): её карточка, если материал есть в индексе, стоит первой.`, '')
+      // Уточнение («А какой из них детям?») без предыдущих реплик оценить нельзя.
+      if (index > 0 && !turn.reference_answer) {
+        const dialogue = result.turns.slice(0, index).flatMap((previous) => [`Посетитель: ${previous.question}`, `Ассистент: ${shownAnswer(previous) || `(ответа нет, статус хода ${previous.observed.status ?? 'нет хода'})`}`])
+        lines.push('Предыдущие реплики диалога:', '', '```text', ...dialogue, '```', '')
+      }
       if (turn.reference_answer) {
         if (turn.history?.length) lines.push('Предыдущие реплики:', '', '```json', JSON.stringify(turn.history, null, 2), '```', '')
         lines.push('Пример хорошего ответа (другие формулировки допустимы):', '', '```text', turn.reference_answer, '```', '')
@@ -203,18 +273,18 @@ export function renderJudgeTask(rubric, results, outDir, { blind = null } = {}) 
       }
       const cards = turn.observed.modelCall?.cards ?? []
       if (cards.length) {
-        lines.push('Карточки подбора:')
-        for (const card of cards) lines.push(`- [${card.n}] ${card.type === 'quest' ? 'Квест' : 'Статья'} «${card.title}» — ${card.url ?? ''}; ${turn.reference_answer ? card.snippet : card.snippet.slice(0, 160)}`)
+        lines.push(viaService ? 'Карточки службы (ушли в подсказку модели):' : 'Карточки подбора:')
+        for (const card of cards) lines.push(`- [${card.n}] ${card.type === 'quest' ? 'Квест' : 'Статья'} «${card.title}» — ${card.url ?? ''}; ${turn.reference_answer || scores ? card.snippet : card.snippet.slice(0, 160)}`)
       } else {
         lines.push(`Карточки подбора: ${turn.observed.sources?.length ? turn.observed.sources.map((source) => `«${source.title}»`).join(', ') : 'нет'}`)
       }
       lines.push('', `Статус хода: ${turn.observed.status ?? 'нет хода'}; автопроверки: ${turn.eval.pass ? 'пройдены' : turn.eval.failures.map((item) => item.check).join(', ')}`)
-      const shown = (turn.observed.answerText || turn.observed.notice || '').trim()
+      const shown = shownAnswer(turn)
       const raw = String(turn.observed.modelCall?.text ?? '').trim()
       lines.push('', 'Показанный ответ (его получил посетитель):', '', '```text', shown, '```', '')
       if (!turn.observed.modelCall) lines.push('Сырой ответ модели: модель не вызывалась (ход закрыт фильтром тем или подбором).', '')
       else if (raw === shown) lines.push('Сырой ответ модели совпадает с показанным.', '')
-      else lines.push('Сырой ответ модели (до стража ссылок и остановки генератора):', '', '```text', raw, '```', '')
+      else lines.push(viaService ? 'Сырой ответ модели (до стража ссылок; ссылки — как их написала модель):' : 'Сырой ответ модели (до стража ссылок и остановки генератора):', '', '```text', raw, '```', '')
     }
   }
   return lines.join('\n')

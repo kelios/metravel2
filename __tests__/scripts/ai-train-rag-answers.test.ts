@@ -763,3 +763,262 @@ describe('ai-train rag_answers edition 8 (#3278 v8)', () => {
     }
   });
 });
+
+// #3319 (круг v9): v8 учил «детский квест + ещё один обычный» (13 из 49 подсказок с одной помеченной карточкой места),
+// «выбери один» и пять карточек города не были представлены. Edition 9: один помеченный — один пункт.
+describe('ai-train rag_answers edition 9 (#3319 v9)', () => {
+  let home: string;
+  let rows: Record<string, any>[];
+  const lang = (r: Record<string, any>) => r.id.split(':').at(-2);
+  const user = (r: Record<string, any>): string => r.messages.at(-2).content;
+  const answer = (r: Record<string, any>): string => r.messages.at(-1).content;
+  const answerUrls = (r: Record<string, any>): string[] => answer(r).match(URL_RE) ?? [];
+  const place = (r: Record<string, any>): string => r.key.split(':')[1];
+  // карточки подсказки: [тип, адрес, начало фрагмента]
+  const cards = (r: Record<string, any>) =>
+    [...user(r).matchAll(/\[\d\] (Квест|Статья) «[^»]*» — (\S+)\n?([^\n]*)/g)].map((m) => ({ type: m[1], url: m[2], head: m[3] }));
+  // квесты места: по псевдониму города в адресе (фикстура: krakow, minsk, grodno, warsaw)
+  const ALIAS: Record<string, string> = { Краков: 'krakow', Минск: 'minsk', Гродно: 'grodno', Варшава: 'warsaw' };
+  const own = (r: Record<string, any>) => cards(r).filter((c) => c.type === 'Квест' && c.url.includes(`/quests/${ALIAS[place(r)]}/`));
+  const UNKNOWN_RE = /не указаны|не пазначаны|не вказано|nie poda(?:ją|je)|(?:do|does) not state/;
+  const AUDIENCE_KINDS = ['kids', 'kids_followup', 'one_marked', 'one_any'];
+
+  beforeAll(() => {
+    home = makeTempDir('ai-train-rag9-');
+    const raw = path.join(home, 'data', 'raw');
+    fs.mkdirSync(raw, { recursive: true });
+    const q = (id: string, title: string, city: string, alias: string, duration: number, extra: Record<string, unknown> = {}) =>
+      ({ ...quest(id, title, city, alias, duration), ...extra });
+    writeJsonl(path.join(raw, 'travels.jsonl'), [
+      travel(1, 'Краков: путеводитель по местам', 'Краков', 'Польша'),
+      travel(2, 'Минск за выходные: путеводитель', 'Минск', 'Беларусь'),
+      travel(3, 'Гродно за 1 день', 'Гродно', 'Беларусь'),
+    ]);
+    writeJsonl(path.join(raw, 'quests.jsonl'), [
+      // Краков: один детский, один семейный, шесть обычных (пять и больше — для crowded5)
+      q('krakow-a', 'Квест по Кракову: Вавельский дракон', 'Краков', 'krakow', 120),
+      q('krakow-b', 'Квест по Кракову: Казимеж', 'Краков', 'krakow', 60),
+      q('krakow-c', 'Квест по Кракову: Нова-Хута', 'Краков', 'krakow', 90),
+      q('krakow-d', 'Квест по Кракову: тропа шопкарей', 'Краков', 'krakow', 100),
+      q('krakow-e', 'Квест по Кракову: Тынец', 'Краков', 'krakow', 240),
+      q('krakow-f', 'Квест по Кракову: курган Ванды', 'Краков', 'krakow', 300),
+      q('krakow-kids', 'Экзамен смотрителя драконят', 'Краков', 'krakow', 80, { tags: { kids: true, 'age-8-10': true, 'adult-required': true } }),
+      q('krakow-family', 'Парк Прокоцим: голоса парка', 'Краков', 'krakow', 90, { tags: ['family', 'citywalk'] }),
+      // Минск: два детских и четыре обычных
+      q('minsk-a', 'Квест по Минску: цмок', 'Минск', 'minsk', 45),
+      q('minsk-b', 'Квест по Минску: предания', 'Минск', 'minsk', 150),
+      q('minsk-c', 'Квест по Минску: дворики', 'Минск', 'minsk', 110),
+      q('minsk-d', 'Квест по Минску: Троицкое', 'Минск', 'minsk', 95),
+      q('minsk-kids-1', 'Друзья из бронзы', 'Минск', 'minsk', 75, { tags: { kids: true, 'age-8-10': true } }),
+      q('minsk-kids-2', 'Школа маленьких сыщиков', 'Минск', 'minsk', 70, { tags: { kids: true, 'age-5-7': true } }),
+      // Гродно: только семейный
+      q('grodno-a', 'Квест по Гродно: замки', 'Гродно', 'grodno', 70),
+      q('grodno-b', 'Квест по Гродно: улицы', 'Гродно', 'grodno', 95),
+      q('grodno-family', 'Лето на Немане', 'Гродно', 'grodno', 80, { tags: { family: true } }),
+      // Варшава: пометок нет
+      q('warsaw-a', 'Квест по Варшаве: Старый город', 'Варшава', 'warsaw', 90),
+      q('warsaw-b', 'Квест по Варшаве: Мокотув и Повисле', 'Варшава', 'warsaw', 100),
+      q('warsaw-c', 'Квест по Варшаве: пражский берег', 'Варшава', 'warsaw', 85),
+    ]);
+    const mixFile = path.join(home, 'rag9.json');
+    fs.writeFileSync(mixFile, JSON.stringify({ name: 'rag9', split: { by: 'key', valid_share: 0, test_share: 0 }, sets: { rag_answers: { options: { edition: 9, per_place: 1, page_travels: 2, page_quests: 4 } } } }));
+    const run = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', path.join(home, 'out9')]);
+    expect(run.status).toBe(0);
+    rows = readJsonl(path.join(home, 'data', 'sets', 'rag_answers', 'train.jsonl'));
+  });
+  afterAll(() => removeDir(home));
+
+  // Эталон: хеши записей, снятые с кода до правки (HEAD 28d6a6a39) на этой же фикстуре; подсказка приложения и вопросы
+  // контура подменены, чтобы хеш не менялся от правок prompt.ts и новых оценочных вопросов.
+  it('прежние edition 3–8 выдают те же записи байт в байт', () => {
+    const script = [
+      'import sys, json, hashlib, tempfile',
+      `sys.path.insert(0, ${JSON.stringify(DIR)})`,
+      'from pathlib import Path',
+      'from sets import assistant_prompt as a, rag_answers as R',
+      'a._fixture = {"system": {l: f"SYS {l}" for l in a.LOCALES}, "offtopic_reply": {l: "no" for l in a.LOCALES}, "max_answer_chars": 1200,',
+      ' "user_with_sources": "Материалы сайта:\\n{sources}\\n\\nВопрос посетителя: {question}", "user_no_sources": "Материалы сайта: ничего.\\n\\nВопрос посетителя: {question}"}',
+      'R.is_contour_question = lambda q: False',
+      'raw = Path(tempfile.mkdtemp())',
+      'def w(name, rows): (raw/name).write_text("\\n".join(json.dumps(r, ensure_ascii=False) for r in rows)+"\\n", encoding="utf-8")',
+      'def travel(i, title, city, country): return {"id": i, "slug": f"travel-{i}", "name": title, "title": title, "cityName": city, "countryName": country,',
+      '    "meta_description": f"{title}: маршрут на выходные и советы по парковке. Второе предложение.", "description": "<p>" + "Длинный рассказ о поездке. " * 20 + "</p>"}',
+      'def quest(i, title, city, alias, dur, diff="easy", **kw): return {"id": i, "quest_id": i, "title": title, "city_name": city, "city_alias": alias, "country_name": "Польша",',
+      '    "duration_min": str(dur), "difficulty": diff, "steps": [{"step_id": "a"}, {"step_id": "b"}, {"step_id": "c"}], **kw}',
+      'w("travels.jsonl", [travel(1, "Краков: путеводитель по местам", "Краков", "Польша"), travel(2, "Минск за выходные: путеводитель", "Минск", "Беларусь"),',
+      '                    travel(3, "Гродно за 1 день", "Гродно", "Беларусь"), travel(4, "Татры: поход к Морскому оку", "Закопане", "Польша")])',
+      'w("quests.jsonl", [quest("krakow-dragon", "Квест по Кракову: Вавельский дракон", "Краков", "krakow", 120), quest("krakow-kazimierz", "Квест по Кракову: Казимеж", "Краков", "krakow", 60, "medium"),',
+      '    quest("krakow-huta", "Квест по Кракову: Нова-Хута", "Краков", "krakow", 90), quest("krakow-szopka", "Квест по Кракову: тропа шопкарей", "Краков", "krakow", 100),',
+      '    quest("krakow-tyniec", "Квест по Кракову: Тынец", "Краков", "krakow", 240), quest("krakow-wanda", "Квест по Кракову: курган Ванды", "Краков", "krakow", 300),',
+      '    quest("krakow-kids-dragon", "Экзамен смотрителя драконят", "Краков", "krakow", 80, tags={"kids": True, "family": True, "age-8-10": True, "adult-required": True}),',
+      '    quest("krakow-family", "Парк Прокоцим: голоса парка", "Краков", "krakow", 90, tags=["family", "citywalk"]),',
+      '    quest("minsk-cmok", "Квест по Минску: цмок", "Минск", "minsk", 45), quest("minsk-bokhan", "Квест по Минску: предания", "Минск", "minsk", 150, "medium"),',
+      '    quest("grodno-a", "Квест по Гродно: замки", "Гродно", "grodno", 70), quest("grodno-b", "Квест по Гродно: улицы", "Гродно", "grodno", 95, "medium"),',
+      '    quest("grodno-kids", "Тайна городской башни", "Гродно", "grodno", 60, tags={"kids": True, "age-5-7": True})])',
+      'ctx = {"seed": 20261017, "raw": raw, "sources": raw/"nosources"}',
+      'h = lambda rows: hashlib.sha256(json.dumps(rows, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]',
+      'print(json.dumps({e: [len(rows), h(rows)] for e in (3, 4, 5, 6, 7, 8) for rows in [R.build(ctx, {"edition": e, "per_place": 1, "page_travels": 3, "page_quests": 6})]}))',
+    ].join('\n');
+    const run = runCli('python3', ['-I', '-c', script]);
+    expect(run.stderr).toBe('');
+    expect(JSON.parse(run.stdout)).toEqual({
+      3: [78, '6af1f12f49e3dddc'], 4: [105, '8635d1f251e96566'], 5: [148, '328411fc1c1b673c'],
+      6: [269, '9c85b374b1cc092f'], 7: [283, 'c20fd695159fd245'], 8: [320, '2e5af556d7628643'],
+    });
+  });
+
+  it('одна помеченная карточка места — один пункт, обычный квест рядом и квест другого города не называются', () => {
+    const audience = rows.filter((r) => AUDIENCE_KINDS.includes(r.kind));
+    expect(audience.length).toBeGreaterThan(60);
+    const table = new Map<string, number>();
+    for (const r of audience) {
+      const mine = own(r);
+      const marked = mine.filter((c) => c.head.startsWith('Детский'));
+      const family = mine.filter((c) => c.head.startsWith('Семейный'));
+      const named = answerUrls(r);
+      // вне квестов места не называется ничего
+      expect({ id: r.id, foreign: named.filter((u) => !mine.some((c) => c.url === u)) }).toEqual({ id: r.id, foreign: [] });
+      if (marked.length) {
+        expect({ id: r.id, named }).toEqual({ id: r.id, named: marked.map((c) => c.url) });
+        if (marked.length === 1) expect(named).toHaveLength(1);
+      } else if (family.length && r.kind !== 'one_any') {
+        expect({ id: r.id, named }).toEqual({ id: r.id, named: family.map((c) => c.url) });
+        expect(answer(r)).toMatch(/семейн|сямейн|сімейн|rodzinn|family/);
+      } else if (r.kind === 'kids' || r.kind === 'kids_followup') {
+        expect(answer(r)).toMatch(UNKNOWN_RE);
+        expect(named.length).toBeLessThanOrEqual(2);
+      }
+      const key = `${r.kind}|${lang(r)}|${marked.length}|${named.length}`;
+      table.set(key, (table.get(key) ?? 0) + 1);
+    }
+    // один помеченный → один пункт; два → два; встречаются все три случая 0/1/2 в диалоге
+    const keys = [...table.keys()];
+    expect(keys.some((k) => /^kids\|ru\|1\|1$/.test(k))).toBe(true);
+    expect(keys.some((k) => /^kids\|pl\|2\|2$/.test(k))).toBe(true);
+    for (const k of ['0', '1', '2']) expect(keys.some((x) => x.startsWith('kids_followup|') && x.split('|')[2] === k)).toBe(true);
+    expect(keys.filter((k) => /^kids\|[a-z]+\|1\|/.test(k)).every((k) => k.endsWith('|1'))).toBe(true);
+  });
+
+  it('новые и изменённые виды идут на пяти языках и в равном числе', () => {
+    for (const kind of ['kids', 'kids_followup', 'one_marked', 'one_any', 'crowded5']) {
+      const counts = new Map<string, number>();
+      for (const r of rows.filter((x) => x.kind === kind)) counts.set(lang(r), (counts.get(lang(r)) ?? 0) + 1);
+      expect({ kind, langs: [...counts.keys()].sort() }).toEqual({ kind, langs: ['be', 'en', 'pl', 'ru', 'uk'] });
+      // crowded5 теряет пример, чей вопрос совпал с вопросом контура («Какие квесты есть в Кракове?» — русский вариант)
+      expect({ kind, spread: Math.max(...counts.values()) - Math.min(...counts.values()) <= (kind === 'crowded5' ? 3 : 1) }).toEqual({ kind, spread: true });
+    }
+  });
+
+  it('«назови только его»: один пункт, одна ссылка, ровно одна помеченная карточка, без отсылки к источникам и встречного вопроса', () => {
+    const marked = rows.filter((r) => r.kind === 'one_marked');
+    expect(marked.length).toBeGreaterThan(8);
+    for (const r of marked) {
+      expect(cards(r).filter((c) => c.head.startsWith('Детский') && own(r).some((o) => o.url === c.url))).toHaveLength(1);
+      expect(answerUrls(r)).toHaveLength(1);
+      expect(answer(r).split('\n').filter((line) => line.startsWith('- '))).toHaveLength(1);
+      expect(answer(r)).not.toMatch(/списке источников|спісе крыніц|списку джерел|liście źródeł|sources list|\?/);
+    }
+    // «выбери один» — первая карточка подсказки, и среди карточек места нет помеченных
+    const any = rows.filter((r) => r.kind === 'one_any');
+    expect(any.length).toBeGreaterThan(8);
+    for (const r of any) {
+      const mine = own(r);
+      expect(mine.length).toBeGreaterThanOrEqual(2);
+      expect(mine.some((c) => /^(?:Детский|Семейный)/.test(c.head))).toBe(false);
+      expect(answerUrls(r)).toEqual([mine[0].url]);
+      expect(answer(r)).not.toMatch(/списке источников|спісе крыніц|списку джерел|liście źródeł|sources list|\?/);
+    }
+  });
+
+  it('диалог о детях: два–пять квестов города в подсказке, первая реплика — список без детского, чужие города не называются', () => {
+    const dialog = rows.filter((r) => r.kind === 'kids_followup');
+    expect(dialog.length).toBeGreaterThan(20);
+    for (const r of dialog) {
+      expect(r.messages).toHaveLength(5);
+      const mine = own(r);
+      expect(mine.length).toBeGreaterThanOrEqual(2);
+      expect(mine.length).toBeLessThanOrEqual(5);
+      expect(r.messages[1].role).toBe('user');
+      expect(r.messages[2].content).toMatch(/https:\/\/metravel\.by\/quests\//);
+    }
+    // в части примеров рядом лежит карточка чужого города
+    expect(dialog.some((r) => cards(r).some((c) => c.type === 'Квест' && !own(r).some((o) => o.url === c.url)))).toBe(true);
+    // и ни в одном она не названа — это проверено правилом выше; пятикарточный вариант встречается
+    expect(dialog.some((r) => cards(r).length === 5)).toBe(true);
+  });
+
+  it('пять квестов одного города: три ссылки без пояснений в порядке карточек и «остальное в списке источников»', () => {
+    const five = rows.filter((r) => r.kind === 'crowded5');
+    expect(five.length).toBeGreaterThan(15);
+    for (const r of five) {
+      const shown = cards(r);
+      expect(shown).toHaveLength(5);
+      expect(new Set(shown.map((c) => c.url.split('/')[4])).size).toBe(1);
+      expect(answerUrls(r)).toEqual(shown.slice(0, 3).map((c) => c.url));
+      expect(answer(r).split('\n').filter((line) => line.startsWith('- ')).every((line) => /^- \[[^\]]+\]\(https[^)]+\)$/.test(line))).toBe(true);
+      expect(answer(r)).toMatch(/списке источников|спісе крыніц|списку джерел|liście źródeł|sources list|списке источников\./);
+    }
+    const injected = rows.filter((r) => r.kind === 'crowded_injected');
+    expect(injected.length).toBeGreaterThan(3);
+    for (const r of injected) {
+      expect(lang(r)).toBe('ru');
+      expect(user(r).split('Вопрос посетителя: ')[1]).toMatch(/google\.com|booking\.com|tripadvisor\.com|wikipedia\.org/);
+      expect(answer(r)).not.toMatch(/google|booking|tripadvisor|wikipedia/);
+      expect(cards(r)).toHaveLength(5);
+      expect(answerUrls(r)).toEqual(cards(r).slice(0, 3).map((c) => c.url));
+      expect(answer(r)).toMatch(/списке источников/);
+    }
+  });
+
+  it('прежняя пара карточек диалога edition 8 заменена, а вопрос другой редакции остаётся как был', () => {
+    // у edition 9 нет вида followup с двумя карточками «общий + детский» из edition 8: они теперь kids_followup
+    expect(rows.some((r) => r.kind === 'followup' && r.messages.length === 5 && cards(r).length === 2 && /Детский городской квест/.test(user(r)))).toBe(false);
+    expect(rows.filter((r) => r.kind === 'kids_followup').length).toBeGreaterThan(0);
+  });
+
+  it('вопрос, повторяющий живой или отложенный набор по любому имени cases*.jsonl, генератор не строит', () => {
+    const script = [
+      'import sys, json, tempfile, shutil',
+      `sys.path.insert(0, ${JSON.stringify(DIR)})`,
+      'from pathlib import Path',
+      'from sets import assistant_prompt as a, rag_answers as R',
+      `src = Path(${JSON.stringify(path.join(process.cwd(), 'scripts/ai-assistant-eval'))})`,
+      'tmp = Path(tempfile.mkdtemp())',
+      'for name in ("cases.jsonl", "cases.quality.jsonl", "cases.complex.jsonl", "fixtures.complex.json"): shutil.copy(src / name, tmp / name)',
+      'asks = [t.format(loc="в Минске") for t in R.ONE_KIDS_ASK["ru"]]',
+      '(tmp / "cases.live.jsonl").write_text("\\n".join(json.dumps({"q": q}, ensure_ascii=False) for q in asks[:2]) + "\\n", encoding="utf-8")',
+      '(tmp / "cases.holdout-2026-11.jsonl").write_text("\\n".join(json.dumps({"turns": [q]}, ensure_ascii=False) for q in asks[2:]) + "\\n", encoding="utf-8")',
+      'a.CONTOUR_CASES = tmp / "cases.jsonl"; a._contour = None',
+      'print(json.dumps({"all": all(a.is_contour_question(q) for q in asks), "names": sorted(k for k in a.holdout_provenance() if k.startswith("cases"))}))',
+    ].join('\n');
+    const run = runCli('python3', ['-I', '-c', script]);
+    expect(run.stderr).toBe('');
+    const out = JSON.parse(run.stdout);
+    expect(out.all).toBe(true);
+    expect(out.names).toEqual(expect.arrayContaining(['cases.live.jsonl', 'cases.holdout-2026-11.jsonl']));
+  });
+
+  it('перефраз оценочных вопросов в их городе не строится: h29, mt03, h28, q11, q12, q29, v5ln03, in08', () => {
+    const script = [
+      'import sys, json',
+      `sys.path.insert(0, ${JSON.stringify(DIR)})`,
+      'from sets import rag_answers as R',
+      'print(json.dumps({"held": {k: sorted(v) for k, v in R.HELDOUT_CITIES_9.items()}, "asks": [t for l in R.ONE_KIDS_ASK.values() for t in l]}, ensure_ascii=False))',
+    ].join('\n');
+    const run = runCli('python3', ['-I', '-c', script]);
+    expect(run.stderr).toBe('');
+    const out = JSON.parse(run.stdout);
+    expect(out.held).toEqual({
+      kids_followup: ['Барановичи', 'Несвиж', 'Пинск'], one_marked: ['Барановичи', 'Варшава'], one_any: ['Варшава'],
+      crowded5: ['Гродно'], crowded_injected: ['Гродно'],
+    });
+    // q11/q12: «Какой из квестов … детский? Назови только его» / «Який із … квестів дитячий? Назви тільки його»
+    for (const ask of out.asks) expect(ask).not.toMatch(/Какой из квестов|Який із квестів|Які з квэстаў|Który z questów|Which of the quests/);
+  });
+
+  it('неизвестная edition — ошибка сборки', () => {
+    const run = runCli('python3', ['-I', '-c', `import sys\nsys.path.insert(0, ${JSON.stringify(DIR)})\nfrom pathlib import Path\nfrom sets import rag_answers as R\nR.build({"seed": 1, "raw": Path("."), "sources": Path(".")}, {"edition": 10})`]);
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('edition must be 3, 4, 5, 6, 7, 8 or 9');
+  });
+});

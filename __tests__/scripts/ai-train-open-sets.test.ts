@@ -392,8 +392,127 @@ print(json.dumps({"e1": stats(1), "e2": stats(2)}))
   });
 
   it('неизвестная edition — ошибка сборки', () => {
-    const res = runCli('python3', ['-I', '-c', `import sys\nsys.path.insert(0, sys.argv[1])\nfrom sets import osm_intents as o\no.build({"seed": 1, "sources": None}, {"edition": 3})`, DIR]);
+    const res = runCli('python3', ['-I', '-c', `import sys\nsys.path.insert(0, sys.argv[1])\nfrom sets import osm_intents as o\no.build({"seed": 1, "sources": None}, {"edition": 4})`, DIR]);
     expect(res.status).not.toBe(0);
-    expect(res.stderr).toContain('edition must be 1 or 2');
+    expect(res.stderr).toContain('edition must be 1, 2 or 3');
+  });
+});
+
+// #3319 (круг v9): фраза категории стояла в паре чаще, чем одна, а `attractions` была самой частой «второй» категорией;
+// BE «з аўтадомам» читалось как «з сабакам». Edition 3 строит набор по расписанию, а не случайным выбором.
+describe('ai-train osm_intents edition 3 (#3319 v9)', () => {
+  const SETUP = `
+import json, re, collections
+from sets import osm_intents as o
+o.load_pois = lambda root: []
+names = [("Лида", "Ліда", "Lida"), ("Гомель", "Гомель", "Homel"), ("Брест", "Брэст", "Brześć"), ("Пинск", "Пінск", "Pińsk"), ("Мир", "Мір", "Mir"), ("Слоним", "Слонім", "Słonim"),
+         ("Гданьск", "Гданьск", "Gdańsk"), ("Краков", "Кракаў", "Kraków"), ("Торунь", "Торунь", "Toruń"), ("Люблин", "Люблін", "Lublin"), ("Познань", "Познань", "Poznań"), ("Лодзь", "Лодзь", "Łódź")]
+o.load_centres = lambda root, pois, per: {"BY": [{"key": f"wd:B{i}", "ru": r, "be": b, "pl": p} for i, (r, b, p) in enumerate(names[:6])],
+                                         "PL": [{"key": f"wd:P{i}", "ru": r, "be": b, "pl": p} for i, (r, b, p) in enumerate(names[6:])]}
+rows = o.build({"seed": 7, "sources": None}, {"intents": 1500, "describe": 0, "edition": 3, "lang_share": {"be": 0.25, "pl": 0.25}})
+def parse(r):
+    q = r["messages"][1]["content"].split("«", 1)[1].rsplit("»", 1)[0]
+    return r["id"].split(":")[1], q, json.loads(r["messages"][2]["content"])
+def phrases(lang, q):
+    low, found = q.lower(), []
+    for p, c in sorted(((p, c) for c, ps in o.CAT_PHRASE[lang].items() for p in ps), key=lambda x: -len(x[0])):
+        if p.lower() in low:
+            found.append((p, c)); low = low.replace(p.lower(), "#" * len(p))
+    return found
+`;
+  const run = (code: string) => py(`${SETUP}\n${code}`);
+
+  it('фраза категории и категории ответа связаны в обе стороны; пара даёт ровно две названные категории', () => {
+    const out = run(`
+bad, leaked, held = [], 0, o.held_out_prompts()
+for r in rows:
+    lang, q, a = parse(r)
+    leaked += o.norm_question(r["messages"][1]["content"]) in held
+    if o.validate_filter(a): bad.append(("schema", q))
+    if {c for _, c in phrases(lang, q)} != set(a["categories"]): bad.append(("categories", q, a["categories"]))
+    if len(a["categories"]) == 2 and "attractions" in a["categories"] and not any(c == "attractions" for _, c in phrases(lang, q)): bad.append(("attractions", q))
+langs = collections.Counter(parse(r)[0] for r in rows)
+attractions = collections.Counter((parse(r)[2]["categories"].count("attractions"), len(parse(r)[2]["categories"])) for r in rows)
+print(json.dumps({"bad": bad[:5], "n_bad": len(bad), "leaked": leaked, "langs": langs, "attractions": {f"{k[0]}/{k[1]}": v for k, v in attractions.items()}}))
+`);
+    expect(out.n_bad).toBe(0);
+    expect(out.leaked).toBe(0);
+    const total = Object.values(out.langs as Record<string, number>).reduce((a, b) => a + b, 0);
+    expect(out.langs.be / total).toBeGreaterThan(0.22);
+    expect(out.langs.be / total).toBeLessThan(0.28);
+    expect(out.langs.pl / total).toBeGreaterThan(0.22);
+    expect(out.langs.pl / total).toBeLessThan(0.28);
+    // attractions: и одна, и в паре, и без неё
+    expect(out.attractions['1/1']).toBeGreaterThan(50);
+    expect(out.attractions['1/2']).toBeGreaterThan(10);
+    expect(out.attractions['0/2']).toBeGreaterThan(out.attractions['1/2']);
+  });
+
+  it('доля пар около 19 %, и для каждой фразы каждого языка «одна категория» не менее чем в 1,5 раза чаще, чем пара с ней', () => {
+    const out = run(`
+alone, paired, pairs = collections.Counter(), collections.Counter(), 0
+for r in rows:
+    lang, q, a = parse(r)
+    two = len(a["categories"]) == 2
+    pairs += two
+    for p, _ in phrases(lang, q):
+        (paired if two else alone)[(lang, p)] += 1
+phrase_keys = sorted({(lang, p) for lang, by in o.CAT_PHRASE.items() for ps in by.values() for p in ps})
+print(json.dumps({"pair_share": pairs / len(rows), "ratios": {f"{k[0]}:{k[1]}": [alone[k], paired[k]] for k in phrase_keys}}))
+`);
+    expect(out.pair_share).toBeGreaterThan(0.18);
+    expect(out.pair_share).toBeLessThan(0.22);
+    expect(Object.keys(out.ratios).length).toBeGreaterThanOrEqual(40);
+    for (const [phrase, [alone, paired]] of Object.entries(out.ratios as Record<string, number[]>)) {
+      expect({ phrase, ok: alone >= 1.5 * paired && paired > 0 }).toEqual({ phrase, ok: true });
+    }
+  });
+
+  it('контрастные пары: тот же вопрос, различается только ограничение («с собакой» → dogs, «с кемпером» → camper) — не меньше 30 на BE и PL', () => {
+    const out = run(`
+pairs = collections.defaultdict(list)
+for r in rows:
+    if r["id"].startswith("ic"):
+        pairs[r["id"].split(":")[0]].append(r)
+report = collections.Counter(); problems = []
+for key, members in pairs.items():
+    if len(members) != 2:
+        problems.append(("orphan", key)); continue
+    (l1, q1, a1), (l2, q2, a2) = parse(members[0]), parse(members[1])
+    cons = sorted(next(iter(a["constraints"])) for a in (a1, a2))
+    same = all(a1[k] == a2[k] for k in ("categories", "radius_km", "center")) and l1 == l2 and members[0]["key"] == members[1]["key"]
+    if cons != ["camper", "dogs"] or not same or q1 == q2 or len(a1["constraints"]) != 1 or len(a2["constraints"]) != 1:
+        problems.append(("not a contrast", key, q1, q2))
+    report[l1] += 1
+print(json.dumps({"report": report, "problems": problems[:3], "n_problems": len(problems)}))
+`);
+    expect(out.n_problems).toBe(0);
+    expect(out.report.be).toBeGreaterThanOrEqual(30);
+    expect(out.report.pl).toBeGreaterThanOrEqual(30);
+    expect(out.report.ru).toBeGreaterThanOrEqual(15);
+  });
+
+  it('вопросы среза оценки не строятся, прежние edition 1 и 2 дают те же записи байт в байт', () => {
+    const out = py(`
+import json, hashlib
+from sets import osm_intents as o
+o.load_pois = lambda root: []
+o.load_centres = lambda root, pois, per: {"BY": [{"key": "wd:Q2", "ru": "Лида", "be": "Ліда", "pl": "Lida"}, {"key": "wd:Q4", "ru": "Гомель", "be": "Гомель", "pl": "Homel"}],
+                                         "PL": [{"key": "wd:Q3", "ru": "Гданьск", "be": "Гданьск", "pl": "Gdańsk"}, {"key": "wd:Q5", "ru": "Краков", "be": "Кракаў", "pl": "Kraków"}]}
+h = lambda rows: hashlib.sha256(json.dumps(rows, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
+res = {}
+for e in (1, 2):
+    rows = o.build({"seed": 7, "sources": None}, {"intents": 400, "describe": 0, "edition": e, "lang_share": {"be": 0.2, "pl": 0.2}}); res[e] = [len(rows), h(rows)]
+held = o.held_out_prompts()
+three = o.build({"seed": 7, "sources": None}, {"intents": 400, "describe": 0, "edition": 3})
+res["leaked"] = sum(o.norm_question(r["messages"][1]["content"]) in held for r in three)
+res["three"] = len(three)
+print(json.dumps(res))
+`);
+    // Эталон: хеши записей кода до правки (HEAD 28d6a6a39), те же центры и параметры.
+    expect(out['1']).toEqual([399, '671f4b552e5e974b']);
+    expect(out['2']).toEqual([398, '5231ea723d4a69ff']);
+    expect(out.leaked).toBe(0);
+    expect(out.three).toBeGreaterThan(300);
   });
 });

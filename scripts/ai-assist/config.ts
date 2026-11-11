@@ -45,6 +45,8 @@ export interface AssistConfig {
   demandLogPath: string
   /** IP посетителя из `X-Real-IP`/`X-Forwarded-For` — сервис стоит за nginx. */
   trustProxy: boolean
+  /** Контур оценки (#3286): событие `trace` в потоке `/ai/ask` и адрес модели в `/ai/health`. В образе прода не задаётся. */
+  evalTrace: boolean
 }
 
 function envNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -79,5 +81,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
     dayTimeZone: env.AI_ASSIST_DAY_TZ || DEFAULT_DAY_TIME_ZONE,
     demandLogPath: env.AI_DEMAND_LOG || DEFAULT_DEMAND_LOG_PATH,
     trustProxy: env.AI_ASSIST_TRUST_PROXY !== '0',
+    evalTrace: env.AI_ASSIST_EVAL_TRACE === '1',
   }
 }

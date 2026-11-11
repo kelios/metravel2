@@ -14,6 +14,7 @@ import type { DemandEntry as ClientDemandEntry, DemandReason as ClientDemandReas
 import { createApp } from '@/scripts/ai-assist/app'
 import { clientIp, GENERATOR_RETRY_AFTER_SEC } from '@/scripts/ai-assist/ask'
 import { ResponseCache } from '@/scripts/ai-assist/cache'
+import { loadConfig } from '@/scripts/ai-assist/config'
 import { createDemandLog, type DemandEntry, type DemandReason } from '@/scripts/ai-assist/demandLog'
 import { AskLimits, createCounterStore, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 
@@ -172,7 +173,7 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
   }
 }
 
-function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[] } = {}) {
+function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[]; evalTrace?: boolean } = {}) {
   const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
@@ -196,6 +197,7 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
       queueTimeoutMs: overrides.queueTimeoutMs ?? 200,
       trustProxy: true,
       now: overrides.now,
+      evalTrace: overrides.evalTrace ? { llmUrl: 'http://127.0.0.1:8090' } : null,
     },
     authorDraft: { limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock('Europe/Minsk'), dailyLimit: 5, strikesToBlock: 3 }) },
     suggestTags: { catalog: { dictionary: async () => null, travelTags: async () => null } },
@@ -422,6 +424,44 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
     }
   })
 
+  it('#3315: в подсказку модели идут только карточки города из вопроса; список источников посетителя полный и без служебного поля места', async () => {
+    const prompts: string[] = []
+    const generator = fakeGenerator((request) => {
+      prompts.push(String(request.messages.at(-1)?.content ?? ''))
+      return 'Загляните в [Квест по Бресту](https://metravel.by/quests/2)'
+    })
+    const chunks: Spec[] = [
+      ...FIXTURE_CHUNKS,
+      { type: 'quest', sourceId: 4, title: 'Набережная Гродно', text: 'квест задание набережная неман', city: 'Гродно' },
+    ]
+    const { server } = makeServer({ generator, chunks })
+    await listen(server)
+    try {
+      const result = await post(server, '/ai/ask', { q: 'Какие квесты есть в Бресте?', locale: 'ru' })
+      expect(result.status).toBe(200)
+      const sources = result.events[0].data.sources as { type: string; source_id: string; place?: unknown }[]
+      // Посетитель видит весь подбор, включая квесты Гродно.
+      expect(sources.some((s) => s.type === 'quest' && s.source_id === '2')).toBe(true)
+      expect(sources.some((s) => s.type === 'quest' && s.source_id !== '2')).toBe(true)
+      expect(sources.every((s) => !('place' in s))).toBe(true)
+      // Модель — только карточки Бреста.
+      expect(prompts[0]).toContain('Квест «Квест по Бресту» — https://metravel.by/quests/2')
+      expect(prompts[0]).not.toContain('Гродно')
+
+      // Уточнение без своего места берёт город из опоры диалога.
+      const followUp = await post(server, '/ai/ask', {
+        q: 'А какой из них самый короткий?',
+        locale: 'ru',
+        history: [{ role: 'user', text: 'Какие квесты есть в Бресте?' }, { role: 'assistant', text: 'В Бресте есть квест.' }],
+      })
+      expect(followUp.status).toBe(200)
+      expect(prompts[1]).toContain('Квест «Квест по Бресту»')
+      expect(prompts[1]).not.toContain('Гродно')
+    } finally {
+      await close(server)
+    }
+  })
+
   it('отказ модели на вопрос с признаком поездки (#3216) — done no_sources и строка в журнале спроса, без страйка', async () => {
     const requests: GenerateRequest[] = []
     const { server, limits, readLog } = makeServer({
@@ -443,6 +483,71 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
     } finally {
       await close(server)
     }
+  })
+
+  it('#3286: с AI_ASSIST_EVAL_TRACE поток несёт перед done событие trace — карточки подсказки и сырой ответ до стража; без флага события нет', async () => {
+    const prompts: string[] = []
+    const answer = 'Загляните в [Квест по Бресту](https://metravel.by/quests/2) и на https://evil.example/x'
+    const generator = () => fakeGenerator((request) => {
+      prompts.push(String(request.messages.at(-1)?.content ?? ''))
+      return answer
+    })
+    const chunks: Spec[] = [...FIXTURE_CHUNKS, { type: 'quest', sourceId: 4, title: 'Набережная Гродно', text: 'квест задание набережная неман', city: 'Гродно' }]
+    const promptUrls = (prompt: string) => [...prompt.matchAll(/^\[\d+\] .* — (\S+)$/gm)].map((match) => match[1])
+    const traced = makeServer({ generator: generator(), chunks, evalTrace: true })
+    const plain = makeServer({ generator: generator(), chunks })
+    await Promise.all([listen(traced.server), listen(plain.server)])
+    try {
+      const reply = await post(traced.server, '/ai/ask', { q: 'Какие квесты есть в Бресте?', locale: 'ru' })
+      expect(reply.events.map((event) => event.event).filter((name) => name !== 'text')).toEqual(['sources', 'trace', 'done'])
+      const trace = reply.events.find((event) => event.event === 'trace')!.data
+      // Сырой ответ — с чужим адресом, который страж убрал из показанного текста.
+      expect(trace.raw_text).toBe(answer)
+      expect(reply.events.filter((event) => event.event === 'text').at(-1)!.data.text).not.toContain('evil.example')
+      // Карточки события — ровно те, что стоят в сообщении модели: отбор по месту (#3315) оставил только Брест,
+      // а посетитель получил полный подбор.
+      const urls = trace.prompt_sources.map((source: { url: string }) => source.url)
+      expect(urls).toEqual(promptUrls(prompts[0]))
+      expect(urls).toEqual(['https://metravel.by/quests/2'])
+      expect(reply.events[0].data.sources.length).toBeGreaterThan(urls.length)
+      expect(trace.prompt_sources[0]).toMatchObject({ type: 'quest', source_id: '2', title: 'Квест по Бресту', path: '/quests/2' })
+      expect(trace.prompt_sources.every((source: object) => !('place' in source))).toBe(true)
+
+      // Закреплённая страница (#2897): отбора по месту нет, в событии — те же карточки, что в подсказке.
+      const pinned = await post(traced.server, '/ai/ask', { q: 'квест гродно замок', locale: 'ru', source: { type: 'travel', id: 816 } })
+      const pinnedTrace = pinned.events.find((event) => event.event === 'trace')!.data
+      expect(pinnedTrace.prompt_sources.map((source: { url: string }) => source.url)).toEqual(promptUrls(prompts[1]))
+      expect(pinnedTrace.prompt_sources[0].source_id).toBe('816')
+
+      // Модель не вызывалась (фильтр тем) — события нет: карточек подсказки и ответа не существует.
+      const offTopic = await post(traced.server, '/ai/ask', { q: 'как готовить кашу' })
+      expect(offTopic.events.map((event) => event.event)).toEqual(['sources', 'done'])
+
+      // Без флага — прежний поток, а /ai/health не называет адрес модели.
+      const silent = await post(plain.server, '/ai/ask', { q: 'Какие квесты есть в Бресте?', locale: 'ru' })
+      expect(silent.events.some((event) => event.event === 'trace')).toBe(false)
+      expect(silent.events.at(-1)!.data.status).toBe('done')
+      const health = (server: http.Server) =>
+        new Promise<Record<string, unknown>>((resolve, reject) => {
+          http.get({ host: '127.0.0.1', port: (server.address() as AddressInfo).port, path: '/ai/health' }, (response) => {
+            const chunks: Buffer[] = []
+            response.on('data', (chunk) => chunks.push(chunk))
+            response.on('end', () => resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))))
+          }).on('error', reject)
+        })
+      expect(await health(traced.server)).toMatchObject({ eval_trace: true, llm_url: 'http://127.0.0.1:8090' })
+      const plainHealth = await health(plain.server)
+      expect('eval_trace' in plainHealth || 'llm_url' in plainHealth).toBe(false)
+    } finally {
+      await Promise.all([close(traced.server), close(plain.server)])
+    }
+  })
+
+  it('#3286: флаг трассировки читается только из AI_ASSIST_EVAL_TRACE=1, образ прода его не задаёт', () => {
+    expect(loadConfig({}).evalTrace).toBe(false)
+    expect(loadConfig({ AI_ASSIST_EVAL_TRACE: 'true' }).evalTrace).toBe(false)
+    expect(loadConfig({ AI_ASSIST_EVAL_TRACE: '1' }).evalTrace).toBe(true)
+    expect(readFileSync(join(process.cwd(), 'services/ai-assist/Dockerfile'), 'utf8')).not.toContain('AI_ASSIST_EVAL_TRACE')
   })
 
   it('отказ самой модели — done off_topic/model_refusal без страйка; лимит списан', async () => {

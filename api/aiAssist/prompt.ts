@@ -9,6 +9,8 @@
  */
 
 import { AI_PROMPT_SOURCES_LIMIT } from './policy.ts'
+import { selectPlaceSources } from './promptPlace.ts'
+import { buildRetrievalQuery, resolveRetrievalAnchor } from './retrievalQuery.ts'
 import type { AiChatMessage, AiHistoryItem, AiSource } from './types'
 
 /** Копия `SYSTEM` из `scripts/ai-train/sets/common.py` — менять синхронно. */
@@ -94,15 +96,24 @@ export type BuildAssistantMessagesInput = {
   locale: string
   sources: readonly AiSource[]
   history?: readonly AiHistoryItem[]
+  /**
+   * Запрос подбора (#3315) — вопрос вместе с опорой уточнения: по нему определяется место, карточки
+   * которого идут в подсказку. Не задан — собирается из вопроса и истории тем же правилом, что у
+   * подбора; `null` — отбора по месту нет (закреплённая страница #2897: её карточки уже выбраны).
+   */
+  retrievalQuery?: string | null
 }
 
 /**
- * Карточки, которые уходят в подсказку модели (#3268): первые `AI_PROMPT_SOURCES_LIMIT` по порядку
- * подбора. Одно место для экрана, службы `/ai/ask` и набора quality; список источников посетителя и
- * страж ссылок работают с полным подбором.
+ * Карточки, которые уходят в подсказку модели: сначала отбор по месту вопроса (#3315), затем первые
+ * `AI_PROMPT_SOURCES_LIMIT` по порядку подбора (#3268). Одно место для экрана, службы `/ai/ask` и
+ * набора quality; список источников посетителя и страж ссылок работают с полным подбором.
  */
-export const selectPromptSources = (sources: readonly AiSource[], limit: number = AI_PROMPT_SOURCES_LIMIT): readonly AiSource[] =>
-  sources.slice(0, Math.max(0, limit))
+export const selectPromptSources = (
+  sources: readonly AiSource[],
+  limit: number = AI_PROMPT_SOURCES_LIMIT,
+  placeQuery: string | null = null,
+): readonly AiSource[] => selectPlaceSources(placeQuery, sources).slice(0, Math.max(0, limit))
 
 /** Сообщения для `/v1/chat/completions`: system → история (≤ 6) → вопрос с карточками подсказки. */
 export function buildAssistantMessages({
@@ -110,16 +121,18 @@ export function buildAssistantMessages({
   locale,
   sources,
   history = [],
+  retrievalQuery,
 }: BuildAssistantMessagesInput): AiChatMessage[] {
   const trimmedHistory = history
     .filter((item) => item && (item.role === 'user' || item.role === 'assistant'))
     .slice(-MAX_HISTORY_ITEMS)
     .map((item) => ({ role: item.role, content: sanitizeFragment(item.text, MAX_HISTORY_TEXT_LENGTH) }))
     .filter((item) => item.content.length > 0)
+  const placeQuery = retrievalQuery === undefined ? buildRetrievalQuery(question, resolveRetrievalAnchor(history)) : retrievalQuery
 
   return [
     { role: 'system', content: buildSystemPrompt(locale) },
     ...trimmedHistory,
-    { role: 'user', content: buildUserMessage(question, selectPromptSources(sources)) },
+    { role: 'user', content: buildUserMessage(question, selectPromptSources(sources, AI_PROMPT_SOURCES_LIMIT, placeQuery)) },
   ]
 }

@@ -402,7 +402,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           return
         }
 
-        const messages = buildAssistantMessages({ question, locale, sources, history })
+        // Место вопроса — по запросу подбора (#3315); у закреплённой страницы карточки уже выбраны.
+        const messages = buildAssistantMessages({ question, locale, sources, history, retrievalQuery: pinned ? null : searchQuery })
         let pendingFull = ''
         const flush = () => {
           flushTimerRef.current = null

@@ -26,7 +26,26 @@ Options (mixes/*.yaml → sets.osm_intents.options):
   lang_share    — {be: 0.1, pl: 0.1} share of non-Russian intent questions;
   edition       — 1 (default): a constraint always follows a comma at the end of the question;
                   2 (#3278): constraints in every position and form (CONSTRAINT_FORMS) and a pair of
-                  categories in 45 % of the questions. Edition 1 output is unchanged.
+                  categories in 45 % of the questions. Edition 1 output is unchanged;
+                  3 (#3319): the phrase ↔ category link is balanced in both directions, see «Edition 3» below.
+                  Editions 1 and 2 are unchanged;
+  pair_share    — edition 3: share of questions with two categories (default 0.19);
+  contrast      — edition 3: {be: 40, pl: 40, ru: 24} pairs of the same question that differ only in the
+                  constraint (dogs / camper).
+
+Edition 3 (#3319 v9) — from the v8 acceptance of the filter slice (o09, o21, o23, o24, o26, o33, o34, o36, o37):
+a category phrase stood next to another category more often than alone (RU «музе*»: 47 alone, 80 in a pair;
+BE and PL thinner), and `attractions` was the most frequent «second» category, so the model added or swapped
+it: BE «музеі» → culture + attractions, «замки и музеи» → the second category became attractions, BE
+«з аўтадомам» → dogs. The generator is stratified instead of random:
+  * every category phrase of every language gets at least 1,5 times as many questions where it stands alone as
+    questions where it stands in a pair (pair share 19 %, average ratio about 2: at a uniform draw it is (1 − s) / 2s, so 25 %
+    pairs would give 1,5);
+  * pairs walk through all 30 ordered category pairs, so a pair never holds a category its question does not
+    name, and `attractions` stands in 1/3 of them and not in 2/3; alone it has 1,5× the share of the others;
+  * contrast pairs: one question with the same centre, radius, categories and opener, whose only difference is
+    the constraint phrase («з сабакам» → dogs, «з аўтадомам / з кемперам» → camper; PL «z psem» / «kamperem»);
+  * the language share is exact (be 25 %, pl 25 %), not a per-sample draw.
 """
 from __future__ import annotations
 
@@ -162,6 +181,18 @@ PLURAL_CATS = {
            "ruiny", "zamki i pałace"},
 }
 PAIR_SHARE_V2 = 0.45
+# Edition 3 (#3319): see the module docstring. Pair share 19 % (eval slice: 9 pairs of 44; v8 train held 238 pairs) gives an
+# average ratio alone : in a pair of about 2, at least 1,5 per phrase.
+PAIR_SHARE_V3 = 0.19
+CONTRAST_PAIRS_V3 = {"be": 40, "pl": 40, "ru": 24}
+# attractions stands alone 1,5 times as often as any other category
+SINGLE_WEIGHT_V3 = {c: (3 if c == "attractions" else 2) for c in CATEGORIES}
+# one more opener without a verb for BE/PL and «Шукаю» for BE (the nouns are plural and inanimate, so the accusative is the nominative)
+OPENERS_V3 = {"ru": OPENERS["ru"], "be": OPENERS["be"] + ["{cats} {where}{cons}", "Шукаю {cats} {where}{cons}."],
+              "pl": OPENERS["pl"] + ["{cats} {where}{cons}"]}
+# the layouts a contrast pair can share: both constraints have a tail and a sentence in every language
+CONTRAST_LAYOUTS = ("tail", "tail_plain", "sentence")
+CONTRAST_CONSTRAINTS = ("dogs", "camper")
 
 DESCRIBE_PROMPT = ("Кратко опиши место по данным OpenStreetMap в стиле metravel.by, без выдуманных фактов. "
                    "Страна по границе выборки: {country}.\nТеги:\n{tags}")
@@ -402,6 +433,113 @@ def intent_sample_v2(rng: random.Random, lang: str, centres: dict[str, list[dict
     return q, answer, key
 
 
+# ----------------------------------------------------------------------------- edition 3
+
+def _where_v3(rng: random.Random, lang: str, centres: dict[str, list[dict]]) -> tuple[str, dict | None, int, str]:
+    """Place phrase, centre, radius and split key — the draws of intent_sample_v2, shared by a contrast pair."""
+    country = rng.choice(["BY", "PL"])
+    roll = rng.random()
+    if roll < 0.1 or not centres[country]:
+        where = rng.choice(COUNTRY_PHRASE[lang]).format(c=COUNTRY_L[lang][country] if lang != "ru" else COUNTRY_RU[country])
+        return where, None, 200, f"country:{country}"
+    place = rng.choice(centres[country])
+    x, key = place[lang], place["key"]
+    if roll < 0.55:
+        radius = rng.choice(RADII)
+        phrase = rng.choice(RADIUS_PHRASE[lang])
+    else:
+        phrase, radius = rng.choice(NEAR_PHRASE[lang])
+    return phrase.format(r=radius, x=in_phrase(x, phrase, lang, rng)), {"name": x}, radius, key
+
+
+def _question_v3(rng: random.Random, lang: str, cat_phrases: list[str], where: str, cons: list[str], opener: str,
+                 layout: str | None = None) -> str:
+    """The question of intent_sample_v2 for the given constraints; `layout` forces one layout for every constraint
+    (a contrast pair keeps the question's shape and changes only the constraint)."""
+    cats_text = JOIN[lang].join(cat_phrases)
+    lead, tails, sentences = "", [], []
+    for index, c in enumerate(cons):
+        forms = CONSTRAINT_FORMS[lang][c]
+        layouts = ["tail", "tail_plain", "sentence"] + [name for name in ("mid", "noun") if name in forms]
+        if "lead" in forms and all(p in PLURAL_CATS[lang] for p in cat_phrases):
+            layouts.append("lead")
+        chosen = layout or (rng.choice(layouts) if index == 0 else "tail")
+        if chosen == "mid":
+            cats_text = f"{cats_text} {rng.choice(forms['mid'])}"
+        elif chosen == "noun":
+            cats_text = f"{cats_text}{JOIN[lang]}{rng.choice(forms['noun'])}"
+        elif chosen == "lead":
+            lead = rng.choice(forms["lead"])
+        elif chosen == "sentence":
+            sentences.append(rng.choice(forms["sentence"]))
+        else:
+            tails.append(("" if chosen == "tail_plain" else ",") + f" {rng.choice(forms['tail'])}")
+    if lead:
+        q = f"{lead} {cats_text} {where}{''.join(tails)}"
+    else:
+        q = opener.format(where=where, cats=cats_text, cons="".join(tails))
+    q = q[0].upper() + q[1:]
+    if sentences:
+        q = (q if q[-1] in ".?" else q + ".") + " " + " ".join(sentences)
+    return q
+
+
+class _Cycle:
+    """Phrases (or any items) in shuffled rounds: every item comes up floor(n / len) or ceil(n / len) times."""
+
+    def __init__(self, rng: random.Random, items: list):
+        self.rng, self.items, self.queue = rng, list(items), []
+
+    def next(self):
+        if not self.queue:
+            self.queue = self.items[:]
+            self.rng.shuffle(self.queue)
+        return self.queue.pop()
+
+
+def intents_v3(rng: random.Random, n: int, share: dict[str, float], centres: dict[str, list[dict]], pair_share: float,
+               contrast: dict[str, int]) -> list[tuple[str, str, dict, str, str]]:
+    """Edition 3 intent samples as (lang, question, answer, split key, id) — id is «i<n>:<lang>» or, for a contrast pair, «ic<n>:<lang>:<constraint>» —
+    `n` before the dedupe of the caller.
+    Jobs (a single category, a pair, a contrast pair) are planned per language, then shuffled and rendered."""
+    be, pl = round(n * share["be"]), round(n * share["pl"])
+    counts = {"be": be, "pl": pl, "ru": n - be - pl}
+    ordered_pairs = [(a, b) for a in CATEGORIES for b in CATEGORIES if a != b]
+    jobs: list[tuple] = []
+    for lang, total in counts.items():
+        pairs = round(total * pair_share)
+        contrasts = min(int(contrast.get(lang, 0)), max(0, (total - pairs) // 2))
+        singles = total - pairs - 2 * contrasts
+        phrase_alone = {c: _Cycle(rng, CAT_PHRASE[lang][c]) for c in CATEGORIES}
+        phrase_paired = {c: _Cycle(rng, CAT_PHRASE[lang][c]) for c in CATEGORIES}
+        # categories: rounds of the weighted list for alone, rounds of all 30 ordered pairs for pairs
+        cats_alone, cats_pair = _Cycle(rng, [c for c in CATEGORIES for _ in range(SINGLE_WEIGHT_V3[c])]), _Cycle(rng, ordered_pairs)
+        for _ in range(singles):
+            c = cats_alone.next()
+            jobs.append(("single", lang, [c], [phrase_alone[c].next()]))
+        for _ in range(contrasts):
+            c = cats_alone.next()
+            jobs.append(("contrast", lang, [c], [phrase_alone[c].next()]))
+        for _ in range(pairs):
+            a, b = cats_pair.next()
+            jobs.append(("pair", lang, [a, b], [phrase_paired[a].next(), phrase_paired[b].next()]))
+    rng.shuffle(jobs)
+    out: list[tuple[str, str, dict, str, str]] = []
+    for index, (kind, lang, cats, phrases) in enumerate(jobs):
+        where, centre, radius, key = _where_v3(rng, lang, centres)
+        opener = rng.choice(OPENERS_V3[lang])
+        base: dict = {"categories": sorted(cats, key=CATEGORIES.index), "radius_km": radius, "center": centre}
+        if kind == "contrast":
+            layout = rng.choice(CONTRAST_LAYOUTS)
+            for c in CONTRAST_CONSTRAINTS:
+                out.append((lang, _question_v3(rng, lang, phrases, where, [c], opener, layout), {**base, "constraints": {c: True}}, key, f"ic{index}:{lang}:{c}"))
+            continue
+        cons = [c for c in CONSTRAINTS if rng.random() < 0.2]
+        answer = {**base, **({"constraints": {c: True for c in cons}} if cons else {})}
+        out.append((lang, _question_v3(rng, lang, phrases, where, cons, opener), answer, key, f"i{index}:{lang}"))
+    return out
+
+
 # Russian prepositions in the templates take the genitive ("от Несвижа") or the
 # instrumental ("рядом с Несвижем"); the answer keeps the nominative, so the
 # model learns the mapping. Only one-word names with a clear ending are
@@ -539,9 +677,9 @@ def build(ctx: dict, options: dict) -> list[dict]:
     n_describe = int(options.get("describe", DESCRIBE))
     per_country = int(options.get("centres", CENTRES))
     edition = int(options.get("edition", 1))
-    if edition not in (1, 2):
-        raise SystemExit("set osm_intents: edition must be 1 or 2")
-    sample = intent_sample_v2 if edition >= 2 else intent_sample
+    if edition not in (1, 2, 3):
+        raise SystemExit("set osm_intents: edition must be 1, 2 or 3")
+    sample = intent_sample_v2 if edition == 2 else intent_sample
     share = {**LANG_SHARE, **{k: float(v) for k, v in (options.get("lang_share") or {}).items()}}
     if set(share) - {"be", "pl"} or sum(share.values()) > 1.0:
         raise SystemExit(f"set osm_intents: lang_share takes be/pl with a sum ≤ 1, got {share}")
@@ -555,7 +693,27 @@ def build(ctx: dict, options: dict) -> list[dict]:
     out: list[dict] = []
     seen: set[str] = set()
     held_out = held_out_prompts()
-    for n in range(n_intents):
+    if edition >= 3:
+        pair_share = float(options.get("pair_share", PAIR_SHARE_V3))
+        contrast = {**CONTRAST_PAIRS_V3, **{k: int(v) for k, v in (options.get("contrast") or {}).items()}}
+        if not 0.0 <= pair_share < 0.5:
+            raise SystemExit(f"set osm_intents: pair_share must be in [0, 0.5), got {pair_share}")
+        drafts = intents_v3(rng, n_intents, share, centres, pair_share, contrast)
+        # a contrast pair is skipped as a whole: its two questions stay twins in the data or not at all
+        blocked, local = set(), set()
+        for _, q, _, _, id in drafts:
+            if q in local or norm_question(INTENT_PROMPT.format(q=q)) in held_out:
+                blocked.add(id.split(":")[0])
+            local.add(q)
+        for lang, q, answer, key, id in drafts:
+            if id.split(":")[0] in blocked and id.startswith("ic"):
+                continue
+            prompt = INTENT_PROMPT.format(q=q)
+            if q in seen or norm_question(prompt) in held_out:
+                continue
+            seen.add(q)
+            out.append(rec(prompt, dump_filter(answer), "intent", key, id))
+    for n in range(0 if edition >= 3 else n_intents):
         roll = rng.random()
         lang = "be" if roll < share["be"] else "pl" if roll < share["be"] + share["pl"] else "ru"
         q, answer, key = sample(rng, lang, centres)

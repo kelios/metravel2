@@ -22,13 +22,18 @@
  * с которой открыт ассистент; её карточка из индекса ставится первой в контекст на
  * каждом ходу, подбор добавляет остальные. Кривой `source` — 400 bad_request; материала
  * нет в индексе (опубликован после сборки) — ход идёт без закреплённой карточки.
+ *
+ * Контур оценки (#3286): при `AI_ASSIST_EVAL_TRACE=1` поток несёт перед `done` событие
+ * `trace {prompt_sources, raw_text}` — карточки, ушедшие в подсказку модели, и её ответ до
+ * стража ссылок. Клиент экрана чужие события пропускает; в образе прода переменной нет.
  */
 import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
-import { buildAssistantMessages, MAX_HISTORY_ITEMS } from '../../api/aiAssist/prompt.ts'
+import { buildAssistantMessages, MAX_HISTORY_ITEMS, selectPromptSources } from '../../api/aiAssist/prompt.ts'
+import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, parseSourceRef, pinSourceFirst } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
@@ -51,6 +56,11 @@ export interface RetrievalResult {
   degraded: boolean
 }
 
+/** Режим контура оценки (#3286); адрес модели показывает `/ai/health` — приёмка сверяет, на какую модель смотрит служба. */
+export interface EvalTrace {
+  llmUrl: string | null
+}
+
 export interface AskDeps {
   /** Подбор карточек по индексу; бросает `HttpError` (503 busy) при занятой модели эмбеддинга. */
   retrieve: (q: string, locale: Locale) => Promise<RetrievalResult>
@@ -65,6 +75,8 @@ export interface AskDeps {
   demandLog: DemandLog
   /** Брать IP из `X-Real-IP`/`X-Forwarded-For` (сервис за nginx), см. `clientIp`. */
   trustProxy: boolean
+  /** `AI_ASSIST_EVAL_TRACE=1`: событие `trace` перед `done`. Без него события нет — так живёт прод. */
+  evalTrace?: EvalTrace | null
   log: (line: string) => void
   now?: () => Date
 }
@@ -220,7 +232,10 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       throw new HttpError(503, 'generator_unavailable', { detail: 'AI_LLM_URL не задан', retryAfterSec: GENERATOR_RETRY_AFTER_SEC })
     }
 
-    const messages = buildAssistantMessages({ question, locale, sources, history })
+    // Место вопроса — по запросу подбора (#3315); у закреплённой страницы карточки уже выбраны.
+    const messages = buildAssistantMessages({ question, locale, sources, history, retrievalQuery: pinned ? null : retrievalQuery })
+    // Контур оценки (#3286): карточки подсказки — тем же отбором и с тем же запросом места, что в `messages`.
+    const tracedSources = deps.evalTrace ? selectPromptSources(sources, undefined, pinned ? null : retrievalQuery).map(withoutPlace) : null
     const controller = new AbortController()
     // Посетитель закрыл вкладку или нажал «Остановить»: генерация прекращается.
     response.once('close', () => {
@@ -240,7 +255,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const ensureStream = (): Stream => {
       if (!stream) {
         stream = openStream(response)
-        stream.event('sources', { sources, degraded, remaining: quota.remaining })
+        stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
       }
       return stream
     }
@@ -265,6 +280,8 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       clearFlush()
       const guarded = enforceSourceLinks(result.text, sources)
       const open = ensureStream()
+      // Сырой ответ — до стража ссылок; остановку генератора на цикле и четвёртой рекомендации он уже прошёл.
+      if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text })
       const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
       if (verdict === 'no_material') {
         // #3216: модель отказала вопросу с признаком поездки — «материала нет» и строка в журнале спроса.

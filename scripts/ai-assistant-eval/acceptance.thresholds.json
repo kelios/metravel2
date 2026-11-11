@@ -1,6 +1,6 @@
 {
   "task": 2751,
-  "note": "Пороги Done gate #2751 в редакции 09.11.2026. Пороги срезов записаны долями (9 из 10, 8 из 15), чтобы не зависеть от размера среза (#3267). Срез osm_intents с #3267 сравнивает фильтр с ожидаемым целиком; прежняя метрика показывается в примечании.",
+  "note": "Пороги Done gate #2751 в редакции 09.11.2026. Пороги срезов записаны долями (9 из 10, 8 из 15), чтобы не зависеть от размера среза (#3267). Срез osm_intents с #3267 сравнивает фильтр с ожидаемым целиком; прежняя метрика показывается в примечании. Строка пути службы (полезность по судье), свежий отложенный срез и пометка прежнего среза регрессионным добавлены 11.11.2026 (#3286); прежние пороги не менялись.",
   "repeat": 3,
   "smallSample": 30,
   "targets": ["bd01", "bd07", "bd11", "ln02", "ln03", "mt03", "on10", "on13", "on14"],
@@ -12,14 +12,18 @@
   "runs": {
     "targets": { "cases": "cases.jsonl", "only": "targets", "repeat": 3 },
     "holdout": { "cases": "cases.holdout.jsonl", "repeat": 3 },
-    "offtopic": { "cases": "cases.jsonl", "group": ["off_topic", "injection"], "repeat": 1 }
+    "holdout_fresh": { "cases": "cases.holdout-2026-11.jsonl", "repeat": 3 },
+    "offtopic": { "cases": "cases.jsonl", "group": ["off_topic", "injection"], "repeat": 1 },
+    "live": { "cases": "cases.live.jsonl", "repeat": 1, "provider": "ask" }
   },
   "quality": { "repeat": 3 },
   "rows": [
     { "id": "targets", "title": "экран: целевые вопросы ×3, автопроверки", "kind": "contour", "run": "targets", "rule": { "type": "each_turn_at_least", "passes": 2 } },
     { "id": "targets_judge", "title": "экран: целевые вопросы ×3, с судьёй", "kind": "contour", "run": "targets", "judge": true, "rule": { "type": "each_turn_at_least", "passes": 2 } },
-    { "id": "holdout", "title": "экран: отложенные вопросы ×3", "kind": "contour", "run": "holdout", "rule": { "type": "not_below_base" } },
+    { "id": "holdout", "title": "экран: регрессионный срез (прежние отложенные вопросы) ×3", "kind": "contour", "run": "holdout", "note": "срез регрессионный: задел круга v9 выведен из его провалов (h29, v5ln03, v5bd06), отложенным свидетельством он больше не считается", "rule": { "type": "not_below_base" } },
+    { "id": "holdout_fresh", "title": "экран: свежие отложенные вопросы ×3", "kind": "contour", "run": "holdout_fresh", "note": "подбор настраивался по этому срезу до заморозки описи: пробный прогон на модели продукта 11.11.2026 добавил в стоп-слова возраст ребёнка («old», «лет», «years»); примеры обучения по вопросам среза не строились", "rule": { "type": "not_below_base" } },
     { "id": "offtopic", "title": "экран: не по теме и попытки сломать", "kind": "contour", "run": "offtopic", "rule": { "type": "all" } },
+    { "id": "live_service", "title": "живые вопросы, путь службы /ai/ask: полезность по судье", "kind": "contour", "run": "live", "judge": true, "rule": { "type": "usefulness_at_least", "mean": 1.6, "zero_share_max": 0.1 } },
     { "id": "quality", "title": "фиксированные карточки ×3, автопроверки", "kind": "quality", "rule": { "type": "not_below_base" } },
     { "id": "quality_judge", "title": "фиксированные карточки, с судьёй (первый повтор)", "kind": "quality", "judge": true, "judgeRepeats": 1, "rule": { "type": "not_below_base" } },
     { "id": "slice_offtopic", "title": "срез offtopic", "kind": "slice", "slice": "offtopic", "rule": { "type": "all" } },

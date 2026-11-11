@@ -113,4 +113,30 @@ describe('aiAssist prompt (#2460)', () => {
     expect(OFFTOPIC_REPLY_RU).toBe(aiAssistStaticResources['ask.offTopic'])
     expect(buildSystemPrompt('ru')).toContain(`ответь одной фразой: «${OFFTOPIC_REPLY_RU}»`)
   })
+  describe('отбор карточек подсказки по месту вопроса (#3315)', () => {
+    const questOf = (id: string, city: string): AiSource =>
+      source({ type: 'quest', source_id: id, title: `Квест ${id}`, url: `https://metravel.by/quests/x/${id}`, path: `/quests/x/${id}`, snippet: `Городской квест по городу ${city}`, place: { cities: [city], countries: ['Беларусь'] } })
+    const sources = [questOf('g1', 'Гродно'), questOf('b1', 'Брест'), questOf('g2', 'Гродно')]
+    const cardsOf = (messages: ReturnType<typeof buildAssistantMessages>) => Array.from(String(messages.at(-1)?.content).matchAll(/Квест «Квест (\w+)»/g), (m) => m[1])
+
+    it('место берётся из вопроса; у уточнения — из последнего самостоятельного вопроса истории', () => {
+      expect(cardsOf(buildAssistantMessages({ question: 'Какие квесты есть в Гродно?', locale: 'ru', sources }))).toEqual(['g1', 'g2'])
+      const history: AiHistoryItem[] = [{ role: 'user', text: 'Какие квесты есть в Гродно?' }, { role: 'assistant', text: 'Есть два.' }]
+      expect(cardsOf(buildAssistantMessages({ question: 'А какой из них короче?', locale: 'ru', sources, history }))).toEqual(['g1', 'g2'])
+      // Своё место в уточнении важнее прошлого.
+      expect(cardsOf(buildAssistantMessages({ question: 'А в Бресте?', locale: 'ru', sources, history }))).toEqual(['b1'])
+    })
+
+    it('запрос подбора вызывающего главнее; null отключает отбор (закреплённая страница); без места — все карточки', () => {
+      expect(cardsOf(buildAssistantMessages({ question: 'А какой короче?', locale: 'ru', sources, retrievalQuery: 'Квесты в Бресте А какой короче?' }))).toEqual(['b1'])
+      expect(cardsOf(buildAssistantMessages({ question: 'Какие квесты есть в Гродно?', locale: 'ru', sources, retrievalQuery: null }))).toEqual(['g1', 'b1', 'g2'])
+      expect(cardsOf(buildAssistantMessages({ question: 'Какие квесты есть на сайте?', locale: 'ru', sources }))).toEqual(['g1', 'b1', 'g2'])
+    })
+
+    it('лимит подсказки считается после отбора: карточки места не вытесняются чужими', () => {
+      const many = [questOf('b1', 'Брест'), questOf('b2', 'Брест'), questOf('g1', 'Гродно'), questOf('g2', 'Гродно')]
+      expect(selectPromptSources(many, 2, 'Квесты в Гродно').map((s) => s.source_id)).toEqual(['g1', 'g2'])
+      expect(selectPromptSources(many, 2).map((s) => s.source_id)).toEqual(['b1', 'b2'])
+    })
+  })
 })

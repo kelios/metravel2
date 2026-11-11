@@ -2,14 +2,18 @@
   "note": "Опись замороженных оценочных входов (#3267). Правка любого файла меняет то, что измеряет приёмка: хеш обновляется той же правкой командой `npm run ai:assistant:accept -- --freeze`, а числа до и после несравнимы.",
   "files": {
     "scripts/ai-assistant-eval/JUDGE.md": {
-      "sha256": "82f2ba7ad39e60b96990a72f677529aa8f39b40db6348b30994bedbcdb8334c4"
+      "sha256": "7cfcfded4fb3c7d015e3ceb4b499c5414f538935e8569bc4f8eb7ff4f38d1ef2"
     },
     "scripts/ai-assistant-eval/acceptance.thresholds.json": {
-      "sha256": "9f2821797e8bc3718d8cdd7cd6e7f78f1b64745b8d182850da8e173b2542a0a3"
+      "sha256": "6d6ff31769afda8364ebc24356706d38261567e653ee81224aaa4575229c7b6c"
     },
     "scripts/ai-assistant-eval/cases.complex.jsonl": {
       "sha256": "55fbcd40920a077c6c51f9750134002b62d0e762c8b580444ca565694bdae42e",
       "cases": 16
+    },
+    "scripts/ai-assistant-eval/cases.holdout-2026-11.jsonl": {
+      "sha256": "a2ee1816154fd35fc8a56995fef06088fca82a056e90bc71b3519ef03445be5a",
+      "cases": 36
     },
     "scripts/ai-assistant-eval/cases.holdout.jsonl": {
       "sha256": "98a7b0829b2fff2a4a02bca03e209896c81d841c23d64590a99b4e33e196da7d",
@@ -18,6 +22,10 @@
     "scripts/ai-assistant-eval/cases.jsonl": {
       "sha256": "bb91f8bef3abc8d2f42b0a7cf1b03fbf08f80ebe086fd09c053ec769450cc437",
       "cases": 70
+    },
+    "scripts/ai-assistant-eval/cases.live.jsonl": {
+      "sha256": "01daac42d518064addc1a8c12c16c4452d71e8ad48f0d6de37892e43a35f2b4d",
+      "cases": 64
     },
     "scripts/ai-assistant-eval/cases.quality.jsonl": {
       "sha256": "add1fea929c48ff56cbcc105fd57f1ebec9ae7a92b423a02c7a3a29dc7084987",

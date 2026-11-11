@@ -1,0 +1,28 @@
+# metravel-llm v9 (#3319): the v8 recipe with two sets re-edited, both from the pre-training diagnosis of 11.11.2026
+# (scripts/ai-train/README.md → «Кандидат v9»; v8 acceptance: h29, v5ln03, v5bd06, h28, q11–q13, q29, in08, osm_intents 35/44):
+#   rag_answers edition 9 — a question about children names the marked quests of the place only («один подходящий —
+#     один пункт», the family ones when no child's quest is among the cards, no mark → «возраст не указан»); a direct
+#     request for one («назови только его», «выбери один») gets one item and one link; the children's follow-up runs
+#     over 2–5 cards of the city with 0, 1 or 2 marked; five quests of a city → three links without a blurb and the
+#     pointer to the sources list, also under a foreign-link request. Every new kind over the same cities in five languages.
+#   osm_intents edition 3 — a category phrase stands alone at least 1,5 times as often as in a pair (19 % pairs),
+#     `attractions` only where its phrase is, contrast pairs BE/PL/RU («з сабакам» ↔ «з аўтадомам»), be/pl 25 % each,
+#     about 850 filter samples taken whole (cap 400k tokens is above the set: no subsample).
+# Everything else is v8: stage s3 holds rag_answers + offtopic + osm_intents + wikivoyage, the replay pool (0.25) is
+# toponyms / translations / site; only s3 is trained and the saved v4 adapter continues (lora-qwen3.5-4b-v9.yaml).
+# Same seed and split as v8, corpus data/raw-20261111 (--raw). v4–v8 are never overwritten.
+name: v9
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 350000}
+  translations: {weight: 1.0, cap_tokens: 400000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
+  site:         {weight: 1.0, cap_tokens: 1200000, options: {chunk_chars: 2600, structured: true}}
+  osm_intents:  {weight: 1.0, cap_tokens: 400000, options: {intents: 880, describe: 120, centres: 250, lang_share: {be: 0.25, pl: 0.25}, edition: 3}}
+  wikivoyage:   {weight: 0.7, cap_tokens: 120000}
+  rag_answers:  {weight: 1.0, options: {per_place: 1, edition: 9}}
+  offtopic:     {weight: 1.0, cap_tokens: 18000, options: {variants: 1}}
+stages:
+  - {name: s1, sets: [toponyms, translations, site]}
+  - {name: s3, sets: [osm_intents, wikivoyage, rag_answers, offtopic]}
+replay: 0.25

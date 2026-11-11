@@ -20,7 +20,7 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | `POST /ai/suggest-tags` `{text, locale?}` (#2886) | `{countries, categories, transports, companions, over_nights_stay, confidence, degraded, neighbours, took_ms}` — подсказка словарных значений визарда статьи: текст → вектор → `AI_TAG_SUGGEST_NEIGHBOURS` (10) ближайших статей индекса (тот же `vectorSources`, что у `/ai/search`, очередь к эмбеддингу общая) → у каждой `GET /api/travels/<id>/` (id стран, категорий, транспорта, компаньонов, ночёвок) → голосование: значение проходит с `max(2, ⌈0.3·k⌉)` голосов из k ответивших статей и только если есть в словаре `GET /api/getFiltersTravel/` + `GET /api/countriesforsearch/`; `confidence` — средняя доля голосов принятых значений. Словарь и ответы статей — в памяти час (`TagCatalog`), отказы не кэшируются. `400 bad_request` — текст короче 300 знаков или кривая `locale`; `503 busy` — очередь к эмбеддингу; нет словаря или ни одной статьи → `200` с пустыми списками, `confidence: 0`, `degraded: true`. Модель не участвует: бюджет клиента 4 с не вмещает обработку промпта из 4000 знаков на CPU |
 | `POST /ai/near-route` `{points: [{lat, lng}], limit?: 1..12, locale?}` (#2911) | `{items, took_ms}` — материалы в коридоре маршрута планировщика: источники индекса с координатами не дальше 30 км от ближайшего сегмента ломаной (haversine до ближайшей точки сегмента; одна точка — расстояние до неё), ближние первыми, один фрагмент на источник (у квеста — локали `locale`, если есть), `items[]` формы `/ai/search` со `score: null` плюс `distance_km`. Без модели и эмбеддинга, как `/ai/similar`. `400 bad_request` — нет точек, больше 50, кривые координаты или `limit` вне 1..12 |
 | `POST /ai/intent` `{q, locale?}` (#2887) | `{categories, radius_km, center, constraints}` — фильтр карты из описания для строки «Опишите, что ищете» на `/map`: вопрос → `metravel-llm` с промптом набора `osm_intents` (`INTENT_PROMPT` из `scripts/ai-train/sets/osm_intents.py`, система — как у `/ai/ask`) → первый JSON-объект из ответа → TS-валидатор схемы `scripts/ai-train/osm_filter_schema.json` (`scripts/ai-assist/osmFilterSchema.ts`, порт `validate_filter()`/`extract_json()` с тестом эквивалентности Python-валидатору; enum'ы читаются из файла схемы, в образ он копируется). `categories` — `OsmPoiCategory` карты (attractions, culture, viewpoints, entertainment, religion, history), `radius_km` — 10/25/50/100/200, `center` — `{name}` или `null`, `constraints` — `{dogs, camper, kids, free}` (пустой объект, если модель опустила). `400 bad_request` — `q` короче 3 или длиннее 300 знаков, кривая `locale`; `422 {error: 'invalid_intent', detail}` — ответ без JSON или не по схеме (`detail` — ошибки валидатора); `429 limit` — `AI_MAP_INTENT_DAILY_LIMIT` (30) запросов/сутки/IP, тот же `AskLimits` с префиксом `ai-intent:v1`; `429 busy` — очередь к модели; `503 generator_unavailable` — нет `AI_LLM_URL` или модель не ответила. Неудачный запрос (422/429 busy/503) лимит не тратит |
-| `GET /ai/health` | `{ok, model, dim, count, index_built_at, index_age_days, sources: {travel, quest}, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` — `index_age_days` и `sources` (#3288) показывают пробе устаревший индекс: при возрасте больше 7 дней служба пишет предупреждение при старте |
+| `GET /ai/health` | `{ok, model, dim, count, index_built_at, index_age_days, sources: {travel, quest}, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` — `index_age_days` и `sources` (#3288) показывают пробе устаревший индекс: при возрасте больше 7 дней служба пишет предупреждение при старте. С `AI_ASSIST_EVAL_TRACE=1` (#3286) — ещё `eval_trace: true` и `llm_url`: приёмка сверяет, что служба смотрит на модель своей стороны |
 
 `items[]`: `{type, source_id, title, url, snippet, score, city, country, lat, lng}`;
 `score` — косинус лучшего фрагмента (`null`, если источник пришёл только из
@@ -53,7 +53,16 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | --- | --- |
 | `sources` | `{sources: AiSource[], degraded, remaining}` — карточки промпта `{type, source_id, title, url, path, snippet, score}`; для отказа — `[]` |
 | `text` | `{text}` — накопленный текст после стража ссылок (не дельта: страж может убрать уже показанный адрес) |
+| `trace` | только при `AI_ASSIST_EVAL_TRACE=1` (#3286), один раз перед `done`, если модель ответила: `{prompt_sources: AiSource[], raw_text}` — карточки, ушедшие в подсказку модели после отбора по месту (#3315) и лимита (`selectPromptSources`), и ответ модели до стража ссылок (после остановки генератора на цикле и четвёртой рекомендации) |
 | `done` | `{status: done, removed_links, usage, remaining}` · `{status: off_topic, reason: offtopic_warning, strikes, strikes_to_block}` · `{status: off_topic, reason: model_refusal}` · `{status: no_sources}` · `{status: unavailable}` · `{status: error}` |
+
+Событие `trace` нужно контуру оценки (`npm run ai:assistant:eval -- --provider ask`,
+`docs/features/ai-assistant.md` → «Путь службы `/ai/ask`»): по нему прогон
+записывает, что модель получила и что ответила до стража. Клиент экрана чужие
+события пропускает. Без переменной события нет и `/ai/health` не отдаёт
+`eval_trace` и `llm_url`; в `Dockerfile` и в окружении прода переменная не
+задаётся — тесты `ask.test.ts` проверяют и поток без неё, и образ. Отказ фильтра
+тем и пустой подбор события не несут: модель не вызывалась.
 
 Второй рубеж и лимит рекомендаций (#3216) — те же модули, что у экрана:
 `judgeModelReply` (`api/aiAssist/topicGate.ts`) отдаёт отказ модели на вопрос с
@@ -147,6 +156,7 @@ IP не пишется) — единственная запись на диск:
 | `AI_ASSIST_DAY_TZ` | `Europe/Minsk` | календарный день лимитов и блока «не по теме» |
 | `AI_DEMAND_LOG` | `logs/ai-demand.jsonl` (образ: `/app/logs/ai-demand.jsonl`) | журнал спроса |
 | `AI_ASSIST_TRUST_PROXY` | `1` | IP из `X-Real-IP`/последнего адреса `X-Forwarded-For`; `0` — только адрес сокета |
+| `AI_ASSIST_EVAL_TRACE` | — | `1` — только для контура оценки (#3286): событие `trace` в потоке `/ai/ask`, `eval_trace` и `llm_url` в `/ai/health`. На проде и в образе не задаётся |
 
 ## Запуск на Mac
 
@@ -162,6 +172,9 @@ curl -s -X POST localhost:8787/ai/near-route -H 'content-type: application/json'
 curl -sN -X POST localhost:8787/ai/ask -H 'content-type: application/json' \
   -d '{"q":"куда поехать под Гродно с детьми","locale":"ru"}'
 curl -si -X POST localhost:8787/ai/ask -H 'content-type: application/json' -d '{"q":"как готовить кашу"}'  # ×3 → 429
+# контур оценки (#3286): событие trace перед done и снятый дневной лимит
+AI_ASSIST_EVAL_TRACE=1 AI_ASK_DAILY_LIMIT=100000 AI_LLM_URL=http://127.0.0.1:8080 \
+  AI_INDEX_DIR=.codex-temp/ai-index/dist BACKEND_URL=https://metravel.by npm run ai:assist:dev
 curl -s -X POST localhost:8787/ai/author-draft -H 'content-type: application/json' \
   -d '{"text":"<текст статьи от 200 знаков>","kind":"meta","locale":"ru"}'   # {variants: [...], remaining}
 curl -s -X POST localhost:8787/ai/intent -H 'content-type: application/json' \

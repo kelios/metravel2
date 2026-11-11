@@ -7,6 +7,7 @@
  *
  *   npm run ai:assistant:accept -- --base-url http://127.0.0.1:8080 --candidate-url http://127.0.0.1:8090
  *   npm run ai:assistant:accept -- --plan                      # показать команды, ничего не запускать
+ *   npm run ai:assistant:accept -- --provider ask --base-ask-url http://127.0.0.1:8787 --candidate-ask-url http://127.0.0.1:8788 …
  *   npm run ai:assistant:accept -- --merge-judge <папка>       # вердикты судьи → прогоны → таблица
  *   npm run ai:assistant:accept -- --table <папка>             # пересчитать проверки и таблицу
  *   npm run ai:assistant:accept -- --freeze                    # переписать опись оценочных входов
@@ -16,6 +17,11 @@
  * базой и с кандидатом. Обе модели идут через один и тот же экран: `run.mjs` перехватывает запрос
  * к модели и пересылает его на нужный сервер. Незавершённую приёмку можно продолжить тем же `--out`:
  * готовые прогоны не повторяются.
+ *
+ * `--provider ask` (#3286) добавляет прогоны пути службы `/ai/ask` (в `runs` — `"provider": "ask"`):
+ * живые вопросы идут в две службы metravel-assist — `--base-ask-url` смотрит на `llama-server` базы,
+ * `--candidate-ask-url` — на кандидата; обе запущены с `AI_ASSIST_EVAL_TRACE=1` и на одном индексе.
+ * Без флага эти прогоны не собираются, а их строки таблицы остаются «не оценено».
  *
  * Судья — обязательный шаг: после сбора в `<папка>/judge/A` и `<папка>/judge/B` лежат задания со
  * слепыми метками (сырой и показанный ответ, без имён версий). Судья пишет `judge.jsonl` рядом с
@@ -31,6 +37,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildAcceptance, renderAcceptance, validateThresholds } from './acceptance.mjs'
+import { inspectAskService } from './ask-path.mjs'
 import { parseJudgeLines, renderJudgeTask, validateQualityJudges } from './report.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -65,7 +72,10 @@ export function buildInventory() {
 
 export function parseAcceptArgs(argv) {
   const args = { screen: 'http://localhost:8081', aiHome: path.join(os.homedir(), 'metravel-ai'), skip: new Set() }
-  const keys = { '--base-url': 'baseUrl', '--candidate-url': 'candidateUrl', '--screen': 'screen', '--out': 'out', '--ai-home': 'aiHome', '--merge-judge': 'mergeJudge', '--table': 'table' }
+  const keys = {
+    '--base-url': 'baseUrl', '--candidate-url': 'candidateUrl', '--screen': 'screen', '--out': 'out', '--ai-home': 'aiHome', '--merge-judge': 'mergeJudge', '--table': 'table',
+    '--provider': 'provider', '--base-ask-url': 'baseAskUrl', '--candidate-ask-url': 'candidateAskUrl',
+  }
   for (let i = 0; i < argv.length; i += 1) {
     const [flag, inline] = argv[i].split('=', 2)
     if (flag === '--plan') args.plan = true
@@ -77,25 +87,41 @@ export function parseAcceptArgs(argv) {
       args[keys[flag]] = value
     } else throw new Error(`неизвестный флаг ${flag}`)
   }
-  for (const key of ['baseUrl', 'candidateUrl', 'screen']) if (args[key]) args[key] = args[key].replace(/\/+$/, '')
+  for (const key of ['baseUrl', 'candidateUrl', 'screen', 'baseAskUrl', 'candidateAskUrl']) if (args[key]) args[key] = args[key].replace(/\/+$/, '')
+  if (args.provider !== undefined && args.provider !== 'ask') throw new Error(`--provider: только ask; получено ${args.provider}`)
+  if ((args.baseAskUrl || args.candidateAskUrl) && args.provider !== 'ask') throw new Error('--base-ask-url и --candidate-ask-url нужны только с --provider ask')
   const unknown = [...args.skip].filter((name) => !['contour', 'quality', 'slices'].includes(name))
   if (unknown.length) throw new Error(`--skip: contour, quality, slices; получено ${unknown.join(', ')}`)
   return args
 }
 
-/** План прогонов одной стороны: команда, папка и сколько результатов в ней должно получиться. */
-export function planRuns(thresholds, side, modelUrl, sideDir, screen) {
+/** Прогоны пути службы: в `runs` у них `"provider": "ask"`. */
+const isAskRun = (run) => run.provider === 'ask'
+
+/**
+ * План прогонов одной стороны: команда, папка и сколько результатов в ней должно получиться.
+ * Прогоны пути службы (#3286) входят в план только с адресом службы стороны (`askUrl`); наборы
+ * вопросов читаются из `casesDir`.
+ */
+export function planRuns(thresholds, side, modelUrl, sideDir, screen, { askUrl = null, casesDir = HERE } = {}) {
   const runs = []
   for (const [name, run] of Object.entries(thresholds.runs)) {
-    const cases = readLines(path.join(HERE, run.cases))
+    if (isAskRun(run) && !askUrl) continue
+    const casesFile = path.join(casesDir, run.cases)
+    if (!fs.existsSync(casesFile)) throw new Error(`runs.${name}: нет набора вопросов ${run.cases}`)
+    const cases = readLines(casesFile)
     const selected = cases.filter((item) => (run.only !== 'targets' || thresholds.targets.includes(item.id)) && (!run.group || run.group.includes(item.group)))
     if (run.only === 'targets' && selected.length !== thresholds.targets.length) throw new Error(`runs.${name}: в ${run.cases} нет части целевых вопросов`)
-    const argv = [path.join(HERE, 'run.mjs'), '--base', screen, '--model-url', modelUrl, '--cases', path.join(HERE, run.cases), '--repeat', String(run.repeat ?? 1), '--out', path.join(sideDir, name)]
+    // Путь службы грузит клиент экрана (`askProvider.ts`) — тем же Node с type stripping, что набор quality.
+    const argv = isAskRun(run)
+      ? [...NODE22_FLAGS, path.join(HERE, 'run.mjs'), '--provider', 'ask', '--ask-url', askUrl, '--model-url', modelUrl]
+      : [path.join(HERE, 'run.mjs'), '--base', screen, '--model-url', modelUrl]
+    argv.push('--cases', casesFile, '--repeat', String(run.repeat ?? 1), '--out', path.join(sideDir, name))
     if (run.only === 'targets') argv.push('--only', thresholds.targets.join(','))
     if (run.group) argv.push('--group', run.group.join(','))
-    runs.push({ kind: 'contour', side, name, dir: path.join(sideDir, name), expected: selected.length * (run.repeat ?? 1), command: [process.execPath, ...argv] })
+    runs.push({ kind: isAskRun(run) ? 'ask' : 'contour', side, name, dir: path.join(sideDir, name), expected: selected.length * (run.repeat ?? 1), command: [process.execPath, ...argv] })
   }
-  const quality = readLines(path.join(HERE, 'cases.quality.jsonl')).length
+  const quality = readLines(path.join(casesDir, 'cases.quality.jsonl')).length
   for (let round = 1; round <= (thresholds.quality?.repeat ?? 1); round += 1) {
     const dir = path.join(sideDir, `quality-${round}`)
     runs.push({ kind: 'quality', side, name: `quality-${round}`, dir, expected: quality, command: [process.execPath, ...NODE22_FLAGS, path.join(HERE, 'quality.mjs'), '--model-url', modelUrl, '--out', dir] })
@@ -130,7 +156,8 @@ async function identifyModel(url) {
 /**
  * Прогон с вердиктами судьи. У набора quality вердикт обязан нести оценки качества и условия
  * (`validateQualityJudges`): пересборка `quality.mjs --report` идёт без проверки кода выхода, и без
- * этой проверки неполный вердикт попал бы в таблицу приёмки.
+ * этой проверки неполный вердикт попал бы в таблицу приёмки. То же у прогона, который строка
+ * таблицы меряет полезностью (#3286): без трёх оценок среднюю считать не из чего.
  */
 const loadRun = (dir, { quality = false } = {}) => {
   if (!fs.existsSync(path.join(dir, 'results.jsonl'))) return null
@@ -146,7 +173,7 @@ export function loadArtifacts(outDir, thresholds) {
   const artifacts = { contour: { base: {}, candidate: {} }, quality: { base: [], candidate: [] }, slices: null }
   for (const side of SIDES) {
     for (const name of Object.keys(thresholds.runs)) {
-      const run = loadRun(path.join(outDir, side, name))
+      const run = loadRun(path.join(outDir, side, name), { quality: scoredRuns(thresholds).has(name) })
       if (run) artifacts.contour[side][name] = run
     }
     for (let round = 1; round <= (thresholds.quality?.repeat ?? 1); round += 1) {
@@ -158,6 +185,9 @@ export function loadArtifacts(outDir, thresholds) {
   if (fs.existsSync(slices)) artifacts.slices = readLines(slices)
   return artifacts
 }
+
+/** Прогоны, которые строка таблицы меряет полезностью судьи: вердикт несёт три оценки на каждый ход. */
+const scoredRuns = (thresholds) => new Set(thresholds.rows.filter((row) => row.rule?.type === 'usefulness_at_least').map((row) => row.run))
 
 /** Какие прогоны оценивает судья: целевые вопросы целиком и первый повтор набора quality. */
 const judgedRuns = (thresholds) => [...new Set(thresholds.rows.filter((row) => row.judge).map((row) => (row.kind === 'quality' ? 'quality-1' : row.run)))]
@@ -173,7 +203,7 @@ export function writeJudgePackages(outDir, thresholds, blind) {
       const dir = path.join(outDir, 'judge', label, name)
       fs.mkdirSync(dir, { recursive: true })
       const judgeFile = path.relative(ROOT, path.join(dir, 'judge.jsonl'))
-      fs.writeFileSync(path.join(dir, 'judge-task.md'), renderJudgeTask(rubric, run.results, null, { blind: { label, judgeFile } }))
+      fs.writeFileSync(path.join(dir, 'judge-task.md'), renderJudgeTask(rubric, run.results, null, { blind: { label, judgeFile }, scores: scoredRuns(thresholds).has(name) }))
       written.push(path.relative(ROOT, path.join(dir, 'judge-task.md')))
     }
   }
@@ -230,25 +260,42 @@ async function collect(args, thresholds) {
   const inventory = buildInventory()
   const identity = { base: await identifyModel(args.baseUrl), candidate: await identifyModel(args.candidateUrl) }
   if (identity.base.sha256 && identity.base.sha256 === identity.candidate.sha256) throw new Error('база и кандидат — один и тот же файл модели')
+  // Путь службы: каждая служба отдаёт событие `trace`, смотрит на модель своей стороны, индекс у обеих один.
+  const viaService = args.provider === 'ask'
+  let ask = null
+  if (viaService) {
+    if (!args.baseAskUrl || !args.candidateAskUrl) throw new Error('--provider ask: нужны --base-ask-url и --candidate-ask-url — две службы metravel-assist')
+    if (args.baseAskUrl === args.candidateAskUrl) throw new Error('службы базы и кандидата — один адрес')
+    ask = { base: await inspectAskService(args.baseAskUrl, args.baseUrl, fetchJson), candidate: await inspectAskService(args.candidateAskUrl, args.candidateUrl, fetchJson) }
+    if (ask.base.indexBuiltAt !== ask.candidate.indexBuiltAt || ask.base.indexCount !== ask.candidate.indexCount) throw new Error(`службы базы и кандидата на разных индексах: ${ask.base.indexBuiltAt} (${ask.base.indexCount}) и ${ask.candidate.indexBuiltAt} (${ask.candidate.indexCount})`)
+  } else if (Object.values(thresholds.runs).some(isAskRun)) {
+    console.log('[accept] прогоны пути службы не собираются: нет --provider ask — их строки останутся «не оценено»')
+  }
   let meta
   if (fs.existsSync(metaFile)) {
     // Продолжение: те же модели и те же входы, иначе в одной таблице окажутся несравнимые прогоны.
     meta = readJson(metaFile)
     for (const side of SIDES) if (meta[side].sha256 !== identity[side].sha256 || meta[side].file !== identity[side].file) throw new Error(`${side}: в папке приёмки другая модель (${meta[side].file}) — начните новую папку`)
     if (meta.inventoryHash !== sha256(JSON.stringify(inventory.files))) throw new Error('оценочные входы изменились с начала приёмки — начните новую папку')
+    if (ask) {
+      if (meta.ask && (meta.ask.base.indexBuiltAt !== ask.base.indexBuiltAt || meta.ask.base.indexCount !== ask.base.indexCount)) throw new Error('индекс служб изменился с начала приёмки — начните новую папку')
+      meta.ask = ask
+      fs.writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`)
+    }
   } else {
     // Метки судьи назначаются по хешам моделей: не «A — всегда база», но воспроизводимо.
     const flip = parseInt(sha256(`${identity.base.sha256}:${identity.candidate.sha256}`).slice(0, 2), 16) % 2 === 1
     meta = {
       startedAt: new Date().toISOString(), ...identity, screen: args.screen, gitSha: git('rev-parse', '--short', 'HEAD'),
-      dirty: git('status', '--short', '--', 'api/aiAssist', 'components/screens/assistant', 'scripts/ai-assistant-eval', 'scripts/ai-train').split('\n').filter(Boolean),
+      dirty: git('status', '--short', '--', 'api/aiAssist', 'components/screens/assistant', 'scripts/ai-assist', 'scripts/ai-assistant-eval', 'scripts/ai-train').split('\n').filter(Boolean),
       thresholds: path.relative(ROOT, THRESHOLDS), inventoryHash: sha256(JSON.stringify(inventory.files)),
       blind: flip ? { A: 'candidate', B: 'base' } : { A: 'base', B: 'candidate' },
+      ...(ask ? { ask } : {}),
     }
     fs.writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`)
   }
 
-  const runs = SIDES.flatMap((side) => planRuns(thresholds, side, side === 'base' ? args.baseUrl : args.candidateUrl, path.join(outDir, side), args.screen)).filter((run) => !args.skip.has(run.kind))
+  const runs = SIDES.flatMap((side) => planRuns(thresholds, side, args[`${side}Url`], path.join(outDir, side), args.screen, { askUrl: viaService ? args[`${side}AskUrl`] : null })).filter((run) => !args.skip.has(run.kind))
   for (const run of runs) {
     const title = `${run.side}/${run.name}`
     if (isComplete(run)) {
@@ -295,9 +342,11 @@ export async function main(argv) {
   if (errors.length) throw new Error(`acceptance.thresholds.json: ${errors.join('; ')}`)
   if (args.plan) {
     for (const side of SIDES) {
-      for (const run of planRuns(thresholds, side, `<${side}-url>`, path.join('<out>', side), args.screen)) console.log(`${side}/${run.name} (${run.expected}): ${run.command.map((part) => (part === process.execPath ? 'node' : part.startsWith(ROOT) ? path.relative(ROOT, part) : part)).join(' ')}`)
+      for (const run of planRuns(thresholds, side, `<${side}-url>`, path.join('<out>', side), args.screen, { askUrl: args.provider === 'ask' ? `<${side}-ask-url>` : null })) console.log(`${side}/${run.name} (${run.expected}): ${run.command.map((part) => (part === process.execPath ? 'node' : part.startsWith(ROOT) ? path.relative(ROOT, part) : part)).join(' ')}`)
     }
     console.log(`slices: ${path.join(args.aiHome, 'venv/bin/python')} -I scripts/ai-train/eval.py --ai-home ${args.aiHome} --base-server <base-url> --server <candidate-url> --out <out>/slices`)
+    const askRuns = Object.entries(thresholds.runs).filter(([, run]) => isAskRun(run)).map(([name]) => name)
+    if (askRuns.length && args.provider !== 'ask') console.log(`путь службы (${askRuns.join(', ')}): в плане только с --provider ask --base-ask-url <адрес> --candidate-ask-url <адрес>`)
     return 0
   }
   if (args.mergeJudge || args.table) {

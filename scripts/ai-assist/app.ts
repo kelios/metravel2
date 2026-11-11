@@ -136,6 +136,8 @@ export function createApp(deps: AppDeps): http.Server {
     const memory = process.memoryUsage()
     return {
       llm: deps.ask.generator ? 'configured' : 'unconfigured',
+      // Контур оценки (#3286): приёмка сверяет, что служба смотрит на свою модель; без флага полей нет.
+      ...(deps.ask.evalTrace ? { eval_trace: true, llm_url: deps.ask.evalTrace.llmUrl } : {}),
       ask_queue: { busy: llmQueue.isBusy, waiting: llmQueue.waiting },
       ok: true,
       model: deps.modelKey,
@@ -228,6 +230,8 @@ export function createApp(deps: AppDeps): http.Server {
       path: new URL(item.url).pathname,
       snippet: [...lead, item.snippet].filter(Boolean).join('. '),
       score: item.score ?? 0,
+      // Место карточки для отбора подсказки (#3315): у квеста — город на всех локалях индекса, у статьи — страна.
+      place: { cities: quest ? quest.cities : [], countries: [item.country] },
     }
   }
 
