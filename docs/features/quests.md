@@ -98,7 +98,7 @@ runtime-доказательствами под задачу, а не налич
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
 | `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); сегмент, равный alias квеста без id (`grodno-royal`) → `router.replace` на канонический `/quests/<cityId>/<alias>`; неизвестный сегмент → терминальный экран `components/quests/QuestNotFoundScreen.tsx` (ссылки «Все квесты», «Квесты в Беларуси», 4 популярных, `noindex`), не редирект (#2896); каталог не загрузился (сеть) и кэша нет → `components/quests/QuestLandingLoadError.tsx` с «Повторить», не «не найдено»; маркер `notFound` SSR-loader'а остаётся в силе (#2914) |
 | `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → тот же `QuestNotFoundScreen` (`kind="country"`, #2896); упавший каталог без кэша → `QuestLandingLoadError` (#2914); native → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
-| `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
+| `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов; несуществующий квест (404 `by-quest-id`) → `QuestNotFoundScreen` (`kind="quest"`, через `QuestAddressNotFound`), сбой сети/5xx → экран ошибки с «Повторить» и своим текстом (#3227) |
 | Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); серверный двойник — `discovery.preview` SSR-проекции (`selectPopularQuests`, те же 8 ссылок тем же правилом), рендерится внутри `#root` (#2766) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
 
@@ -869,11 +869,31 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
    `QuestNotFoundScreen` (noindex, выход в каталог и популярные) на том же
    адресе, без `replace('/quests')` (#2896).
 3. **Деталь `/quests/{city}/{questId}`.** Загрузка идёт только при
-   `useIsFocused()`. Ветки: loading → «не найден/ошибка» (`noindex, nofollow`) →
+   `useIsFocused()`. Ветки: loading → «не найдено» либо «ошибка» (обе
+   `noindex, nofollow`, см. «Состояния адреса квеста» ниже) →
    гость (`QuestWizard guestMode`) → согласие (`QuestConsentGate`) → визард.
    На успешной ветке дополнительно императивно патчится `<head>` тремя
    отложенными проходами (0/120/400 мс) — на gate/loading/error ветках патч
    выключен, иначе он перетирал их `robots`/`canonical`.
+   **Состояния адреса квеста (#3227).** Любая форма адреса раздела —
+   `/quests/{city}/{questId}`, `/quests/{slug}`, `/quests/country/{alias}`,
+   `/{be,uk,pl,en}/quests/{city}/{questId}` — сводится к одному состоянию
+   функцией `resolveQuestAddressState` (`utils/questAddressState.ts`):
+
+   | состояние | когда | экран |
+   | --- | --- | --- |
+   | `not_found` | `GET /api/quests/by-quest-id/<id>/` ответил 404/410; каталог ответил и не знает города, alias квеста или страны; маркер `notFound` SSR-loader'а; сегмент, из которого id не собрать (`undefined`) | `QuestNotFoundScreen`: выход в каталог, популярные квесты, `noindex, nofollow`; кнопки «Повторить» нет |
+   | `error` | сеть, таймаут, 5xx, любой другой статус; упавший каталог без данных в кеше | экран ошибки с «Повторить» и текстом из `@/i18n` (`ErrorState` детали, `QuestLandingLoadError` лендингов) |
+
+   Текст ошибки бэкенда на экран не попадает: хуки `hooks/useQuestsApi.ts`
+   отдают экранам классификацию (`failure`) или факт сбоя (`failed`), а не
+   `error.message`. Адрес с языковым префиксом без опубликованной версии
+   отдельно спрашивает `by-quest-id` (`useQuestExistence`): публикация не
+   различает «перевода нет» и «квеста нет»; квеста нет → `not_found`, квест
+   есть → экран языковой версии `QuestLocaleUnavailable`. Регрессию держат
+   `__tests__/routes/quest-address-family.test.tsx` (все формы адреса на
+   ответах 404 и 5xx) и guard `__tests__/app/questAddressState.guard.test.ts`
+   (экраны квестов не читают `.message` пойманной ошибки).
 4. **Прохождение.** intro (кнопка «Начать») → шаг: история, задание, фото,
    карта, подсказка, поле ответа. Верный ответ → `answers[stepId]`, обнуление
    `attempts` и `hints`, событие `quest_point_done`, переход дальше. Сайдбар, полоса шагов и мобильный список

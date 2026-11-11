@@ -26,7 +26,7 @@ jest.mock('@/hooks/useQuestsApi', () => ({
   // QuestsScreen's `citiesByCountry` useMemo/effect chain forever (real
   // React Query memoizes `data` and only changes reference when data actually
   // changes) — reuse one stable array so this test mirrors that contract.
-  useQuestsList: () => ({ quests: STABLE_EMPTY_QUESTS, loading: false, error: null }),
+  useQuestsList: () => ({ quests: STABLE_EMPTY_QUESTS, loading: false, failed: false }),
 }))
 
 function loadQuestsScreen() {

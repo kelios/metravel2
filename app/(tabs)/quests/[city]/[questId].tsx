@@ -23,7 +23,7 @@ import {
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
-import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
+import { useQuestBundle, useQuestExistence, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import {
   QUEST_PRINT_PARAM,
   isQuestPrintRequested,
@@ -46,6 +46,7 @@ import { stringifyJsonLd } from '@/utils/jsonLd';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, normalizeOgImageUrl } from '@/utils/seo';
 import { buildQuestSeoMetadata } from '@/utils/questSeo';
 import { buildQuestCountModel } from '@/utils/questCountModel';
+import { resolveQuestAddressState } from '@/utils/questAddressState';
 import { trackQuestView } from '@/utils/questFunnelAnalytics';
 
 import type { QuestWizardProps } from '@/components/quests/QuestWizard';
@@ -90,6 +91,8 @@ function QuestWizardWeb(props: QuestWizardProps) {
 const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
   Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
 );
+// #3227: общий экран «не найдено»; чанк грузится только на несуществующем адресе.
+const QuestAddressNotFound = React.lazy(() => import('@/components/quests/QuestAddressNotFound'));
 const QuestWizardComponent = Platform.OS === 'web' ? QuestWizardWeb : QuestWizardDirect;
 const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;
 
@@ -311,23 +314,6 @@ const PrimaryAction = ({
   </Pressable>
 );
 
-const PrimaryQuestLink = ({
-  children,
-  icon,
-  styles,
-  colors,
-}: {
-  children: React.ReactNode;
-  icon?: IconName;
-  styles: ReturnType<typeof createStyles>;
-  colors: Colors;
-}) => (
-  <LinkPressable href={QUEST_LIST_ROUTE} style={styles.primaryButton}>
-    {icon ? <Icon name={icon} color={colors.textOnPrimary} size={16} /> : null}
-    <Text style={styles.primaryButtonText}>{children}</Text>
-  </LinkPressable>
-);
-
 const LoadingState = ({
   canonical,
   colors,
@@ -354,50 +340,43 @@ const LoadingState = ({
   </CenteredPage>
 );
 
+// Состояние `error` контракта `utils/questAddressState.ts` (#3227): сеть или сбой
+// сервера. Текст свой, из `@/i18n`; «не найдено» рисует `QuestAddressNotFound`.
 const ErrorState = ({
-  bundleError,
   colors,
   isFocused,
   onRetry,
   styles,
 }: {
-  bundleError: string | null;
   colors: Colors;
   isFocused: boolean;
   onRetry: () => void;
   styles: ReturnType<typeof createStyles>;
 }) => {
-  const isLoadError = Boolean(bundleError);
-
+  const title = i18nT('quests:app.tabs.quests.city.questId.ne_udalos_zagruzit_kvest_37c9397e');
+  const description = i18nT('quests:app.tabs.quests.city.questId.loadErrorDescription');
   return (
     <CenteredPage styles={styles}>
       {isFocused ? (
         <InstantSEO
-          headKey="quest-not-found"
-          title={isLoadError ? i18nT('quests:app.tabs.quests.city.questId.ne_udalos_zagruzit_kvest_37c9397e') : i18nT('quests:app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517')}
-          description={bundleError || i18nT('quests:app.tabs.quests.city.questId.notFoundDescription')}
+          headKey="quest-load-error"
+          title={title}
+          description={description}
           canonical={buildCanonicalUrl(QUEST_LIST_ROUTE)}
           ogType="website"
           robots="noindex, nofollow"
         />
       ) : null}
-      <View style={styles.stateCard}>
+      <View style={styles.stateCard} testID="quest-load-error">
         <Icon name="alert-circle" size={28} color={colors.textMuted} />
-        <Text style={styles.stateTitle}>{isLoadError ? i18nT('quests:app.tabs.quests.city.questId.ne_udalos_zagruzit_kvest_37c9397e') : i18nT('quests:app.tabs.quests.city.questId.kvest_ne_nayden_6b07f517')}</Text>
-        <Text style={styles.stateText}>{bundleError || i18nT('quests:app.tabs.quests.city.questId.notFoundDescription')}</Text>
-        {isLoadError ? (
-          <PrimaryAction icon="refresh-cw" onPress={onRetry} styles={styles} colors={colors}>
-            {i18nT('quests:app.tabs.quests.city.questId.povtorit_35493473')}</PrimaryAction>
-        ) : null}
-        {isLoadError ? (
-          <LinkPressable href={QUEST_LIST_ROUTE} style={styles.secondaryButton}>
-            <Icon name="arrow-left" color={colors.text} size={16} />
-            <Text style={styles.secondaryButtonText}>{i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
-          </LinkPressable>
-        ) : (
-          <PrimaryQuestLink icon="arrow-left" styles={styles} colors={colors}>
-            {i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</PrimaryQuestLink>
-        )}
+        <Text style={styles.stateTitle}>{title}</Text>
+        <Text style={styles.stateText}>{description}</Text>
+        <PrimaryAction icon="refresh-cw" onPress={onRetry} styles={styles} colors={colors}>
+          {i18nT('quests:app.tabs.quests.city.questId.povtorit_35493473')}</PrimaryAction>
+        <LinkPressable href={QUEST_LIST_ROUTE} style={styles.secondaryButton}>
+          <Icon name="arrow-left" color={colors.text} size={16} />
+          <Text style={styles.secondaryButtonText}>{i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
+        </LinkPressable>
       </View>
     </CenteredPage>
   );
@@ -428,8 +407,14 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
   const prefixAvailable = !route || prefixServing.projection?.state === 'available';
   const offlinePrefix = Boolean(route && prefixServing.offline);
   const shouldLoadQuest = isFocused && Boolean(questId) && (prefixAvailable || offlinePrefix);
-  const { bundle, loading: isQuestLoading, error: bundleError, refetch } = useQuestBundle(
+  const { bundle, loading: isQuestLoading, failure: bundleFailure, refetch } = useQuestBundle(
     shouldLoadQuest ? questId : undefined,
+    route?.locale,
+  );
+  // Префикс без опубликованной версии: публикация не различает «перевода нет» и
+  // «квеста нет» — это решает то же адресное чтение `by-quest-id` (#3227).
+  const prefixExistence = useQuestExistence(
+    isFocused && route && !offlinePrefix && !prefixServing.pending && !prefixAvailable ? questId : undefined,
     route?.locale,
   );
   const ruServing = useQuestServing({
@@ -761,9 +746,19 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
       <QuestReviewInviteModal invite={reviewInvite} />
     </>
   );
+  // #3227: один экран «не найдено» для всех форм адреса квеста.
+  const inertLoading = <LoadingState canonical={canonical} colors={colors} isFocused={false} styles={styles} />;
+  const notFoundScreen = (
+    <Suspense fallback={inertLoading}>
+      <QuestAddressNotFound segment={questId} />
+    </Suspense>
+  );
 
   if (route && prefixUnavailable) {
-    return <QuestLocaleUnavailable projection={serving.projection} locale={route.locale} temporary={offlinePrefix || serving.projection?.state === 'temporary_failure' || prefixContentMismatch || prefixIdentityMismatch || Boolean(bundleError)} onRetry={() => { serving.refetch(); if (shouldLoadQuest) refetch(); }} />;
+    // Квеста нет вовсе — «не найдено»; квест есть, а версии нет — экран языковой версии.
+    if ((bundleFailure ?? prefixExistence.failure) === 'not_found') return notFoundScreen;
+    if (prefixExistence.pending) return inertLoading;
+    return <QuestLocaleUnavailable projection={serving.projection} locale={route.locale} temporary={offlinePrefix || serving.projection?.state === 'temporary_failure' || prefixContentMismatch || prefixIdentityMismatch || Boolean(bundleFailure)} onRetry={() => { serving.refetch(); if (shouldLoadQuest) refetch(); if (prefixExistence.failure) void prefixExistence.refetch(); }} />;
   }
 
   if (isLoading || (route && !prefixAvailable && !offlinePrefix)) {
@@ -771,7 +766,12 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
   }
 
   if (!bundle) {
-    return <ErrorState bundleError={bundleError} colors={colors} isFocused={showQuestSeo} onRetry={refetch} styles={styles} />;
+    // Вне фокуса запрос бандла выключен: карточка в стеке об адресе ничего не решает.
+    if (!isFocused) return inertLoading;
+    const addressState = resolveQuestAddressState({ resolved: false, loading: false, failure: bundleFailure });
+    return addressState === 'error'
+      ? <ErrorState colors={colors} isFocused={showQuestSeo} onRetry={refetch} styles={styles} />
+      : notFoundScreen;
   }
 
   if (!isAuthenticated) {

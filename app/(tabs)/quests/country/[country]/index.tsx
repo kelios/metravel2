@@ -30,6 +30,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useLocale, useTranslation } from '@/i18n/LocaleProvider'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
+import { resolveQuestCatalogAddressState } from '@/utils/questAddressState'
 import { buildQuestCountryLandingGroups } from '@/utils/questCountryLanding'
 
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
@@ -58,7 +59,7 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
   const colors = useThemedColors()
   const { locale } = useLocale()
   const { t } = useTranslation()
-  const { quests, loading, error, refetch, refetching } = useQuestsList({ trackRefetching: true })
+  const { quests, loading, failed, refetch, refetching } = useQuestsList({ trackRefetching: true })
 
   const countryGroups = useMemo(
     () => buildQuestCountryLandingGroups(quests, { locale }),
@@ -76,9 +77,12 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
   // Маркер loader'а лишь не ждёт каталога; страну, которую каталог разрешил, он не накрывает.
   // Упавший каталог — ошибка с повтором, а не «не найдено» (#2914); сбой фонового
   // обновления при данных в кеше каталог не отнимает.
-  const catalogFailed = Boolean(error) && quests.length === 0
-  const notFound = Platform.OS === 'web' && !country && (loaderNotFound || (!loading && !catalogFailed))
-  const loadError = Platform.OS === 'web' && !notFound && !country && !loading && catalogFailed
+  // Сами состояния сводит общий контракт адреса квеста (#3227).
+  const addressState = resolveQuestCatalogAddressState(
+    Boolean(country), loading, failed && quests.length === 0, loaderNotFound,
+  )
+  const notFound = Platform.OS === 'web' && addressState === 'not_found'
+  const loadError = Platform.OS === 'web' && addressState === 'error'
 
   useEffect(() => {
     if (country?.countryName) navigation.setOptions({ title: country.countryName })

@@ -19,6 +19,7 @@ import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import type { QuestsCatalogRoute } from '@/screens/tabs/QuestsScreen'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
+import { resolveQuestCatalogAddressState } from '@/utils/questAddressState'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
 import { useBreakpoints } from '@/hooks/useResponsive'
@@ -98,7 +99,7 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   const colors = useThemedColors()
   const { t } = useTranslation()
 
-  const { quests, loading, error, refetch, refetching } = useQuestsList({ trackRefetching: true })
+  const { quests, loading, failed, refetch, refetching } = useQuestsList({ trackRefetching: true })
 
   const cityGroups = useMemo(() => buildQuestCityLandingGroups(quests), [quests])
 
@@ -155,9 +156,12 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   // Упавший каталог (обрыв сети) ничего не решает: пустой список — не «такого
   // квеста нет», а ошибка с повтором (#2914). Ответ loader'а остаётся в силе.
   // Сбой фонового обновления при данных в кеше каталог не отнимает — он решает.
-  const catalogFailed = Boolean(error) && quests.length === 0
-  const notFound = !aliasQuestPath && !resolved && (loaderNotFound || (!loading && !catalogFailed))
-  const loadError = !notFound && !resolved && !loading && catalogFailed
+  // Сами состояния сводит общий контракт адреса квеста (#3227).
+  const addressState = resolveQuestCatalogAddressState(
+    Boolean(resolved || aliasQuestPath), loading, failed && quests.length === 0, loaderNotFound,
+  )
+  const notFound = addressState === 'not_found'
+  const loadError = addressState === 'error'
 
   // Navigation/stack header title = localized city name (from the resolved
   // city_name), never the raw URL segment («4» / «minsk»). Matches the pattern

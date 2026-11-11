@@ -53,9 +53,10 @@ jest.mock('@/hooks/useQuestsApi', () => ({
       city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
     },
     loading: false,
-    error: null,
+    failure: null,
     refetch: jest.fn(),
   }),
+  useQuestExistence: () => ({ pending: false, failure: null, refetch: jest.fn() }),
   useQuestProgressSync: () => ({
     progress: mockProgressSync.progress,
     progressLoading: false,

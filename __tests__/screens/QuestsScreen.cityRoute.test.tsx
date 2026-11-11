@@ -37,7 +37,7 @@ jest.mock('@/hooks/useQuestsApi', () => {
         completionsCount: 0, viewsCount: 0, isCompletedByMe: false, firstCompleter: null,
     });
     const quests = [quest('minsk-a', '4', 'Минск'), quest('minsk-b', '4', 'Минск'), quest('grodno-a', '5', 'Гродно')];
-    return { useQuestsList: () => ({ quests, loading: false, error: null }) };
+    return { useQuestsList: () => ({ quests, loading: false, failed: false }) };
 });
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({ isMobile: false }),

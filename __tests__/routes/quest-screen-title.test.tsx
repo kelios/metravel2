@@ -42,7 +42,7 @@ const mockUseQuestBundle = jest.fn(() => ({
     city: { id: 4, name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
   },
   loading: false,
-  error: null,
+  failure: null,
   refetch: jest.fn(),
 }))
 const mockUseQuestProgressSync = jest.fn(() => ({
@@ -76,6 +76,8 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/hooks/useQuestsApi', () => ({
   useQuestBundle: (...args: any[]) => mockUseQuestBundle(...args),
+  // #3227: проба существования квеста для адреса с префиксом без опубликованной версии.
+  useQuestExistence: () => ({ pending: false, failure: null, refetch: jest.fn() }),
   useQuestProgressSync: (...args: any[]) => mockUseQuestProgressSync(...args),
   useQuestReviews: () => ({
     data: [],
@@ -250,7 +252,7 @@ describe('Quest screen title sync', () => {
         city: { id: 4, name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
       },
       loading: false,
-      error: null,
+      failure: null,
       refetch: jest.fn(),
     })
     mockUseQuestProgressSync.mockClear()
@@ -444,7 +446,7 @@ describe('Quest screen title sync', () => {
         `<!doctype html><html><head><title>${props.title} — ${i18nT('quests:components.quests.QuestPrintable.bookTitle')}</title></head><body><h1>${props.title}</h1></body></html>`,
       ),
     )
-    mockUseQuestBundle.mockReturnValue({ ...loaded, bundle: null, error: 'Не удалось загрузить квест', refetch } as any)
+    mockUseQuestBundle.mockReturnValue({ ...loaded, bundle: null, failure: 'error', refetch } as any)
     const screen = await render(<QuestScreen />)
     expect(activeHelmetHeads.size).toBe(0)
     expect(generate).not.toHaveBeenCalled()
@@ -771,7 +773,7 @@ describe('Quest screen title sync', () => {
         city: { name: 'Минск', countryCode: 'BY', lat: 53.9, lng: 27.56 },
       },
       loading: false,
-      error: null,
+      failure: null,
       refetch: jest.fn(),
     })
 

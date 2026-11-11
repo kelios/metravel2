@@ -55,7 +55,8 @@ describe('#1562 предусловие clientOnly для визарда квес
     expect(questLoadingOperands(source)).toEqual(expect.arrayContaining([
       'Boolean(route&&serving.pending&&!serving.projection)',
       'isQuestLoading',
-      '(isAuthenticated?progressLoading:Boolean(questId)&&!guestFlow.guestReady)',
+      // #2997: вошедший дополнительно ждёт перенос гостевого прохождения в аккаунт.
+      '(isAuthenticated?progressLoading||guestFlow.migrationPending:Boolean(questId)&&!guestFlow.guestReady)',
     ]))
   })
 
@@ -71,12 +72,24 @@ describe('#1562 предусловие clientOnly для визарда квес
     const loadingGate = findQuestLoadingGate(source)
     expect(loadingGate).toBeGreaterThan(-1)
 
-    // A revoked/invalid prefix can bypass loading only into its unavailable
-    // screen, which mounts no wizard or clientOnly subscription subtree.
-    const unavailableGate = /if\s*\(\s*route\s*&&\s*prefixUnavailable\s*\)\s*\{\s*return\s+<QuestLocaleUnavailable\b/.exec(source)
+    // A revoked/invalid prefix can bypass loading only into its terminal
+    // screens — «не найдено» (#3227), the inert loading frame of the existence
+    // probe, or the unavailable screen — none of which mounts a wizard or a
+    // clientOnly subscription subtree.
+    const unavailableGate = /if\s*\(\s*route\s*&&\s*prefixUnavailable\s*\)\s*\{([\s\S]*?)\n {2}\}\n/.exec(source)
     expect(unavailableGate).not.toBeNull()
     expect(unavailableGate!.index).toBeLessThan(loadingGate)
-    expect(readSource('components/quests/QuestLocaleUnavailable.tsx')).not.toMatch(/<QuestWizard|<EmailSubscriptionForm/)
+    const prefixReturns = [...unavailableGate![1].matchAll(/\breturn\s+(<\w+|\w+)/g)].map((match) => match[1])
+    expect(prefixReturns).toEqual(['notFoundScreen', 'inertLoading', '<QuestLocaleUnavailable'])
+    expect(source).toMatch(/const inertLoading = <LoadingState\b/)
+    expect(source).toMatch(/const notFoundScreen = \(\s*<Suspense fallback=\{inertLoading\}>\s*<QuestAddressNotFound\b/)
+    for (const terminal of [
+      'components/quests/QuestLocaleUnavailable.tsx',
+      'components/quests/QuestAddressNotFound.tsx',
+      'components/quests/QuestNotFoundScreen.tsx',
+    ]) {
+      expect(readSource(terminal)).not.toMatch(/<QuestWizard|<EmailSubscriptionForm/)
+    }
 
     const mountPoints = [...source.matchAll(/<QuestWizardComponent\b/g)].map((match) => match.index ?? -1)
     expect(mountPoints.length).toBeGreaterThan(0)

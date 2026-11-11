@@ -109,7 +109,7 @@ describe('single-quest metadata (#1992)', () => {
   it('bundle error retains the route error and never fans out into either catalog', async () => {
     fetchQuestByQuestId.mockRejectedValue(new Error('Not found'))
     const { result } = await renderHook(() => useDetail(), { wrapper })
-    await waitFor(() => expect(result.current.error).toBe('Not found'))
+    await waitFor(() => expect(result.current.failure).toBe('error'))
     expect(result.current.bundle).toBeNull()
     expect(result.current.rating.ratingCount).toBe(0)
     expect(fetchQuestsByCity).not.toHaveBeenCalled()

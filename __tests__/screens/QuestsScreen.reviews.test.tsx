@@ -20,7 +20,7 @@ jest.mock('@/components/MapPage/Map.web', () => () => null);
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => {} }));
 jest.mock('@/hooks/useQuestsApi', () => ({
-    useQuestsList: () => ({ quests: mockQuests, loading: mockLoading, error: mockError }),
+    useQuestsList: () => ({ quests: mockQuests, loading: mockLoading, failed: Boolean(mockError) }),
 }));
 jest.mock('@/hooks/useResponsive', () => ({
     useResponsive: () => ({ isMobile: mockMobile }),

@@ -67,7 +67,7 @@ jest.mock('@/hooks/useQuestsApi', () => {
     useQuestsList: () => ({
       quests: mockError && !mockKeepDataOnError ? [] : quests,
       loading: mockLoading,
-      error: mockError,
+      failed: Boolean(mockError),
       refetch: mockRefetch,
     }),
   }

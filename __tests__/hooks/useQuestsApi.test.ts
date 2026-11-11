@@ -170,10 +170,10 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.quests).toHaveLength(1);
       expect(result.current.quests[0].id).toBe('krakow-dragon');
-      expect(result.current.error).toBeNull();
+      expect(result.current.failed).toBe(false);
     });
 
-    it('sets error when API fails (no fallback)', async () => {
+    it('reports the failure without the error text when API fails (no fallback)', async () => {
       mockFetchQuestsList.mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = await renderHook(() => useQuestsList(), { wrapper });
@@ -181,7 +181,9 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.quests).toEqual([]);
-      expect(result.current.error).toBe('Network error');
+      // #3227: экран получает факт сбоя, текст ошибки из хука не выходит.
+      expect(result.current.failed).toBe(true);
+      expect(result.current).not.toHaveProperty('error');
     });
 
   });
@@ -252,7 +254,7 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(mockFetchQuestsPreview).not.toHaveBeenCalled());
     });
 
-    it('reports an error message when the request fails', async () => {
+    it('reports the failure without the error text when the request fails', async () => {
       mockFetchQuestsPreview.mockRejectedValueOnce(new Error('Network error'));
 
       const { result } = await renderHook(() => useQuestsPreview(2), { wrapper });
@@ -260,7 +262,8 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.quests).toEqual([]);
-      expect(result.current.error).toBe('Network error');
+      expect(result.current.failed).toBe(true);
+      expect(result.current).not.toHaveProperty('error');
     });
   });
 
@@ -283,7 +286,7 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.bundle).not.toBeNull();
       expect(result.current.bundle!.title).toBe('Тайна дракона');
-      expect(result.current.error).toBeNull();
+      expect(result.current.failure).toBeNull();
       expect(typeof result.current.refetch).toBe('function');
     });
 
@@ -348,15 +351,21 @@ describe('useQuestsApi hooks', () => {
       expect(mockFetchQuestByQuestId).not.toHaveBeenCalled();
     });
 
-    it('sets error when API fails (no fallback)', async () => {
-      mockFetchQuestByQuestId.mockRejectedValueOnce(new Error('Not found'));
+    // #3227: адресное чтение отдаёт классификацию сбоя, а не текст бэкенда.
+    it.each([
+      ['404 бэкенда', Object.assign(new Error('error: Quest with quest_id=nonexistent not found'), { status: 404 }), 'not_found'],
+      ['5xx', Object.assign(new Error('Service Unavailable'), { status: 503 }), 'error'],
+      ['обрыв сети', new Error('Network request failed'), 'error'],
+    ])('classifies a failed bundle read (%s) and exposes no error text', async (_label, error, failure) => {
+      mockFetchQuestByQuestId.mockRejectedValueOnce(error);
 
       const { result } = await renderHook(() => useQuestBundle('nonexistent'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.bundle).toBeNull();
-      expect(result.current.error).toBe('Not found');
+      expect(result.current.failure).toBe(failure);
+      expect(result.current).not.toHaveProperty('error');
       // Деталь упала → полный список квестов НЕ грузим (#729 lazy-fallback).
       expect(mockFetchQuestsList).not.toHaveBeenCalled();
     });

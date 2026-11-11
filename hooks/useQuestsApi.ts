@@ -42,8 +42,9 @@ import {
 import { devWarn } from '@/utils/logger';
 import { questTagNames } from '@/utils/questTags';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
-import { translate as i18nT } from '@/i18n'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
+import { classifyQuestLoadFailure, type QuestLoadFailure } from '@/utils/questAddressState';
+import { isUsableRouteSegment } from '@/utils/routePaths';
 
 
 // Re-export types for backward compatibility
@@ -77,15 +78,22 @@ type PendingQuestProgress = {
     data: PendingQuestProgressData;
 };
 
-const getErrorMessage = (error: unknown, fallback: string): string =>
-    error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
-
 // Полный список нужен каталогу и промо; metadata детали читается из bundle.
 // #1393: и само определение запроса, и времена кеша живут в листовых модулях
 // `questsListQuery` / `questsListCachePolicy`. Ре-экспорта отсюда намеренно
 // НЕТ: он оставлял бы открытой ровно ту дверь, которую задача закрывала, —
 // импорт двух констант из модуля, который тянет за собой адаптеры и таблицу
 // контуров стран.
+
+/**
+ * #3227: адресное чтение (`by-quest-id`) отдаёт экрану классификацию сбоя, а не
+ * текст бэкенда. Сегмент, из которого id не собрать (`/quests/undefined/undefined`,
+ * #1185), отбивается до сети кодом 400: такого адреса нет, повтор его не починит.
+ */
+const addressedReadFailure = (questId: string | undefined, error: unknown): QuestLoadFailure | null => {
+    if (!error) return null;
+    return isUsableRouteSegment(questId) ? classifyQuestLoadFailure(error) : 'not_found';
+};
 
 // ===================== ХУКИ =====================
 
@@ -108,10 +116,7 @@ export function useQuestsList(opts?: { enabled?: boolean; trackRefetching?: bool
         [data],
     );
 
-    const errorMessage = error
-        ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b'))
-        : null;
-    if (error) devWarn('Failed to load quests list:', errorMessage);
+    if (error) devWarn('Failed to load quests list:', error);
 
     // Повтор после ошибки — лендинги города и страны показывают её с «Повторить» (#2914).
     const retry = useCallback(() => { void refetch(); }, [refetch]);
@@ -121,7 +126,9 @@ export function useQuestsList(opts?: { enabled?: boolean; trackRefetching?: bool
     // те, кто просил (лендинги с «Повторить»): остальным фоновое обновление каталога
     // не даёт лишних рендеров.
     const refetching = opts?.trackRefetching ? query.isFetching : false;
-    return { quests, loading: enabled && isPending, error: errorMessage, refetch: retry, refetching };
+    // #3227: экран получает факт сбоя, а не текст ошибки — упавший каталог ничего
+    // не говорит о существовании адреса и для всех лендингов означает `error`.
+    return { quests, loading: enabled && isPending, failed: Boolean(error), refetch: retry, refetching };
 }
 
 /**
@@ -162,12 +169,9 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
         [data],
     );
 
-    const errorMessage = error
-        ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.oshibka_zagruzki_kvestov_cdefd63b'))
-        : null;
-    if (error) devWarn('Failed to load quests preview:', errorMessage);
+    if (error) devWarn('Failed to load quests preview:', error);
 
-    return { quests, loading: enabled && isPending, error: errorMessage };
+    return { quests, loading: enabled && isPending, failed: Boolean(error) };
 }
 
 /** Хук для загрузки полного бандла квеста по quest_id */
@@ -223,7 +227,23 @@ export function useQuestBundle(questId: string | undefined, routeLocale?: string
         // на ErrorState до 60 с (LONG_TIMEOUT × 2 попытки) не давала бы никакой
         // обратной связи — до рефактора её давал setLoading(true) в refetch.
         loading: Boolean(questId) && (isPending || (isFetching && !data) || !hydrationReady),
-        error: error ? getErrorMessage(error, i18nT('quests:hooks.useQuestsApi.kvest_ne_nayden_af9ac6a4')) : null,
+        failure: addressedReadFailure(questId, error),
+        refetch,
+    };
+}
+
+/**
+ * Существует ли квест с таким id — то же адресное чтение, что у `useQuestBundle`
+ * (общий ключ кеша), но без адаптации бандла и без записи в офлайн-каталог.
+ * Нужен адресу с языковым префиксом: публикация не различает «перевода нет» и
+ * «квеста нет», это решает `by-quest-id` (#3227).
+ */
+export function useQuestExistence(questId: string | undefined, routeLocale?: string) {
+    const { data, isPending, isFetching, error, refetch } = useQuestBundleQuery(questId, routeLocale);
+    return {
+        // Как у `useQuestBundle`: `isFetching && !data` — это повтор после сбоя.
+        pending: Boolean(questId) && (isPending || (isFetching && !data)),
+        failure: addressedReadFailure(questId, error),
         refetch,
     };
 }

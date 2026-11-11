@@ -29,7 +29,7 @@ jest.mock('@/hooks/useQuestReviewPrompt', () => ({
   useQuestReviewPrompt: () => ({ prompt: null, dismiss: () => {} }),
 }));
 jest.mock('@/hooks/useQuestsApi', () => ({
-  useQuestsList: () => ({ quests: mockQuests, loading: false, error: null }),
+  useQuestsList: () => ({ quests: mockQuests, loading: false, failed: false }),
 }));
 jest.mock('@/hooks/useResponsive', () => ({
   useBreakpoints: () => ({ isMobile: mockMobile, width: mockMobile ? 390 : 1280 }),

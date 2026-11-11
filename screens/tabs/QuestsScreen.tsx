@@ -139,7 +139,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     const mapLocationAttemptedRef = useRef(false);
 
     // API data
-    const { quests: listedQuests, loading: questsLoading, error: questsError } = useQuestsList();
+    const { quests: listedQuests, loading: questsLoading, failed: questsError } = useQuestsList();
     const ALL_QUESTS = useMemo(
         () => localeHub ? listedQuests.filter((quest) => quest.availableLocales.includes(localeHub)) : listedQuests,
         [listedQuests, localeHub],
