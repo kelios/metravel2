@@ -154,6 +154,17 @@ describe('CompactSideBarTravel in the real React Native Web DOM (#2032)', () => 
     expect(container.querySelectorAll('[data-sidebar-card="true"]')).toHaveLength(1)
   })
 
+  it('renders the author name as a real profile link (#3237)', () => {
+    const author = container.querySelector('[data-testid="travel-details-author"] a[href]') as HTMLAnchorElement
+    expect(author).not.toBeNull()
+    expect(author.getAttribute('href')).toBe('/user/user-1')
+    expect(author.getAttribute('role')).not.toBe('button')
+    // A modified click stays with the browser (new tab): the app does not cancel it.
+    const modified = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true })
+    act(() => { author.dispatchEvent(modified) })
+    expect(modified.defaultPrevented).toBe(false)
+  })
+
   it('has app/global.css rules for the sidebar that all reach rendered elements', () => {
     const rules = readSidebarRules()
     const selectors = rules.map((rule) => rule.selector)

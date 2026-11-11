@@ -10,6 +10,8 @@ export type TravelLoaderPayload = {
   /** FAQPage from the author's description before sanitizing strips data-faq/itemprop. */
   faqJsonLd?: Record<string, unknown> | null
   linkGraph?: TravelLinkGraphResult
+  /** #3237: соцсети автора из публичного профиля для `author.sameAs`. */
+  authorSameAs?: string[]
 } | null
 
 export const TravelLoaderDataContext = createContext<TravelLoaderPayload>(null)

@@ -75,6 +75,7 @@ export const travelGenerated2 = {
   "components.travel.details.sections.TravelDetailsContentSection.chto_ponravilos_134b7cf3": "What I liked",
   "components.travel.details.sections.TravelDetailsContentSection.chto_smutilo_72420632": "What confused",
   "components.travel.details.sections.TravelDetailsContentSection.tripMonthAndReadingTime": "Trip month: {{month}} · {{readingTime}}",
+  "components.travel.details.TravelUpdatedLine.label": "Updated",
   "components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e": "Cons",
   "components.travel.details.sections.TravelDetailsContentSection.odno_nazhatie_i_rolik_nachnet_proigryvatsya_9afa12cf": "One click and the video will start playing",
   "components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f": "Route description",

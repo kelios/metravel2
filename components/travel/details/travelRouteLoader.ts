@@ -9,6 +9,8 @@ import { buildTravelSeoDescription } from '@/utils/travelSeoDescription'
 import { buildTravelFaqJsonLd } from '@/utils/travelFaq'
 import type { TravelLoaderPayload } from './travelLoaderData'
 import { loadTravelLinkGraph } from './travelLinkGraphLoader'
+import { fetchPublicUserProfile } from '@/components/screens/profile/userProfileRouteLoader'
+import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 
 const INITIAL_TRAVEL_FIELDS = [
   'id', 'slug', 'name', 'title', 'travel_image_thumb_url', 'travel_image_thumb_small_url',
@@ -19,7 +21,7 @@ const INITIAL_TRAVEL_FIELDS = [
   'comment_thread_id', 'gallery', 'travelAddress', 'userIds', 'year', 'monthName', 'number_days',
   'companions', 'coordsMeTravel', 'countryCode', 'user', 'created_at', 'updated_at', 'publish',
   'moderation', 'publication_status', 'engagementStats', 'authorName', 'date_create', 'date_update',
-  'datePublished', 'dateModified', 'media',
+  'datePublished', 'dateModified', 'media', 'content_updated_at',
 ] as const
 
 export function resolveTravelLoaderSegment(value: string | string[] | undefined): string | null {
@@ -82,6 +84,38 @@ export function projectTravelLoaderPayload(raw: Record<string, unknown>, routeKe
   }
 }
 
+// `author.sameAs` — необязательная разметка, а бэкенд один на 1 CPU: профиль автора
+// читается не дольше AUTHOR_PROFILE_TIMEOUT_MS и помнится процессом AUTHOR_SAME_AS_TTL_MS
+// (у сотен статей несколько авторов). Сбой и таймаут дают `[]` и не кэшируются.
+const AUTHOR_PROFILE_TIMEOUT_MS = 2_000
+const AUTHOR_SAME_AS_TTL_MS = 10 * 60_000
+const AUTHOR_SAME_AS_CACHE_LIMIT = 500
+const authorSameAsCache = new Map<number, { expiresAt: number; sameAs: string[] }>()
+
+async function loadTravelAuthorSameAs(request: ImmutableRequest, authorId: number): Promise<string[]> {
+  const cached = authorSameAsCache.get(authorId)
+  if (cached && cached.expiresAt > Date.now()) return cached.sameAs
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  const timer = setTimeout(abort, AUTHOR_PROFILE_TIMEOUT_MS)
+  request.signal.addEventListener('abort', abort, { once: true })
+  if (request.signal.aborted) abort()
+  const remember = (sameAs: string[]) => {
+    if (authorSameAsCache.size >= AUTHOR_SAME_AS_CACHE_LIMIT) authorSameAsCache.clear()
+    authorSameAsCache.set(authorId, { expiresAt: Date.now() + AUTHOR_SAME_AS_TTL_MS, sameAs })
+    return sameAs
+  }
+  try {
+    return remember((await fetchPublicUserProfile({ signal: controller.signal }, authorId)).sameAs)
+  } catch (error) {
+    // Нет публичного профиля — ответ, а не сбой: помним пустой список.
+    return (error as { httpStatus?: number })?.httpStatus === 404 ? remember([]) : []
+  } finally {
+    clearTimeout(timer)
+    request.signal.removeEventListener('abort', abort)
+  }
+}
+
 export async function loadTravelRoute(
   request: ImmutableRequest | undefined,
   params: Record<string, string | string[]>,
@@ -103,7 +137,15 @@ export async function loadTravelRoute(
       }
       const payload = projectTravelLoaderPayload(record, segment)
       if (!payload.travel.id || !payload.travel.name) throw publicRouteError(503)
-      payload.linkGraph = await loadTravelLinkGraph(request, payload.travel.id)
+      // #3237: соцсети автора для `author.sameAs` — из его публичного профиля. Сбой
+      // профиля не роняет статью: разметка просто остаётся без `sameAs`.
+      const authorId = resolveTravelAuthorId(payload.travel)
+      const [linkGraph, authorSameAs] = await Promise.all([
+        loadTravelLinkGraph(request, payload.travel.id),
+        authorId === null ? Promise.resolve([]) : loadTravelAuthorSameAs(request, authorId),
+      ])
+      payload.linkGraph = linkGraph
+      payload.authorSameAs = authorSameAs
       return payload
     } catch (error) {
       if (error instanceof Error && 'httpStatus' in error) throw error

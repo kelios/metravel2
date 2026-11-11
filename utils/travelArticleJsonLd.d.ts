@@ -7,6 +7,8 @@ export type TravelArticleStructuredDataInput = {
   /** Editorial content language, independent of the reader's interface locale. */
   language?: string
   travel?: unknown
+  /** Соцсети автора из публичного профиля (#3237); пустой список — без `sameAs`. */
+  authorSameAs?: readonly string[] | null
 }
 export function buildTravelArticleStructuredData(input: TravelArticleStructuredDataInput): Record<string, unknown> | null
 export function buildTravelBreadcrumbStructuredData(input: Pick<TravelArticleStructuredDataInput, 'headline' | 'canonical'>): Record<string, unknown> | null

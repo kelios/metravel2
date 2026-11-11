@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react'
-import { Platform, Pressable, View } from 'react-native'
+import { memo, useCallback, useMemo } from 'react'
+import { Platform, Pressable, View, type GestureResponderEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { Text } from '@/ui/paper'
@@ -19,6 +19,8 @@ import { webOnly } from '../helpers'
 import { createStyles } from '../styles'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
+import { routes } from '@/utils/routes'
+import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 
 
 // Детерминированное форматирование тысяч: встроенное locale-форматирование может давать
@@ -79,6 +81,18 @@ export const AuthorBlock = memo(function AuthorBlock({
   }, [displayName])
   const editTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_609c8bab')
   const writeTitle = i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_e9dfca99')
+  // #3237: на web имя автора — настоящая ссылка `<a href="/user/<id>">` (как в
+  // TravelAuthorQuickLink): обычный клик — переход внутри приложения, клик с
+  // модификатором — браузеру.
+  const isWebLink = Platform.OS === 'web' && !!authorUserId
+  const handleProfilePress = useCallback((event?: GestureResponderEvent) => {
+    if (isWebLink && event) {
+      const linkEvent = event as unknown as LinkPressEvent
+      if (!shouldHandleLinkClick(linkEvent)) return
+      linkEvent.preventDefault?.()
+    }
+    onOpenProfile()
+  }, [isWebLink, onOpenProfile])
 
   return (
     <View
@@ -116,9 +130,9 @@ export const AuthorBlock = memo(function AuthorBlock({
           <View style={styles.userRow}>
             <Pressable
               ref={webTitleRef(authorUserId ? i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }) : null)}
-              onPress={onOpenProfile}
+              onPress={handleProfilePress}
               disabled={!authorUserId}
-              accessibilityRole={authorUserId ? 'button' : undefined}
+              accessibilityRole={authorUserId ? (isWebLink ? 'link' : 'button') : undefined}
               accessibilityLabel={
                 authorUserId ? i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }) : undefined
               }
@@ -130,8 +144,8 @@ export const AuthorBlock = memo(function AuthorBlock({
               {...webOnly(
                 authorUserId
                   ? ({
+                      href: routes.user(authorUserId),
                       cursor: 'pointer',
-                      role: 'button',
                       'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.otkryt_profil_avtora_value1_ef516528', { value1: displayName }),
                     } as any)
                   : {},

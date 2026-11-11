@@ -30,6 +30,7 @@ import {
 import { decorateRichImageFrames } from '@/components/travel/stableContent/richImageFrames'
 import { extractYouTubeFacadeVideoId } from '@/components/travel/stableContent/youtubeFacadeId'
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
+import { applyRichTextImageAlt } from '@/utils/richTextImageAlt'
 import {
   familyRouteOfMediaUrl,
   isLegacyResizeRouteUrl,
@@ -499,7 +500,6 @@ const declaredDimension = (value: string | null | undefined) => (value && DIGITS
 // регулярки по строке тега, и `src="` в хвосте значения `alt` принимался за `src`:
 // замена сдвигала кавычки, и текст из `class` становился атрибутом `onerror`.
 const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): string => {
-  let imgIdx = 0
   return rewriteStartTags(html, ['img'], ({ attrs }) => {
     const src = getAttribute(attrs, 'src') ?? ''
     const responsive = src ? buildMetravelResponsiveImage(src, media) : null
@@ -545,11 +545,10 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
     if (!hasDeclaredSize) attrs.push({ name: 'data-aspect-fallback', value: '1' })
     for (const name of ['decoding', 'fetchpriority', 'loading']) removeAttribute(attrs, name)
 
-    const fallbackAlt = escapeHtmlAttr(i18nT('travel:components.travel.stableContent.htmlTransform.izobrazhenie_marshruta_value1_ae0fc919', { value1: imgIdx + 1 }))
-    if (!(getAttribute(attrs, 'alt') ?? '').trim()) setAttribute(attrs, 'alt', fallbackAlt)
+    // #3237: подпись автора или пустой `alt` — тот же контракт, что у серверного HTML.
+    applyRichTextImageAlt(attrs)
 
     attrs.push({ name: 'loading', value: 'lazy' }, { name: 'decoding', value: 'async' }, { name: 'fetchpriority', value: 'low' })
-    imgIdx += 1
   })
 }
 

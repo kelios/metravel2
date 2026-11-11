@@ -75,6 +75,7 @@ export const travelGenerated2 = {
   "components.travel.details.sections.TravelDetailsContentSection.chto_ponravilos_134b7cf3": "Co mi się podobało",
   "components.travel.details.sections.TravelDetailsContentSection.chto_smutilo_72420632": "Co za zamieszanie",
   "components.travel.details.sections.TravelDetailsContentSection.tripMonthAndReadingTime": "Miesiąc podróży: {{month}} · {{readingTime}}",
+  "components.travel.details.TravelUpdatedLine.label": "Zaktualizowano",
   "components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e": "Wady",
   "components.travel.details.sections.TravelDetailsContentSection.odno_nazhatie_i_rolik_nachnet_proigryvatsya_9afa12cf": "Jedno kliknięcie i wideo zacznie się odtwarzać",
   "components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f": "Opis trasy",

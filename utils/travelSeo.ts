@@ -3,6 +3,8 @@ import { DEFAULT_LOCALE, i18n, translate as i18nT } from '@/i18n'
 import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, htmlToPlainText, normalizeSeoLead } from '@/utils/seoText'
 import { buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
 import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
+import { travelAuthorProfileUrl } from '@/utils/travelAuthorProfile';
+import { readTravelContentUpdatedAt } from '@/utils/travelContentUpdatedAt';
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
@@ -204,19 +206,18 @@ export function createTravelArticleJsonLd(
     if (dateStr && !isNaN(Date.parse(dateStr))) safeData.datePublished = dateStr;
   }
 
-  if (travel.updated_at) {
-    const dateStr =
-      typeof travel.updated_at === 'number'
-        ? new Date(travel.updated_at * 1000).toISOString()
-        : String(travel.updated_at);
-    if (dateStr && !isNaN(Date.parse(dateStr))) safeData.dateModified = dateStr;
-  }
+  // #3237: та же честная дата, что у серверной разметки; нет её — дата публикации.
+  const modifiedAt = readTravelContentUpdatedAt(travel) ?? safeData.datePublished;
+  if (modifiedAt) safeData.dateModified = modifiedAt;
 
   const authorName = travel.user?.name || travel.user?.first_name;
   if (authorName) {
+    const authorUrl = travelAuthorProfileUrl(travel);
     safeData.author = {
       '@type': 'Person',
       name: stripHtmlForSeo(authorName).slice(0, 100),
+      // #3237: тот же профиль, что у серверной разметки (`utils/travelArticleJsonLd.js`).
+      ...(authorUrl ? { url: authorUrl } : {}),
     };
   }
 

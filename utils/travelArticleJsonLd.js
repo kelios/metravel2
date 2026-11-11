@@ -1,7 +1,10 @@
-/* global module */
+/* global module, require */
+const { travelAuthorProfileUrl } = require('./travelAuthorProfile')
+const { readTravelContentUpdatedAt } = require('./travelContentUpdatedAt')
+
 const SITE_URL = 'https://metravel.by'
 
-function buildTravelArticleStructuredData({ headline, description, canonical, image, travel, language }) {
+function buildTravelArticleStructuredData({ headline, description, canonical, image, travel, language, authorSameAs }) {
   const cleanHeadline = String(headline || '').trim()
   if (!cleanHeadline || !canonical) return null
   const authorName = String(
@@ -23,9 +26,16 @@ function buildTravelArticleStructuredData({ headline, description, canonical, im
     },
     author: { '@type': 'Person', name: authorName },
   }
+  // #3237: профиль автора на сайте.
+  const authorUrl = travelAuthorProfileUrl(travel)
+  if (authorUrl) payload.author.url = authorUrl
+  // `sameAs` — только соцсети из публичного профиля автора (#3240), пустые не пишем.
+  if (authorUrl && Array.isArray(authorSameAs) && authorSameAs.length) payload.author.sameAs = authorSameAs.slice()
   if (image) payload.image = [image]
   const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null
-  const modifiedAt = travel?.updated_at || travel?.date_update || travel?.dateModified || null
+  // #3237: `dateModified` — честная дата правки содержания (`content_updated_at`,
+  // #3240); её нет — дата публикации. Технический `updated_at` сюда не идёт.
+  const modifiedAt = readTravelContentUpdatedAt(travel) || publishedAt
   if (publishedAt) payload.datePublished = publishedAt
   if (modifiedAt) payload.dateModified = modifiedAt
   return payload

@@ -65,6 +65,41 @@ describe('travel route loader', () => {
     expect(jest.getTimerCount()).toBe(0)
   })
 
+  it('reads the author sameAs from the public profile and survives its failure (#3237)', async () => {
+    const authored = { ...article, user: { id: 1, name: 'Юля' }, userIds: 1 }
+    const profile = { user: 1, first_name: 'Юля', last_name: 'Sauran', instagram: 'https://www.instagram.com/metravelby/',
+      youtube: '', telegram: '@handle', vk: null }
+    fetchMock.mockImplementation(async (url: string) => ({ ok: true, status: 200,
+      json: async () => url.includes('/quests/web/discovery/') ? graph : url.includes('/user/1/profile/') ? profile : authored }))
+    const payload = await loadTravelRoute(request(), { param: 'demo' })
+    expect(fetchMock.mock.calls.map(([url]) => url)).toContain('http://localhost:8000/api/user/1/profile/')
+    expect(payload?.authorSameAs).toEqual(['https://www.instagram.com/metravelby/'])
+
+    // The process remembers the author's sameAs: the next article render reads no profile.
+    fetchMock.mockClear()
+    await expect(loadTravelRoute(request(), { param: 'demo' })).resolves.toMatchObject({
+      authorSameAs: ['https://www.instagram.com/metravelby/'] })
+    expect(fetchMock.mock.calls.map(([url]) => url)).not.toContain('http://localhost:8000/api/user/1/profile/')
+
+    const otherAuthor = { ...authored, user: { id: 2, name: 'Сергей' }, userIds: 2 }
+    fetchMock.mockImplementation(async (url: string) => (url.includes('/user/2/profile/')
+      ? { ok: false, status: 500, json: async () => ({}) }
+      : { ok: true, status: 200, json: async () => url.includes('/quests/web/discovery/') ? graph : otherAuthor }))
+    await expect(loadTravelRoute(request(), { param: 'demo' })).resolves.toMatchObject({ authorSameAs: [] })
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  it('gives up on a slow author profile without holding the article (#3237)', async () => {
+    const authored = { ...article, user: { id: 3, name: 'Автор' }, userIds: 3 }
+    fetchMock.mockImplementation((url: string, init: { signal: AbortSignal }) => (url.includes('/user/3/profile/')
+      ? new Promise((_, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted'))))
+      : Promise.resolve({ ok: true, status: 200, json: async () => url.includes('/quests/web/discovery/') ? graph : authored })))
+    const pending = loadTravelRoute(request(), { param: 'demo' })
+    await jest.advanceTimersByTimeAsync(2_000)
+    await expect(pending).resolves.toMatchObject({ authorSameAs: [] })
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
   it('leaves numeric author previews to the credential-aware client query', async () => {
     await expect(loadTravelRoute(request(), { param: '42' })).resolves.toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()

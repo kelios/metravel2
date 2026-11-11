@@ -109,7 +109,20 @@ describe('travelSeo', () => {
     } as any);
 
     expect(jsonLd).not.toHaveProperty('datePublished');
-    expect(jsonLd?.dateModified).toBe('2025-01-02T00:00:00.000Z');
+    // #3237: технический `updated_at` больше не выдаётся за дату правки содержания.
+    expect(jsonLd).not.toHaveProperty('dateModified');
+  });
+
+  it.each([
+    ['present', { content_updated_at: '2026-10-05T09:00:00Z' }, '2026-10-05T09:00:00.000Z'],
+    ['null', { content_updated_at: null }, '2017-02-01T12:00:00Z'],
+    ['absent', {}, '2017-02-01T12:00:00Z'],
+  ])('takes dateModified from content_updated_at when %s, else the publication date (#3237)', (_label, extra, expected) => {
+    const jsonLd = createTravelArticleJsonLd({
+      id: 10, slug: 'tivoli', name: 'Тиволи', created_at: '2017-02-01T12:00:00Z',
+      updated_at: '2026-09-23T07:54:00Z', ...extra,
+    } as any);
+    expect(jsonLd?.dateModified).toBe(expected);
   });
 
   it('publishes datePublished verbatim when created_at is a valid source date', () => {

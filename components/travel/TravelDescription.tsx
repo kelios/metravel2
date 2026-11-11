@@ -19,6 +19,7 @@ import { translate as i18nT } from '@/i18n'
 import { useResponsive } from '@/hooks/useResponsive';
 import { toInertHtml } from '@/utils/inertHtml';
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings';
+import { ensureRichTextImageAlt } from '@/utils/richTextImageAlt';
 import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
 
@@ -112,7 +113,8 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
     const canParseHtml = revealedHtml === htmlContent;
     const initialDescriptionHtml = useMemo(
         () => Platform.OS === 'web' && serverSanitized && hasLoaderTravel
-            ? toInertHtml(demoteRichTextPageHeadings(htmlContent))
+            // #3237: серверный HTML несёт `alt` у каждой картинки — подпись автора или пустой.
+            ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)))
             : null,
         [hasLoaderTravel, htmlContent, serverSanitized],
     );

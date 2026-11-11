@@ -89,16 +89,26 @@ ${SCREEN}="favorite"]{flex:0 0 auto;display:flex;justify-content:flex-end;min-wi
 }
 `
 
-/** «Юля · Октябрь 2019 · 1 день · Беларусь»: пустые части пропускаются. */
-export function buildTravelFirstScreenMeta(travel: Travel): string {
-  const author = resolveTravelAuthorName(travel, travel.userName)
+/**
+ * Части строки меты: имя автора отдельно, чтобы экран мог сделать его ссылкой
+ * на профиль (#3237), и остальное — «Октябрь 2019 · 1 день · Беларусь».
+ */
+export function buildTravelFirstScreenMetaParts(travel: Travel): { author: string; details: string } {
+  const author = String(resolveTravelAuthorName(travel, travel.userName) ?? '').trim()
   const when = [travel.monthName, travel.year != null ? String(travel.year) : '']
     .map((part) => String(part ?? '').trim())
     .filter(Boolean)
     .join(' ')
   const days = formatDays(travel.number_days != null ? Number(travel.number_days) : null)
-  return [author, when, days, travel.countryName]
+  const details = [when, days, travel.countryName]
     .map((part) => String(part ?? '').trim())
     .filter(Boolean)
     .join(' · ')
+  return { author, details }
+}
+
+/** «Юля · Октябрь 2019 · 1 день · Беларусь»: пустые части пропускаются. */
+export function buildTravelFirstScreenMeta(travel: Travel): string {
+  const { author, details } = buildTravelFirstScreenMetaParts(travel)
+  return [author, details].filter(Boolean).join(' · ')
 }

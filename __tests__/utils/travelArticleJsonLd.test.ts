@@ -12,7 +12,8 @@ describe('shared travel SSR/static structured data', () => {
       inLanguage: 'pl',
       mainEntityOfPage: 'https://metravel.by/travels/demo', url: 'https://metravel.by/travels/demo',
       author: { name: 'Автор' }, publisher: { logo: { url: 'https://metravel.by/assets/icons/logo_yellow_60x60.png' } },
-      datePublished: '2025-01-01', dateModified: '2026-01-01', image: ['https://metravel.by/gallery/1?w=1280'],
+      // #3237: `date_update` — техническая дата; без `content_updated_at` — дата публикации.
+      datePublished: '2025-01-01', dateModified: '2025-01-01', image: ['https://metravel.by/gallery/1?w=1280'],
     })
     expect(buildTravelArticleStructuredData({ headline: '', canonical: '/demo' })).toBeNull()
   })
@@ -27,5 +28,17 @@ describe('shared travel SSR/static structured data', () => {
         { position: 3, name: 'Название', item: 'https://metravel.by/travels/demo' },
       ],
     })
+  })
+
+  it.each([
+    ['present', { content_updated_at: '2026-10-05T09:00:00Z' }, '2026-10-05T09:00:00.000Z'],
+    ['null', { content_updated_at: null }, '2017-02-01T12:00:00Z'],
+    ['absent', {}, '2017-02-01T12:00:00Z'],
+  ])('dateModified follows content_updated_at when %s, never updated_at (#3237)', (_label, extra, expected) => {
+    const data = buildTravelArticleStructuredData({
+      headline: 'Тиволи', canonical: 'https://metravel.by/travels/tivoli',
+      travel: { created_at: '2017-02-01T12:00:00Z', updated_at: '2026-09-23T07:54:00Z', ...extra },
+    })
+    expect(data).toMatchObject({ datePublished: '2017-02-01T12:00:00Z', dateModified: expected })
   })
 })

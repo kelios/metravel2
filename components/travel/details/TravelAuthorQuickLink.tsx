@@ -17,6 +17,7 @@ import { makeContentRef } from '@/types/contentSafety'
 import type { Travel } from '@/types/types'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { routes } from '@/utils/routes'
+import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 import { translate as i18nT } from '@/i18n'
 
 const AVATAR_SIZE = 44
@@ -116,8 +117,16 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
   )
   const socialLinks = useMemo(() => resolveAuthorSocials(authorProfile), [authorProfile])
 
-  const openProfile = useCallback(() => {
+  // #3237: на web имя автора — настоящая ссылка `<a href="/user/<id>">`; обычный
+  // клик остаётся переходом внутри приложения, клик с модификатором — браузеру.
+  const profileHref = canOpenAuthor ? routes.user(authorUserId) : null
+  const openProfile = useCallback((event?: unknown) => {
     if (!authorUserId) return
+    if (Platform.OS === 'web' && event) {
+      const linkEvent = event as LinkPressEvent
+      if (!shouldHandleLinkClick(linkEvent)) return
+      linkEvent.preventDefault?.()
+    }
     router.push(routes.user(authorUserId))
   }, [authorUserId, router])
 
@@ -168,9 +177,10 @@ function TravelAuthorQuickLink({ travel }: TravelAuthorQuickLinkProps) {
       style={styles.container}
     >
       <Pressable
+        {...(Platform.OS === 'web' && profileHref ? ({ href: profileHref } as object) : null)}
         onPress={openProfile}
         disabled={!canOpenAuthor}
-        accessibilityRole={canOpenAuthor ? 'button' : undefined}
+        accessibilityRole={canOpenAuthor ? (Platform.OS === 'web' ? 'link' : 'button') : undefined}
         accessibilityLabel={
           canOpenAuthor
             ? i18nT(

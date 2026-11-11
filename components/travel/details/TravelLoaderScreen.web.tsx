@@ -34,6 +34,7 @@ export default function TravelLoaderScreen() {
       image: seo.readyImage,
       travel: payload.travel,
       language: DEFAULT_LOCALE,
+      authorSameAs: payload.authorSameAs,
     })
     const breadcrumb = buildTravelBreadcrumbStructuredData({ headline: payload.travel.name, canonical: seo.canonicalUrl })
     return { '@context': 'https://schema.org', '@graph': [article, breadcrumb, faq].filter(Boolean) }

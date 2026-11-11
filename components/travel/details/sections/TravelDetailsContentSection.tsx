@@ -8,6 +8,7 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { CollapsibleSection } from './CollapsibleSection'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import TravelDescription from '@/components/travel/TravelDescription'
+import TravelUpdatedLine from '@/components/travel/details/TravelUpdatedLine'
 import { buildArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import { safeGetYoutubeId } from '@/utils/travelMedia'
 import { resolveServerRichTextHtml } from '@/utils/serverSafeHtml'
@@ -144,6 +145,7 @@ export const TravelDetailsContentSection: React.FC<{
                     ? i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.tripMonthAndReadingTime', { month: travel.monthName, readingTime: readingTimeLabel })
                     : readingTimeLabel}
                 </Text>
+                <TravelUpdatedLine travel={travel} style={styles.descriptionIntroText} />
               </View>
               {/* #3221: ссылка на квесты города — в начале статьи, полный блок остаётся под текстом. */}
               <TravelQuestTeaserLine travel={travel} />

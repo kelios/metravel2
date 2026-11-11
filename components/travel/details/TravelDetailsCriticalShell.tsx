@@ -7,6 +7,7 @@ import type {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, type Href } from 'expo-router';
 
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -33,8 +34,10 @@ import { TravelHeroFavoriteToggleSlot } from './TravelHeroSlots';
 import { useTravelLoaderPayload } from './travelLoaderData';
 import {
   TRAVEL_FIRST_SCREEN_STYLES,
-  buildTravelFirstScreenMeta,
+  buildTravelFirstScreenMetaParts,
 } from './travelFirstScreenLayout';
+import { travelAuthorProfilePath } from '@/utils/travelAuthorProfile';
+import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable';
 
 // The travel name is the page's single semantic <h1>. In the DOM its heading row
 // (h1 + mobile meta + «Хочу поехать») follows the gallery and its caption and
@@ -266,7 +269,13 @@ export default function TravelDetailsCriticalShell({
     !!travel && isMobile && Platform.OS !== 'web' && !showDesktopSidebar;
 
   // Not memoized on `travel`: the days label is locale-dependent.
-  const firstScreenMeta = Platform.OS === 'web' && travel ? buildTravelFirstScreenMeta(travel) : '';
+  const metaParts = Platform.OS === 'web' && travel ? buildTravelFirstScreenMetaParts(travel) : null;
+  const metaAuthor = metaParts?.author ?? '';
+  const metaDetails = metaParts?.details ?? '';
+  const firstScreenMeta = [metaAuthor, metaDetails].filter(Boolean).join(' · ');
+  // #3237: имя автора в строке меты — ссылка на его профиль, уже в серверном HTML.
+  // Обычный клик — переход внутри приложения, с модификатором — браузеру.
+  const authorProfilePath = metaAuthor ? travelAuthorProfilePath(travel) : null;
 
   // Rendered by the hero between the gallery and the facts/actions. Memoized so
   // the stable hero element below is not invalidated by unrelated shell renders.
@@ -288,7 +297,23 @@ export default function TravelDetailsCriticalShell({
           (hidden ≥768 px, where the facts row right below carries the same data). */}
       {firstScreenMeta ? (
         <p data-testid="travel-details-first-screen-meta" data-travel-first-screen="meta">
-          {firstScreenMeta}
+          {authorProfilePath ? (
+            <>
+              <a
+                href={authorProfilePath}
+                data-travel-author-link="true"
+                style={{ color: 'inherit' }}
+                onClick={(event) => {
+                  if (!shouldHandleLinkClick(event as unknown as LinkPressEvent)) return;
+                  event.preventDefault();
+                  router.push(authorProfilePath as Href);
+                }}
+              >
+                {metaAuthor}
+              </a>
+              {metaDetails ? ` · ${metaDetails}` : null}
+            </>
+          ) : firstScreenMeta}
         </p>
       ) : null}
       <div data-travel-first-screen="favorite">
@@ -297,7 +322,7 @@ export default function TravelDetailsCriticalShell({
         </Suspense>
       </div>
     </div>
-  ) : null, [travel, isMobile, isRouterSsrTravel, colors.text, firstScreenMeta]);
+  ) : null, [travel, isMobile, isRouterSsrTravel, colors.text, firstScreenMeta, authorProfilePath, metaAuthor, metaDetails]);
 
   // Completed server boundaries keep the visible HTML while React hydrates the
   // hero and article independently. Stable elements prevent unrelated container
