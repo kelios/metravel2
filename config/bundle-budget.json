@@ -35,7 +35,7 @@
       "__expo-metro-runtime"
     ],
     "htmlRoutes": true,
-    "maxBrotliKB": 775,
+    "maxBrotliKB": 740,
     "maxRequests": 27,
     "maxRequestsByRoute": {
       "index.html": 16,

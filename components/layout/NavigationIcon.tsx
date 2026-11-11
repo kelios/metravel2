@@ -1,6 +1,6 @@
 import { Platform, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import Svg, { Circle, Path, Rect } from 'react-native-svg'
+import Svg, { Circle, Path, Rect } from './navigationIconSvg'
 
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import BelarusOutlineIcon from './BelarusOutlineIcon'
