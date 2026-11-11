@@ -59,8 +59,15 @@ async function openAssistant(page: Page): Promise<void> {
 }
 
 async function send(page: Page, question: string): Promise<void> {
-  await page.getByTestId('assistant-input').fill(question);
-  await page.getByTestId('assistant-send').click();
+  const input = page.getByTestId('assistant-input');
+  const sendButton = page.getByTestId('assistant-send');
+  // Экран виден из статики до гидрации: значение, введённое раньше, React стирает.
+  // Повторяем ввод, пока кнопка не станет активной (draft попал в state).
+  await expect(async () => {
+    await input.fill(question);
+    await expect(sendButton).toBeEnabled({ timeout: 1_000 });
+  }).toPass({ timeout: SCREEN_TIMEOUT_MS });
+  await sendButton.click();
 }
 
 test.describe('Assistant via server /ai/ask (#2884)', () => {
