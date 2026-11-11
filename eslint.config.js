@@ -100,6 +100,8 @@ const baseIgnores = [
   "scripts/.fix-*/**",
   "scripts/.tmp-*",
   "scripts/.tmp-*/**",
+  "scripts/.recover-ssg/",
+  "scripts/.recover-ssg/**",
   "scripts/.migrate-description-images/",
   "scripts/.migrate-description-images/**",
   "scripts/.quest-review/",

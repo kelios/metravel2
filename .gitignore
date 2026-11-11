@@ -229,6 +229,8 @@ scripts/.quest-review/
 
 # Index-status кэш (не коммитим)
 scripts/.index-cache/
+# Dry-run отчёты scripts/recover-travel-from-ssg.js (REPORT_DIR)
+scripts/.recover-ssg/
 /dump/
 /.quest-audit/
 

@@ -28,7 +28,6 @@ module.exports = {
     '\\.mjs$': expoPreset.transform['\\.[jt]sx?$'],
   },
   moduleNameMapper: {
-    '^@/components/KeyboardShortcutsHelp$': '<rootDir>/__mocks__/KeyboardShortcutsHelp.tsx',
     ...moduleNameMapper,
     '^@/(.*)$': '<rootDir>/$1',
     // expo-router 58 экспортирует только `./build/*`; vendor-копия react-helmet-async, которую
