@@ -13,6 +13,7 @@ export const seoSsgResources = {
   "questDetail.factRoute_other": "Trasa: {{count}} punktów",
   "questDetail.factDuration": "Czas: około {{value1}}",
   "questDetail.factStart": "Start: {{value1}}",
+  "questDetail.factFormat": "Format: samodzielnie, w dowolny dzień, bez zapisów",
   "questDetail.routeHeading": "Co jest na trasie",
   "questDetail.routeLead": "Punkty trasy po kolei — co to za miejsca i dlaczego są ciekawe. Zadania i odpowiedzi zostają w samym queście.",
   "questDetail.linksHeading": "Dokąd dalej",

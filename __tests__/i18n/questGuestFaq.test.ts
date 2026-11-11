@@ -29,7 +29,7 @@ afterEach(async () => {
 describe('guest quest registration promise', () => {
   it.each(SUPPORTED_LOCALES)('keeps %s app and SSG registration answers truthful and identical', async (locale) => {
     await i18n.changeLanguage(locale)
-    const answer = getQuestFaqItems()[4].a
+    const answer = getQuestFaqItems()[5].a
     const template = resources[locale].quests[answerKey]
     const ssg = createSsgTranslator(catalogs, locale)
 
@@ -48,7 +48,7 @@ describe('guest quest registration promise', () => {
     const limits = require('@/utils/guestQuestLimits')
     jest.replaceProperty(limits, 'GUEST_QUEST_FREE_STEPS', changedLimit)
 
-    expect(getQuestFaqItems()[4].a).toContain(`Гость может пройти ${noun} квеста`)
+    expect(getQuestFaqItems()[5].a).toContain(`Гость может пройти ${noun} квеста`)
   })
 
   it.each([
@@ -62,8 +62,8 @@ describe('guest quest registration promise', () => {
     jest.replaceProperty(limits, 'GUEST_QUEST_FREE_STEPS', limit)
     const ssg = createSsgTranslator(catalogs, locale)
 
-    expect(getQuestFaqItems()[4].a).toContain(noun)
-    expect(getQuestFaqItems()[4].a).toBe(ssg.tp(`quests:${answerKey}`, limit, { freeSteps: formatInteger(limit, locale) }))
+    expect(getQuestFaqItems()[5].a).toContain(noun)
+    expect(getQuestFaqItems()[5].a).toBe(ssg.tp(`quests:${answerKey}`, limit, { freeSteps: formatInteger(limit, locale) }))
   })
 
   it('loads the shared gate limit in plain Node without native storage dependencies', () => {

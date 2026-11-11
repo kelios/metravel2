@@ -326,6 +326,39 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
   },
+  contactHint: {
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  contactHintTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  contactHintText: {
+    ...DESIGN_TOKENS.typography.scale.bodySmall,
+    color: colors.text,
+  },
+  contactHintLink: {
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  contactHintLinkPressed: {
+    opacity: 0.75,
+  },
+  contactHintLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
   form: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,

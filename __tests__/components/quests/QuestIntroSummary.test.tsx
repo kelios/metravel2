@@ -23,6 +23,11 @@ describe('quest introduction summary (#3065)', () => {
     expect(view.queryByText('9')).toBeNull()
   })
 
+  it('says under the offer that the quest is self-guided, any day, no booking (#3284)', async () => {
+    const view = await render(<QuestIntroSummary durationMin={120} pointsCount={7} routeComplete route={route()} />)
+    expect(view.getByTestId('quest-intro-self-guided').props.children).toBe('Проходите сами в любой день — без записи и без группы.')
+  })
+
   it('distinguishes loading, absent metadata and an unrouted fallback', async () => {
     const view = await render(<QuestIntroSummary metaLoading pointsCount={2} routeComplete route={route({ status: 'loading', source: 'direct' })} />)
     expect(view.getAllByText('Загрузка…')).toHaveLength(2)

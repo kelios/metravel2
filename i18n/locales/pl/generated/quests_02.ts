@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a2": "Otwórz quest w telefonie i podążaj trasą. W każdym punkcie przeczytaj legendę, wykonaj zadanie i wpisz odpowiedź, aby odblokować kolejny punkt. Mapa i podpowiedzi są zawsze pod ręką.",
   "screens.tabs.QuestsSeoIntroFaq.q3": "Ile kosztuje quest?",
   "screens.tabs.QuestsSeoIntroFaq.a3": "Wszystkie miejskie questy Metravel są bezpłatne. Nie musisz nic kupować ani rezerwować — po prostu wybierz trasę i ruszaj na spacer.",
+  "screens.tabs.QuestsSeoIntroFaq.q9": "Czy trzeba się zapisać albo dołączyć do grupy?",
+  "screens.tabs.QuestsSeoIntroFaq.a9": "Nie. Metravel nie prowadzi questów z prowadzącym i nie zbiera grup. Trasę przechodzisz samodzielnie, z własnego telefonu, w dowolny dzień i o dogodnej porze. W kilka osób można iść z jednym telefonem. Bilety do muzeów po drodze kupuje się osobno, w kasie muzeum.",
   "screens.tabs.QuestsSeoIntroFaq.q4": "Czy questy są odpowiednie dla dzieci?",
   "screens.tabs.QuestsSeoIntroFaq.a4": "Tak. Mamy osobne questy dla dzieci w wieku 5–7 i 8–10 lat oraz trasy dla nastolatków 11–14 lat: zadania są prostsze, a historie pisane dla młodych odkrywców. Wiek jest podany wprost na karcie trasy.",
   "screens.tabs.QuestsSeoIntroFaq.q5": "Czy potrzebna jest rejestracja?",

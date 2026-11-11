@@ -11,7 +11,7 @@ import { CategoriesShowcase } from '@/components/about/CategoriesShowcase';
 import { StatsBanner } from '@/components/about/StatsBanner';
 import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
-import { sendFeedback } from '@/api/misc';
+import { submitContactFeedback } from '@/utils/contactFeedback';
 import { useIsFocused } from 'expo-router';
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -92,7 +92,7 @@ function AboutAndContactScreen() {
 
     try {
       setSending(true);
-      const res = await sendFeedback(name.trim(), email.trim(), message.trim());
+      const res = await submitContactFeedback(name.trim(), email.trim(), message.trim());
       setResp({ text: res, error: false });
       clearForm();
       showToast({ type: 'success', text1: i18nT('home:app.tabs.about.soobschenie_otpravleno_e066a056'), text2: i18nT('home:app.tabs.about.spasibo_za_obratnuyu_svyaz_bb3f2f80'), visibilityTime: 4000 });
@@ -269,6 +269,7 @@ function AboutAndContactScreen() {
                     messageRef={messageRef}
                     onSubmitEditingEmail={() => emailRef.current?.focus()}
                     onSubmitEditingMessage={() => messageRef.current?.focus()}
+                    onOpenQuests={() => router.push('/quests')}
                   />
                   <SocialSection
                     onOpenFacebook={() => openUrl(METRAVEL_SOCIAL_LINKS.facebook)}

@@ -176,6 +176,8 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsSeoIntroFaq.a2": "Open the quest on your phone and follow the route. At each point read the legend, complete the task and enter the answer to unlock the next point. The map and hints are always at hand.",
   "screens.tabs.QuestsSeoIntroFaq.q3": "How much does a quest cost?",
   "screens.tabs.QuestsSeoIntroFaq.a3": "All Metravel city quests are free. There is nothing to buy or book — just pick a route and set off for a walk.",
+  "screens.tabs.QuestsSeoIntroFaq.q9": "Do I need to book or join a group?",
+  "screens.tabs.QuestsSeoIntroFaq.a9": "No. Metravel does not run hosted quests or put groups together. You walk the route on your own, from your phone, on any day and at any time that suits you. A group of friends can share one phone. Tickets to museums along the way are bought separately at the museum.",
   "screens.tabs.QuestsSeoIntroFaq.q4": "Are the quests suitable for kids?",
   "screens.tabs.QuestsSeoIntroFaq.a4": "Yes. We have dedicated kids quests for ages 5–7 and 8–10 and teen routes for ages 11–14: the tasks are simpler and the stories are written for young explorers. The age is shown right on the route card.",
   "screens.tabs.QuestsSeoIntroFaq.q5": "Do I need to register?",

@@ -374,6 +374,7 @@ export const questsGenerated1 = {
   "components.quests.QuestIntroSummary.unavailable": "Brak danych",
   "components.quests.QuestIntroSummary.offer": "Za darmo · bez przewodnika · {{points}} · {{duration}}",
   "components.quests.QuestIntroSummary.offerNoDuration": "Za darmo · bez przewodnika · {{points}}",
+  "components.quests.QuestIntroSummary.selfGuided": "Przejdź samodzielnie w dowolny dzień — bez zapisów i bez grupy.",
   "components.quests.QuestStoryText.more": "Czytaj dalej",
   "components.quests.QuestStoryText.less": "Zwiń",
   "components.quests.QuestForCityCard.difficulty.easy": "Łatwy",

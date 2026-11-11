@@ -374,6 +374,7 @@ export const questsGenerated1 = {
   "components.quests.QuestIntroSummary.unavailable": "Няма даных",
   "components.quests.QuestIntroSummary.offer": "Бясплатна · без гіда · {{points}} · {{duration}}",
   "components.quests.QuestIntroSummary.offerNoDuration": "Бясплатна · без гіда · {{points}}",
+  "components.quests.QuestIntroSummary.selfGuided": "Праходзьце самі ў любы дзень — без запісу і без групы.",
   "components.quests.QuestStoryText.more": "Чытаць далей",
   "components.quests.QuestStoryText.less": "Згарнуць",
   "components.quests.QuestForCityCard.difficulty.easy": "Лёгка",

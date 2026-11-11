@@ -48,6 +48,7 @@ import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnost
 import { installQaDebug } from '@/utils/qaDebug';
 import { useAriaHiddenFocusGuard } from "@/hooks/useAriaHiddenFocusGuard";
 import { useWebScrollDelegation } from "@/hooks/useWebScrollDelegation";
+import { recordVisitedPath } from "@/utils/navigationTrail";
 import { BottomChromeInsetProvider } from "@/components/layout/bottomChromeInset";
 import { ROOT_ICON_FONTS } from '@/components/layout/rootIconFonts';
 
@@ -213,6 +214,11 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       }
       return pathname || '';
     }, [pathname, segments]);
+
+    // #3284: форма контактов сообщает, с какого экрана человек в неё перешёл.
+    useEffect(() => {
+      recordVisitedPath(effectivePathname);
+    }, [effectivePathname]);
 
     // Dev-only QA: дамп runtime-состояния в logcat ([QA-STATE]) на смене роута +
     // globalThis.__QA__(). No-op в проде. Помогает device-QA читать состояние без правок кода.

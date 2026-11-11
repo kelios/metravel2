@@ -13,6 +13,7 @@ export const seoSsgResources = {
   "questDetail.factRoute_other": "Route: {{count}} points",
   "questDetail.factDuration": "Time: about {{value1}}",
   "questDetail.factStart": "Start: {{value1}}",
+  "questDetail.factFormat": "Format: self-guided, any day, no booking",
   "questDetail.routeHeading": "What is on the route",
   "questDetail.routeLead": "The route points in order — what these places are and why they are interesting. Tasks and answers stay inside the quest.",
   "questDetail.linksHeading": "Where to go next",

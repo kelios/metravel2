@@ -98,6 +98,36 @@ function clampMetaDescription(value, maxEncodedLength = SEO_DESCRIPTION_MAX_ENCO
   return clipped.replace(/[\s.,;:!?·–—-]+$/u, '').trim();
 }
 
+// Описание собирается целыми предложениями: то, что не помещается в лимит,
+// опускается целиком, а не обрывается на полуслове («…прямо со»). Обрезка
+// остаётся только для первого предложения, если оно само длиннее лимита.
+function joinWholeSentences(parts, maxEncodedLength = SEO_DESCRIPTION_MAX_ENCODED_LENGTH) {
+  const sentences = parts.map((part) => normalizeText(part)).filter(Boolean);
+  if (sentences.length === 0) return '';
+  let description = clampMetaDescription(sentences[0], maxEncodedLength);
+  if (description !== sentences[0]) return description;
+  for (const sentence of sentences.slice(1)) {
+    const next = `${description} ${sentence}`;
+    if (encodedAttributeLength(next) <= maxEncodedLength) description = next;
+  }
+  return description;
+}
+
+// Первое предложение несёт название квеста, второе — формат (#3284). Формат
+// обязателен: если вместе они не влезают, укорачивается название внутри первого
+// предложения (с «…»), а не теряется второе. Без этого 65 из 282 квестов каталога
+// (названия длиннее ~52 знаков) оставались в сниппете без «в любой день, без записи».
+const MIN_CLIPPED_TITLE_LENGTH = 12;
+
+function fitLeadBeforeFormat(renderLead, title, format, maxEncodedLength = SEO_DESCRIPTION_MAX_ENCODED_LENGTH) {
+  const lead = renderLead(title);
+  const overflow = encodedAttributeLength(`${normalizeText(lead)} ${normalizeText(format)}`) - maxEncodedLength;
+  if (overflow <= 0) return lead;
+  const budget = encodedAttributeLength(title) - overflow - 1; // 1 — место под «…»
+  if (budget < MIN_CLIPPED_TITLE_LENGTH) return lead;
+  return renderLead(`${clampMetaDescription(title, budget)}…`);
+}
+
 function formatDuration(durationMin, translate) {
   const minutesTotal = Number(durationMin) || 0;
   if (minutesTotal <= 0) return '';
@@ -136,22 +166,24 @@ function buildQuestSeoMetadata({
     ? translate('seo:utils.questSeo.city_prefixed_quest_title', { value1: cityLabel, value2: questTitle })
     : questTitle;
 
-  const descriptionParts = [
-    city
-      ? translate('seo:utils.questSeo.gorod_value1_besplatnyy_peshiy_marshrut_valu_951719a3', { value1: city, value2: shortTitle })
-      : translate('seo:utils.questSeo.besplatnyy_peshiy_marshrut_value1_po_dostopr_8cbbea0f', { value1: questTitle }),
-  ];
+  // #3284: сразу после названия идёт формат — «сами, в любой день, без записи».
+  // Посетитель из поиска принял квест за мероприятие с датой, записью и ценой:
+  // слово «бесплатный» в сниппете на вопрос «когда и с кем» не отвечает.
+  const renderLead = (leadTitle) => (city
+    ? translate('seo:utils.questSeo.gorod_value1_besplatnyy_peshiy_marshrut_valu_951719a3', { value1: city, value2: leadTitle })
+    : translate('seo:utils.questSeo.besplatnyy_peshiy_marshrut_value1_po_dostopr_8cbbea0f', { value1: leadTitle }));
+  const format = translate('seo:utils.questSeo.selfGuidedAnyDay');
+  const descriptionParts = [fitLeadBeforeFormat(renderLead, city ? shortTitle : questTitle, format), format];
   const pointsCount = Number(points) || 0;
   if (pointsCount > 0) {
     descriptionParts.push(`${pointsCount} ${pluralize('seo:utils.questSeo.pointNoun', pointsCount)}.`);
   }
   const duration = formatDuration(durationMin, translate);
   if (duration) descriptionParts.push(translate('seo:utils.questSeo.primerno_value1_cc8b37aa', { value1: duration }));
-  descriptionParts.push(translate('seo:utils.questSeo.zadaniya_i_legendy_pryamo_so_smartfona_33796e9b'));
 
   return {
     title: buildBrandedSeoTitle(searchTitle),
-    description: clampMetaDescription(descriptionParts.join(' ')),
+    description: joinWholeSentences(descriptionParts),
   };
 }
 

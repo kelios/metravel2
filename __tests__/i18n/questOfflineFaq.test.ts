@@ -8,7 +8,7 @@ afterEach(async () => { await i18n.changeLanguage('ru') })
 describe('quest offline FAQ (#3063)', () => {
   it.each(SUPPORTED_LOCALES)('chooses the web restriction and preserves native copy in %s', async (locale) => {
     await i18n.changeLanguage(locale)
-    expect(getQuestFaqItems('web')[5].a).toBe(resources[locale].quests['screens.tabs.QuestsSeoIntroFaq.a6Web'])
-    expect(getQuestFaqItems('ios')[5].a).toBe(resources[locale].quests['screens.tabs.QuestsSeoIntroFaq.a6'])
+    expect(getQuestFaqItems('web')[6].a).toBe(resources[locale].quests['screens.tabs.QuestsSeoIntroFaq.a6Web'])
+    expect(getQuestFaqItems('ios')[6].a).toBe(resources[locale].quests['screens.tabs.QuestsSeoIntroFaq.a6'])
   })
 })

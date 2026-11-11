@@ -1,6 +1,6 @@
 import React from 'react'
 import { Platform, TextInput } from 'react-native'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 import { ContactForm } from '@/components/about/ContactForm'
 
@@ -52,6 +52,7 @@ const props = {
   messageRef: React.createRef<TextInput>(),
   onSubmitEditingEmail: jest.fn(),
   onSubmitEditingMessage: jest.fn(),
+  onOpenQuests: jest.fn(),
 }
 
 describe('ContactForm honeypot boundary', () => {
@@ -86,5 +87,15 @@ describe('ContactForm honeypot boundary', () => {
     } else {
       expect(hint).toBeNull()
     }
+  })
+
+  it('answers the "how do I join a quest" question above the fields and links to quests (#3284)', async () => {
+    const onOpenQuests = jest.fn()
+    const { getByTestId, getByText } = await render(<ContactForm {...props} onOpenQuests={onOpenQuests} />)
+
+    expect(getByText('home:components.about.ContactForm.questHintTitle')).toBeTruthy()
+    expect(getByText('home:components.about.ContactForm.questHintText')).toBeTruthy()
+    await fireEvent.press(getByTestId('contact-quest-hint-link'))
+    expect(onOpenQuests).toHaveBeenCalledTimes(1)
   })
 })

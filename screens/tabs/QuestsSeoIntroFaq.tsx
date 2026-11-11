@@ -40,6 +40,7 @@ export function getQuestFaqItems(platform: string = Platform.OS): QuestFaqItem[]
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q1'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a1') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q2'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a2') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q3'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a3') },
+    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q9'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a9') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q4'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a4') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q5'), a: translatePlural('quests:screens.tabs.QuestsSeoIntroFaq.a5', GUEST_QUEST_FREE_STEPS, { freeSteps: formatInteger(GUEST_QUEST_FREE_STEPS) }) },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q6'), a: platform === 'web' ? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6Web') : i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6') },

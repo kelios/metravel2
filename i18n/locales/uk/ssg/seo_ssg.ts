@@ -13,6 +13,7 @@ export const seoSsgResources = {
   "questDetail.factRoute_other": "Маршрут: {{count}} точок",
   "questDetail.factDuration": "Час: приблизно {{value1}}",
   "questDetail.factStart": "Старт: {{value1}}",
+  "questDetail.factFormat": "Формат: самостійно, будь-якого дня, без запису",
   "questDetail.routeHeading": "Що на маршруті",
   "questDetail.routeLead": "Точки маршруту по черзі — що це за місця і чим вони цікаві. Завдання та відповіді залишаються в самому квесті.",
   "questDetail.linksHeading": "Куди далі",

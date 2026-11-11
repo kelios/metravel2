@@ -67,7 +67,41 @@ describe('quest SEO metadata', () => {
     })
 
     expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
-    expect(seo.description).not.toMatch(/[\s.,;:!?·–—-]$/u)
+    // Целые предложения: либо первое предложение обрезано без висящей пунктуации,
+    // либо описание заканчивается точкой последнего поместившегося предложения.
+    expect(seo.description).not.toMatch(/[\s,;:!?·–—-]$/u)
+  })
+
+  it('shortens an oversized title inside the first sentence and keeps the format sentence (#3284)', () => {
+    const seo = buildQuestSeoMetadata({
+      title: 'Очень длинный городской маршрут & легенды старого центра с неожиданным финалом и ещё одной долгой прогулкой вдоль набережной до самого заката',
+      cityName: 'Санкт-Петербург',
+      points: 25,
+      durationMin: 195,
+    })
+
+    expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
+    expect(seo.description).toMatch(/^Город Санкт-Петербург: бесплатный пеший маршрут «Очень длинный [^»]*…» по достопримечательностям\. Проходите сами в любой день, без записи\.$/u)
+  })
+
+  it('keeps the format sentence for a catalog title that alone overflows with it (#3284)', () => {
+    const seo = buildQuestSeoMetadata({ title: 'Квест по Дубровнику: республика одного слова — Libertas', cityName: 'Дубровник', points: 9, durationMin: 150 })
+
+    expect(seo.description).toContain('…» по достопримечательностям. Проходите сами в любой день, без записи.')
+    expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
+  })
+
+  it('says the quest is self-guided right after the title and never cuts a sentence (#3284)', () => {
+    const fits = buildQuestSeoMetadata({ title: 'Витебск: столица авангарда', cityName: 'Витебск', points: 8, durationMin: 120 })
+    expect(fits.description).toBe(
+      'Город Витебск: бесплатный пеший маршрут «столица авангарда» по достопримечательностям. Проходите сами в любой день, без записи. 8 точек. Примерно 2 ч.',
+    )
+
+    // Длинное название: формат помещается, а число точек и время опускаются целиком.
+    const tight = buildQuestSeoMetadata({ title: 'Квест по Несвижу: дворец Радзивиллов', cityName: 'Несвиж', points: 7, durationMin: 120 })
+    expect(tight.description).toContain('Проходите сами в любой день, без записи.')
+    expect(tight.description).toMatch(/\.$/u)
+    expect(encodedAttributeLength(tight.description)).toBeLessThanOrEqual(160)
   })
 
   it('builds native quest metadata when Intl.PluralRules is unavailable', () => {

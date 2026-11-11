@@ -613,6 +613,20 @@ describe('api/misc', () => {
     await expect(sendFeedback('A', 'b@c.com', 'Hi')).rejects.toThrow('oops')
   })
 
+  it('sendFeedback carries the source page only when it is known (#3284)', async () => {
+    mockSanitizeInput.mockImplementation((v: string) => v.trim())
+    mockFetchWithTimeout.mockResolvedValue({ ok: true, status: 200 })
+    mockSafeJsonParse.mockResolvedValue({})
+
+    await sendFeedback('A', 'b@c.com', 'Hi', '/quests/17/nesvizh-radziwill')
+    expect(JSON.parse(mockFetchWithTimeout.mock.calls.at(-1)[1].body)).toEqual({
+      name: 'A', email: 'b@c.com', message: 'Hi', page_url: '/quests/17/nesvizh-radziwill',
+    })
+
+    await sendFeedback('A', 'b@c.com', 'Hi', null)
+    expect(JSON.parse(mockFetchWithTimeout.mock.calls.at(-1)[1].body)).toEqual({ name: 'A', email: 'b@c.com', message: 'Hi' })
+  })
+
   describe('sendFeedback success localization (#1808)', () => {
     const localizedSuccess = [
       ['ru', 'Сообщение успешно отправлено'],

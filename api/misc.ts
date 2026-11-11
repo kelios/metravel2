@@ -714,7 +714,10 @@ export const fetchAllCountries = async (
 export const sendFeedback = async (
   name: string,
   email: string,
-  message: string
+  message: string,
+  // Экран, с которого человек перешёл в контакты (#3284). Бэкенд покажет его в
+  // письме после #3283; до выката неизвестное поле сериализатор игнорирует.
+  pageUrl?: string | null
 ): Promise<string> => {
   const sanitizedName = sanitizeInput(name.trim());
   const sanitizedEmail = sanitizeInput(email.trim());
@@ -730,7 +733,8 @@ export const sendFeedback = async (
       body: JSON.stringify({
         name: sanitizedName,
         email: sanitizedEmail,
-        message: sanitizedMessage
+        message: sanitizedMessage,
+        ...(pageUrl ? { page_url: pageUrl } : {}),
       }),
     }, DEFAULT_TIMEOUT);
 

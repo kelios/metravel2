@@ -52,6 +52,7 @@ function introModel(quest, bundle, ssg) {
     points > 0 && ssg.tp('seoSsg:questDetail.factRoute', points),
     duration && ssg.t('seoSsg:questDetail.factDuration', { value1: duration }),
     start && ssg.t('seoSsg:questDetail.factStart', { value1: start }),
+    ssg.t('seoSsg:questDetail.factFormat'),
   ].filter(Boolean) };
 }
 
@@ -148,7 +149,7 @@ function buildCity(city, bundles, travels, countries, ssg) {
     description: clampMetaDescription(`${name}: что посмотреть на прогулке — ${count} ${ruPlural(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Квесты рядом и маршруты путешественников.`),
     canonical: ORIGIN + path, image: absoluteImage(coverQuest?.cover_url || coverQuest?.coverUrl), tourist_type: '', city_name: name },
   heading: `Городские квесты: ${name}`, kicker: '',
-  lead: `${name}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять пешком.`,
+  lead: `${name}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять в любой день: записываться и ждать группу не нужно.`,
   paragraphs: [], facts: [], sections };
   return { kind: 'city', locale: 'ru', city_id: Number(city.cityId), city_ids: city.cityIds,
     aliases: [...(city.legacyAliases || []), ...(city.legacyCityIds || []).map(String), ...city.cityIds.map(String)],

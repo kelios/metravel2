@@ -25,7 +25,10 @@ export default function QuestIntroSummary({ durationMin, difficulty, metaLoading
     item: { flexBasis: '45%', flexGrow: 1, minWidth: 0 },
     label: { color: colors.textMuted, fontSize: 12 },
     value: { color: colors.text, fontSize: 14, fontWeight: '600' },
-    offer: { flexBasis: '100%', color: colors.text, fontSize: 15, fontWeight: '700' },
+    // Оффер и строка формата — одна колонка на всю ширину ряда (#3284).
+    lead: { flexBasis: '100%', gap: DESIGN_TOKENS.spacing.xxs },
+    offer: { color: colors.text, fontSize: 15, fontWeight: '700' },
+    selfGuided: { color: colors.text, fontSize: 14, lineHeight: 20 },
   }), [colors])
   const unavailable = t('quests:components.quests.QuestIntroSummary.unavailable')
   const loading = t('quests:components.quests.QuestIntroSummary.loading')
@@ -48,7 +51,11 @@ export default function QuestIntroSummary({ durationMin, difficulty, metaLoading
     { label: t('quests:components.quests.QuestIntroSummary.distance'), value: distance },
   ]
   return <View style={styles.row} testID="quest-intro-summary">
-    <Text style={styles.offer} testID="quest-intro-offer">{offer}</Text>
+    <View style={styles.lead}>
+      <Text style={styles.offer} testID="quest-intro-offer">{offer}</Text>
+      {/* #3284: «без гида» читали как свойство мероприятия и спрашивали дату, запись и цену. */}
+      <Text style={styles.selfGuided} testID="quest-intro-self-guided">{t('quests:components.quests.QuestIntroSummary.selfGuided')}</Text>
+    </View>
     {fields.map(({ label, value }) => <View key={label} style={styles.item}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>)}
   </View>
 }

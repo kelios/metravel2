@@ -38,6 +38,7 @@ type ContactFormProps = {
   messageRef: React.RefObject<TextInputInstance | null>;
   onSubmitEditingEmail: () => void;
   onSubmitEditingMessage: () => void;
+  onOpenQuests: () => void;
 };
 
 export const ContactForm: React.FC<ContactFormProps> = ({
@@ -71,6 +72,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   messageRef,
   onSubmitEditingEmail,
   onSubmitEditingMessage,
+  onOpenQuests,
 }) => {
   const styles = useAboutStyles();
   const colors = useThemedColors();
@@ -79,6 +81,21 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     <View style={styles.contactHeader}>
       <Text style={styles.contactTitle}>{i18nT('home:components.about.ContactForm.svyazatsya_s_nami_6710884b')}</Text>
       <Text style={styles.contactSubtitle}>{i18nT('home:components.about.ContactForm.est_voprosy_ili_predlozheniya_napishite_nam_9548fc8e')}</Text>
+    </View>
+
+    {/* #3284: самый частый вопрос к форме — «как записаться на квест». Ответ стоит до полей. */}
+    <View style={styles.contactHint} testID="contact-quest-hint">
+      <Text style={styles.contactHintTitle}>{i18nT('home:components.about.ContactForm.questHintTitle')}</Text>
+      <Text style={styles.contactHintText}>{i18nT('home:components.about.ContactForm.questHintText')}</Text>
+      <Pressable
+        onPress={onOpenQuests}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.contactHintLink, pressed && styles.contactHintLinkPressed]}
+        testID="contact-quest-hint-link"
+      >
+        <Text style={styles.contactHintLinkText}>{i18nT('home:components.about.ContactForm.questHintLink')}</Text>
+        <Feather name="arrow-right" size={16} color={colors.primaryText} />
+      </Pressable>
     </View>
 
     <View style={styles.form}>

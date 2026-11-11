@@ -158,7 +158,7 @@ describe('AboutScreen', () => {
         expect(view.getByText(confirmation)).toBeTruthy();
       });
       expect(mockSendFeedback).toHaveBeenCalledTimes(1);
-      expect(mockSendFeedback).toHaveBeenCalledWith('Alice', 'alice@example.com', 'Hello!');
+      expect(mockSendFeedback).toHaveBeenCalledWith('Alice', 'alice@example.com', 'Hello!', null);
       expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
       expect(view.getByPlaceholderText('Имя').props.value).toBe('');
       expect(view.getByPlaceholderText('Email').props.value).toBe('');

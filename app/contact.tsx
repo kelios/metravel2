@@ -10,7 +10,7 @@ import { ContactForm } from '@/components/about/ContactForm'
 import { SocialSection } from '@/components/about/SocialSection'
 import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import CustomHeader from '@/components/layout/CustomHeader'
-import { sendFeedback } from '@/api/misc'
+import { submitContactFeedback } from '@/utils/contactFeedback'
 import { useIsFocused } from 'expo-router'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useAboutStyles } from '@/components/about/aboutStyles'
@@ -108,7 +108,7 @@ function ContactScreen() {
     try {
       sendingRef.current = true
       setSending(true)
-      const result = await sendFeedback(name.trim(), email.trim(), message.trim())
+      const result = await submitContactFeedback(name.trim(), email.trim(), message.trim())
       if (mountedRef.current) {
         setResp({ text: result, error: false })
         clearForm()
@@ -269,6 +269,7 @@ function ContactScreen() {
                       messageRef={messageRef}
                       onSubmitEditingEmail={() => emailRef.current?.focus()}
                       onSubmitEditingMessage={() => messageRef.current?.focus()}
+                      onOpenQuests={() => router.push('/quests')}
                     />
                   </View>
                 </View>

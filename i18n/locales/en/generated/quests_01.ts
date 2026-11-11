@@ -374,6 +374,7 @@ export const questsGenerated1 = {
   "components.quests.QuestIntroSummary.unavailable": "Unavailable",
   "components.quests.QuestIntroSummary.offer": "Free · self-guided · {{points}} · {{duration}}",
   "components.quests.QuestIntroSummary.offerNoDuration": "Free · self-guided · {{points}}",
+  "components.quests.QuestIntroSummary.selfGuided": "Play on your own, any day — no booking, no group to join.",
   "components.quests.QuestStoryText.more": "Read more",
   "components.quests.QuestStoryText.less": "Show less",
   "components.quests.QuestForCityCard.difficulty.easy": "Easy",
