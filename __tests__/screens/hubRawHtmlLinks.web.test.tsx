@@ -94,6 +94,17 @@ describe('/quests: указатель каталога', () => {
     expect(html).toMatch(/<nav[^>]*data-quests-directory/)
   })
 
+  // Между `</li><li>` в серверном HTML пробела нет: без точки переноса после
+  // разделителя браузер рвал названия городов посреди слова («Ген/т»).
+  it('gives the browser a line-break point after every separator', () => {
+    const Directory = require('@/screens/tabs/QuestsCatalogDirectory.web').default
+    const html = renderToString(createElement(Directory, { countries, cities, quests }))
+
+    expect(html).not.toMatch(/<\/li>\s+<li/)
+    expect(html).toContain('li:not(:last-child)::after{content:"· "')
+    expect(html).not.toContain('li+li::before')
+  })
+
   it('renders nothing without data and skips a quest that has no address', () => {
     const Directory = require('@/screens/tabs/QuestsCatalogDirectory.web').default
 
