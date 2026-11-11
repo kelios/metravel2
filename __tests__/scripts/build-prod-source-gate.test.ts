@@ -386,6 +386,54 @@ describe('build-prod.sh entry point', () => {
   })
 })
 
+describe('build-prod.sh tracked public build flags (#3292)', () => {
+  let work: string
+
+  // The harness inherits the jest environment: the variable is unset or set
+  // inside the script itself, so an operator's export cannot leak in.
+  const sourceAfter = (envProd: string, setup: string) => {
+    fs.writeFileSync(path.join(work, '.env.prod'), envProd, 'utf8')
+    const result = runHarness(
+      work,
+      [setup, 'apply_env prod', 'apply_build_public_defaults prod', 'echo "SOURCE=[${EXPO_PUBLIC_AI_SIMILAR_SOURCE-unset}]"'].join('\n'),
+    )
+    expect(result.status).toBe(0)
+    return /SOURCE=\[(.*)\]/.exec(result.stdout)?.[1]
+  }
+
+  beforeEach(() => {
+    work = makeTempDir('build-prod-public-flags-')
+  })
+
+  afterEach(() => {
+    removeDir(work)
+  })
+
+  it('turns the similar-articles blocks on when neither the machine env nor .env.prod mentions the flag', () => {
+    expect(sourceAfter('EXPO_PUBLIC_API_URL=https://metravel.by\n', 'unset EXPO_PUBLIC_AI_SIMILAR_SOURCE')).toBe('static')
+    // A commented-out line is not a value: dotenv skips it, so the default applies.
+    expect(sourceAfter('# EXPO_PUBLIC_AI_SIMILAR_SOURCE=\n', 'unset EXPO_PUBLIC_AI_SIMILAR_SOURCE')).toBe('static')
+  })
+
+  it('keeps a value from .env.prod, an empty one included: the file decides, not the default', () => {
+    expect(sourceAfter('EXPO_PUBLIC_AI_SIMILAR_SOURCE=service\n', 'unset EXPO_PUBLIC_AI_SIMILAR_SOURCE')).toBe('unset')
+    expect(sourceAfter('EXPO_PUBLIC_API_URL=x\n  EXPO_PUBLIC_AI_SIMILAR_SOURCE=\n', 'unset EXPO_PUBLIC_AI_SIMILAR_SOURCE')).toBe('unset')
+  })
+
+  it('keeps a value exported by the operator, an empty one included', () => {
+    expect(sourceAfter('EXPO_PUBLIC_API_URL=x\n', 'export EXPO_PUBLIC_AI_SIMILAR_SOURCE=service')).toBe('service')
+    expect(sourceAfter('EXPO_PUBLIC_API_URL=x\n', 'export EXPO_PUBLIC_AI_SIMILAR_SOURCE=')).toBe('')
+  })
+
+  it('is applied by build_env right after the env file, before the export starts', () => {
+    const source = readCanonicalDeploy()
+    const buildEnv = source.slice(source.indexOf('build_env() {'))
+    const applied = buildEnv.indexOf('apply_build_public_defaults "$ENV"')
+    expect(applied).toBeGreaterThan(buildEnv.indexOf('apply_env "$ENV"'))
+    expect(applied).toBeLessThan(buildEnv.indexOf('scripts/build-web-safe.js'))
+  })
+})
+
 describe('build-prod.sh .env lifecycle', () => {
   let work: string
 

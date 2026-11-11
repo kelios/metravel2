@@ -13,7 +13,7 @@
 | --- | --- | --- |
 | `EXPO_PUBLIC_AI_PICKS` | `1` | выставляется вместе с выкатом службы (#2457) |
 | `EXPO_PUBLIC_AI_PICKS_URL` | пусто (same-origin, Metro проксирует `/ai/` → `127.0.0.1:8787`) | пусто (nginx `location /ai/`) |
-| `EXPO_PUBLIC_AI_SIMILAR_SOURCE` | пусто (блоки «Похожие» идут к службе вместе с `EXPO_PUBLIC_AI_PICKS`) | `static` — блоки «Похожие» из слепка, без службы (#3292) |
+| `EXPO_PUBLIC_AI_SIMILAR_SOURCE` | пусто (блоки «Похожие» идут к службе вместе с `EXPO_PUBLIC_AI_PICKS`) | `static` — блоки «Похожие» из слепка, без службы (#3292); задаёт сама сборка выката (`build-prod.sh` → `apply_build_public_defaults`), строка в `.env.prod` не нужна |
 
 Чтение — только `utils/aiPicksConfig.ts` (`isAiPicksEnabled`, `getAiPicksBaseUrl`, `buildAiPicksUrl`,
 `getAiSimilarSource`, `isAiSimilarEnabled`, `getAiSimilarStaticUrl`).
@@ -52,8 +52,13 @@
   `npm run guard:ai-index-freshness -- --artifact public/assets/data/ai-similar.json` (возраст и
   число статей и квестов против каталога, #3288). При выкате `scripts/deploy-prod.sh` печатает
   `⚠️`, если слепок старше 14 дней (`scripts/ai-similar-age-warning.js`), и не останавливается.
-- Флаг прода живёт в `.env.prod` выкатывающей машины (как остальные `EXPO_PUBLIC_*`): на машине
-  без строки `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static` выкат соберёт сайт без блоков.
+- Флаг включает сама сборка выката: `build-prod.sh` → `apply_build_public_defaults` выставляет
+  `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static`, если его нет ни в окружении, ни в `.env.<env>`.
+  `.env.*` в git не лежат и у каждой машины свои: 11.11.2026 блоки прожили на проде четверть
+  часа — следующий выкат (`73026204e`) ушёл с машины без строки в `.env.prod` и собрал сайт без
+  них. Выключить блоки — строка `EXPO_PUBLIC_AI_SIMILAR_SOURCE=` (пустое значение) в
+  `.env.<env>` или в окружении выката. Проверка на живой сборке: в чанке с `getAiSimilarSource`
+  стоит `'static'===String('static')`, а не `String('')`.
 - Клик по карточке блока уходит событием аналитики `AiPick_Click {block: similar_travel |
   similar_quest, type, id}`.
 

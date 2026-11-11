@@ -280,6 +280,23 @@ apply_env() {
   cp ".env.$ENV" .env
 }
 
+# Публичные флаги, которые задаёт сама сборка выката, а не локальный `.env.<env>`
+# (#3292). `.env.*` в git не лежат и у каждой машины свои: 11.11.2026 выкат
+# 73026204e с машины без строки `EXPO_PUBLIC_AI_SIMILAR_SOURCE=static` собрал
+# сайт без блоков «Похожие» через четверть часа после их включения. Блоки читают
+# статический слепок из репозитория (`public/assets/data/ai-similar.json`), службы
+# не требуют — поэтому включены по умолчанию. Значение из окружения или из
+# `.env.<env>` сильнее, в том числе пустое: строка `EXPO_PUBLIC_AI_SIMILAR_SOURCE=`
+# выключает блоки.
+apply_build_public_defaults() {
+  local ENV="$1"
+
+  if [[ -z "${EXPO_PUBLIC_AI_SIMILAR_SOURCE+set}" ]] &&
+    ! grep -Eq '^[[:space:]]*EXPO_PUBLIC_AI_SIMILAR_SOURCE=' ".env.$ENV"; then
+    export EXPO_PUBLIC_AI_SIMILAR_SOURCE=static
+  fi
+}
+
 install_deps() {
   if [[ "${CLEAN:-0}" == "1" ]]; then
     echo "🧹 Чищу зависимости..."
@@ -355,6 +372,7 @@ build_env() {
 
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
+  apply_build_public_defaults "$ENV"
   node scripts/generate-home-responsive-css.js --check
   prepare_metro_cache
 
