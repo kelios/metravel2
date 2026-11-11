@@ -132,9 +132,9 @@ describe('SSR publication pre-transfer checkout gate', () => {
   // #2980: the disk line of the deploy report lived in the static publisher and
   // was lost with it; the SSR publication prints it after finalize, when the
   // release retention has already freed the previous generation.
-  function publication(action: string, extraEnv: Record<string, string> = {}) {
+  function publication(action: string, extraEnv: Record<string, string> = {}, extraArgs: string[] = []) {
     const calls = path.join(fixture, `calls-${action}.txt`)
-    const result = runCli('bash', ['scripts/web-ssr-publication.sh', action, 'c'.repeat(40)], {
+    const result = runCli('bash', ['scripts/web-ssr-publication.sh', action, 'c'.repeat(40), ...extraArgs], {
       cwd: process.cwd(), env: {
         ...process.env, PATH: `${fixture}${path.delimiter}${process.env.PATH}`,
         DEPLOY_ENV_FILE: path.join(fixture, 'missing-env'),
@@ -142,7 +142,7 @@ describe('SSR publication pre-transfer checkout gate', () => {
         SSR_TEST_CALLS: calls, SSR_TEST_CAPABILITY: '{}', ...extraEnv,
       },
     })
-    return { result, commands: fs.readFileSync(calls, 'utf8').trim().split('\n') }
+    return { result, commands: fs.existsSync(calls) ? fs.readFileSync(calls, 'utf8').trim().split('\n') : [] }
   }
 
   it('reports the production disk after finalize, sizing the release store', () => {
@@ -169,6 +169,121 @@ describe('SSR publication pre-transfer checkout gate', () => {
       expect(result.status).toBe(0)
       expect(commands.some(command => command.includes('-- report '))).toBe(false)
     }
+  })
+
+  // #3307/#3308: `publish-code --expect-current` is a compare-and-swap on the
+  // host. A refusal before any write is told from a failed switch by the
+  // helper's stderr line, not by the exit status that came through ssh and
+  // `bash -ic`: after it the caller must not run rollback-code, whose receipt is
+  // keyed by the sha and may belong to another session's publication.
+  describe('publish-code --expect-current (#3307)', () => {
+    const target = 'c'.repeat(40)
+    const expected = 'd'.repeat(40)
+    const other = 'e'.repeat(40)
+    const NOISE = 'bash: cannot set terminal process group (-1): Inappropriate ioctl for device\nbash: no job control in this shell'
+    const refusalLine = (actual: string, expectedValue = expected) =>
+      `web-ssr release refused: current_changed expected=${expectedValue} actual=${actual} mutation=none`
+
+    // The host helper: what it wrote to stderr and the status ssh returned.
+    const publish = (stderr: string, status: string, args = ['--expect-current', expected]) => {
+      fs.writeFileSync(path.join(fixture, 'ssh'), [
+        '#!/bin/sh',
+        'printf "%s\\n" "$*" >> "$SSR_TEST_CALLS"',
+        'case "$*" in *publish-code*) printf "%s\\n" "$SSR_TEST_STDERR" >&2; exit "$SSR_TEST_EXIT";; esac',
+        'printf "%s\\n" "$SSR_TEST_CAPABILITY"',
+        '',
+      ].join('\n'), { mode: 0o755 })
+      return publication('publish-code', { SSR_TEST_STDERR: stderr, SSR_TEST_EXIT: status }, args)
+    }
+
+    it('hands the expected current revision to the host helper', () => {
+      const { result, commands } = publish(NOISE, '0')
+
+      expect(result.status).toBe(0)
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toContain(
+        `web_ssr_release.py publish-code --sha ${target} --receipt web-ssr/receipts/${target}.json --expect-current ${expected}`,
+      )
+    })
+
+    it('keeps the former call when no expectation is given', () => {
+      const { result, commands } = publish(NOISE, '0', [])
+
+      expect(result.status).toBe(0)
+      expect(commands[0]).toContain(`web_ssr_release.py publish-code --sha ${target} --receipt web-ssr/receipts/${target}.json'`)
+      expect(commands[0]).not.toContain('--expect-current')
+    })
+
+    it.each(['3', '255', '1'])('reports "overtaken" by the refusal line with both revisions, whatever status came through ssh (%s)', (status) => {
+      const { result } = publish(`${NOISE}\n${refusalLine(other)}`, status)
+
+      expect(result.status).toBe(75)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain(refusalLine(other))
+      expect(result.stderr).toContain(`❌ Нас обогнали: прод уже ушёл на ${other.slice(0, 9)}; наш ${target.slice(0, 9)} не опубликован — ничего не возвращалось`)
+    })
+
+    // Remote shell output without a trailing newline lands on the helper's line.
+    it('finds the refusal line behind output of the remote shell on the same line', () => {
+      const { result } = publish(`${NOISE}\nbash: warning: setlocale: LC_ALL: cannot change locale${refusalLine(target)}`, '3')
+
+      expect(result.status).toBe(75)
+      expect(result.stderr).toContain(`❌ Ревизия ${target.slice(0, 9)} уже публикуется или опубликована другой сессией`)
+    })
+
+    it('tells apart the same revision already switched by another session', () => {
+      const { result } = publish(refusalLine(target), '3')
+
+      expect(result.status).toBe(75)
+      expect(result.stderr).toContain(`❌ Ревизия ${target.slice(0, 9)} уже публикуется или опубликована другой сессией`)
+      expect(result.stderr).not.toContain('Нас обогнали')
+    })
+
+    it('accepts a host without a current pair as the actual revision', () => {
+      const { result } = publish(refusalLine('none', 'none'), '3', ['--expect-current', 'none'])
+
+      expect(result.status).toBe(75)
+    })
+
+    // Fail closed: without the exact line the switch may have written its receipt.
+    it.each([
+      ['the refusal status without the line', NOISE, '3', 3],
+      ['a refusal that answers another expectation', refusalLine(other, other), '3', 3],
+      ['a refusal that reports a mutation', `${refusalLine(other)}`.replace('mutation=none', 'mutation=receipt'), '3', 3],
+      ['an ordinary refused release', 'web-ssr release refused: ValueError: an unfinished activation receipt already exists', '1', 1],
+      ['a foreign failure with the reserved status 75', NOISE, '75', 1],
+      ['a foreign failure with the reserved status 78', NOISE, '78', 1],
+    ])('does not report "overtaken" for %s', (_name, stderr, status, exit) => {
+      const { result } = publish(stderr, status)
+
+      expect(result.status).toBe(exit)
+      expect(result.stderr).not.toContain('Нас обогнали')
+    })
+
+    it.each([
+      ['a helper older than the contract', `usage: web_ssr_release.py [-h] [--sha SHA] action\nweb_ssr_release.py: error: unrecognized arguments: --expect-current ${expected}`],
+      ['a value the helper rejected', 'web_ssr_release.py: error: --expect-current must be a full lowercase SHA or none'],
+    ])('names %s instead of a failed switch', (_name, stderr) => {
+      const { result } = publish(`${NOISE}\n${stderr}`, '2')
+
+      expect(result.status).toBe(78)
+      expect(result.stderr).toContain('Помощник публикации на хосте не принял --expect-current')
+      expect(result.stderr).toContain('выкатите бэкенд и повторите выкат фронта')
+    })
+
+    it.each([
+      ['--expect-current', 'ABCDEF'],
+      ['--expect-current', 'c'.repeat(39)],
+      ['--expect-current', 'C'.repeat(40)],
+      ['--expect-current'],
+      ['--force', expected],
+    ])('refuses a malformed expectation before reaching the host: %s %s', (...args) => {
+      const { result, commands } = publish(NOISE, '0', args.filter(Boolean) as string[])
+
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('Expected: publish-code <sha> [--expect-current <full lowercase sha|none>]')
+      expect(commands).toEqual([])
+    })
   })
 
   it('real final client packaging preserves linked publication inodes in a separate fresh candidate', () => {

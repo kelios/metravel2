@@ -8151,10 +8151,21 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   <живая> <цель>`). Совпадение — «уже выкачена», код 0 (гейт — 3). Предок,
   разошедшаяся ревизия, нечитаемый `/.build-source.json`, неизвестный sha —
   отказ до сборки. Обход — только `ALLOW_DOWNGRADE=1`, строка в отчёте.
+  С #3307 инвариант держится и в момент публикации: та же сверка вплотную к
+  `publish-code`, прочитанная живая ревизия уходит серверу в
+  `--expect-current` (#3308), отказ — код 75 «нас обогнали» без
+  `rollback-code` и `finalize-code` (receipt ищется по sha и может быть чужим).
 - **Постоянный контроль:** `scripts/assert-deployable-source.js`
   (`checkLiveRevision`) вызывается из `scripts/deploy-prod.sh` до worktree и из
   гейта `build-prod.sh`; `__tests__/scripts/deploy-live-revision-gate.test.ts`,
   сценарии «live revision» в `deploy-prod.test.ts` и `build-prod-source-gate.test.ts`.
+  Момент публикации (#3307): `checkBeforePublish` / `--publish-check` в
+  `deploy_prod` (`build-prod.sh`) и разбор отказа в
+  `scripts/web-ssr-publication.sh`; `__tests__/scripts/deploy-publish-race.test.ts`
+  («B стартовал раньше, публикует позже A» на реальных гейте, издателе и
+  `git merge-base`, хост — заглушка по контракту #3308), блоки «#3307» в
+  `build-prod-fail-closed.test.ts`, `web-ssr-publication.test.ts`,
+  `deploy-live-revision-gate.test.ts`.
 - **Решение для новой жалобы:** прод оказался на предке без `ALLOW_DOWNGRADE=1`
   в логе выката — `reopen #3207`; откат через backend `rollback-code` сюда не
   относится (он не идёт через гейт фронта).
@@ -8169,7 +8180,8 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   историю. Почему прежний Done gate не удержал: `#3207` проверял только
   «цель старше живой» на момент старта и исключил серверную публикацию из
   объёма. Corrective layer и новый control — в `#3307` (сверка в момент
-  публикации + тест «B стартовал раньше, публикует позже A»).
+  публикации + тест «B стартовал раньше, публикует позже A»). Жалоба «прод на
+  предке при коде 0 у обоих выкатов» после #3307/#3308 — `reopen #3307`.
 
 ### DEPLOY-FAIL-OPEN-001 — выкат обходил сбой вместо остановки
 

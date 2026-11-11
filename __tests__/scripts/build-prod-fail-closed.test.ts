@@ -13,6 +13,14 @@
  *
  * Both run against the shell functions taken verbatim from `build-prod.sh`;
  * only `yarn` and the backend publication helper are stubs that record calls.
+ *
+ * #3307: the switch is preceded by a second live-revision check, and a server
+ * refusal before any write is not a failed release. `rollback-code` finds its
+ * receipt by the sha, so after such a refusal it would return another session's
+ * active publication of the same revision: it must run neither from the failure
+ * branch nor from the EXIT handler. Here the gate and the publisher are stubs
+ * (their exit codes are the contract); the real ones run in
+ * `deploy-publish-race.test.ts`.
  */
 import fs from 'fs'
 import path from 'path'
@@ -34,6 +42,7 @@ const INSTALL_DEPS = region('install_deps() {', 'create_export_log() {')
 const PUBLICATION = region('verify_deployment_runtime() {', "ENV=''\nALLOW_DIRTY=0")
 
 const SHA = 'c0ffee0000000000000000000000000000000001'
+const LIVE_SHA = 'beef000000000000000000000000000000000002'
 const CAPABILITY = '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}'
 
 function writeExecutable(filePath: string, lines: string[]): void {
@@ -110,7 +119,9 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       '#!/bin/bash',
       'action="$1"',
       'echo "$action ${2:-}" >> "$PUBLICATION_CALLS"',
+      'if [[ "$action" == publish-code ]]; then echo "$*" > "$PUBLICATION_CALLS.publish"; fi',
       'if [[ "$action" == "${STUB_SIGNAL_ON:-}" ]]; then kill -TERM "$HARNESS_PID"; sleep 0.3; fi',
+      'if [[ "$action" == publish-code && -n "${STUB_PUBLISH_EXIT:-}" ]]; then exit "$STUB_PUBLISH_EXIT"; fi',
       'if [[ "$action" == capability ]]; then printf \'%s\\n\' "$STUB_CAPABILITY"; fi',
       'if [[ " ${STUB_FAIL:-} " == *" $action "* ]]; then exit 1; fi',
       'exit 0',
@@ -120,6 +131,16 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     fs.writeFileSync(
       path.join(work, 'scripts/verify-live-deployment-ssr.js'),
       'process.exit(Number(process.env.STUB_LIVE_EXIT || 0))\n',
+    )
+    // The live-revision check before the switch (#3307): stdout is the value
+    // for `--expect-current`, the exit code is the verdict.
+    fs.writeFileSync(
+      path.join(work, 'scripts/assert-deployable-source.js'),
+      [
+        "if (process.env.STUB_EXPECT_CURRENT) process.stdout.write(process.env.STUB_EXPECT_CURRENT + '\\n')",
+        'process.exit(Number(process.env.STUB_GUARD_EXIT || 0))',
+        '',
+      ].join('\n'),
     )
   })
 
@@ -146,9 +167,16 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
           'echo PUBLISHED',
         ].join('\n'),
       ],
-      { cwd: work, env: { PUBLICATION_CALLS: calls, STUB_CAPABILITY: CAPABILITY, STUB_SIGNAL_ON: '', STUB_FAIL: '', ...env } },
+      {
+        cwd: work,
+        env: {
+          PUBLICATION_CALLS: calls, STUB_CAPABILITY: CAPABILITY, STUB_SIGNAL_ON: '', STUB_FAIL: '',
+          STUB_EXPECT_CURRENT: LIVE_SHA, STUB_GUARD_EXIT: '', STUB_PUBLISH_EXIT: '', ...env,
+        },
+      },
     )
   const actions = () => fs.readFileSync(calls, 'utf8').trim().split('\n').map((line) => line.trim())
+  const publishCall = () => fs.readFileSync(`${calls}.publish`, 'utf8').trim()
 
   it('publishes, verifies and finalizes without a rollback on the ordinary path', () => {
     const result = publish()
@@ -230,6 +258,84 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     expect(result.status).not.toBe(0)
     expect(actions()).toEqual([`stage ${SHA}`])
     expect(result.stdout).toContain('прод не менялся')
+  })
+
+  describe('live revision at the moment of publication (#3307)', () => {
+    it('hands the live revision it was checked against to the server', () => {
+      const result = publish()
+
+      expect(result.status).toBe(0)
+      expect(publishCall()).toBe(`publish-code ${SHA} --expect-current ${LIVE_SHA}`)
+    })
+
+    // ALLOW_DOWNGRADE=1 with an unreadable production: nothing to compare with.
+    it('publishes without the comparison only when the gate returned no revision', () => {
+      const result = publish({ STUB_EXPECT_CURRENT: '' })
+
+      expect(result.status).toBe(0)
+      expect(publishCall()).toBe(`publish-code ${SHA}`)
+    })
+
+    it('stops before the switch with its own exit code when production moved on during the build', () => {
+      const result = publish({ STUB_GUARD_EXIT: '75' })
+
+      expect(result.status).toBe(75)
+      expect(actions()).toEqual([`stage ${SHA}`])
+      expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} остановлен до переключения: нас обогнали`)
+      expect(result.stdout).toContain('ничего не возвращалось')
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('PUBLISHED')
+    })
+
+    it('does not publish when the live revision could not be compared', () => {
+      const result = publish({ STUB_GUARD_EXIT: '1' })
+
+      expect(result.status).toBe(1)
+      expect(actions()).toEqual([`stage ${SHA}`])
+      expect(result.stdout).toContain('Живая ревизия перед публикацией не сверена')
+    })
+
+    // The server refused under its lock, before any write. No rollback-code —
+    // neither from the failure branch nor from the EXIT handler — and no
+    // finalize-code of a release this rollout did not switch.
+    it('leaves with the overtaken code and returns nothing when the server refuses the switch', () => {
+      const result = publish({ STUB_PUBLISH_EXIT: '75' })
+
+      expect(result.status).toBe(75)
+      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} остановлен на переключении: нас обогнали`)
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+      expect(result.stdout).not.toContain('Рендер не прошёл проверку')
+    })
+
+    it('does not return a refused release from the EXIT handler when a signal lands during the refusal', () => {
+      const result = publish({ STUB_PUBLISH_EXIT: '75', STUB_SIGNAL_ON: 'publish-code' })
+
+      expect(result.status).toBe(143)
+      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+    })
+
+    // The backend is rolled out before this code; a host helper that does not
+    // know the argument answers before its lock.
+    it('reports a helper that rejected --expect-current as an error, not as a release to return', () => {
+      const result = publish({ STUB_PUBLISH_EXIT: '78' })
+
+      expect(result.status).toBe(1)
+      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(result.stdout).toContain('помощник хоста не принял --expect-current')
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+    })
+
+    // Any other failure of the switch may have written the receipt: fail closed.
+    it.each(['1', '3', '255'])('still returns the release after an unrecognised failure of the switch (exit %s)', (code) => {
+      const result = publish({ STUB_PUBLISH_EXIT: code })
+
+      expect(result.status).toBe(1)
+      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, `rollback-code ${SHA}`])
+    })
   })
 
   // The marker must be visible to the single EXIT trap: a rollback wired into a

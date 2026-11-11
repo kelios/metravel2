@@ -22,6 +22,12 @@ const repoRoot = path.resolve(__dirname, '..')
 // Distinct from a refusal (1): the requested revision is what production
 // already serves, so there is nothing to build or publish.
 const EXIT_ALREADY_LIVE = 3
+// #3307: production stopped serving a revision this rollout may replace while
+// the rollout ran — it moved on, or another session is publishing this very
+// sha. Not a failure of the rollout: nothing was published and nothing has to
+// be returned. One number for this gate, the publisher
+// (scripts/web-ssr-publication.sh), build-prod.sh and scripts/deploy-prod.sh.
+const EXIT_OVERTAKEN = 75
 
 function defaultMarkerPath(cwd = repoRoot) {
   return path.join(cwd, '.codex-temp', 'ops', 'last-build-source.json')
@@ -201,6 +207,47 @@ function checkLiveRevision({
   )
 }
 
+// #3307: the check above runs before the build and is minutes old by the time
+// the release is staged. On 11.11.2026 two rollouts from different checkouts
+// both passed it, and the older one switched production 21 s after the newer.
+// The publisher repeats the check right before `publish-code` and hands the
+// revision it compared against to the server (`--expect-current`, #3308), which
+// refuses the switch under its own lock when the current pair is no longer it.
+//   status         0 — publish; EXIT_OVERTAKEN — the target does not contain the
+//                  live revision any more, or production already serves the
+//                  target itself (another session's publication, possibly not
+//                  yet accepted: it is neither republished nor finalized here);
+//                  1 — the live revision was not read.
+//   expectCurrent  the live sha the target was compared with. Empty only for an
+//                  ALLOW_DOWNGRADE=1 rollout that could not read it: the one
+//                  case that still publishes without the server-side comparison.
+function checkBeforePublish({ targetSha, cwd = repoRoot, allowDowngrade = undefined, live = undefined } = {}) {
+  const result = checkLiveRevision({ targetSha, cwd, allowDowngrade, live })
+  if (result.relation === 'same') {
+    return {
+      ...result,
+      ok: false,
+      status: EXIT_OVERTAKEN,
+      expectCurrent: '',
+      lines: [
+        `❌ Ревизия ${targetSha.slice(0, 9)} уже публикуется или опубликована другой сессией: прод отдаёт её в /${ARTIFACT_MARKER_NAME}`,
+        '   Наш релиз не переключается, чужой не финализируется и не возвращается — его приёмку ведёт сессия, которая его переключила.',
+      ],
+    }
+  }
+  if (!result.ok) return { ...result, status: result.liveSha ? EXIT_OVERTAKEN : 1, expectCurrent: '' }
+  if (result.liveSha) return { ...result, status: 0, expectCurrent: result.liveSha }
+  return {
+    ...result,
+    status: 0,
+    expectCurrent: '',
+    lines: [
+      ...result.lines,
+      '⚠️  Живая ревизия не прочитана: публикация идёт без --expect-current — сервер не сверит текущую пару с ожидаемой',
+    ],
+  }
+}
+
 function evaluate({ allowDirty, deploying, cwd = repoRoot, liveCheck = false, live = undefined }) {
   const lines = []
   let inside = true
@@ -325,6 +372,7 @@ function main() {
   const copyMarkerPath = arg('--copy-marker', '')
   const liveCheck = arg('--live-check', '0') === '1' && String(deploying) === '1'
   const liveCheckOnly = arg('--live-check-only', '')
+  const publishCheck = arg('--publish-check', '')
   const lastMarker = defaultMarkerPath(cwd)
 
   if (copyMarkerPath) {
@@ -339,15 +387,25 @@ function main() {
     process.exit(0)
   }
 
-  // scripts/deploy-prod.sh asks before it creates the worktree: only the
-  // relation of the named commit to the live release, no tree checks.
-  if (liveCheckOnly) {
+  // scripts/deploy-prod.sh asks before it creates the worktree, build-prod.sh
+  // again right before `publish-code`: only the relation of the named commit to
+  // the live release, no tree checks.
+  if (liveCheckOnly || publishCheck) {
+    // The publisher captures stdout as the value for `--expect-current`, so its
+    // report goes to stderr.
+    const report = publishCheck ? console.error : console.log
     let targetSha = ''
     try {
-      targetSha = git(['rev-parse', '--verify', '--quiet', `${liveCheckOnly}^{commit}`], cwd)
+      targetSha = git(['rev-parse', '--verify', '--quiet', `${liveCheckOnly || publishCheck}^{commit}`], cwd)
     } catch {
-      console.log(`❌ Ревизия ${liveCheckOnly} не найдена: сверять с живой нечего`)
+      report(`❌ Ревизия ${liveCheckOnly || publishCheck} не найдена: сверять с живой нечего`)
       process.exit(1)
+    }
+    if (publishCheck) {
+      const verdict = checkBeforePublish({ targetSha, cwd })
+      for (const line of verdict.lines) report(line)
+      if (verdict.expectCurrent) process.stdout.write(`${verdict.expectCurrent}\n`)
+      process.exit(verdict.status)
     }
     const result = checkLiveRevision({ targetSha, cwd })
     for (const line of result.lines) console.log(line)
@@ -380,8 +438,10 @@ module.exports = {
   ARTIFACT_MARKER_NAME,
   defaultMarkerPath,
   EXIT_ALREADY_LIVE,
+  EXIT_OVERTAKEN,
   evaluate,
   checkLiveRevision,
+  checkBeforePublish,
   readLiveSha,
   inspectSource,
   writeMarker,

@@ -25,6 +25,62 @@ fi
 receipt="web-ssr/receipts/$sha.json"
 remote() { remote_shell "${remote_prefix}python3 $helper $*"; }
 
+# #3307: `publish-code <sha> --expect-current <sha|none>` hands the server the
+# revision the rollout was checked against; under its lock the helper refuses
+# the switch when the current pair is another one (#3308). Two answers mean
+# "refused before any write" and leave with their own codes, so the caller does
+# not run rollback-code: its receipt is keyed by the sha and may belong to
+# another session's active publication of the same revision.
+#   75  current_changed: production moved on, or already serves this sha;
+#   78  the host helper rejected the argument itself (argparse, before the lock).
+# Both are recognised by the helper's stderr line, not by the exit status that
+# travelled through ssh and `bash -ic`; no other failure leaves with 75 or 78.
+EXIT_OVERTAKEN=75
+EXIT_UNSUPPORTED=78
+publish_errors=''
+publish_code() {
+  local expect='' status=0 refusal actual
+  local args=(--sha "$sha" --receipt "$receipt")
+  if [[ $# -gt 0 ]]; then
+    if [[ $# -ne 2 || "$1" != --expect-current || ! "$2" =~ ^([a-f0-9]{40}|none)$ ]]; then
+      echo 'Expected: publish-code <sha> [--expect-current <full lowercase sha|none>]' >&2
+      exit 1
+    fi
+    expect="$2"
+    args+=(--expect-current "$expect")
+  fi
+  publish_errors="$(mktemp -t metravel-publish-code 2>/dev/null || mktemp /tmp/metravel-publish-code.XXXXXX)"
+  trap 'rm -f "$publish_errors"' EXIT
+  remote publish-code "${args[@]}" 2>"$publish_errors" || status=$?
+  cat "$publish_errors" >&2
+  [[ "$status" != 0 ]] || return 0
+  if [[ -n "$expect" ]]; then
+    # Not anchored at the line start: output of the interactive remote shell
+    # without a trailing newline may precede the helper line on the same line.
+    # The exact expected= value keeps a foreign refusal from matching.
+    refusal="$(tr -d '\r' <"$publish_errors" |
+      grep -E "web-ssr release refused: current_changed expected=$expect actual=([a-f0-9]{40}|none) mutation=none\$" |
+      tail -n 1 || true)"
+    if [[ -n "$refusal" ]]; then
+      actual="${refusal#* actual=}"
+      actual="${actual% mutation=none}"
+      if [[ "$actual" == "$sha" ]]; then
+        echo "❌ Ревизия ${sha:0:9} уже публикуется или опубликована другой сессией — наш релиз не переключался, чужой не финализируется и не возвращается" >&2
+      else
+        echo "❌ Нас обогнали: прод уже ушёл на ${actual:0:9}; наш ${sha:0:9} не опубликован — ничего не возвращалось" >&2
+      fi
+      exit "$EXIT_OVERTAKEN"
+    fi
+    if grep -Eq '^[^ ]+: error: .*--expect-current' "$publish_errors"; then
+      echo "❌ Помощник публикации на хосте не принял --expect-current $expect — отказ до замка и записи, прод не менялся" >&2
+      echo "   Бэкенд на хосте старее контракта #3308 либо отклонил значение: выкатите бэкенд и повторите выкат фронта." >&2
+      exit "$EXIT_UNSUPPORTED"
+    fi
+  fi
+  if [[ "$status" == "$EXIT_OVERTAKEN" || "$status" == "$EXIT_UNSUPPORTED" ]]; then status=1; fi
+  exit "$status"
+}
+
 case "$action" in
   stage)
     candidate="${3:?SSR candidate directory required}"
@@ -74,7 +130,9 @@ case "$action" in
     remote verify-code --sha "$sha"
     ;;
   activate|rollback|finalize|publish-code|rollback-code|finalize-code)
-    if [[ "$action" == activate || "$action" == publish-code ]]; then
+    if [[ "$action" == publish-code ]]; then
+      publish_code "${@:3}"
+    elif [[ "$action" == activate ]]; then
       remote "$action" --sha "$sha" --receipt "$receipt"
     else
       remote "$action" --receipt "$receipt"

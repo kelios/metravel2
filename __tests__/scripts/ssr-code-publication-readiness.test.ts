@@ -103,10 +103,16 @@ const server = http.createServer((req, res) => {
 node() {
   case "$1" in
     scripts/verify-live-*.js) "$SSR_PIPELINE_NODE" "$@" --origin "$SSR_PIPELINE_ORIGIN";;
+    # #3307: the live-revision check before the switch has its own tests
+    # (deploy-publish-race.test.ts); here production serves an ancestor.
+    scripts/assert-deployable-source.js) printf '%s\\n' ${'b'.repeat(40)};;
     *) "$SSR_PIPELINE_NODE" "$@";;
   esac
 }
 ${shellFunction('verify_deployment_runtime')}
+${shellFunction('defer_signals')}
+${shellFunction('resume_signals')}
+${shellFunction('rollback_unconfirmed_release')}
 stage() { :; }
 ${shellFunction('deploy_prod')}
 deploy_prod prod

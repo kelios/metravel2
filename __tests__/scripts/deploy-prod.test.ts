@@ -378,6 +378,28 @@ describe('scripts/deploy-prod.sh', () => {
       }
     })
 
+    // #3307: build-prod.sh leaves with 75 when production moved on between the
+    // check above and the publication. The wrapper passes the code out as it is
+    // and does not run the final check against a release it did not publish.
+    it('passes "overtaken at publication" out with its own exit code', () => {
+      const fixture = makeFixture()
+      try {
+        const env = addDeployStubs(fixture)
+        const base = git(fixture.repo, ['rev-parse', 'HEAD~1'])
+
+        const result = runDeploy(fixture, [], { ...env, ...liveOriginEnv(fixture.root, base), STUB_EXIT: '75', DEPLOY_QUIET: '1' })
+
+        expect(result.status).toBe(75)
+        expect(readStubOut(fixture).deploy).toBe('1')
+        expect(result.stdout).not.toContain('stub live check')
+        expect(result.stdout).toContain('❌ build-prod.sh завершился с кодом 75')
+        expect(lastLogLine(fixture)).toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 75$/)
+        expect(fs.existsSync(fixture.worktree)).toBe(false)
+      } finally {
+        removeDir(fixture.root)
+      }
+    })
+
     it('rolls out a newer commit as before, and an older one only with ALLOW_DOWNGRADE=1', () => {
       const fixture = makeFixture()
       try {

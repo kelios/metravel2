@@ -19,7 +19,7 @@ import { makeTempDir, removeDir, runCli, runNodeCli } from './cli-test-utils'
 import { liveOriginEnv } from './remote-deploy-test-utils'
 
 const GATE = path.resolve(process.cwd(), 'scripts/assert-deployable-source.js')
-const { EXIT_ALREADY_LIVE } = require('@/scripts/assert-deployable-source')
+const { EXIT_ALREADY_LIVE, EXIT_OVERTAKEN } = require('@/scripts/assert-deployable-source')
 
 const GIT_ENV = {
   GIT_CONFIG_GLOBAL: '/dev/null',
@@ -177,5 +177,95 @@ describe('deploy gate: live revision (#3207)', () => {
 
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('собирается поверх живой ревизии')
+  })
+
+  // #3307: the check before the build is minutes old when the release is
+  // staged. 11.11.2026: rollout A (the child) and rollout B (its parent) ran
+  // from different checkouts, both passed the check, and B switched production
+  // 21 s after A. `--publish-check` is the same comparison right before
+  // `publish-code`; its stdout is the value for the server's `--expect-current`.
+  describe('at the moment of publication (#3307)', () => {
+    const publishCheck = (target: string, live: string | undefined, env: Record<string, string> = {}) =>
+      runNodeCli([GATE, '--publish-check', target, '--cwd', work], { ...GIT_ENV, ...liveOriginEnv(root, live), ...env })
+
+    let third: string
+
+    beforeEach(() => {
+      third = commit('third')
+      sh('git push -q origin main')
+    })
+
+    it('returns the live revision the target was compared with, and the report on stderr', () => {
+      const result = publishCheck(third, first)
+
+      expect(result.status).toBe(0)
+      expect(result.stdout).toBe(`${first}\n`)
+      expect(result.stderr).toContain(`Живая ревизия прода ${first.slice(0, 9)} — предок выкатываемой ${third.slice(0, 9)}`)
+    })
+
+    it('refuses B, which started earlier and publishes later than A', () => {
+      // B starts: production serves `first`, B's target `second` contains it.
+      expect(checkOnly(second, first).status).toBe(0)
+
+      // A publishes `third`, the child of B's target, while B is still building.
+      const result = publishCheck(second, third)
+
+      expect(EXIT_OVERTAKEN).toBe(75)
+      expect(result.status).toBe(EXIT_OVERTAKEN)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain(`Ревизия ${second.slice(0, 9)} старше живой ${third.slice(0, 9)}`)
+    })
+
+    it('refuses a target that diverged from what production serves by now', () => {
+      sh('git checkout -q -b side HEAD~1')
+      const side = commit('side')
+      sh('git checkout -q main\ngit merge -q --no-edit side\ngit push -q origin main')
+
+      const result = publishCheck(side, third)
+
+      expect(result.status).toBe(EXIT_OVERTAKEN)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain(`Ревизия ${side.slice(0, 9)} не содержит живую ${third.slice(0, 9)}`)
+    })
+
+    // Another session switched production to this very sha and is still
+    // verifying it: neither a republication nor "already deployed, all green".
+    it('does not publish over the same revision switched by another session', () => {
+      const result = publishCheck(third, third)
+
+      expect(result.status).toBe(EXIT_OVERTAKEN)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain(`Ревизия ${third.slice(0, 9)} уже публикуется или опубликована другой сессией`)
+      expect(result.stderr).not.toContain('уже выкачена')
+    })
+
+    // The explicit rollback is a decision about the revision the operator saw:
+    // the server still compares the current pair with it.
+    it('lets an explicit rollback through and still names the revision it replaces', () => {
+      const result = publishCheck(second, third, { ALLOW_DOWNGRADE: '1' })
+
+      expect(result.status).toBe(0)
+      expect(result.stdout).toBe(`${third}\n`)
+      expect(result.stderr).toContain('⚠️  ALLOW_DOWNGRADE=1')
+    })
+
+    it('does not publish blind: an unreadable production stops the switch unless the rollback is explicit', () => {
+      const refused = publishCheck(third, undefined)
+      expect(refused.status).toBe(1)
+      expect(refused.stdout).toBe('')
+      expect(refused.stderr).toContain('Живая ревизия прода не прочитана')
+
+      const forced = publishCheck(third, undefined, { ALLOW_DOWNGRADE: '1' })
+      expect(forced.status).toBe(0)
+      expect(forced.stdout).toBe('')
+      expect(forced.stderr).toContain('публикация идёт без --expect-current')
+    })
+
+    it('keeps one exit code for "overtaken" in the gate, the publisher and build-prod.sh', () => {
+      const read = (file: string) => fs.readFileSync(path.resolve(process.cwd(), file), 'utf8')
+
+      expect(read('scripts/web-ssr-publication.sh')).toContain(`EXIT_OVERTAKEN=${EXIT_OVERTAKEN}\n`)
+      expect(read('build-prod.sh')).toContain(`local overtaken_exit=${EXIT_OVERTAKEN} `)
+    })
   })
 })

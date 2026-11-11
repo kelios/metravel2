@@ -38,8 +38,9 @@ SOURCE_ALREADY_LIVE=0
 # подтверждён живыми проверками и finalize-code. Пока он не пуст, любой выход —
 # ошибка, сигнал, обрыв обёртки — обязан вернуть предыдущую пару.
 PUBLISH_UNCONFIRMED_SHA=''
-# #3272: код сигнала, отложенного на время finalize-code (см. конец публикации).
-FINALIZE_PENDING_SIGNAL=''
+# #3272, #3307: код сигнала, отложенного на время publish-code и finalize-code:
+# исход серверной операции разбирается до выхода (см. defer_signals).
+DEFERRED_SIGNAL=''
 MEDIA_CHECKS_PID=''
 MEDIA_CHECKS_LOG=''
 STAGE_NAME=''
@@ -181,6 +182,23 @@ rollback_unconfirmed_release() {
   echo "   Если finalize-code успел завершиться, релиз уже принят и проверен: бэкенд его не возвращает, прод цел."
   echo "   (docs/WORKFLOW_OPERATIONS.md → «Аварийный возврат прошлой версии»)"
   return 1
+}
+
+# Сигнал на время серверной операции откладывается: обработчик выхода решает
+# по отметке PUBLISH_UNCONFIRMED_SHA, возвращать ли релиз, а отметка верна только
+# после разбора исхода операции. resume_signals возвращает обычные ловушки;
+# отложенный код вызывающий отдаёт сам через `exit "$DEFERRED_SIGNAL"`.
+defer_signals() {
+  DEFERRED_SIGNAL=''
+  trap 'DEFERRED_SIGNAL=130' INT
+  trap 'DEFERRED_SIGNAL=143' TERM
+  trap 'DEFERRED_SIGNAL=129' HUP
+}
+
+resume_signals() {
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
 }
 
 on_exit() {
@@ -457,11 +475,56 @@ deploy_prod() {
   # what to shorten; the sub-stages split the upload and the seal, the backend
   # swap with the live checks, and the finalize with the disk report.
   stage "выкат: переключение и живые проверки"
+  # Коды `publish-code` «сервер отказал до записи» (scripts/web-ssr-publication.sh):
+  # 75 — прод сменил ревизию, пока шёл выкат («нас обогнали»), с ним же выходит
+  # выкат; 78 — помощник хоста не принял --expect-current.
+  local overtaken_exit=75 unsupported_exit=78
+  local expect_current='' guard_status=0 publish_status=0 refused_exit=''
+  local publish_args=("$BUILD_SOURCE_SHA")
+  # #3307: сверка «цель содержит живую ревизию» из гейта источника к этому
+  # моменту устарела на время сборки и заливки. 11.11.2026 два выката из разных
+  # чекаутов прошли её оба, и предок переключил прод через 21 с после потомка.
+  # Сверка повторяется вплотную к переключению, а прочитанная живая ревизия
+  # уходит серверу (`--expect-current`, #3308): под своим замком он откажет,
+  # если текущая пара сменилась уже после этого чтения. Пусто — только у
+  # ALLOW_DOWNGRADE=1 без прочитанной живой ревизии: публикация без сверки.
+  expect_current="$(node scripts/assert-deployable-source.js --publish-check "$BUILD_SOURCE_SHA" --cwd "$(pwd)")" || guard_status=$?
+  if [[ "$guard_status" == "$overtaken_exit" ]]; then
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен до переключения: нас обогнали — прод сменил ревизию, пока шёл выкат. Наш релиз не опубликован, ничего не возвращалось (код $overtaken_exit)"
+    return "$overtaken_exit"
+  fi
+  if [[ "$guard_status" != "0" ]]; then
+    echo "❌ Живая ревизия перед публикацией не сверена — релиз ${BUILD_SOURCE_SHA:0:9} не опубликован, прод не менялся"
+    return 1
+  fi
+  if [[ -n "$expect_current" ]]; then
+    publish_args+=(--expect-current "$expect_current")
+  fi
   # Отметка ставится ДО переключения: receipt публикации бэкенд пишет раньше
   # смены указателя, и оборванный publish-code тоже возвращается rollback-code.
+  # Отказ сервера до записи (#3307) отметку снимает, и снимает до любого выхода,
+  # поэтому сигнал на время вызова отложен: rollback-code ищет receipt по sha и
+  # после такого отказа вернул бы чужую активную публикацию той же ревизии.
+  defer_signals
   PUBLISH_UNCONFIRMED_SHA="$BUILD_SOURCE_SHA"
-  if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
-         verify_deployment_runtime; }; then
+  bash scripts/web-ssr-publication.sh publish-code "${publish_args[@]}" || publish_status=$?
+  if [[ "$publish_status" == "$overtaken_exit" ]]; then
+    PUBLISH_UNCONFIRMED_SHA=''
+    refused_exit="$overtaken_exit"
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: нас обогнали — сервер отказал до записи. Наш релиз не опубликован, ничего не возвращалось (код $overtaken_exit)"
+  elif [[ "$publish_status" == "$unsupported_exit" ]]; then
+    PUBLISH_UNCONFIRMED_SHA=''
+    refused_exit=1
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: помощник хоста не принял --expect-current — отказ до записи, прод не менялся, возврат не нужен"
+  fi
+  resume_signals
+  if [[ -n "$DEFERRED_SIGNAL" ]]; then
+    exit "$DEFERRED_SIGNAL"
+  fi
+  if [[ -n "$refused_exit" ]]; then
+    return "$refused_exit"
+  fi
+  if [[ "$publish_status" != "0" ]] || ! verify_deployment_runtime; then
     echo "❌ Рендер не прошёл проверку"
     rollback_unconfirmed_release || true
     return 1
@@ -474,22 +537,17 @@ deploy_prod() {
   # сначала снимает отметку, и только потом выкат выходит с кодом сигнала.
   # Провал или обрыв самого finalize-code отметку не снимает — возврат, как раньше.
   local finalize_status=0
-  FINALIZE_PENDING_SIGNAL=''
-  trap 'FINALIZE_PENDING_SIGNAL=130' INT
-  trap 'FINALIZE_PENDING_SIGNAL=143' TERM
-  trap 'FINALIZE_PENDING_SIGNAL=129' HUP
+  defer_signals
   bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA" || finalize_status=$?
   if [[ "$finalize_status" == "0" ]]; then
     PUBLISH_UNCONFIRMED_SHA=''
   fi
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-  trap 'exit 129' HUP
-  if [[ -n "$FINALIZE_PENDING_SIGNAL" ]]; then
+  resume_signals
+  if [[ -n "$DEFERRED_SIGNAL" ]]; then
     if [[ "$finalize_status" == "0" ]]; then
       echo "⚠️  Сигнал пришёл во время финализации: релиз ${BUILD_SOURCE_SHA:0:9} уже принят, прод не возвращается"
     fi
-    exit "$FINALIZE_PENDING_SIGNAL"
+    exit "$DEFERRED_SIGNAL"
   fi
   return "$finalize_status"
 }
