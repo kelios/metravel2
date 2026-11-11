@@ -574,9 +574,12 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     // #3218: указатель «страны → города → квесты» — видимые ссылки в серверном HTML
     // общего каталога. Данные уже пришли с загрузчиком страницы; у посадочных
     // страниц (`route`) свой подвал, языковые хабы — отдельная карточка (#3217).
-    const catalogDirectory = useMemo(() => (!route && !localeHub && discovery ? (
+    // Указатель принадлежит только несуженному каталогу: под выдачей города,
+    // фильтра, поиска или области карты он выглядит как чужой хвост страницы.
+    const showCatalogDirectory = !route && !localeHub && !filtersActive && !searchTerm;
+    const catalogDirectory = useMemo(() => (showCatalogDirectory && discovery ? (
         <QuestsCatalogDirectory countries={discovery.countries} cities={discovery.cities} quests={ALL_QUESTS} />
-    ) : null), [route, localeHub, discovery, ALL_QUESTS]);
+    ) : null), [showCatalogDirectory, discovery, ALL_QUESTS]);
 
     // ── SEO ──
     const selectedCityName =
