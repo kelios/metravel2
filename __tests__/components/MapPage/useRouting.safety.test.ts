@@ -10,6 +10,38 @@ import { routeCache } from '@/utils/routeCache';
 // Mock fetch globally
 global.fetch = jest.fn();
 
+// Global fetch is mocked per test; the hook's ORS retry backoff (1 s, 2 s) runs on
+// timers, so failure paths must be settled with fake timers. Asserting only
+// `loading === false` under real timers is vacuous: the initial state is already
+// false, and whether the request has started by the first waitFor check depends
+// on machine speed (CI Smoke flake, 11.11.2026).
+const ROUTE_POINTS: [number, number][] = [[27.56, 53.9], [27.6, 53.95]];
+
+type RoutingSnapshot = ReturnType<typeof useRouting>;
+
+const settleRoute = async (points: [number, number][]): Promise<RoutingSnapshot> => {
+  jest.useFakeTimers();
+  try {
+    const hook = await renderHook(() => useRouting(points, 'car', 'test-api-key-long-enough'));
+    try {
+      await act(async () => { await jest.runAllTimersAsync(); });
+      return hook.result.current;
+    } finally {
+      await hook.unmount();
+    }
+  } finally {
+    jest.useRealTimers();
+  }
+};
+
+const expectDegradedFallback = (state: RoutingSnapshot, points: [number, number][]) => {
+  expect(state.loading).toBe(false);
+  expect(state.error).toEqual(expect.any(String));
+  expect(state.coords).toEqual(points);
+  expect(state.isOptimal).toBe(false);
+  expect(routeCache.get(points, 'car')).toBeNull();
+};
+
 describe('useRouting - Safety Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -226,23 +258,10 @@ describe('useRouting - Safety Tests', () => {
           )
       );
 
-      const { result } = await renderHook(() =>
-        useRouting(
-          [
-            [27.56, 53.9],
-            [27.6, 53.95],
-          ],
-          'car',
-          'test-api-key-long-enough'
-        )
-      );
+      const state = await settleRoute(ROUTE_POINTS);
 
-      await waitFor(
-        () => {
-          expect(result.current.loading).toBe(false);
-        },
-        { timeout: 5000 }
-      );
+      expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
+      expectDegradedFallback(state, ROUTE_POINTS);
     });
 
     it('handles 429 rate limit error', async () => {
@@ -300,21 +319,11 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Internal server error'),
       });
 
-      const { result } = await renderHook(() =>
-        useRouting(
-          [
-            [27.56, 53.9],
-            [27.6, 53.95],
-          ],
-          'car',
-          'test-api-key-long-enough'
-        )
-      );
-
       // 500 на ORS повторяется трижды с паузами 1 с и 2 с, потом идёт запасной маршрут.
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      }, { timeout: 10000 });
+      const state = await settleRoute(ROUTE_POINTS);
+
+      expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
+      expectDegradedFallback(state, ROUTE_POINTS);
     });
   });
 
@@ -435,84 +444,40 @@ describe('useRouting - Safety Tests', () => {
     });
 
     it('handles empty response', async () => {
-      jest.useFakeTimers();
-      const points: [number, number][] = [[27.56, 53.9], [27.6, 53.95]];
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({}),
       });
-      try {
-        const hook = await renderHook(() => useRouting(points, 'car', 'test-api-key-long-enough'));
-        try {
-          // Settle the real debounce and ORS retry/backoff chain before inspecting
-          // the terminal fallback. Awaited renderHook no longer exposes a pre-effect false state.
-          await act(async () => { await jest.runAllTimersAsync(); });
-          expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
-          expect(hook.result.current.loading).toBe(false);
-          expect(hook.result.current.error).toEqual(expect.any(String));
-          expect(hook.result.current.coords).toEqual(points);
-          expect(hook.result.current.isOptimal).toBe(false);
-          expect(routeCache.get(points, 'car')).toBeNull();
-        } finally {
-          await hook.unmount();
-        }
-      } finally {
-        jest.useRealTimers();
-      }
+
+      const state = await settleRoute(ROUTE_POINTS);
+
+      expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
+      expectDegradedFallback(state, ROUTE_POINTS);
     });
 
     it('handles malformed JSON response', async () => {
-      jest.useFakeTimers();
-      const points: [number, number][] = [[27.56, 53.9], [27.6, 53.95]];
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
       });
 
-      try {
-        const hook = await renderHook(() => useRouting(points, 'car', 'test-api-key-long-enough'));
-        try {
-          await act(async () => { await jest.runAllTimersAsync(); });
-          expect(hook.result.current.loading).toBe(false);
-          expect(hook.result.current.error).toEqual(expect.any(String));
-          expect(hook.result.current.isOptimal).toBe(false);
-          expect(routeCache.get(points, 'car')).toBeNull();
-        } finally {
-          await hook.unmount();
-        }
-      } finally {
-        jest.useRealTimers();
-      }
+      const state = await settleRoute(ROUTE_POINTS);
+
+      expectDegradedFallback(state, ROUTE_POINTS);
     });
 
     it('handles response with missing coordinates', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({
-          features: [
-            {
-              geometry: {
-                coordinates: [],
-              },
-            },
-          ],
+          features: [{ geometry: { coordinates: [] } }],
         }),
       });
 
-      const { result } = await renderHook(() =>
-        useRouting(
-          [
-            [27.56, 53.9],
-            [27.6, 53.95],
-          ],
-          'car',
-          'test-api-key-long-enough'
-        )
-      );
+      const state = await settleRoute(ROUTE_POINTS);
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
+      expectDegradedFallback(state, ROUTE_POINTS);
     });
   });
 
