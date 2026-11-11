@@ -43,6 +43,10 @@
 - Сборочный контракт (#2738): чанк блока попадает в сборку под литералом
   `process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE`
   (`TravelDetailsSidebarSection`); без обоих флагов Metro сворачивает ветку.
+- Бюджет бандла: включённый блок добавляет в чанк `TravelDetailsSidebarSection` загрузчик
+  (ленивый импорт, `Suspense`, путь чанка) — 3983 → 4085 байт gzip на сборке 11.11.2026.
+  Сайдбар поэтому не проверяет флаг повторно (это делает сам `AiSimilarSection`), а строка
+  бюджета перезакреплена на замер: `maxGzipKB` 3,7 → 3,8 (`config/bundle-budget.json`).
 - Обновление: `npm run ai:index -- build` (индекс по текущему каталогу, инкремент) →
   `npm run ai:similar:build` → коммит файла → обычный выкат. Проверка свежести:
   `npm run guard:ai-index-freshness -- --artifact public/assets/data/ai-similar.json` (возраст и

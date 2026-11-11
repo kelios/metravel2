@@ -15,7 +15,6 @@ import { translate as i18nT } from '@/i18n'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { METRICS } from '@/constants/layout'
 import { NearTravelListSkeleton, PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton'
-import { isAiSimilarEnabled } from '@/utils/aiPicksConfig'
 
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
@@ -26,15 +25,14 @@ const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 // как запрос блока (учтён в `listsFetching`) появится в кэше.
 // #2738: сборка без флага не выпускает и сам чанк — условие литералом `process.env`
 // (см. aiPicksConfig). #3292: блок включает и статический слепок без службы, поэтому
-// литералов два — оба Expo подставляет при сборке.
+// литералов два — оба Expo подставляет при сборке. Включён ли блок на самом деле,
+// решает сам `AiSimilarSection` (`isAiSimilarEnabled`): повторная проверка здесь стоила
+// чанку сайдбара лишних байт сверх бюджета, а при выключенном блоке секция — `null`.
 const aiSimilarSectionImport =
-  (process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE) && isAiSimilarEnabled()
+  process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE
     ? import('@/components/aiPicks/AiSimilarSection')
     : null
-const AiSimilarSectionLazy =
-  process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE
-    ? React.lazy(() => aiSimilarSectionImport ?? import('@/components/aiPicks/AiSimilarSection'))
-    : null
+const AiSimilarSectionLazy = aiSimilarSectionImport ? React.lazy(() => aiSimilarSectionImport) : null
 const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
 
 export const TravelDetailsSidebarSection: React.FC<{
@@ -181,9 +179,9 @@ export const TravelDetailsSidebarSection: React.FC<{
           (`nearInViewport`), нового наблюдателя видимости нет; чанк блока грузится
           только под флагом.
         */}
-        {AiSimilarSectionLazy && hasValidTravelId && isAiSimilarEnabled() ? (
+        {AiSimilarSectionLazy && hasValidTravelId ? (
           <Suspense fallback={null}>
-            <AiSimilarSectionLazy type="travel" id={Number(travel.id)} limit={6} enabled={nearInViewport} />
+            <AiSimilarSectionLazy type="travel" id={Number(travel.id)} enabled={nearInViewport} />
           </Suspense>
         ) : null}
         {shouldShowNavigationArrows && (
