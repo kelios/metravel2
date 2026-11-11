@@ -263,6 +263,7 @@ describe('SSR publication pre-transfer checkout gate', () => {
     it.each([
       ['a helper older than the contract', `usage: web_ssr_release.py [-h] [--sha SHA] action\nweb_ssr_release.py: error: unrecognized arguments: --expect-current ${expected}`],
       ['a value the helper rejected', 'web_ssr_release.py: error: --expect-current must be a full lowercase SHA or none'],
+      ['a rejection behind output of the remote shell on the same line', 'bashrc-noise web_ssr_release.py: error: --expect-current must be a full lowercase SHA or none'],
     ])('names %s instead of a failed switch', (_name, stderr) => {
       const { result } = publish(`${NOISE}\n${stderr}`, '2')
 

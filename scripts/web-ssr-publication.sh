@@ -71,7 +71,8 @@ publish_code() {
       fi
       exit "$EXIT_OVERTAKEN"
     fi
-    if grep -Eq '^[^ ]+: error: .*--expect-current' "$publish_errors"; then
+    # Без якоря начала строки: вывод ~/.bashrc через `bash -ic` может стоять на той же строке.
+    if grep -Eq '[^ ]+: error: .*--expect-current' "$publish_errors"; then
       echo "❌ Помощник публикации на хосте не принял --expect-current $expect — отказ до замка и записи, прод не менялся" >&2
       echo "   Бэкенд на хосте старее контракта #3308 либо отклонил значение: выкатите бэкенд и повторите выкат фронта." >&2
       exit "$EXIT_UNSUPPORTED"
