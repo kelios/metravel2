@@ -257,12 +257,25 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     setImageUri(oldImage ? normalizeImageUrl(oldImage) : null);
   }, [oldImage]);
 
+  // «Фото в работе» начинается с запуска выбора (пикер, камера), а не с сети:
+  // пока система отдаёт файл, `loading` уже держит сохранение и закрытие (#3213).
+  // Отмена выбора или cancelUpload делают выбор чужим, и его файл не грузится.
+  const beginSelection = useCallback(() => {
+    const seq = ++uploadSeqRef.current;
+    const isCurrent = () => seq === uploadSeqRef.current;
+    setError(null); setLoading(true);
+    return {
+      isCurrent,
+      end: () => { if (isCurrent() && mountedRef.current) setLoading(false); },
+    };
+  }, []);
+
   const handleUploadImage = useCallback(async (file: File | NativeUploadFile) => {
     if (!mountedRef.current) return;
     const seq = ++uploadSeqRef.current;
     const isCurrent = () => seq === uploadSeqRef.current;
     try {
-      setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
+      setLoading(true); setError(null); setUploadMessage(null); setUploadProgress(0); setHasTriedFallback(false);
       const normalizedId = (idTravel ?? '').toString();
       const hasUploadId = Boolean(normalizedId && normalizedId !== 'null' && normalizedId !== 'undefined');
       const uploadableFile =
@@ -299,7 +312,6 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         return;
       }
 
-      if (mountedRef.current) setLoading(true);
       const formData = new FormData();
       if (Platform.OS === 'web' && uploadableFile instanceof File) {
         formData.append('file', uploadableFile);
@@ -380,7 +392,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   return {
     imageUri, previewUrl, loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl, fallbackImageUrl, lastPreviewUrl, hasTriedFallback,
-    handleUploadImage, handleRemovePress, cancelUpload,
+    handleUploadImage, handleRemovePress, cancelUpload, beginSelection,
     handleImageLoadCheck, handleImageError, applyFallback,
     reportClientError,
     blobUrlsRef,

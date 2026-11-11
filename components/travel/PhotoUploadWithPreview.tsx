@@ -61,7 +61,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   const {
     loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl,
-    handleUploadImage, handleRemovePress, cancelUpload,
+    handleUploadImage, handleRemovePress, cancelUpload, beginSelection,
     handleImageLoadCheck, handleImageError, reportClientError,
   } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onError: notifyUploadError, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
 
@@ -91,52 +91,47 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     await handleUploadImage(file);
   }, [handleUploadImage]);
 
-  const pickImageFromGallery = async () => {
-    if (disabled) return;
-    if (Platform.OS === 'web') return;
+  // Выбор держит `loading` с касания до конца загрузки (#3213): пока система
+  // отдаёт файл, владелец формы уже не даёт сохранить или закрыть редактор.
+  const pickAndUpload = async (
+    launch: () => Promise<ImagePicker.ImagePickerResult | null>,
+    failureMessage: string,
+  ) => {
+    if (disabled || loading || Platform.OS === 'web') return;
+    const selection = beginSelection();
     try {
-      // Android uses the system Photo Picker and must not request broad
-      // READ_MEDIA_IMAGES/VIDEO access. iOS still requires library permission.
-      if (Platform.OS === 'ios') {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) {
-          notify(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
-          return;
-        }
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        exif: false,
-      });
-      if (result.canceled) return;
+      const result = await launch();
+      if (!result || result.canceled || !selection.isCurrent()) return;
       const asset = result.assets?.[0];
       if (asset) await uploadPickedAsset(asset);
     } catch {
-      notify(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+      if (selection.isCurrent()) notify(failureMessage);
+    } finally {
+      selection.end();
     }
   };
 
-  const takePhoto = async () => {
-    if (disabled || Platform.OS === 'web') return;
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
+  const pickImageFromGallery = () => pickAndUpload(async () => {
+    // Android uses the system Photo Picker and must not request broad
+    // READ_MEDIA_IMAGES/VIDEO access. iOS still requires library permission.
+    if (Platform.OS === 'ios') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        notify(i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'));
-        return;
+        notify(i18nT('travel:components.travel.ImageGalleryComponent.galleryPermissionMessage'));
+        return null;
       }
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        exif: false,
-      });
-      if (result.canceled) return;
-      const asset = result.assets?.[0];
-      if (asset) await uploadPickedAsset(asset);
-    } catch {
-      notify(i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'));
     }
-  };
+    return ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, exif: false });
+  }, i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+
+  const takePhoto = () => pickAndUpload(async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      notify(i18nT('travel:components.travel.ImageGalleryComponent.cameraPermissionMessage'));
+      return null;
+    }
+    return ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, exif: false });
+  }, i18nT('travel:components.travel.ImageGalleryComponent.takePhotoFailed'));
 
   if (Platform.OS === 'web') {
     // Фолбэк держит ту же высоту, что и реальный вью, пока грузится dropzone-чанк:

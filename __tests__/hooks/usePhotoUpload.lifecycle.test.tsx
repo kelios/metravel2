@@ -32,6 +32,19 @@ it('finishes a point upload without allocating a preview after closing during fi
 });
 afterEach(() => Object.defineProperty(Platform, 'OS', { value: originalOS }));
 
+it('holds the save lock while a dropped web file is still being prepared (#3213)', async () => {
+  let finishPreparation!: (file: File) => void;
+  jest.mocked(prepareWebImageFileForUpload).mockImplementationOnce(() => new Promise((resolve) => { finishPreparation = resolve; }));
+  jest.mocked(uploadImage).mockResolvedValueOnce({ url: 'https://example.com/point.jpg' });
+  const screen = await renderHook(() => usePhotoUpload({ collection: 'travelImageAddress', idTravel: '42' }));
+  const file = new File(['heic'], 'point.heic', { type: 'image/heic' });
+  let pending!: Promise<void>;
+  await act(async () => { pending = screen.result.current.handleUploadImage(file); });
+  expect(screen.result.current.loading).toBe(true);
+  await act(async () => { finishPreparation(file); await pending; });
+  expect(screen.result.current.loading).toBe(false);
+});
+
 it.each([true, false])('delivers a server point photo after upload completion, unmounted=%s', async (unmounted) => {
   let resolveUpload!: (value: { url: string }) => void;
   jest.mocked(uploadImage).mockImplementationOnce(() => new Promise((resolve) => { resolveUpload = resolve; }));
