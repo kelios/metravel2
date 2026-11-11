@@ -65,7 +65,7 @@ const { useTravelStatus, setTravelStatus, removeTravelStatus } = require('@/stor
 }
 const { showToast } = require('@/utils/toast') as { showToast: jest.Mock }
 
-import TravelStatusButton from '@/components/travel/TravelStatusButton'
+import TravelStatusButton, { SM_CHIP_HEIGHT, SM_TOUCH_TARGET_HEIGHT } from '@/components/travel/TravelStatusButton'
 
 const baseProps = {
   travelId: 42,
@@ -110,16 +110,43 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
   // Ряд действий статьи на desktop: статус — 36 px чип, как соседние офлайн,
   // навигатор и GPX; по умолчанию кнопка остаётся 44 px.
-  it('size="sm" ужимает кнопку до 36 px, по умолчанию — 44 px', async () => {
+  // #3192: у чипа нажимается прозрачная рамка 44 px — `hitSlop` тач-таргет не
+  // добирает, — а высоту ряда она не меняет.
+  it('size="sm": видимый чип 36 px внутри нажимаемой рамки 44 px, ряд остаётся высотой чипа', async () => {
     const { StyleSheet } = require('react-native')
-    const view = await render(<TravelStatusButton {...baseProps} size="sm" />)
-    const small = StyleSheet.flatten(screen.getByRole('button', { name: 'Добавить в план' }).props.style)
-    expect(small.minHeight).toBe(36)
+    const view = await render(<TravelStatusButton {...baseProps} size="sm" style={{ flexShrink: 1 }} />)
+    const button = screen.getByRole('button', { name: 'Добавить в план' })
+    const target = StyleSheet.flatten(button.props.style)
+    const chip = StyleSheet.flatten(screen.getByTestId('travel-status-chip').props.style)
+
+    expect(target.minHeight).toBe(SM_TOUCH_TARGET_HEIGHT)
+    expect(SM_TOUCH_TARGET_HEIGHT).toBeGreaterThanOrEqual(44)
+    expect(button.props.hitSlop).toBeUndefined()
+    // Рамка прозрачна: фон и обводка принадлежат чипу.
+    expect(target.backgroundColor).toBeUndefined()
+    expect(target.borderWidth).toBeUndefined()
+    expect(chip.minHeight).toBe(SM_CHIP_HEIGHT)
+    expect(chip.paddingVertical).toBe(0)
+    expect(chip.borderWidth).toBe(1)
+    expect(chip.backgroundColor).toBeTruthy()
+    // Высота в потоке = рамка минус поля = высота чипа: ряд действий не раздвигается.
+    expect(target.minHeight + 2 * target.marginVertical).toBe(SM_CHIP_HEIGHT)
+    // Стиль вызывающего (сжатие в ряду) остаётся на нажимаемом элементе.
+    expect(target.flexShrink).toBe(1)
     await view.unmount()
 
     await render(<TravelStatusButton {...baseProps} />)
     const regular = StyleSheet.flatten(screen.getByRole('button', { name: 'Добавить в план' }).props.style)
     expect(regular.minHeight).toBe(44)
+    expect(regular.marginVertical).toBeUndefined()
+    expect(screen.queryByTestId('travel-status-chip')).toBeNull()
+  })
+
+  it('size="sm": нажатие по рамке открывает выбор статуса', async () => {
+    useAuth.mockReturnValue(makeAuthMock(true, '1'))
+    await render(<TravelStatusButton {...baseProps} size="sm" />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    expect(screen.getByText('Был здесь')).toBeTruthy()
   })
 
   it('отображает текущий статус, если он задан', async () => {

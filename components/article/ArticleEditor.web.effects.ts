@@ -7,6 +7,7 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { normalizeArticleEditorHtmlForOutput } from './articleEditorConfig'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import { buildTravelPath } from '@/utils/routePaths'
 
 
 export async function openArticleEditorPreview({
@@ -30,8 +31,9 @@ export async function openArticleEditorPreview({
   }
 
   try {
-    const url = `${windowObject.location.origin}/travels/${encodeURIComponent(String(idTravel))}`
-    await openExternalUrlInNewTab(url)
+    const path = buildTravelPath(idTravel)
+    if (!path) return
+    await openExternalUrlInNewTab(`${windowObject.location.origin}${path}`)
   } catch {
     // noop
   }

@@ -3,6 +3,7 @@ import type { OfflineMapPoint } from '@/api/mapOffline';
 import type { TravelCoords } from '@/types/types';
 import type { OfflineBBox, OfflineRegion } from '@/utils/mapTileCache';
 import { offlineCatalog } from './offlineCatalog';
+import { buildTravelPath } from '@/utils/routePaths';
 
 export interface OfflineMapRegionSnapshot {
   region: OfflineRegion;
@@ -97,7 +98,7 @@ export async function readAllMapPointsOffline(): Promise<TravelCoords[]> {
         lng: String(point.lng),
         travelImageThumbUrl: point.thumb,
         imageUrl: point.thumb,
-        urlTravel: point.urlTravel || (point.slug ? `/travels/${point.slug}` : ''),
+        urlTravel: point.urlTravel || (buildTravelPath(point.slug, { encode: false }) ?? ''),
         slug: point.slug,
       } as TravelCoords);
     });

@@ -13,6 +13,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'
 import { optimizeImageUrl } from '@/utils/imageOptimization'
 import { formatDate } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 
 const METRIC_TITLE_KEYS: Record<AuthorEngagementMetric, string> = {
   favorites: 'profile:components.profile.ProfileEngagementDetailList.title.favorites',
@@ -32,8 +33,7 @@ const METRIC_ICONS: Record<AuthorEngagementMetric, React.ComponentProps<typeof F
 const resolveTravelHref = (item: AuthorEngagementItem): string | null => {
   const { url, slug, id } = item.travel
   if (url.startsWith('/') && !url.startsWith('//')) return url
-  if (slug) return `/travels/${slug}`
-  return id ? `/travels/${id}` : null
+  return buildTravelPathFromTravel({ slug, id }, { encode: false })
 }
 
 const resolveDisplayName = (item: AuthorEngagementItem): string => {

@@ -51,6 +51,8 @@ type CountPlaceholderProps = {
     styles: any;
     /** Появится ли после загрузки чип сортировки: уверенно это известно только для полного каталога. */
     withSortChip: boolean;
+    /** Известный размер каталога (данные загрузчика); без него — условное число той же ширины. */
+    count?: number;
 };
 
 /**
@@ -61,11 +63,12 @@ type CountPlaceholderProps = {
 export const QuestsCountPlaceholder = memo(function QuestsCountPlaceholder({
     styles,
     withSortChip,
+    count,
 }: CountPlaceholderProps) {
     return (
         <>
             <Text style={[styles.contentCount, placeholderStyles.ghostText]} aria-hidden>
-                {pluralizeQuest(100)}
+                {pluralizeQuest(count && count > 0 ? count : 100)}
             </Text>
             {withSortChip && (
                 <View style={[styles.sortChip, placeholderStyles.ghostChip]} aria-hidden testID="quests-sort-placeholder">

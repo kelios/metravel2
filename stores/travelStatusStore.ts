@@ -11,6 +11,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { translate as i18nT } from '@/i18n'
 import { fetchAllPages } from '@/utils/fetchAllPages'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
 const getUserApi = async () => import('@/api/user')
@@ -88,7 +89,7 @@ const normalizeTravelUrl = (item: Record<string, unknown>, id: string | number):
     if (cleanUrl.includes('/travels/')) return cleanUrl
     if (cleanUrl.startsWith('/')) return cleanUrl
   }
-  return rawSlug ? `/travels/${rawSlug}` : `/travels/${String(id)}`
+  return buildTravelPathFromTravel({ slug: rawSlug, id }, { encode: false }) ?? ''
 }
 
 const getStatusDateField = (status: TravelStatus): 'visitedDate' | 'plannedDate' | 'wishlistDate' =>
@@ -255,11 +256,7 @@ const normalizeServerStatusEntry = (item: unknown): TravelStatusEntry | null => 
     : i18nT('shared:stores.travelStatusStore.puteshestvie_value1_a99c3208', { value1: String(travelId ?? '').trim() })
   const url = typeof travel.url === 'string' && travel.url.trim()
     ? travel.url.trim()
-    : typeof travel.slug === 'string' && travel.slug.trim()
-      ? `/travels/${travel.slug.trim()}`
-      : travelId != null
-        ? `/travels/${String(travelId)}`
-        : ''
+    : buildTravelPathFromTravel({ slug: travel.slug, id: travelId }, { encode: false }) ?? ''
 
   if (
     (typeof travelId !== 'string' && typeof travelId !== 'number') ||

@@ -342,4 +342,8 @@ export const questsGenerated2 = {
   "components.quests.QuestNotFoundScreen.popularTitle": "Папулярныя квэсты",
   "components.quests.QuestNotFoundScreen.seoTitle": "Квэст не знойдзены | Metravel",
   "components.quests.QuestNotFoundScreen.seoDescription": "Такога квэста няма. Адкрыйце каталог квэстаў Metravel або папулярныя маршруты па гарадах.",
+  "screens.tabs.QuestsCatalogDirectory.navLabel": "Паказальнік каталога квэстаў",
+  "screens.tabs.QuestsCatalogDirectory.countriesTitle": "Квэсты па краінах",
+  "screens.tabs.QuestsCatalogDirectory.citiesTitle": "Квэсты па гарадах",
+  "screens.tabs.QuestsCatalogDirectory.questsTitle": "Квэсты каталога",
 } as const

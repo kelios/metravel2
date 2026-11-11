@@ -1,11 +1,14 @@
-import { useMemo } from 'react'
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Platform, Pressable, ScrollView, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native'
+import type { Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import LinkPressable, { shouldHandleLinkClick } from '@/components/ui/LinkPressable'
 import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { resolveSitePath } from '@/utils/siteLinks'
 import { webDataSetProps } from '@/utils/webProps'
 import type { BookImage } from './homeHeroContent'
 
@@ -53,6 +56,61 @@ function getBundledWebAssetUri(source: BookImage['source'] | undefined) {
   return source && typeof source === 'object' ? source.uri : undefined
 }
 
+type CardInteractionState = { pressed: boolean; hovered: boolean; focused: boolean }
+
+type HomeCardLinkProps = Omit<PressableProps, 'style' | 'onPress' | 'children'> & {
+  href?: string | null
+  onOpenArticle: (href?: string | null) => void
+  getStyle: (state: CardInteractionState) => StyleProp<ViewStyle>
+  children: ReactNode
+}
+
+/**
+ * #3218: карточка главной — настоящая ссылка. На web адрес своего сайта отдаётся
+ * как `<a href>` (его видит краулер без JS, работает «открыть в новой вкладке»),
+ * а обычный клик остаётся SPA-переходом через `onOpenArticle`. На native и для
+ * внешнего адреса поведение прежнее: решение принимает `onOpenArticle`.
+ */
+function HomeCardLink({ href, onOpenArticle, getStyle, children, ...rest }: HomeCardLinkProps) {
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const sitePath = Platform.OS === 'web' ? resolveSitePath(href) : null
+
+  if (!sitePath) {
+    return (
+      <Pressable
+        {...rest}
+        onPress={() => onOpenArticle(href)}
+        style={({ pressed, hovered: isHovered, focused: isFocused }: any) =>
+          getStyle({ pressed, hovered: Boolean(isHovered), focused: Boolean(isFocused) })}
+        accessibilityRole="link"
+      >
+        {children}
+      </Pressable>
+    )
+  }
+
+  return (
+    <LinkPressable
+      {...rest}
+      href={sitePath as Href}
+      onPress={(event) => {
+        // Ctrl/Cmd/средний клик — браузеру: он откроет `href` в новой вкладке.
+        if (!shouldHandleLinkClick(event)) return
+        event.preventDefault()
+        onOpenArticle(href)
+      }}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={getStyle({ pressed: false, hovered, focused })}
+    >
+      {children}
+    </LinkPressable>
+  )
+}
+
 function FeaturedRouteCard({
   colors,
   featuredCardWidth,
@@ -67,9 +125,10 @@ function FeaturedRouteCard({
   styles: any
 }) {
   return (
-    <Pressable
-      onPress={() => onOpenArticle(image.href)}
-      style={({ pressed, hovered, focused }: any) => [
+    <HomeCardLink
+      href={image.href}
+      onOpenArticle={onOpenArticle}
+      getStyle={({ pressed, hovered, focused }) => [
         styles.featuredCard,
         (pressed || hovered) && styles.featuredCardHover,
         Platform.OS === 'web' && focused && {
@@ -113,7 +172,7 @@ function FeaturedRouteCard({
           {image.subtitle}
         </Text>
       </View>
-    </Pressable>
+    </HomeCardLink>
   )
 }
 
@@ -140,11 +199,12 @@ function PopularRouteCard({
   }, [image.compactSource, image.source, responsiveWeb])
 
   return (
-    <Pressable
+    <HomeCardLink
       {...(responsiveWeb ? webDataSetProps({ homePopularCard: true }) : {})}
       key={image.title}
-      onPress={() => onOpenArticle(image.href)}
-      style={({ pressed, hovered, focused }: any) => [
+      href={image.href}
+      onOpenArticle={onOpenArticle}
+      getStyle={({ pressed, hovered, focused }) => [
         styles.imageCard,
         useGridLayout && styles.imageCardGrid,
         useGridLayout && width ? { width } : null,
@@ -188,7 +248,7 @@ function PopularRouteCard({
           {image.subtitle}
         </Text>
       </View>
-    </Pressable>
+    </HomeCardLink>
   )
 }
 
@@ -230,17 +290,17 @@ export default function HomeHeroPopularSection({
         >
           {i18nT('home:components.home.HomeHeroPopularSection.populyarnye_marshruty_870b269e')}</Text>
         {(!useMobileGrid || responsiveWeb) && (
-          <Pressable
+          <HomeCardLink
             {...(responsiveWeb ? webDataSetProps({ homePopularSeeAll: true }) : {})}
-            onPress={() => onOpenArticle('/search')}
-            style={styles.popularSeeAll}
+            href="/search"
+            onOpenArticle={onOpenArticle}
+            getStyle={() => styles.popularSeeAll}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            accessibilityRole="link"
             accessibilityLabel={i18nT('home:components.home.HomeHeroPopularSection.smotret_vse_populyarnye_marshruty_f17aa35c')}
           >
             <Text style={styles.popularSeeAllText}>{i18nT('home:components.home.HomeHeroPopularSection.vse_5f903d3d')}</Text>
             <Feather name="arrow-right" size={14} color={colors.primaryDark} />
-          </Pressable>
+          </HomeCardLink>
         )}
       </View>
       {useMobileGrid ? (

@@ -424,6 +424,197 @@ async function testNotFoundTemplate(path) {
   );
 }
 
+/**
+ * #3218: хаб обязан отдавать краулеру без JS видимые ссылки `<a href>` на
+ * контент. До правки главная несла 0 ссылок на статьи, `/quests` — ни одной на
+ * квест, город или страну: списки строил только клиент. Пороги ниже реальных
+ * чисел (страны, города, первая страница каталога) — проверяется наличие слоя,
+ * а не точный размер каталога.
+ */
+const HUB_CONTENT_LINKS = [
+  {
+    path: '/',
+    groups: [
+      { label: 'article links', pattern: '^/travels/[^/]+$', min: 4 },
+      { label: 'quest links', pattern: '^/quests/(?!country/|theme/)[^/]+/[^/]+$', min: 4 },
+    ],
+  },
+  {
+    path: '/quests',
+    groups: [
+      { label: 'quest country links', pattern: '^/quests/country/[^/]+$', min: 5 },
+      { label: 'quest city links', pattern: '^/quests/(?!scenario$|country$|map$|theme$)[^/]+$', min: 20 },
+      { label: 'quest links', pattern: '^/quests/(?!country/|theme/)[^/]+/[^/]+$', min: 20 },
+    ],
+  },
+  {
+    path: '/travelsby',
+    groups: [{ label: 'article links', pattern: '^/travels/[^/]+$', min: 5 }],
+  },
+];
+
+/** Уникальные пути `<a href>` своего сайта из сырого HTML, без query и якоря. */
+function collectAnchorPaths(html) {
+  const paths = new Set();
+  for (const match of String(html || '').matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
+    const href = match[1].replace(/^https?:\/\/(?:www\.)?metravel\.by(?=\/|$)/i, '');
+    if (!href.startsWith('/') || href.startsWith('//')) continue;
+    paths.add(href.split('?')[0].split('#')[0].replace(/(.)\/$/, '$1'));
+  }
+  return [...paths];
+}
+
+function countContentLinks(html, pattern) {
+  const matcher = new RegExp(pattern);
+  return collectAnchorPaths(html).filter((href) => matcher.test(href)).length;
+}
+
+async function testHubContentLinks({ path, groups }) {
+  const url = `${SITE}${path}`;
+  console.log(`\n🔍 ${url} (hub content links)`);
+  let html;
+  try {
+    html = await fetchHtml(url);
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${path}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return;
+  }
+  for (const group of groups) {
+    const found = countContentLinks(html, group.pattern);
+    assert(found >= group.min, `${path} raw HTML has at least ${group.min} ${group.label}`, `found ${found}`);
+  }
+}
+
+/**
+ * #3235: постоянный контроль sitemap и редиректов (бэкенд их уже отдаёт верно).
+ * Порог `maxWithoutLastmod` — число, а не доля: без `<lastmod>` живут только
+ * статические страницы (на 11.11.2026 их 7 из 1885), и рост этого числа значит,
+ * что без даты осталась целая сущность, а не одна страница.
+ */
+const SITEMAP_EXPECTATIONS = {
+  path: '/sitemap.xml',
+  rootPath: '/',
+  maxWithoutLastmod: 15,
+};
+
+/** Числовой id города квестов обязан отвечать 301 на адрес с алиасом. */
+const NUMERIC_QUEST_CITY_PATH = '/quests/58';
+
+const decodeXmlEntities = (value) => String(value || '')
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+  .trim();
+
+/**
+ * Разбор sitemap без XML-библиотеки: `<urlset>` из `<url>` с `<loc>`, необязательным
+ * `<lastmod>` и альтернативами `<xhtml:link href>`. `null` — документ не sitemap
+ * (HTML-заглушка, `<sitemapindex>`, пустой или оборванный ответ).
+ */
+function parseSitemap(xml) {
+  const text = String(xml || '');
+  if (!/<urlset\b/i.test(text) || !/<\/urlset>\s*$/i.test(text)) return null;
+  const urls = [];
+  for (const match of text.matchAll(/<url>([\s\S]*?)<\/url>/gi)) {
+    const body = match[1];
+    const loc = decodeXmlEntities((body.match(/<loc>([\s\S]*?)<\/loc>/i) || [])[1]);
+    if (!loc) return null;
+    urls.push({
+      loc,
+      hasLastmod: /<lastmod>\s*\S[\s\S]*?<\/lastmod>/i.test(body),
+      alternates: [...body.matchAll(/<xhtml:link\b[^>]*\bhref="([^"]*)"/gi)].map((link) => decodeXmlEntities(link[1])),
+    });
+  }
+  return urls.length ? urls : null;
+}
+
+/** Факты о sitemap для проверок: всё считается по документу, без сети. */
+function evaluateSitemap(xml, { site, rootPath = '/' } = {}) {
+  const urls = parseSitemap(xml);
+  if (!urls) return { parsed: false };
+  const locs = new Set(urls.map((url) => url.loc));
+  const withAlternates = urls.filter((url) => url.alternates.length > 0);
+  const missingAlternates = [...new Set(withAlternates.flatMap((url) => url.alternates).filter((href) => !locs.has(href)))];
+  return {
+    parsed: true,
+    urlCount: urls.length,
+    hasRoot: locs.has(`${String(site || '').replace(/\/+$/, '')}${rootPath}`),
+    withoutLastmod: urls.filter((url) => !url.hasLastmod).map((url) => url.loc),
+    alternateUrlCount: withAlternates.length,
+    missingAlternates,
+  };
+}
+
+/**
+ * `301` на `/quests/<alias>`: ровно один сегмент после `/quests/`, и он не число.
+ * Значение алиаса не зашито — город могут переименовать, правило останется верным.
+ */
+function evaluateQuestCityAliasRedirect({ status, location } = {}) {
+  const target = String(location || '').replace(/^https?:\/\/[^/]+/i, '').split('?')[0].split('#')[0];
+  const alias = (target.match(/^\/quests\/([^/]+)\/?$/) || [])[1] || '';
+  return {
+    ok: status === 301 && Boolean(alias) && !/^\d+$/.test(alias),
+    status,
+    target,
+  };
+}
+
+async function testSitemap({ path, rootPath, maxWithoutLastmod }) {
+  const url = `${SITE}${path}`;
+  console.log(`\n🔍 ${url} (sitemap)`);
+  let res;
+  try {
+    res = await fetchRaw(url);
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${path}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return;
+  }
+  assert(res.status === 200, `${path} answers 200`, `got HTTP ${res.status}`);
+  const facts = evaluateSitemap(res.html, { site: SITE, rootPath });
+  assert(facts.parsed, `${path} parses as a <urlset> sitemap`, 'no <urlset> with <url><loc> entries');
+  if (!facts.parsed) return;
+  assert(facts.hasRoot, `${path} lists the home page ${SITE}${rootPath}`, `${facts.urlCount} URLs, none is the home page`);
+  assert(
+    facts.withoutLastmod.length <= maxWithoutLastmod,
+    `${path} has at most ${maxWithoutLastmod} URLs without <lastmod>`,
+    `found ${facts.withoutLastmod.length} of ${facts.urlCount}, e.g. ${facts.withoutLastmod.slice(0, 5).join(', ')}`
+  );
+  assert(facts.alternateUrlCount > 0, `${path} carries xhtml:link alternates`, `0 of ${facts.urlCount} URLs have them`);
+  assert(
+    facts.missingAlternates.length === 0,
+    `${path}: every xhtml:link href is itself a <loc>`,
+    `${facts.missingAlternates.length} missing, e.g. ${facts.missingAlternates.slice(0, 5).join(', ')}`
+  );
+}
+
+async function testQuestCityAliasRedirect(path) {
+  const url = `${SITE}${path}`;
+  console.log(`\n🔍 ${url} (numeric city id → alias)`);
+  let res;
+  try {
+    res = await fetchRaw(url);
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${path}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return;
+  }
+  const verdict = evaluateQuestCityAliasRedirect(res);
+  assert(
+    verdict.ok,
+    `${path} answers 301 to /quests/<alias>`,
+    `got HTTP ${verdict.status}, location "${res.location || ''}"`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -499,6 +690,15 @@ async function main() {
     indexable: true,
     h1Count: 1,
   });
+
+  // --- 6a. Hubs hand a no-JS crawler links to content (#3218) ---
+  for (const hub of HUB_CONTENT_LINKS) {
+    await testHubContentLinks(hub);
+  }
+
+  // --- 6b. Sitemap and the numeric city redirect stay as the backend shipped them (#3235) ---
+  await testSitemap(SITEMAP_EXPECTATIONS);
+  await testQuestCityAliasRedirect(NUMERIC_QUEST_CITY_PATH);
 
   // --- 7. About page ---
   await testPage('/about', {
@@ -606,4 +806,8 @@ if (require.main === module) {
   runCli(main, { name: 'test-seo-prod', usage: USAGE });
 }
 
-module.exports = { CLI_SPEC, USAGE, parseArgs, isBlockedFromIndexing, checkSeoTitleContract };
+module.exports = {
+  CLI_SPEC, USAGE, parseArgs, isBlockedFromIndexing, checkSeoTitleContract,
+  HUB_CONTENT_LINKS, collectAnchorPaths, countContentLinks,
+  SITEMAP_EXPECTATIONS, NUMERIC_QUEST_CITY_PATH, parseSitemap, evaluateSitemap, evaluateQuestCityAliasRedirect,
+};

@@ -7,6 +7,14 @@ import { translate as i18nT } from '@/i18n'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { DISTANCE_SORT_ID } from '@/components/listTravel/utils/catalogSort'
 import { HOME_POPULAR_COMPACT_COVERS } from './homePopularCompactCovers'
+import { buildTravelPath } from '@/utils/routePaths'
+
+/**
+ * #3242/#3218: адрес статьи для карточек главной строит общий построитель из
+ * текущего slug. Slug, ставший `from` в `scripts/seo-redirects.json`, ловит
+ * `npm run guard:travel-links`.
+ */
+const travelHref = (slug: string): string | undefined => buildTravelPath(slug, { encode: false }) ?? undefined
 
 
 export type BookImage = {
@@ -108,7 +116,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_dolomity_5feebc2d') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_sorapis_2fd0cc8f') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_po_dolomitam_ozero_italiya_fa42c033') },
-    href: 'https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
+    href: travelHref('ozero-sorapis-krugovoi-marshrut-v-dolomitakh'),
   },
   {
     source: require('../../assets/images/cover_trecime.webp'),
@@ -118,7 +126,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tre_cime_di_lavaredo_dolomity_0341abf3') },
     title: 'Tre Cime di Lavaredo',
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.krugovoy_marshrut_10_km_gory_italiya_3b3bdd6b') },
-    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
+    href: travelHref('tre-cime-di-lavaredo-krugovoi-marshrut-10-km'),
   },
   {
     source: require('../../assets/images/cover_bled.webp'),
@@ -128,7 +136,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_sloveniya_a6de1598') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_4b95af32') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.chto_posmotret_za_1_den_ozero_sloveniya_337402ef') },
-    href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
+    href: travelHref('ushchele-vintgar-i-ozero-bled-marshrut-na-den'),
   },
   {
     source: {
@@ -141,7 +149,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_germaniya_08d65a9a') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.tropa_vedm_0ac8dba6') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.hayking_gornyy_marshrut_germaniya_cc4d0990') },
-    href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
+    href: travelHref('tropa-vedm-v-gartse-kak-proiti-hexenstieg'),
   },
   {
     // Обложка статьи 362 на проде портретная (768×1024), вся её галерея —
@@ -156,7 +164,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_polsha_e9d180a7') },
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_458dda47') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.pohod_ozero_polsha_daa096f6') },
-    href: 'https://metravel.by/travels/morskoe-oko-v-mae',
+    href: travelHref('morskoe-oko-v-mae-ozero-v-tatrakh-polsha'),
   },
 ] as const
 

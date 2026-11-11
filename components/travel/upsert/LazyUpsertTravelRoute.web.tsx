@@ -1,9 +1,10 @@
 import React, { Suspense, useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
+import { useLocalSearchParams, usePathname, useRouter, type Href } from 'expo-router'
 
 import { useWebHydrationGate } from '@/hooks/useWebHydrationGate'
 import { useAuthStore } from '@/stores/authStore'
+import { buildTravelPath } from '@/utils/routePaths'
 
 const UpsertTravelRoute = React.lazy(() =>
   import('@/components/travel/upsert/UpsertTravelRoute')
@@ -33,7 +34,8 @@ export default function LazyUpsertTravelRoute() {
   useEffect(() => {
     // Keep the exported /travel/new tree through hydration. Only then may the
     // router open details, with auth resolved before private data reaches caches.
-    if (previewId && authReady) router.replace(`/travels/${previewId}`)
+    const previewPath = previewId && authReady ? buildTravelPath(previewId) : null
+    if (previewPath) router.replace(previewPath as Href)
   }, [authReady, previewId, router])
 
   if (!hydrationReady || previewId) return <UpsertTravelRouteFallback />

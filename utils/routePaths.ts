@@ -47,6 +47,17 @@ export function buildQuestPath(cityId: unknown, questId: unknown): string | null
 }
 
 /**
+ * Путь к странице города квестов по его алиасу (`/quests/grodno`). `null`, если
+ * алиаса нет: числовой id города — не канонический адрес страницы, по нему
+ * вызывающий ведёт на сам квест (`buildQuestPath`).
+ */
+export function buildQuestCityPath(cityAlias: unknown): string | null {
+  const alias = normalizeRouteSegment(cityAlias);
+  if (!alias || /^\d+$/.test(alias)) return null;
+  return `/quests/${encodeURIComponent(alias)}`;
+}
+
+/**
  * Путь к путешествию по slug либо по числовому id. `null`, если ни того, ни
  * другого нет. Нулевой и отрицательный id тоже непригодны: `/travels/0` — такая
  * же несуществующая страница, как `/travels/null`.
@@ -56,6 +67,22 @@ export function buildTravelPath(slugOrId: unknown, options?: { encode?: boolean 
   if (!segment) return null;
   if (/^-?\d+$/.test(segment) && Number(segment) <= 0) return null;
   return `/travels/${options?.encode === false ? segment : encodeURIComponent(segment)}`;
+}
+
+/**
+ * Канонический origin сайта для абсолютных адресов вне браузера: печатная
+ * книга, QR-код, выгрузка. `utils/seo.ts` берёт его же как значение по умолчанию.
+ */
+export const SITE_CANONICAL_ORIGIN = 'https://metravel.by';
+
+/**
+ * Абсолютный канонический адрес статьи: без завершающего слэша и без
+ * параметров — ровно тот, что стоит в sitemap. `/travels/<slug>/` прод отдаёт
+ * 301 на адрес без слэша, поэтому QR-код книги с ним вёл через редирект (#3242).
+ */
+export function buildTravelCanonicalUrl(slugOrId: unknown, options?: { encode?: boolean }): string | null {
+  const path = buildTravelPath(slugOrId, options);
+  return path ? `${SITE_CANONICAL_ORIGIN}${path}` : null;
 }
 
 /**

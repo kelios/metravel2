@@ -66,6 +66,10 @@ jest.mock('@/components/travel/NavigationArrows', () => () => null)
 jest.mock('@/components/travel/ToggleableMapSection', () => () => null)
 jest.mock('@/components/travel/details/sections/TravelWeatherBlock', () => () => null)
 jest.mock('@/components/travel/details/sections/DeferredQuestForCitySection', () => () => null)
+// Web bundles resolve the `.web` variant of the teaser (loader data, no query);
+// jest resolves the default one, so point it at the file the site really ships.
+jest.mock('@/components/travel/details/sections/TravelQuestTeaserLine', () =>
+  jest.requireActual('@/components/travel/details/sections/TravelQuestTeaserLine.web'))
 jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => () => null)
 jest.mock('@/components/travel/details/sections/TravelArticleShareTripCta', () => () => null)
 jest.mock('@/components/travel/details/sections/TravelPeerBadgePrompt', () => () => null)

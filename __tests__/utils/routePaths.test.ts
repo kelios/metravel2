@@ -1,4 +1,7 @@
 import {
+  SITE_CANONICAL_ORIGIN,
+  buildQuestCityPath,
+  buildTravelCanonicalUrl,
   buildQuestPath,
   buildTravelPath,
   buildTravelPathFromTravel,
@@ -38,6 +41,38 @@ describe('utils/routePaths', () => {
       expect(isUsableRouteSegment('minsk')).toBe(true)
       expect(isUsableRouteSegment('undefined')).toBe(false)
       expect(isUsableRouteSegment(null)).toBe(false)
+    })
+  })
+
+  // #3221: страница города квестов живёт на алиасе; числовой id — не её адрес.
+  describe('buildQuestCityPath', () => {
+    it('builds the city page path from the alias', () => {
+      expect(buildQuestCityPath('grodno')).toBe('/quests/grodno')
+      expect(buildQuestCityPath(' torun ')).toBe('/quests/torun')
+    })
+
+    it('returns null without an alias or for a numeric city id', () => {
+      expect(buildQuestCityPath(undefined)).toBeNull()
+      expect(buildQuestCityPath('')).toBeNull()
+      expect(buildQuestCityPath('undefined')).toBeNull()
+      expect(buildQuestCityPath('11')).toBeNull()
+      expect(buildQuestCityPath(11)).toBeNull()
+    })
+  })
+
+  // #3242: адрес для печати и QR — тот же канонический, что в sitemap.
+  describe('buildTravelCanonicalUrl', () => {
+    it('builds an absolute address without a trailing slash or query', () => {
+      expect(buildTravelCanonicalUrl('minsk-za-vykhodnye')).toBe('https://metravel.by/travels/minsk-za-vykhodnye')
+      expect(buildTravelCanonicalUrl('minsk-za-vykhodnye')).toBe(`${SITE_CANONICAL_ORIGIN}/travels/minsk-za-vykhodnye`)
+      expect(buildTravelCanonicalUrl('minsk-za-vykhodnye')?.endsWith('/')).toBe(false)
+    })
+
+    it('returns null when there is no usable slug', () => {
+      expect(buildTravelCanonicalUrl('')).toBeNull()
+      expect(buildTravelCanonicalUrl(undefined)).toBeNull()
+      expect(buildTravelCanonicalUrl('null')).toBeNull()
+      expect(buildTravelCanonicalUrl(0)).toBeNull()
     })
   })
 

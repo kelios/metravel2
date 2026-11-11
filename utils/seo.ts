@@ -4,6 +4,7 @@
 
 import { familyRouteFromPathname, socialPreviewWidthForRoute } from '@/constants/imageContract';
 import { resolveLegacyResizeOrigin, toLegacyResizePath } from '@/utils/mediaUrl';
+import { SITE_CANONICAL_ORIGIN } from '@/utils/routePaths';
 
 export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
 
@@ -21,7 +22,7 @@ export const MAP_OG_IMAGE_PATH = '/og-map.png';
  * getSiteBaseUrl() // => "https://metravel.by"
  */
 export function getSiteBaseUrl(): string {
-  const raw = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+  const raw = process.env.EXPO_PUBLIC_SITE_URL || SITE_CANONICAL_ORIGIN;
   return raw.replace(/\/+$/, ''); // remove trailing slashes
 }
 

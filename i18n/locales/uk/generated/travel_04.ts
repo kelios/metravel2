@@ -594,4 +594,10 @@ export const travelGenerated4 = {
   "components.travel.useTravelPublishChecklist.seoDescription": "SEO-опис",
   "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "До {{value1}} знаків (крок {{value2}})",
   "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Свій текст у сніпеті пошуку замість випадкового уривка",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount": "{{city}}: {{count}} безкоштовних квестів-прогулянок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_one": "{{city}}: {{count}} безкоштовний квест-прогулянка",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_few": "{{city}}: {{count}} безкоштовні квести-прогулянки",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_many": "{{city}}: {{count}} безкоштовних квестів-прогулянок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_other": "{{city}}: {{count}} безкоштовних квестів-прогулянок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuests": "{{city}}: безкоштовні квести-прогулянки",
 } as const

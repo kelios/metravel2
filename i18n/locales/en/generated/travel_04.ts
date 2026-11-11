@@ -594,4 +594,10 @@ export const travelGenerated4 = {
   "components.travel.useTravelPublishChecklist.seoDescription": "SEO description",
   "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "Up to {{value1}} characters (step {{value2}})",
   "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Your own text in the search snippet instead of a random excerpt",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount": "{{city}}: {{count}} free walking quests",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_one": "{{city}}: {{count}} free walking quest",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_few": "{{city}}: {{count}} free walking quests",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_many": "{{city}}: {{count}} free walking quests",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_other": "{{city}}: {{count}} free walking quests",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuests": "{{city}}: free walking quests",
 } as const

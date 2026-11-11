@@ -25,6 +25,7 @@ import { parseTravelStatusDateParts, useTravelStatus, setTravelStatus } from '@/
 import { useAuthStore } from '@/stores/authStore';
 import { translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout';
+import { buildTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths';
 
 
 const MultiSelectFieldAny: any = MultiSelectField;
@@ -125,9 +126,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     }, [currentCalendarStatus?.status, currentCalendarStatus?.visitedDate, formData?.id, formData?.visitedDate, handleFieldChange]);
 
     const openPreview = useCallback(() => {
-        const slug = form?.slug;
-        if (!slug) return;
-        const url = `/travels/${slug}`;
+        const url = buildTravelPath(form?.slug, { encode: false });
+        if (!url) return;
         void openExternalUrlInNewTab(url, {
             allowRelative: true,
             baseUrl: 'https://metravel.by',
@@ -166,7 +166,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 id: form.id,
                 type: 'travel',
                 title: form.name || travelDataOld?.name || i18nT('travel:common.untitled'),
-                url: form.slug ? `/travels/${form.slug}` : `/travels/${form.id}`,
+                url: buildTravelPathFromTravel({ slug: form.slug, id: form.id }, { encode: false }) ?? '',
                 imageUrl:
                     form.travel_image_thumb_url ||
                     form.travel_image_thumb_small_url ||

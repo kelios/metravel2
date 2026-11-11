@@ -26,6 +26,11 @@ import { formatDate } from '@/i18n/format'
 import { webTitleRef } from '@/utils/webProps'
 import { saveGuestPlanIntent } from '@/utils/guestPlanIntent'
 
+/** Видимая высота чипа `size="sm"` — как у соседних чипов ряда действий статьи. */
+export const SM_CHIP_HEIGHT = 36
+/** Нажимаемая высота того же чипа: минимум тач-таргета проекта (`guard:touch-targets`). */
+export const SM_TOUCH_TARGET_HEIGHT = 44
+
 
 const STATUS_OPTIONS: Array<{
   key: TravelStatus
@@ -68,7 +73,8 @@ type Props = {
   idleLabel?: string
   /**
    * Полный (не compact) режим: `md` — 44 px, `sm` — 36 px чип в тоне соседних
-   * чипов ряда действий статьи (desktop); тач-таргет добирает `hitSlop`.
+   * чипов ряда действий статьи (desktop). У `sm` нажимается прозрачная рамка
+   * 44 px вокруг чипа (#3192): `hitSlop` тач-таргет не добирает.
    */
   size?: 'md' | 'sm'
   style?: StyleProp<ViewStyle>
@@ -311,10 +317,19 @@ export default function TravelStatusButton({
       fontWeight: '600',
       color: current ? colors.primary : colors.primaryText,
     },
+    // #3192: нажимаемая рамка чипа `sm`. Сама она прозрачна и держит 44 px, а
+    // отрицательные поля возвращают ряду действий высоту чипа: соседи по ряду —
+    // те же 36 px, и рамка в потоке раздвигала бы ряд на 8 px.
+    btnTargetSm: {
+      justifyContent: 'center',
+      minHeight: SM_TOUCH_TARGET_HEIGHT,
+      marginVertical: -(SM_TOUCH_TARGET_HEIGHT - SM_CHIP_HEIGHT) / 2,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+    },
     btnSm: {
       gap: DESIGN_TOKENS.spacing.xs,
       paddingVertical: 0,
-      minHeight: 36,
+      minHeight: SM_CHIP_HEIGHT,
       backgroundColor: colors.primaryLight,
       borderColor: current ? colors.primary : colors.primaryAlpha30,
     },
@@ -713,30 +728,39 @@ export default function TravelStatusButton({
   }
 
   const isSmall = size === 'sm'
+  const mainLabel = currentOption?.label ?? idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback')
+  const mainContent = (
+    <>
+      <Feather
+        name={currentOption?.icon ?? 'plus-circle'}
+        size={isSmall ? 16 : 20}
+        color={current ? colors.primary : isSmall ? colors.primaryText : colors.textMuted}
+      />
+      <Text style={[styles.btnText, isSmall && styles.btnTextSm]}>{mainLabel}</Text>
+      {current && current.status === 'planned' && current.plannedDate && (
+        <Text style={[styles.btnText, { fontWeight: '400', fontSize: 13, color: colors.textSecondary }]}>
+          · {formatPlannedDate(current.plannedDate)}
+        </Text>
+      )}
+    </>
+  )
 
   return (
     <>
       <Pressable
-        style={[styles.btn, isSmall && styles.btnSm, globalFocusStyles.focusable, style]}
+        // `md`: кнопка сама и есть видимая пилюля 44 px. `sm`: нажимается прозрачная
+        // рамка 44 px, а пилюля 36 px лежит внутри неё (#3192).
+        style={isSmall
+          ? [styles.btnTargetSm, globalFocusStyles.focusable, style]
+          : [styles.btn, globalFocusStyles.focusable, style]}
         onPress={handleMainPress}
-        hitSlop={isSmall ? 4 : undefined}
         accessibilityRole="button"
-        accessibilityLabel={currentOption ? currentOption.label : (idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback'))}
+        accessibilityLabel={mainLabel}
         accessibilityHint={i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae')}
       >
-        <Feather
-          name={currentOption?.icon ?? 'plus-circle'}
-          size={isSmall ? 16 : 20}
-          color={current ? colors.primary : isSmall ? colors.primaryText : colors.textMuted}
-        />
-        <Text style={[styles.btnText, isSmall && styles.btnTextSm]}>
-          {currentOption?.label ?? idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback')}
-        </Text>
-        {current && current.status === 'planned' && current.plannedDate && (
-          <Text style={[styles.btnText, { fontWeight: '400', fontSize: 13, color: colors.textSecondary }]}>
-            · {formatPlannedDate(current.plannedDate)}
-          </Text>
-        )}
+        {isSmall ? (
+          <View style={[styles.btn, styles.btnSm]} testID="travel-status-chip">{mainContent}</View>
+        ) : mainContent}
       </Pressable>
 
       {modalJsx}

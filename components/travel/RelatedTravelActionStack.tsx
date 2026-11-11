@@ -10,6 +10,7 @@ import PlaceSaveHeartButton, { type PlaceSaveHeart } from '@/components/places/P
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { normalizeRelatedTravelId, resolveRelatedTravelRef } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPath } from '@/utils/routePaths'
 
 type Props = {
   relatedTravelUrl?: string | null
@@ -65,7 +66,8 @@ export default function RelatedTravelActionStack({
     const explicitId = normalizeRelatedTravelId(relatedTravelId)
 
     if (urlRef) return explicitId != null ? { ...urlRef, id: explicitId } : urlRef
-    return explicitId != null ? { route: `/travels/${explicitId}`, id: explicitId } : null
+    const idRoute = buildTravelPath(explicitId)
+    return explicitId != null && idRoute ? { route: idRoute, id: explicitId } : null
   }, [relatedTravelId, relatedTravelUrl])
 
   // For id-based URLs we already have everything the buttons need (id + fallbacks),

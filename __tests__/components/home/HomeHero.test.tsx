@@ -26,6 +26,14 @@ const mockResponsiveState = {
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+  router: { push: jest.fn() },
+  // #3218: карточки «Популярных маршрутов» на web — `LinkPressable` (`Link asChild`).
+  Link: ({ href, asChild, children, ...props }: any) => {
+    const mockReact = require('react')
+    return asChild
+      ? mockReact.cloneElement(mockReact.Children.only(children), { ...props, href })
+      : mockReact.createElement('a', { ...props, href }, children)
+  },
 }))
 jest.mock('@/utils/analytics')
 jest.mock('@/utils/externalLinks', () => ({
@@ -129,8 +137,12 @@ describe('HomeHero Component', () => {
 
       // openExternalUrl opens a site path that has an app screen via
       // expo-router (see the book-cover invariant below), so no own router.push.
+      // #3242: адрес берётся из набора слайдов, а не дублируется литералом —
+      // slug статьи меняется при переименовании, и копия в тесте устаревала.
+      const { BOOK_IMAGES } = require('@/components/home/homeHeroContent')
+      expect(BOOK_IMAGES[0].href).toMatch(/^\/travels\/ozero-sorapis-[a-z0-9-]+$/)
       expect(openExternalUrl).toHaveBeenCalledWith(
-        'https://metravel.by/travels/ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom?returnTo=%2Fsearch',
+        BOOK_IMAGES[0].href,
         expect.objectContaining({ allowRelative: true }),
       )
       expect(mockPush).not.toHaveBeenCalled()
@@ -307,20 +319,18 @@ describe('HomeHero Component', () => {
     it('first image (Тропа ведьм) has valid href/title/subtitle', () => {
       const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
       if (!BOOK_IMAGES_FOR_TEST) return
-      expect(BOOK_IMAGES_FOR_TEST[0].href).toMatch(
-        /^https:\/\/metravel\.by\/travels\//,
-      )
+      expect(BOOK_IMAGES_FOR_TEST[0].href).toMatch(/^\/travels\/[a-z0-9-]+$/)
       expect(BOOK_IMAGES_FOR_TEST[0].title).toBeTruthy()
       expect(BOOK_IMAGES_FOR_TEST[0].subtitle).toBeTruthy()
     })
 
-    it('remaining images have href pointing to metravel.by', () => {
+    it('remaining images have a relative canonical article href', () => {
       const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero')
       if (!BOOK_IMAGES_FOR_TEST) return
       const withHref = BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href)
       expect(withHref.length).toBeGreaterThan(0)
       withHref.forEach((img: any) => {
-        expect(img.href).toMatch(/^https:\/\/metravel\.by\/travels\//)
+        expect(img.href).toMatch(/^\/travels\/[a-z0-9-]+$/)
         expect(img.title).toBeTruthy()
         expect(img.subtitle).toBeTruthy()
       })

@@ -342,4 +342,8 @@ export const questsGenerated2 = {
   "components.quests.QuestNotFoundScreen.popularTitle": "Popular quests",
   "components.quests.QuestNotFoundScreen.seoTitle": "Quest not found | Metravel",
   "components.quests.QuestNotFoundScreen.seoDescription": "There is no such quest. Open the Metravel quest catalog or popular city routes.",
+  "screens.tabs.QuestsCatalogDirectory.navLabel": "Quest catalog directory",
+  "screens.tabs.QuestsCatalogDirectory.countriesTitle": "Quests by country",
+  "screens.tabs.QuestsCatalogDirectory.citiesTitle": "Quests by city",
+  "screens.tabs.QuestsCatalogDirectory.questsTitle": "Quests in the catalog",
 } as const

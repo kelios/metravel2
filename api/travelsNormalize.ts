@@ -4,7 +4,7 @@
 import { Travel, TravelMedia } from '@/types/types';
 import { isPrivateOrLocalHost } from '@/utils/mediaUrl';
 import { indexTravelMedia } from '@/utils/mediaPlaceholderIndex';
-import { normalizeRouteSegment } from '@/utils/routePaths';
+import { buildTravelPath, normalizeRouteSegment } from '@/utils/routePaths';
 
 export type MyTravelsItem = Record<string, unknown>;
 export type MyTravelsPayload =
@@ -203,8 +203,9 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     // But if API provided a url and it is non-canonical (e.g. '/test' or 'test'),
     // we fix it to the canonical travel route.
     if (rawUrl) {
-        if (canonicalKey && !hasTravelsUrl) {
-            out.url = `/travels/${canonicalKey}`;
+        const canonicalPath = buildTravelPath(canonicalKey, { encode: false });
+        if (canonicalPath && !hasTravelsUrl) {
+            out.url = canonicalPath;
         } else if (!rawUrl.startsWith('http') && !rawUrl.startsWith('/')) {
             out.url = `/${rawUrl}`;
         }

@@ -73,11 +73,14 @@ function buildBreadcrumbList(items: BreadcrumbItem[], id?: string) {
   };
 }
 
-function buildItemList(items: Array<Record<string, unknown>>, id: string, name: string) {
+function buildItemList(items: Array<Record<string, unknown>>, id: string, name: string, total?: number) {
   return {
     '@type': 'ItemList',
     '@id': id,
     name,
+    // #3218: список может перечислять только начало каталога — размер всего
+    // каталога называется явно, иначе разметка расходится со страницей.
+    ...(total != null && total >= items.length ? { numberOfItems: total } : null),
     itemListElement: items.map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,
@@ -226,7 +229,7 @@ export function createQuestCatalogStructuredData({
         breadcrumb: { '@id': breadcrumbId },
         ...(items.length ? { mainEntity: { '@id': itemListId } } : null),
       },
-      ...(items.length ? [buildItemList(items, itemListId, i18nT('seo:utils.discoverySeo.katalog_kvestov_ffeb5cb5'))] : []),
+      ...(items.length ? [buildItemList(items, itemListId, i18nT('seo:utils.discoverySeo.katalog_kvestov_ffeb5cb5'), quests.length)] : []),
       breadcrumb,
     ],
   };

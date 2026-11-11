@@ -5,6 +5,7 @@ import type { PdfRichTextSection } from '../../../themes/headingLevels'
 import type { BookSettings } from '@/types/bookSettings'
 import type { PdfIconName } from './pdfVisualHelpers'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelCanonicalUrl } from '@/utils/routePaths'
 
 
 type TravelContentVariant = 'runtime' | 'standalone'
@@ -92,7 +93,7 @@ export function renderTravelContentPageMarkup(args: {
   } = args
 
   const { colors, typography, spacing } = theme
-  const url = travel.slug ? `https://metravel.by/travels/${travel.slug}` : travel.url
+  const url = buildTravelCanonicalUrl(travel.slug, { encode: false }) ?? travel.url
   const shouldShowInlineGallery =
     showInlineGallery &&
     !(includeGallery !== false && hasGalleryMedia)

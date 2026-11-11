@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 
 import QuestEditorialText, { renderQuestEditorialText } from './QuestEditorialText'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
@@ -10,6 +10,7 @@ import { useTravelsForQuest } from '@/hooks/useTravelsForQuest'
 import type { TravelLocationQuery } from '@/utils/travelForLocation'
 import { resolveTravelCityName } from '@/utils/travelDisplayLocation'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
 const MAX_TRAVELS = 4
@@ -87,7 +88,10 @@ export function TravelsForQuestSection({ cityName, countryName, countryCode, coo
                 renderText={renderQuestEditorialText}
                 imageUrl={travel.travel_image_thumb_url}
                 metaText={metaText}
-                onPress={() => router.push(`/travels/${travel.slug || travel.id}`)}
+                onPress={() => {
+                  const path = buildTravelPathFromTravel(travel, { encode: false })
+                  if (path) router.push(path as Href)
+                }}
                 imageHeight={170}
                 mediaFit="contain"
                 mediaProps={{

@@ -41,6 +41,7 @@ import { showToast } from '@/utils/toast'
 
 import { type PlacesStyles } from './PlacesScreen.styles'
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPath } from '@/utils/routePaths'
 
 
 export const PlaceCard = React.memo(function PlaceCard({
@@ -75,7 +76,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   const sourceTravelId = pager.activeSource?.travelId
   const articleUrl = sourceFields.articleUrl || (
     sourceTravelId != null && Number.isSafeInteger(sourceTravelId) && sourceTravelId > 0
-      ? `/travels/${sourceTravelId}`
+      ? buildTravelPath(sourceTravelId) ?? ''
       : ''
   )
   const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)

@@ -4,6 +4,7 @@ import { translate as i18nT } from '@/i18n'
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex'
 import { isValidCoordinate } from '@/utils/coordinates'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
 /** Rating for a single external provider (2GIS, TripAdvisor, …). */
@@ -182,9 +183,7 @@ const buildRelatedTravelUrl = (
   if (nestedUrl) return nestedUrl
 
   const nestedSlug = normalizeText(item.travel?.slug)
-  if (nestedSlug) return `/travels/${encodeURIComponent(nestedSlug)}`
-
-  return travelId != null ? `/travels/${travelId}` : ''
+  return buildTravelPathFromTravel({ slug: nestedSlug, id: travelId }) ?? ''
 }
 
 const readCoordinates = (

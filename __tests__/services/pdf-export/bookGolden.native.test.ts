@@ -221,11 +221,35 @@ describe('эталоны PDF-книги (приложения, без DOM)', () 
           toDataURL: () => Promise.reject(new Error('You need to specify a canvas element')),
           toString: () => Promise.resolve(svg),
         },
-        'https://metravel.by/travels/x/',
+        'https://metravel.by/travels/x',
         200
       )
 
       expect(dataUrl).toBe(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`)
+    })
+
+    // #3242: адрес со слэшем на конце прод отдаёт 301 — QR обязан вести сразу на статью.
+    it('QR статьи кодирует канонический адрес без слэша на конце, без slug — готовый url', async () => {
+      const encoded: string[] = []
+      const generator = new EnhancedPdfGenerator('minimal') as unknown as {
+        getQRCode: () => Promise<unknown>
+        renderQrCode: (qr: unknown, url: string, width: number) => Promise<string>
+        generateQRCodes: (travels: Array<{ slug?: string; url?: string }>) => Promise<string[]>
+      }
+      generator.getQRCode = () => Promise.resolve({})
+      generator.renderQrCode = (_qr, url) => {
+        encoded.push(url)
+        return Promise.resolve('data:qr')
+      }
+
+      const codes = await generator.generateQRCodes([
+        { slug: 'minsk-za-vykhodnye' },
+        { slug: '', url: 'https://metravel.by/travels/123' },
+        { slug: '' },
+      ])
+
+      expect(encoded).toEqual(['https://metravel.by/travels/minsk-za-vykhodnye', 'https://metravel.by/travels/123'])
+      expect(codes).toEqual(['data:qr', 'data:qr', ''])
     })
 
     it('если не получилось ни PNG, ни SVG — книга собирается без QR-кода', async () => {
@@ -240,7 +264,7 @@ describe('эталоны PDF-книги (приложения, без DOM)', () 
       await expect(
         generator.renderQrCode(
           { toDataURL: () => Promise.reject(new Error('no canvas')), toString: () => Promise.reject(new Error('no svg')) },
-          'https://metravel.by/travels/x/',
+          'https://metravel.by/travels/x',
           120
         )
       ).resolves.toBe('')

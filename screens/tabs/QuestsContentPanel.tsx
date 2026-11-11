@@ -81,6 +81,12 @@ type QuestsContentPanelProps = {
     noticeSlot?: React.ReactNode;
     /** Copy owned by the route below the grid (city page, #2654); hidden while searching. */
     footerSlot?: React.ReactNode;
+    /**
+     * #3218: размер полного каталога, известный до гидратации (данные загрузчика).
+     * Плейсхолдер счётчика пишет его вместо условного числа, чтобы в серверном
+     * HTML, в JSON-LD и в загруженном каталоге стояла одна цифра.
+     */
+    catalogTotal?: number;
 };
 
 type QuestListItem = QuestMeta & { _distanceKm?: number };
@@ -129,6 +135,7 @@ function QuestsContentPanel({
     onToggleViewMode,
     noticeSlot = null,
     footerSlot = null,
+    catalogTotal,
 }: QuestsContentPanelProps) {
     // #1826: на web сетка каталога не виртуализирована — 177 карточек уходили в
     // первый кадр одним `map`. `FlatList` здесь не годится: он списочный, а
@@ -362,6 +369,7 @@ function QuestsContentPanel({
                         // Чип резервируется только для полного каталога: там он есть всегда, а в
                         // срезе города или фильтра прохождений может не набраться.
                         withSortChip={!isMobile && selectedCityId === ALL_QUESTS_ID && !isMapAreaActive}
+                        count={catalogTotal}
                     />
                 )}
                 {dataLoaded && <Text style={styles.contentCount}>{countText}</Text>}

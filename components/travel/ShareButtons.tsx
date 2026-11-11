@@ -20,6 +20,7 @@ import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButton
 import { isPrintAvailable } from '@/utils/printAvailability';
 import { devWarn } from '@/utils/logger';
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 
 
 const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'));
@@ -72,8 +73,7 @@ function ShareButtons({ travel, url, variant = 'default', surface = 'card' }: Sh
       return window.location.href;
     }
     const { getSiteBaseUrl } = require('@/utils/seo');
-    const travelId = travel.slug || travel.id;
-    return `${getSiteBaseUrl()}/travels/${travelId}`;
+    return `${getSiteBaseUrl()}${buildTravelPathFromTravel(travel, { encode: false }) ?? ''}`;
   }, [url, travel]);
 
   const shareTitle = travel.name || i18nT('travel:components.travel.ShareButtons.defaultShareTitle');

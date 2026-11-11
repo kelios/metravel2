@@ -10,6 +10,11 @@ import { TravelDetailsContentSection } from '@/components/travel/details/section
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 let mockProgressiveShouldLoad = true
+let mockTeaserMatches: unknown[] = []
+
+jest.mock('@/hooks/useQuestForLocation', () => ({
+  useQuestsForLocation: () => ({ matches: mockTeaserMatches, loading: false }),
+}))
 
 jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
   const React = require('react')
@@ -156,6 +161,7 @@ describe('TravelDetailsContentSection', () => {
   beforeEach(() => {
     jest.mocked(TravelDetailsDeferredTransition).mockClear()
     mockProgressiveShouldLoad = true
+    mockTeaserMatches = []
   })
 
   it.each(['Июль', null])('shows visit month %s as a date and keeps reading time (#3067)', async (monthName) => {
@@ -227,6 +233,35 @@ describe('TravelDetailsContentSection', () => {
     expect(content.indexOf('travel-peer-badge-prompt')).toBeLessThan(content.indexOf('lazy-youtube'))
     expect(content.indexOf('lazy-youtube')).toBeLessThan(content.indexOf('travel-nearby-quests'))
     expect(within(screen.getByTestId('travel-details-description')).queryAllByTestId('travel-peer-badge-prompt', { includeHiddenElements: true })).toHaveLength(0)
+  })
+
+  // #3221: короткая ссылка на квесты города стоит перед текстом статьи, а
+  // призывы после текста (#2774) остаются на своих местах.
+  it('puts the city quests teaser above the article body and keeps the order after the text', async () => {
+    mockTeaserMatches = [
+      { quest: { id: 'grodno-royal', cityId: '11', cityName: 'Гродно', cityAlias: 'grodno' }, score: 160, distanceKm: 0.4 },
+      { quest: { id: 'grodno-castles', cityId: '11', cityName: 'Гродно', cityAlias: 'grodno' }, score: 160, distanceKm: 0.6 },
+    ]
+    const view = await render(
+      <TravelDetailsContentSection travel={createTravel()} isMobile forceOpenKey={null} anchors={createAnchors()} />,
+      { wrapper: withQueryClient() },
+    )
+
+    expect(screen.getAllByTestId('travel-quest-teaser')).toHaveLength(1)
+    expect(screen.getByText('Гродно: 2 бесплатных квеста-прогулки')).toBeTruthy()
+    const content = JSON.stringify(view.toJSON())
+    expect(content.indexOf('travel-quest-teaser')).toBeGreaterThan(-1)
+    expect(content.indexOf('travel-quest-teaser')).toBeLessThan(content.indexOf('travel-description-Тестовый маршрут'))
+    expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-register-cta'))
+  })
+
+  it('shows no teaser when there are no quests for the article', async () => {
+    await render(
+      <TravelDetailsContentSection travel={createTravel()} isMobile forceOpenKey={null} anchors={createAnchors()} />,
+      { wrapper: withQueryClient() },
+    )
+
+    expect(screen.queryByTestId('travel-quest-teaser')).toBeNull()
   })
 
   it('retains the share invitation when the published article has no description section', async () => {

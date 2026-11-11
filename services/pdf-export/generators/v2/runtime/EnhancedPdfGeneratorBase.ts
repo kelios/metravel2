@@ -4,6 +4,7 @@
 import type { BookSettings } from '@/types/bookSettings';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
+import { buildTravelCanonicalUrl } from '@/utils/routePaths';
 import { getThemeConfig, type PdfThemeName } from '../../../themes/PdfThemeConfig';
 import { DEFAULT_FREE_PDF_THEME, isPremiumThemeName } from '../../../themes/themeTiers';
 import { downgradeNonPremiumSettings } from '../../../premiumSettingsGate';
@@ -518,9 +519,8 @@ export class EnhancedPdfGeneratorBase {
     const QRCode = await this.getQRCode();
     return Promise.all(
       travels.map((travel) => {
-        const url = travel.slug
-          ? `https://metravel.by/travels/${travel.slug}/`
-          : travel.url || '';
+        // #3242: канонический адрес без слэша на конце — QR ведёт на статью без редиректа.
+        const url = buildTravelCanonicalUrl(travel.slug, { encode: false }) ?? (travel.url || '');
         if (!url) return '';
         return this.renderQrCode(QRCode, url, 200);
       })

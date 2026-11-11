@@ -890,6 +890,26 @@ not by the fastest patch that makes the symptom disappear.
     - rollback/removal plan,
     - owner and target removal date.
 
+
+### Internal travel links
+
+- Every internal link to an article goes straight to its canonical address
+  `/travels/<current slug>`: no 301 hop, no address missing from the sitemap
+  (#3242, family `internal-links-canonical-url`: #1956, #2932).
+- The page path of an article is built only by `buildTravelPath` /
+  `buildTravelPathFromTravel` from `utils/routePaths.ts` (slug first, numeric id
+  as the in-app fallback). No template string or concatenation of `/travels/…`
+  in feature code; API endpoints (`/travels/<id>/`, `/api/travels/…`) are not
+  page paths.
+- A slug written into code by hand (hub pages, home hero cards) must be the
+  current one. `scripts/seo-rename.js` records every rename in
+  `scripts/seo-redirects.json`; a literal whose slug is a `from` there is an
+  error with the replacement named.
+- Guard: `npm run guard:travel-links` (in `lint`, `lint:ci` and `check:fast`).
+  Its exception list `AD_HOC_BUILDER_BASELINE` is closed and only shrinks.
+  Links inside article bodies are editorial data and are rewritten by
+  `scripts/seo-fix-links.js`, not by the renderer.
+
 ### Images and placeholders
 
 - Show a placeholder when `imageUrl` is missing or image load fails.

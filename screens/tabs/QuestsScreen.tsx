@@ -30,6 +30,7 @@ import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
 import { QuestSectionFrame } from '@/components/quests/QuestSectionFrame';
+import QuestsCatalogDirectory from './QuestsCatalogDirectory';
 import { getStyles } from './QuestsScreen.styles';
 import { getQuestCatalogSidebarGeometry } from './QuestsStyleMetrics';
 import {
@@ -146,7 +147,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     const catalogPath = (localeHub && buildQuestLocaleHubPath(localeHub)) || '/quests';
     // A server-rendered catalogue publishes its JSON-LD in the body: expo-router
     // Head never reaches the SSR HTML, so via Head crawlers would get none (#2817).
-    const jsonLdInBody = Boolean(useQuestDiscovery());
+    const discovery = useQuestDiscovery();
+    const jsonLdInBody = Boolean(discovery);
     // A server-seeded catalogue still waits for hydration: the grid sizes its
     // cards from a measured width, so the first frame keeps the static skeleton
     // (no reflow of seeded cards — CLS 0.14 on /quests@1440 under SSR).
@@ -569,6 +571,13 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         || activeMapAreaCenter,
     );
 
+    // #3218: указатель «страны → города → квесты» — видимые ссылки в серверном HTML
+    // общего каталога. Данные уже пришли с загрузчиком страницы; у посадочных
+    // страниц (`route`) свой подвал, языковые хабы — отдельная карточка (#3217).
+    const catalogDirectory = useMemo(() => (!route && !localeHub && discovery ? (
+        <QuestsCatalogDirectory countries={discovery.countries} cities={discovery.cities} quests={ALL_QUESTS} />
+    ) : null), [route, localeHub, discovery, ALL_QUESTS]);
+
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID
@@ -774,7 +783,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 onShowNearby={requestNearbyQuests}
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
-                footerSlot={route?.footer}
+                footerSlot={route?.footer ?? catalogDirectory}
+                catalogTotal={ALL_QUESTS.length}
             />
         </QuestSectionFrame>
         </QuestCatalogLocaleContext.Provider>

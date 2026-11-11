@@ -6,7 +6,7 @@ import {
     Text,
     View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import type { Travel } from "@/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
@@ -21,6 +21,7 @@ import { resolveTravelAuthorDisplayName, resolveTravelAuthorName } from '@/compo
 import { formatViewCount } from '@/components/travel/utils/travelHelpers';
 import { translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers';
+import { buildTravelPathFromTravel } from '@/utils/routePaths';
 
 
 type Props = {
@@ -125,7 +126,8 @@ const TravelTmlRound: React.FC<Props> = ({ travel, webTouchAction }) => {
 
     const onPress = useCallback(() => {
         if (!canOpen) return;
-        router.push(`/travels/${slug || travel.id}`);
+        const path = buildTravelPathFromTravel({ slug, id: travel.id }, { encode: false });
+        if (path) router.push(path as Href);
     }, [canOpen, slug, travel.id]);
 
     // AND-23: Share travel on long press (native only)

@@ -20,6 +20,7 @@ import WizardStepRouter, {
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import { buildExplicitLoginHref, buildRegistrationHref } from '@/utils/authNavigation';
+import { buildTravelPath } from '@/utils/routePaths';
 import { openWebWindow } from '@/utils/externalLinks';
 import {
   trackContentCreateAuthGateViewed,
@@ -510,7 +511,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
     // Native и заблокированный попап: остаёмся в текущем SPA-стеке и ходим по
     // id — он резолвится у автора и для неопубликованного черновика.
-    router.push(`/travels/${encodeURIComponent(travelId)}` as any);
+    const travelPath = buildTravelPath(travelId);
+    if (travelPath) router.push(travelPath as any);
   }, [handleManualSave, publicTravelId, router]);
 
   const handleSessionLogin = useCallback(async () => {

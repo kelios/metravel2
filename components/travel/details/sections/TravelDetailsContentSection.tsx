@@ -16,6 +16,7 @@ import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsCo
 import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelLinkGraphSection from './TravelLinkGraphSection'
+import TravelQuestTeaserLine from './TravelQuestTeaserLine'
 import TravelColoringSlot from './TravelColoringSlot'
 import TravelRouteTasksSlot from './TravelRouteTasksSlot'
 import { useTravelLoaderPayload } from '../travelLoaderData'
@@ -25,6 +26,7 @@ import TravelArticleShareTripCta from './TravelArticleShareTripCta'
 import TravelPeerBadgePrompt from './TravelPeerBadgePrompt'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
+import { buildTravelPath } from '@/utils/routePaths'
 
 
 // #1499: выбор web/native переехал в платформенную пару
@@ -143,13 +145,15 @@ export const TravelDetailsContentSection: React.FC<{
                     : readingTimeLabel}
                 </Text>
               </View>
+              {/* #3221: ссылка на квесты города — в начале статьи, полный блок остаётся под текстом. */}
+              <TravelQuestTeaserLine travel={travel} />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
               <TravelColoringSlot key={travel.id} travelId={travel.id} />
 
               <TravelRegisterCtaSection
-                redirect={travel.slug ? `/travels/${travel.slug}` : undefined}
+                redirect={buildTravelPath(travel.slug, { encode: false }) ?? undefined}
                 travelId={travel.id}
                 title={travel.name}
                 imageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url}

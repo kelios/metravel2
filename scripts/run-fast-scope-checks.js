@@ -310,6 +310,14 @@ const main = () => {
       process.exit(guardStatus)
     }
 
+    // #3242: дёшево и безусловно — адрес статьи, вписанный в код руками,
+    // устаревает от переименования в другом файле (`scripts/seo-redirects.json`),
+    // поэтому scope изменённых файлов здесь ничего не говорит.
+    const travelLinksGuardStatus = runCommand('npm', ['run', 'guard:travel-links'])
+    if (travelLinksGuardStatus !== 0) {
+      process.exit(travelLinksGuardStatus)
+    }
+
     // Безусловно (#3202): новый сток rich-text появляется в новом файле, а не в
     // изменённом, и проверка «только изменённого» его бы не увидела.
     const richTextSinksGuardStatus = runCommand('npm', ['run', 'guard:rich-text-sinks'])

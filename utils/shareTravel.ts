@@ -5,6 +5,7 @@
 import { Platform, Share } from 'react-native';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
+import { buildTravelPath } from '@/utils/routePaths'
 
 
 interface ShareTravelParams {
@@ -25,7 +26,9 @@ interface ShareTravelParams {
 export async function shareTravel({ id, title, description }: ShareTravelParams): Promise<boolean> {
   const safeId = String(id ?? '').trim();
   if (!safeId) return false;
-  const url = buildCanonicalUrl(`/travels/${encodeURIComponent(safeId)}`);
+  const path = buildTravelPath(safeId);
+  if (!path) return false;
+  const url = buildCanonicalUrl(path);
   const message = description
     ? `${title}\n\n${description}\n\n${url}`
     : `${title}\n\n${url}`;

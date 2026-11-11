@@ -14,6 +14,7 @@ import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import type { Travel } from '@/types/types'
 import { buildLoginHref, getWebRedirectPath } from '@/utils/authNavigation'
+import { buildTravelPathFromTravel } from '@/utils/routePaths'
 import { trackPeerBadgePromptClicked, trackPeerBadgePromptImpression } from '@/utils/growthFunnelAnalytics'
 
 type Props = { travel: Travel; isMobile: boolean; hasArticleText: boolean }
@@ -40,7 +41,7 @@ function TravelPeerBadgePrompt({ travel, isMobile, hasArticleText }: Props) {
   const trackClick = useCallback(() => trackPeerBadgePromptClicked({ travelId }), [travelId])
   const login = useCallback(() => {
     trackClick()
-    const fallbackRedirect = `/travels/${travel.slug || travel.id}`
+    const fallbackRedirect = buildTravelPathFromTravel({ slug: travel.slug, id: travel.id }, { encode: false }) ?? '/'
     router.push(buildLoginHref({
       redirect: getWebRedirectPath(fallbackRedirect),
       fallbackRedirect,

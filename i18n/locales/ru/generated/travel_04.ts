@@ -594,4 +594,10 @@ export const travelGenerated4 = {
   "components.travel.useTravelPublishChecklist.seoDescription": "SEO-описание",
   "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "До {{value1}} знаков (шаг {{value2}})",
   "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Свой текст в сниппете поиска вместо случайного отрывка",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount": "{{city}}: {{count}} бесплатных квестов-прогулок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_one": "{{city}}: {{count}} бесплатный квест-прогулка",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_few": "{{city}}: {{count}} бесплатных квеста-прогулки",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_many": "{{city}}: {{count}} бесплатных квестов-прогулок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuestsCount_other": "{{city}}: {{count}} бесплатных квестов-прогулок",
+  "components.travel.details.sections.TravelQuestTeaserLine.cityQuests": "{{city}}: бесплатные квесты-прогулки",
 } as const
