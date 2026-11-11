@@ -20,7 +20,30 @@ export type QuestSeoMetadata = {
   description: string;
 };
 
+export type QuestCityLandingPlace = {
+  title?: string | null;
+  location?: string | null;
+};
+
+export type QuestCityLandingMetaInput = {
+  cityName?: string | null;
+  /** Только для разведения двух городов с одинаковым именем в разных странах. */
+  countryName?: string | null;
+  questTitles?: readonly string[];
+  /** Точки маршрутов города в порядке `walk.places`. */
+  places?: readonly QuestCityLandingPlace[];
+  nearbyCityNames?: readonly string[];
+  translate?: QuestSeoInput['translate'];
+  translatePlural?: QuestSeoInput['translatePlural'];
+  locale?: string;
+};
+
 export function buildBrandedSeoTitle(base?: string | null, maxLength?: number): string;
+export function buildQuestCityLandingMeta(input?: QuestCityLandingMetaInput): QuestSeoMetadata;
 export function buildQuestSeoMetadata(input?: QuestSeoInput): QuestSeoMetadata;
+export function questCityLandingPlaceLabels(
+  places?: readonly QuestCityLandingPlace[] | null,
+  cityName?: string | null,
+): string[];
 export function clampMetaDescription(value?: string | null, maxEncodedLength?: number): string;
 export function encodedAttributeLength(value?: string | null): number;

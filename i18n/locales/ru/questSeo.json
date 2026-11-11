@@ -12,5 +12,18 @@
   "utils.questSeo.value1_ch_d6644461": "{{value1}} ч",
   "utils.questSeo.value1_ch_value2_min_a31b9fed": "{{value1}} ч {{value2}} мин",
   "utils.questSeo.value1_min_7c081c0f": "{{value1}} мин",
-  "utils.questSeo.selfGuidedAnyDay": "Проходите сами в любой день, без записи."
+  "utils.questSeo.selfGuidedAnyDay": "Проходите сами в любой день, без записи.",
+  "utils.questSeo.cityLandingTitle": "{{value1}}: квесты-прогулки — {{value2}}",
+  "utils.questSeo.cityLandingTitleBare": "{{value1}}: квесты-прогулки с заданиями",
+  "utils.questSeo.cityLandingWithCountry": "{{value1}}, {{value2}}",
+  "utils.questSeo.cityLandingQuestCount": "{{count}} квестов с заданиями",
+  "utils.questSeo.cityLandingQuestCount_one": "{{count}} квест с заданиями",
+  "utils.questSeo.cityLandingQuestCount_few": "{{count}} квеста с заданиями",
+  "utils.questSeo.cityLandingQuestCount_many": "{{count}} квестов с заданиями",
+  "utils.questSeo.cityLandingQuestCount_other": "{{count}} квеста с заданиями",
+  "utils.questSeo.cityLandingLead": "{{value1}}: {{value2}}.",
+  "utils.questSeo.cityLandingLeadQuests": "{{value1}}: {{value2}} — {{value3}}.",
+  "utils.questSeo.cityLandingQuotedTitle": "«{{value1}}»",
+  "utils.questSeo.cityLandingMoreQuests": "{{value1}} и другие",
+  "utils.questSeo.cityLandingNearby": "Рядом: {{value1}}."
 }

@@ -16,6 +16,7 @@ const mockPush = jest.fn()
 // заглушка: проверяется то, что роут ему передаёт (срез, SEO, текст под сеткой).
 let mockCatalogRoute: QuestsCatalogRoute | null = null
 let mockCityParam = 'rome'
+let mockUiLanguage = 'ru'
 let mockLegacyCityId: number | undefined
 
 const WALK_MODEL = {
@@ -24,8 +25,8 @@ const WALK_MODEL = {
       questId: 'rome-forum',
       questTitle: 'Квест по Риму: Форум',
       pointIndex: 0,
-      title: 'Капитолий',
-      location: 'Площадь Микеланджело',
+      title: 'Площадь Кампидольо',
+      location: 'Площадь Кампидольо на Капитолийском холме',
       sentences: ['Площадь спроектировал Микеланджело, и это его единственный градостроительный проект.'],
       openingHours: '',
       ticketPrice: '',
@@ -77,10 +78,6 @@ jest.mock('@/screens/tabs/QuestsScreen', () => ({
     mockCatalogRoute = route
     return <>{route.seo}{route.footer}</>
   },
-}))
-
-jest.mock('@/screens/tabs/questsShared', () => ({
-  pluralizeQuest: (count: number) => `${count} quest`,
 }))
 
 jest.mock('@/screens/tabs/QuestsScreen.styles', () => ({
@@ -149,22 +146,30 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
+// #3236: head города собирает общий билдер `buildQuestCityLandingMeta`; его
+// подписи — RU-каталог questSeo.json, остальные ключи экрана — сами ключи.
 jest.mock('@/i18n/LocaleProvider', () => {
-  const t = (key: string) => {
-    if (key.endsWith('.metaDescription')) return 'City description'
-    if (key.endsWith('.seoTitle')) return 'City title'
-    return key
+  const questSeoRu = require('@/i18n/locales/ru/questSeo.json') as Record<string, string>
+  const t = (key: string, params: Record<string, unknown> = {}) => {
+    const template = questSeoRu[key.replace(/^seo:/, '')]
+    if (!template) return key
+    return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params[name] ?? ''))
   }
 
   return {
-    useTranslation: () => ({ t }),
+    useTranslation: () => ({ t, i18n: { language: mockUiLanguage } }),
   }
 })
 
 import QuestsByCityScreen from '@/app/(tabs)/quests/[city]/index'
 
 const GENERIC_DESCRIPTION = 'Generic description'
-const CITY_DESCRIPTION = 'City description'
+const CITY_DESCRIPTION = 'Рим: 1 квест с заданиями — «Форум». Проходите сами в любой день, без записи. Рядом: Неаполь.'
+const PROJECTION_META = {
+  title: 'Опубликованный заголовок Рима | Metravel',
+  description: 'Опубликованное описание Рима из проекции.',
+  locale: 'ru',
+}
 const DESCRIPTION_SELECTORS = [
   'meta[name="description"]',
   'meta[property="og:description"]',
@@ -194,6 +199,7 @@ describe('quest city SEO focus lifecycle', () => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
     mockCityParam = 'rome'
+    mockUiLanguage = 'ru'
     mockLegacyCityId = undefined
     mockReplace.mockClear()
     mockPush.mockClear()
@@ -274,6 +280,40 @@ describe('quest city SEO focus lifecycle', () => {
 
     expect(await screen.findByTestId('quest-not-found')).toBeTruthy()
     expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  // #3236: опубликованный head города — единственный источник после гидрации;
+  // экран не собирает поверх серверного свой текст.
+  it('keeps the published projection head instead of rebuilding it', async () => {
+    const screen = await render(<QuestsByCityScreen projectionMeta={PROJECTION_META} />)
+
+    expectSingleDescriptionSet(PROJECTION_META.description)
+    expect(mockCatalogRoute?.seo).toMatchObject({
+      props: expect.objectContaining({ title: PROJECTION_META.title, description: PROJECTION_META.description }),
+    })
+    await screen.unmount()
+  })
+
+  // Посадочные публикуются только на RU: при другом языке интерфейса русский
+  // head проекции не ставится, его собирает запасной путь через i18n.
+  it('ignores the RU projection head when the interface language differs', async () => {
+    mockUiLanguage = 'en'
+    const screen = await render(<QuestsByCityScreen projectionMeta={PROJECTION_META} />)
+
+    const props = (mockCatalogRoute?.seo as React.ReactElement<{ title: string; description: string }>).props
+    expect(props.title).not.toBe(PROJECTION_META.title)
+    expect(props.description).not.toBe(PROJECTION_META.description)
+    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | Metravel')
+    await screen.unmount()
+  })
+
+  it('builds the fallback head from the shared landing builder without the «что посмотреть» formula', async () => {
+    await render(<QuestsByCityScreen />)
+
+    const props = (mockCatalogRoute?.seo as React.ReactElement<{ title: string; description: string }>).props
+    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | Metravel')
+    expect(props.description).toBe(CITY_DESCRIPTION)
+    expect(`${props.title} ${props.description}`).not.toContain('что посмотреть')
   })
 
   it('removes city descriptions on blur when the previous head had none', async () => {

@@ -128,8 +128,6 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.country.CU": "Cuba",
   "screens.tabs.QuestsScreen.country.ID": "Indonesia",
   "app.tabs.quests.city.index.title": "City quests: {{value1}}",
-  "app.tabs.quests.city.index.seoTitle": "Quests in {{value1}} — walks with challenges",
-  "app.tabs.quests.city.index.metaDescription": "What to see in {{value1}}: {{value2}} with challenges at real places. Nearby quests and traveller routes.",
   "app.tabs.quests.city.index.walkTitle": "What you will see along the way: {{value1}}",
   "app.tabs.quests.city.index.walkLead": "Route stops are real places in the city. Below are notes about them taken from the quests themselves: what these places are and why they are interesting. No tasks or answers here.",
   "app.tabs.quests.city.index.walkOpeningHours": "Opening hours: {{value1}}",

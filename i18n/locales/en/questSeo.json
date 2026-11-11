@@ -12,5 +12,18 @@
   "utils.questSeo.value1_ch_d6644461": "{{value1}} h",
   "utils.questSeo.value1_ch_value2_min_a31b9fed": "{{value1}} h {{value2}} min",
   "utils.questSeo.value1_min_7c081c0f": "{{value1}} min",
-  "utils.questSeo.selfGuidedAnyDay": "Self-guided, any day, no booking."
+  "utils.questSeo.selfGuidedAnyDay": "Self-guided, any day, no booking.",
+  "utils.questSeo.cityLandingTitle": "{{value1}}: quest walks — {{value2}}",
+  "utils.questSeo.cityLandingTitleBare": "{{value1}}: quest walks with challenges",
+  "utils.questSeo.cityLandingWithCountry": "{{value1}}, {{value2}}",
+  "utils.questSeo.cityLandingQuestCount": "{{count}} quests with challenges",
+  "utils.questSeo.cityLandingQuestCount_one": "{{count}} quest with challenges",
+  "utils.questSeo.cityLandingQuestCount_few": "{{count}} quests with challenges",
+  "utils.questSeo.cityLandingQuestCount_many": "{{count}} quests with challenges",
+  "utils.questSeo.cityLandingQuestCount_other": "{{count}} quests with challenges",
+  "utils.questSeo.cityLandingLead": "{{value1}}: {{value2}}.",
+  "utils.questSeo.cityLandingLeadQuests": "{{value1}}: {{value2}} — {{value3}}.",
+  "utils.questSeo.cityLandingQuotedTitle": "“{{value1}}”",
+  "utils.questSeo.cityLandingMoreQuests": "{{value1}} and more",
+  "utils.questSeo.cityLandingNearby": "Nearby: {{value1}}."
 }

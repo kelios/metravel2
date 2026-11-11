@@ -5,12 +5,15 @@ import LegacyScreenModule from './index.tsx';
 // Metro по явному расширению берёт `index.tsx`, а TypeScript через `moduleSuffixes`
 // (`.web` первым) разрешает тот же путь в ЭТОТ файл, поэтому тип default-экспорта
 // здесь свой же и props экрана TS не видит — объявляем их явно (#2896).
-const LegacyQuestCity = LegacyScreenModule as unknown as ComponentType<{ notFound?: boolean }>;
+const LegacyQuestCity = LegacyScreenModule as unknown as ComponentType<{
+  notFound?: boolean;
+  projectionMeta?: { title: string; description: string; locale: string } | null;
+}>;
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web';
 
 export default function QuestCityRoute() {
   return process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-    ? <QuestPublicLoaderScreen>{(_projection, state) => <LegacyQuestCity notFound={state.notFound} />}</QuestPublicLoaderScreen>
+    ? <QuestPublicLoaderScreen>{(_projection, state) => <LegacyQuestCity notFound={state.notFound} projectionMeta={state.meta} />}</QuestPublicLoaderScreen>
     : <LegacyQuestCity />;
 }
 

@@ -2,7 +2,7 @@
 
 const questSeoRu = require('../i18n/locales/ru/questSeo.json');
 const { selectPluralCategory } = require('../i18n/pluralRules');
-const { SEO_TITLE_MAX_LENGTH, buildSeoTitle } = require('./seoText');
+const { SEO_TITLE_MAX_LENGTH, SEO_TITLE_SUFFIX, buildSeoTitle } = require('./seoText');
 
 const DEFAULT_QUEST_SEO_LOCALE = 'ru-RU';
 
@@ -187,9 +187,168 @@ function buildQuestSeoMetadata({
   };
 }
 
+// #3236: посадочная города `/quests/<город>` — head из одного источника для
+// SSR-проекции и клиентского экрана. Шаблон «Городские квесты: <Город> —
+// прогулки с заданиями» отличался между 232 городами только именем; заголовок
+// и описание теперь несут то, что есть только у этого города: реальные места
+// его маршрутов, названия квестов и соседние города. Формулу «что посмотреть»
+// держат статьи /travels (#1756), в описании города её нет.
+const CITY_LANDING_TITLE_PLACES = 2;
+const CITY_LANDING_DESCRIPTION_QUESTS = 3;
+const CITY_LANDING_NEARBY = 4;
+const CITY_LANDING_PLACE_MAX_LENGTH = 30;
+const CITY_LANDING_PLACE_MAX_WORDS = 4;
+
+// Заголовок точки в квесте — чаще авторская загадка («Знак терпения», «Король,
+// который показал пальцем») или родовое слово («Холм», «Двор», «Колокол»), чем
+// имя места. Метка места проходит два условия:
+// 1. голова заголовка подтверждена адресом точки — каждое значимое слово
+//    («Башня Шоломона») встречается в её location («Башня Шоломона
+//    (Salamon-torony), Salamontorony utca»);
+// 2. в ней есть имя собственное: слово с заглавной не в начале или число
+//    («Площадь Дам», «Свято-Духов собор», «Нотр-Дам», «Форт 45»). Одиночное
+//    слово этого признака не несёт: «Синтагма» и «Колокол» по написанию не
+//    различить, а «Колокол» подтверждается адресом «у Колокольной башни».
+// Остальное заголовок не получает: «квесты-прогулки с заданиями» честнее
+// «квесты-прогулки — Холм».
+const OPTIONAL_PLACE_MARK = /по\s+желанию/iu;
+const PLACE_HEAD_BREAK = /\s+[—–-]\s+|:\s|,\s|\s\(/u;
+const PROPER_NAME_MARK = /[\s-]«?\p{Lu}|\p{N}/u;
+const QUEST_WORD = /^(?:квест|квэст|quest)$/iu;
+
+function placeWords(value) {
+  return normalizeText(value).toLowerCase().match(/[\p{L}\p{N}-]+/gu) || [];
+}
+
+function wordStem(word) {
+  return word.slice(0, Math.max(4, word.length - 2));
+}
+
+function questCityLandingPlaceLabel(place) {
+  const title = normalizeText(place?.title);
+  const location = normalizeText(place?.location);
+  if (!title || OPTIONAL_PLACE_MARK.test(title)) return '';
+  const head = title.split(PLACE_HEAD_BREAK)[0].trim();
+  const words = placeWords(head);
+  if (!head || head.length > CITY_LANDING_PLACE_MAX_LENGTH || words.length === 0 || words.length > CITY_LANDING_PLACE_MAX_WORDS) return '';
+  if ((head.match(/«/gu) || []).length !== (head.match(/»/gu) || []).length) return '';
+  const haystack = location.toLowerCase();
+  const significant = words.filter((word) => word.length >= 4);
+  if (location && (significant.length === 0 || !significant.every((word) => haystack.includes(wordStem(word))))) return '';
+  return PROPER_NAME_MARK.test(head) ? head : '';
+}
+
+/** Реальные места маршрутов города в порядке `walk.places`, без повторов и самого города. */
+function questCityLandingPlaceLabels(places, cityName) {
+  const cityLabel = questCitySerpLabel(cityName).toLowerCase();
+  const labels = [];
+  for (const place of Array.isArray(places) ? places : []) {
+    const label = questCityLandingPlaceLabel(place);
+    if (!label || label.toLowerCase() === cityLabel) continue;
+    if (labels.some((known) => known.toLowerCase() === label.toLowerCase())) continue;
+    labels.push(label);
+  }
+  return labels;
+}
+
+// «Минск: звезда над батлейкой» и «Квест по Минску: звезда над батлейкой» на
+// странице Минска — это «звезда над батлейкой»: город уже открывает описание.
+// Снимается только префикс до двоеточия или тире, целиком состоящий из города
+// («Минск:») или из «Квест <предлог> <город>». «Витебск как галерея: …»,
+// «Квест по дворикам Минска: …» и «Велоквест из Гродно: …» несут смысл и
+// остаются целиком.
+function questLandingQuestTitle(title, cityLabel) {
+  const text = normalizeText(title);
+  const match = /^(.+?)(?::\s+|\s+[—–]\s+)(.+)$/u.exec(text);
+  if (!match || !cityLabel) return text;
+  const prefix = match[1];
+  const words = prefix.split(/\s+/u);
+  const namesCity = prefix.toLowerCase() === cityLabel.toLowerCase()
+    || (words.length === 3 && QUEST_WORD.test(words[0]) && questTitleNamesCity(words[2], cityLabel));
+  if (!namesCity) return text;
+  // «Брест: пока горит свеча» в списке посадочной читается как «Пока горит свеча».
+  const rest = match[2].trim();
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
+function buildQuestCityLandingMeta({
+  cityName,
+  countryName,
+  questTitles = [],
+  places = [],
+  nearbyCityNames = [],
+  translate = defaultTranslate,
+  translatePlural,
+  locale = DEFAULT_QUEST_SEO_LOCALE,
+} = {}) {
+  const pluralize = translatePlural
+    || (translate === defaultTranslate
+      ? (key, count, params) => defaultTranslatePlural(key, count, params, locale)
+      : (key, count, params) => translate(key, { ...params, count }));
+  const serpLabel = questCitySerpLabel(cityName);
+  const country = normalizeText(countryName);
+  const cityLabel = country
+    ? translate('seo:utils.questSeo.cityLandingWithCountry', { value1: serpLabel, value2: country })
+    : serpLabel;
+
+  const placeLabels = questCityLandingPlaceLabels(places, cityName).slice(0, CITY_LANDING_TITLE_PLACES);
+  const titleCandidates = placeLabels
+    .map((_, index) => translate('seo:utils.questSeo.cityLandingTitle', {
+      value1: cityLabel, value2: placeLabels.slice(0, placeLabels.length - index).join(', '),
+    }));
+  titleCandidates.push(translate('seo:utils.questSeo.cityLandingTitleBare', { value1: cityLabel }));
+  const titleBase = titleCandidates.find((candidate) =>
+    normalizeText(candidate).length + SEO_TITLE_SUFFIX.length <= SEO_TITLE_MAX_LENGTH)
+    || titleCandidates[titleCandidates.length - 1];
+
+  const sortedTitles = questTitles
+    .map((title) => normalizeText(title))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, locale));
+  const count = sortedTitles.length;
+  const countPhrase = pluralize('seo:utils.questSeo.cityLandingQuestCount', count);
+  const quoted = sortedTitles.map((title) =>
+    translate('seo:utils.questSeo.cityLandingQuotedTitle', { value1: questLandingQuestTitle(title, serpLabel) }));
+  const renderLead = (shown) => {
+    if (shown === 0) return translate('seo:utils.questSeo.cityLandingLead', { value1: cityLabel, value2: countPhrase });
+    const list = quoted.slice(0, shown).join(', ');
+    return translate('seo:utils.questSeo.cityLandingLeadQuests', {
+      value1: cityLabel,
+      value2: countPhrase,
+      value3: shown < quoted.length ? translate('seo:utils.questSeo.cityLandingMoreQuests', { value1: list }) : list,
+    });
+  };
+  const format = translate('seo:utils.questSeo.selfGuidedAnyDay');
+  const fits = (parts) => encodedAttributeLength(parts.map((part) => normalizeText(part)).join(' ')) <= SEO_DESCRIPTION_MAX_ENCODED_LENGTH;
+
+  let lead = renderLead(0);
+  for (let shown = Math.min(quoted.length, CITY_LANDING_DESCRIPTION_QUESTS); shown > 0; shown -= 1) {
+    if (fits([renderLead(shown), format])) {
+      lead = renderLead(shown);
+      break;
+    }
+  }
+  const descriptionParts = [lead, format];
+  const nearby = nearbyCityNames.map((name) => questCitySerpLabel(name)).filter(Boolean).slice(0, CITY_LANDING_NEARBY);
+  for (let shown = nearby.length; shown > 0; shown -= 1) {
+    const sentence = translate('seo:utils.questSeo.cityLandingNearby', { value1: nearby.slice(0, shown).join(', ') });
+    if (fits([...descriptionParts, sentence])) {
+      descriptionParts.push(sentence);
+      break;
+    }
+  }
+
+  return {
+    title: buildBrandedSeoTitle(titleBase),
+    description: joinWholeSentences(descriptionParts),
+  };
+}
+
 module.exports = {
   buildBrandedSeoTitle,
+  buildQuestCityLandingMeta,
   buildQuestSeoMetadata,
   clampMetaDescription,
   encodedAttributeLength,
+  questCityLandingPlaceLabels,
 };

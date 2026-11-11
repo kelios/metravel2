@@ -12,5 +12,18 @@
   "utils.questSeo.value1_ch_d6644461": "{{value1}} godz",
   "utils.questSeo.value1_ch_value2_min_a31b9fed": "{{value1}} godz. {{value2}} min",
   "utils.questSeo.value1_min_7c081c0f": "{{value1}} min",
-  "utils.questSeo.selfGuidedAnyDay": "Przejdź samodzielnie w dowolny dzień, bez zapisów."
+  "utils.questSeo.selfGuidedAnyDay": "Przejdź samodzielnie w dowolny dzień, bez zapisów.",
+  "utils.questSeo.cityLandingTitle": "{{value1}}: questy-spacery — {{value2}}",
+  "utils.questSeo.cityLandingTitleBare": "{{value1}}: questy-spacery z zadaniami",
+  "utils.questSeo.cityLandingWithCountry": "{{value1}}, {{value2}}",
+  "utils.questSeo.cityLandingQuestCount": "{{count}} questów z zadaniami",
+  "utils.questSeo.cityLandingQuestCount_one": "{{count}} quest z zadaniami",
+  "utils.questSeo.cityLandingQuestCount_few": "{{count}} questy z zadaniami",
+  "utils.questSeo.cityLandingQuestCount_many": "{{count}} questów z zadaniami",
+  "utils.questSeo.cityLandingQuestCount_other": "{{count}} questu z zadaniami",
+  "utils.questSeo.cityLandingLead": "{{value1}}: {{value2}}.",
+  "utils.questSeo.cityLandingLeadQuests": "{{value1}}: {{value2}} — {{value3}}.",
+  "utils.questSeo.cityLandingQuotedTitle": "„{{value1}}”",
+  "utils.questSeo.cityLandingMoreQuests": "{{value1}} i inne",
+  "utils.questSeo.cityLandingNearby": "W pobliżu: {{value1}}."
 }

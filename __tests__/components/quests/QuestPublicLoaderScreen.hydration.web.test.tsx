@@ -92,3 +92,30 @@ it('mounts the app screen directly on a client-side navigation, without a docume
     container.remove();
   }
 });
+
+// #3236: экран города после гидрации и на клиентском переходе ставит head
+// опубликованной страницы, а не собирает свой поверх серверного `<title>`.
+it('hands the published landing head to the app screen and none on a not-found answer', async () => {
+  const city = pages.find((entry) => entry.kind === 'city')!;
+  const meta = (city.page as { meta: { title: string; description: string } }).meta;
+  const seen: unknown[] = [];
+  const LoaderScreen = Screen as unknown as React.ComponentType<{
+    children: (projection: unknown, state: { notFound: boolean; meta: unknown }) => React.ReactNode;
+  }>;
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    payload = { ...city, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
+      ru_source_path: city.canonical_path, versions: [] };
+    await act(async () => { root.render(createElement(LoaderScreen, null, (_projection, state) => { seen.push(state); return null; })); });
+    expect(seen.at(-1)).toEqual({ notFound: false, meta: { title: meta.title, description: meta.description, locale: 'ru' } });
+
+    payload = { kind: 'not_found', path: '/quests/missing', httpStatus: 404 };
+    await act(async () => { root.render(createElement(LoaderScreen, null, (_projection, state) => { seen.push(state); return null; })); });
+    expect(seen.at(-1)).toEqual({ notFound: true, meta: null });
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
+});

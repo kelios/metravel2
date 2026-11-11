@@ -1,5 +1,5 @@
 const path = require('node:path');
-const { buildQuestWebProjection, publicPageText } = require('@/scripts/lib/questWebProjection');
+const { assertDistinctCityLandingMeta, buildQuestWebProjection, publicPageText } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
 const { scoreQuestPageLevel } = require('@/scripts/lib/questPageDepth');
 import { questPrivateSnapshot, questPublicLocales } from '../fixtures/questPublicProjection';
@@ -75,7 +75,11 @@ describe('immutable public quest projection', () => {
     const source = questPrivateSnapshot();
     const base = source.catalog[0], ruBundle = source.bundles.ru['7/fixture-city-walk'];
     const addQuest = (questId: string, cityId: string, title: string) => {
+      // Другой город — другое имя: два разных города одной страны с одним именем
+      // отклоняет guard уникальности head посадочных (#3236).
+      const cityName = cityId === '7' ? base.city_name : 'Другой город';
       source.catalog.push({ ...base, id: source.catalog.length + 100, quest_id: questId, city_id: cityId, title,
+        city_name: cityName, city_name_canonical: cityName,
         lat: cityId === '7' ? base.lat : 52.1, lng: cityId === '7' ? base.lng : 23.7 });
       source.source_snapshot.quests.push({ ...source.source_snapshot.quests[0], quest_pk: source.catalog.length + 100,
         city_id: Number(cityId), quest_slug: questId, locales: { ru: source.source_snapshot.quests[0].locales.ru } });
@@ -104,5 +108,41 @@ describe('immutable public quest projection', () => {
       page.kind === 'detail' && page.locale === 'ru' && page.canonical_path === '/quests/7/fixture-city-walk'));
     expect(detail).toContain('/quests/7/alpha-walk');
     expect(detail.filter((path: string) => path.startsWith('/travels/'))).toEqual(['/travels/local-walk']);
+  });
+
+  // #3236: head посадочной города собран из его мест, квестов и соседей, а не
+  // из одного шаблона на все города; формулу «что посмотреть» держат статьи.
+  it('builds the city landing head from the shared landing builder', () => {
+    const city = buildQuestWebProjection(questPrivateSnapshot(), catalogs).pages.find((page: { kind: string }) => page.kind === 'city');
+    expect(city.page.meta.title).toBe('Город: квесты-прогулки с заданиями | Metravel');
+    expect(city.page.meta.description).toBe('Город: 1 квест с заданиями — «Квест по городу». Проходите сами в любой день, без записи.');
+  });
+
+  it('tells two same-named cities of different countries apart by country (#3236)', () => {
+    const source = questPrivateSnapshot();
+    const base = source.catalog[0], ruBundle = source.bundles.ru['7/fixture-city-walk'];
+    source.catalog.push({ ...base, id: 200, quest_id: 'polish-walk', city_id: '9', country_code: 'PL', country_name: 'Польша',
+      title: 'Квест по городу', lat: 50.06, lng: 19.94 });
+    source.source_snapshot.quests.push({ ...source.source_snapshot.quests[0], quest_pk: 200, city_id: 9, quest_slug: 'polish-walk',
+      locales: { ru: source.source_snapshot.quests[0].locales.ru } });
+    const steps = ruBundle.steps.map((step) => ({ ...step, story: step.story.replace(/[a-z]/g,
+      (letter) => String.fromCharCode(97 + (letter.charCodeAt(0) - 97 + 7) % 26)) }));
+    (source.bundles.ru as Record<string, unknown>)['9/polish-walk'] = { ...ruBundle, quest_id: 'polish-walk', steps };
+
+    const cities = buildQuestWebProjection(source, catalogs).pages.filter((page: { kind: string }) => page.kind === 'city');
+    expect(cities).toHaveLength(2);
+    const metas = cities.map((page: { page: { meta: { title: string; description: string } } }) => page.page.meta);
+    expect(metas.map((meta: { title: string }) => meta.title).sort()).toEqual([
+      'Город, Беларусь: квесты-прогулки с заданиями | Metravel',
+      'Город, Польша: квесты-прогулки с заданиями | Metravel',
+    ]);
+    expect(new Set(metas.map((meta: { description: string }) => meta.description)).size).toBe(2);
+  });
+
+  it('rejects a city landing head that stays duplicated after the country is added (#3236)', () => {
+    const entry = (path: string) => ({ canonical_path: path, page: { meta: { title: 'Город | Metravel', description: 'Одно описание.' } } });
+    const cities = [entry('/quests/a'), entry('/quests/b')];
+    const inputs = new Map(cities.map((city) => [city, { cityName: 'Город', countryName: 'Беларусь', questTitles: ['Квест'] }]));
+    expect(() => assertDistinctCityLandingMeta(cities, inputs)).toThrow('Quest city landing title is not unique: "Город, Беларусь: квесты-прогулки с заданиями | Metravel" at /quests/a, /quests/b');
   });
 });

@@ -12,5 +12,18 @@
   "utils.questSeo.value1_ch_d6644461": "{{value1}} ч",
   "utils.questSeo.value1_ch_value2_min_a31b9fed": "{{value1}} ч {{value2}} мін",
   "utils.questSeo.value1_min_7c081c0f": "{{value1}} мін",
-  "utils.questSeo.selfGuidedAnyDay": "Праходзьце самі ў любы дзень, без запісу."
+  "utils.questSeo.selfGuidedAnyDay": "Праходзьце самі ў любы дзень, без запісу.",
+  "utils.questSeo.cityLandingTitle": "{{value1}}: квэсты-прагулкі — {{value2}}",
+  "utils.questSeo.cityLandingTitleBare": "{{value1}}: квэсты-прагулкі з заданнямі",
+  "utils.questSeo.cityLandingWithCountry": "{{value1}}, {{value2}}",
+  "utils.questSeo.cityLandingQuestCount": "{{count}} квэстаў з заданнямі",
+  "utils.questSeo.cityLandingQuestCount_one": "{{count}} квэст з заданнямі",
+  "utils.questSeo.cityLandingQuestCount_few": "{{count}} квэсты з заданнямі",
+  "utils.questSeo.cityLandingQuestCount_many": "{{count}} квэстаў з заданнямі",
+  "utils.questSeo.cityLandingQuestCount_other": "{{count}} квэста з заданнямі",
+  "utils.questSeo.cityLandingLead": "{{value1}}: {{value2}}.",
+  "utils.questSeo.cityLandingLeadQuests": "{{value1}}: {{value2}} — {{value3}}.",
+  "utils.questSeo.cityLandingQuotedTitle": "«{{value1}}»",
+  "utils.questSeo.cityLandingMoreQuests": "{{value1}} і іншыя",
+  "utils.questSeo.cityLandingNearby": "Побач: {{value1}}."
 }

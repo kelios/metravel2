@@ -17,7 +17,6 @@ import {
 } from '@/components/quests/QuestLandingLayout'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
 import type { QuestsCatalogRoute } from '@/screens/tabs/QuestsScreen'
-import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { resolveQuestCatalogAddressState } from '@/utils/questAddressState'
 import { useQuestsList } from '@/hooks/useQuestsApi'
@@ -26,7 +25,7 @@ import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { buildQuestPath } from '@/utils/routePaths'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
-import { buildBrandedSeoTitle } from '@/utils/questSeo'
+import { buildQuestCityLandingMeta } from '@/utils/questSeo'
 import { STORAGE_PENDING_CATALOG_SELECTION } from '@/utils/questCatalogSelection'
 import { buildCanonicalQuestCityIndex } from '@/utils/questCityCanonical'
 import {
@@ -36,6 +35,7 @@ import {
 } from '@/utils/questCityAlias'
 
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { getFormatLocale, translatePlural } from '@/i18n'
 import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const CITY_FOOTER_STYLE = { gap: 16, marginTop: 24 } as const
@@ -69,6 +69,14 @@ type Props = {
    * экран «не найдено» рисуется сразу, не дожидаясь каталога.
    */
   notFound?: boolean
+  /**
+   * Head опубликованной страницы города (#3236). Серверный `<title>` и описание
+   * собраны тем же `buildQuestCityLandingMeta`, что и запасной путь ниже, —
+   * экран ставит их как есть и не перезаписывает другим текстом. Посадочные
+   * публикуются только на `locale` (RU): при другом языке интерфейса head
+   * собирается запасным путём на этом языке.
+   */
+  projectionMeta?: { title: string; description: string; locale: string } | null
 }
 
 /**
@@ -90,14 +98,16 @@ export function findQuestByAliasSegment<T extends { id: string; cityId: string }
  * и сетка, что у `/quests`, плюс SEO города и его заметки под сеткой. Возврат
  * (#1484) считает сам экран каталога.
  */
-export default function QuestsByCityScreen({ notFound: loaderNotFound = false }: Props) {
+export default function QuestsByCityScreen({ notFound: loaderNotFound = false, projectionMeta: publishedMeta = null }: Props) {
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getQuestLandingRouteParam(params.city)
   const navigation = useNavigation()
   const router = useRouter()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const uiLanguage = String(i18n?.resolvedLanguage || i18n?.language || '').split('-')[0]
+  const projectionMeta = publishedMeta && (!uiLanguage || publishedMeta.locale === uiLanguage) ? publishedMeta : null
 
   const { quests, loading, failed, refetch, refetching } = useQuestsList({ trackRefetching: true })
 
@@ -186,17 +196,22 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   const dockPx = useDockReservePx()
   const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [colors, bpWidth, height, dockPx])
 
-  const seoTitle = useMemo(
-    () => buildBrandedSeoTitle(t('quests:app.tabs.quests.city.index.seoTitle', { value1: cityName || cityParam })),
-    [cityName, cityParam, t],
+  // Без опубликованной проекции (native, сборка без SSR) — тот же билдер на
+  // данных, что есть у экрана: места маршрутов появляются, когда пришли бандлы.
+  const fallbackMeta = useMemo(
+    () => (projectionMeta ? null : buildQuestCityLandingMeta({
+      cityName: cityName || cityParam,
+      questTitles: cityQuests.map((quest) => quest.title),
+      places: walk?.places ?? [],
+      nearbyCityNames: nearbyCities.map((group) => group.cityName || group.segment),
+      translate: t,
+      translatePlural,
+      locale: getFormatLocale(),
+    })),
+    [cityName, cityParam, cityQuests, nearbyCities, projectionMeta, t, walk],
   )
-  const seoDescription = useMemo(
-    () => t('quests:app.tabs.quests.city.index.metaDescription', {
-      value1: cityName || cityParam,
-      value2: pluralizeQuest(cityQuests.length),
-    }),
-    [cityName, cityParam, cityQuests.length, t],
-  )
+  const seoTitle = projectionMeta?.title ?? fallbackMeta?.title ?? ''
+  const seoDescription = projectionMeta?.description ?? fallbackMeta?.description ?? ''
   const descriptionMetaTargets = useMemo(
     () => QUEST_LANDING_DESCRIPTION_META_TARGETS.map((target) => ({ ...target, content: seoDescription })),
     [seoDescription],

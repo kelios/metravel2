@@ -1,7 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
-const { buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../../utils/questSeo');
+const { buildQuestCityLandingMeta, buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../../utils/questSeo');
 const { getQuestIntro, getQuestSteps } = require('../../utils/questStoryText');
 const { buildQuestCityAliasMap, buildQuestCityLandingGroups, findNearbyQuestCityGroups, questRouteKey } = require('../../utils/questCityAlias');
 const { buildQuestCountryLandingGroups, questCountryLandingIsLinkable, questIsoCountryCode } = require('../../utils/questCountryLanding');
@@ -111,8 +111,8 @@ function ruPlural(count, one, few, many) {
   return form === 'one' ? one : form === 'few' ? few : many;
 }
 
-function buildCity(city, bundles, travels, countries, ssg) {
-  const name = city.cityName, count = city.quests.length;
+function buildCity(city, bundles, travels, countries, ssg, metaInputs) {
+  const name = city.cityName;
   const walk = buildQuestCityWalkModel(city.quests, bundles);
   const path = `/quests/${city.segment}`;
   const sections = [];
@@ -145,15 +145,45 @@ function buildCity(city, bundles, travels, countries, ssg) {
     item('Все городские квесты', '/quests'),
   ]));
   const coverQuest = city.quests.find((quest) => quest.cover_url || quest.coverUrl);
-  const page = { meta: { title: buildBrandedSeoTitle(`Городские квесты: ${name} — прогулки с заданиями`),
-    description: clampMetaDescription(`${name}: что посмотреть на прогулке — ${count} ${ruPlural(count, 'квест', 'квеста', 'квестов')} с заданиями по реальным местам. Квесты рядом и маршруты путешественников.`),
+  const metaInput = { cityName: name, questTitles: byTitle(city.quests).map(questTitle), places: walk.places,
+    nearbyCityNames: nearby.map((other) => other.cityName || other.segment),
+    translate: ssg.t, translatePlural: ssg.tp, locale: ssg.languageTag };
+  const { title, description } = buildQuestCityLandingMeta(metaInput);
+  const page = { meta: { title, description,
     canonical: ORIGIN + path, image: absoluteImage(coverQuest?.cover_url || coverQuest?.coverUrl), tourist_type: '', city_name: name },
   heading: `Городские квесты: ${name}`, kicker: '',
   lead: `${name}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять в любой день: записываться и ждать группу не нужно.`,
   paragraphs: [], facts: [], sections };
-  return { kind: 'city', locale: 'ru', city_id: Number(city.cityId), city_ids: city.cityIds,
+  const entry = { kind: 'city', locale: 'ru', city_id: Number(city.cityId), city_ids: city.cityIds,
     aliases: [...(city.legacyAliases || []), ...(city.legacyCityIds || []).map(String), ...city.cityIds.map(String)],
     canonical_path: path, source_revision: hash(city.quests.map((quest) => quest.quest_id)), content_revision: hash(page), page };
+  metaInputs.set(entry, { ...metaInput, countryName: city.countryName || city.countryCode || '' });
+  return entry;
+}
+
+/**
+ * #3236: title и description посадочной города уникальны по всей когорте.
+ * Совпадение (одно имя у городов разных стран) разводится страной в том поле,
+ * которое совпало; если и со страной остаётся дубль — публикация отклоняется.
+ */
+function assertDistinctCityLandingMeta(cities, metaInputs) {
+  const collisions = (field) => {
+    const byValue = new Map();
+    for (const entry of cities) {
+      const value = entry.page.meta[field];
+      byValue.set(value, [...(byValue.get(value) || []), entry]);
+    }
+    return [...byValue.entries()].filter(([, entries]) => entries.length > 1);
+  };
+  for (const field of ['title', 'description']) {
+    for (const [, entries] of collisions(field)) {
+      for (const entry of entries) entry.page.meta[field] = buildQuestCityLandingMeta(metaInputs.get(entry))[field];
+    }
+  }
+  for (const field of ['title', 'description']) {
+    const [duplicate] = collisions(field);
+    if (duplicate) throw new Error(`Quest city landing ${field} is not unique: "${duplicate[0]}" at ${duplicate[1].map((entry) => entry.canonical_path).join(', ')}`);
+  }
 }
 
 function buildCountry(country) {
@@ -234,7 +264,9 @@ function projectQuestWeb(source, catalogs, emit) {
     if (locale === 'ru') {
       const bundles = new Map(Object.entries(localeBundles).map(([key, bundle]) => [key.split('/').slice(1).join('/'), bundle]));
       const ru = createSsgTranslator(catalogs, 'ru');
-      const cities = cityGroups.map((city) => buildCity(city, bundles, context.travel_links, { groups: countries, cityGroups }, ru));
+      const metaInputs = new Map();
+      const cities = cityGroups.map((city) => buildCity(city, bundles, context.travel_links, { groups: countries, cityGroups }, ru, metaInputs));
+      assertDistinctCityLandingMeta(cities, metaInputs);
       const countryPages = countries.map(buildCountry);
       scoreCohort(cities, 'city', 'ru', countries);
       scoreCohort(countryPages, 'country', 'ru', countries);
@@ -270,4 +302,4 @@ function buildQuestWebProjection(snapshot, catalogs) {
   return { schema_version: 2, pages, discovery };
 }
 
-module.exports = { buildQuestWebProjection, projectQuestWeb, publicPageText, introModel, formatQuestDuration };
+module.exports = { buildQuestWebProjection, projectQuestWeb, publicPageText, introModel, formatQuestDuration, assertDistinctCityLandingMeta };

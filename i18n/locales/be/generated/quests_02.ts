@@ -128,8 +128,6 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.country.CU": "Куба",
   "screens.tabs.QuestsScreen.country.ID": "Інданезія",
   "app.tabs.quests.city.index.title": "Гарадскія квэсты: {{value1}}",
-  "app.tabs.quests.city.index.seoTitle": "Гарадскія квэсты: {{value1}} — прагулкі з заданнямі",
-  "app.tabs.quests.city.index.metaDescription": "{{value1}}: што паглядзець на прагулцы — {{value2}} з заданнямі па рэальных месцах. Квэсты побач і маршруты падарожнікаў.",
   "app.tabs.quests.city.index.walkTitle": "Што ўбачыце па дарозе: {{value1}}",
   "app.tabs.quests.city.index.walkLead": "Пункты маршрутаў — рэальныя мясціны горада. Ніжэй — нататкі пра іх з саміх квэстаў: што гэта за мясціны і чым яны цікавыя. Заданняў і адказаў тут няма.",
   "app.tabs.quests.city.index.walkOpeningHours": "Гадзіны працы: {{value1}}",

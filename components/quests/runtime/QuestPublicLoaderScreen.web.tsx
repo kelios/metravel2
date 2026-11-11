@@ -79,6 +79,12 @@ const subscribeNever = () => () => {};
 export type QuestPublicLoaderState = {
   /** Публикация ответила «нет такого адреса» на клиентский запрос данных маршрута. */
   notFound: boolean;
+  /**
+   * Head опубликованной страницы (#3236): экран после гидрации ставит ровно его,
+   * а не собирает свой текст поверх серверного `<title>`. `locale` — язык
+   * публикации: head другого языка интерфейса экран строит сам.
+   */
+  meta: { title: string; description: string; locale: string } | null;
 };
 
 /**
@@ -101,6 +107,13 @@ export default function QuestPublicLoaderScreen({ children }: {
   const data = payload && !notFound ? payload as QuestPublicProjection : null;
   const serverMarkup = useSyncExternalStore(subscribeNever, () => false, () => true);
   const projection = useMemo(() => (data ? servingProjection(data) : null), [data]);
-  const state = useMemo<QuestPublicLoaderState>(() => ({ notFound }), [notFound]);
+  const metaTitle = data?.page.meta.title ?? '';
+  const metaDescription = data?.page.meta.description ?? '';
+  const metaLocale = data?.locale ?? '';
+  const state = useMemo<QuestPublicLoaderState>(() => ({
+    notFound,
+    meta: metaTitle && metaDescription && metaLocale
+      ? { title: metaTitle, description: metaDescription, locale: metaLocale } : null,
+  }), [metaDescription, metaLocale, metaTitle, notFound]);
   return data && serverMarkup ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{children(projection, state)}</>;
 }
