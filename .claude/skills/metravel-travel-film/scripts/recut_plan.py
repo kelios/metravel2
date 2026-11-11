@@ -20,15 +20,22 @@ round.json:
 Что делает:
 - каждую границу вырезки сдвигает в самую тихую точку в пределах ±0,25 с
   ("snap": false оставляет как есть — для границ на склейке планов);
-- делит отрезки плана, сохраняя усиление, титры и прежние перебивки;
+- делит отрезки плана, сохраняя усиление, титры и прежние перебивки; у разрезанной
+  перебивки наезд снимается, а появление и исчезновение остаются только на её
+  настоящих краях;
+- остаток отрезка не длиннее 0,3 с убирает вместе с вырезкой и печатает об этом;
 - перебивку, которая закрывает вырезку, делит на куски по обе стороны стыка;
 - печатает обрывки планов короче секунды рядом с вшитыми перебивками: такую
   границу надо сдвинуть на край перебивки или расширить вырезку;
 - печатает таблицу вырезок и новую длительность.
-Таймкод начала перебивки не должен попадать внутрь вырезки.
+Таймкод начала перебивки не должен попадать внутрь вырезки. Звук прошлого
+результата нужен в WAV 16 бит: `ffmpeg -i результат.mp4 -vn -c:a pcm_s16le audio_full.wav`.
+Новый план не может лечь на место базового: по базовому переводятся таймкоды
+прошлого результата.
 """
 import json
 import math
+import os
 import struct
 import sys
 import wave
@@ -46,6 +53,8 @@ def tc(t: float) -> str:
 
 def main() -> None:
     rnd = json.load(open(sys.argv[1]))
+    if os.path.exists(rnd["out_plan"]) and os.path.samefile(rnd["out_plan"], rnd["base_plan"]):
+        raise SystemExit("out_plan совпадает с base_plan: базовый план не перезаписывается")
     plan = json.load(open(rnd["base_plan"]))
 
     lay, pos = [], 0.0
@@ -55,13 +64,20 @@ def main() -> None:
         pos += b - a
     old_dur = pos
 
-    wav = wave.open(rnd["result_audio"])
+    try:
+        wav = wave.open(rnd["result_audio"])
+    except wave.Error as e:
+        raise SystemExit(f"result_audio должен быть WAV 16 бит ({e})")
+    if wav.getsampwidth() != 2:
+        raise SystemExit(f"result_audio должен быть WAV 16 бит, а не {8 * wav.getsampwidth()}")
     sr = wav.getframerate()
 
     def rms(t: float, d: float = 0.05) -> float:
-        wav.setpos(max(0, int(t * sr)))
+        wav.setpos(min(wav.getnframes(), max(0, int(t * sr))))
         raw = wav.readframes(int(d * sr))
         n = len(raw) // 2
+        if n == 0:
+            return 1e18  # за концом файла тихой точки нет
         v = struct.unpack("<%dh" % n, raw)
         return math.sqrt(sum(x * x for x in v) / max(1, n))
 
@@ -97,8 +113,14 @@ def main() -> None:
                     continue
                 if sa - x > 0.3:
                     new.append((x, sa))
+                elif sa - x > 1e-6:
+                    print(f"остаток {tc(s['pos'] + x - s['in'])}-{tc(s['pos'] + sa - s['in'])} "
+                          f"({sa - x:.2f} с) убран вместе с вырезкой")
                 if y - sb > 0.3:
                     new.append((sb, y))
+                elif y - sb > 1e-6:
+                    print(f"остаток {tc(s['pos'] + sb - s['in'])}-{tc(s['pos'] + y - s['in'])} "
+                          f"({y - sb:.2f} с) убран вместе с вырезкой")
             pieces = new
         for x, y in pieces:
             d = {k: v for k, v in s.items() if k not in ("pos", "broll", "cards")}
@@ -111,6 +133,15 @@ def main() -> None:
                         e = dict(o, at=round(oa, 4), dur=round(ob - oa, 4))
                         if "in" in o:
                             e["in"] = round(o["in"] + (oa - o["at"]), 4)
+                        # разрезанная перебивка: наезд прыгнул бы назад, а затухание на стыке мигнуло бы планом
+                        fade = e.pop("fade", None)
+                        for side, whole in (("fade_in", oa - o["at"] < 0.02), ("fade_out", o["at"] + o["dur"] - ob < 0.02)):
+                            value = o.get(side, fade)
+                            e.pop(side, None)
+                            if value and whole:
+                                e[side] = value
+                        if ob - oa < o["dur"] - 0.02:
+                            e.pop("zoom", None)
                         kept.append(e)
                 if kept:
                     d[key] = kept

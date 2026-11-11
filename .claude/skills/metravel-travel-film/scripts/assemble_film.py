@@ -12,11 +12,18 @@
   "sources": {"film": "/путь/мастер.mp4"},
   "segments": [
     {"src": "film", "in": 0, "out": 452.0, "note": "вступление",
-     "afilter": "highpass=f=90", "gain_db": 0, "fade_out": 0,
-     "broll": [{"at": 460.0, "dur": 6, "file": "/путь/исходник.MOV", "in": 2.0, "fit": "cover"}],
-     "cards": [{"at": 213.0, "dur": 5, "file": "/путь/титр.png"}]}
+     "afilter": "highpass=f=90", "gain_db": 0, "fade_in": 0, "fade_out": 0,
+     "audio_src": "film",
+     "broll": [{"at": 460.0, "dur": 6, "file": "/путь/исходник.MOV", "in": 2.0, "fit": "cover",
+                "zoom": 0.05, "fade_in": 0.3, "fade_out": 0.3}],
+     "cards": [{"at": 213.0, "dur": 5, "file": "/путь/титр.png", "fade": 0.4}]}
   ]
 }
+"fade_in"/"fade_out" отрезка — затемнение картинки и затухание звука в его начале
+и конце. "audio_src" берёт звук отрезка из другого источника с теми же
+таймкодами. У перебивки и титра "fade_in"/"fade_out" (или общий "fade") —
+плавное появление и исчезновение поверх плана, "fit": "contain" вписывает
+кадр с полями вместо обрезки.
 
 Необязательный ключ "remusic" заменяет музыку в сведённом звуке (см. remusic.py):
   "remusic": {
@@ -24,8 +31,11 @@
     "jobs": [{"name": "кухня", "src": "film", "old": "/путь/ES_old.mp3",
               "runs": [{"a": 1056.73, "b": 1184.77, "src_in": 0}],
               "new": "/путь/ES_new.mp3", "new_start": 0, "level_db": 0, "lift_db": 4,
-              "mute": [[157.27, 163.97]]}]
+              "mute": [[157.27, 163.97]], "solo": [[1280.0, 1313.0]]}]
   }
+"mute" — окна, где новая музыка молчит; "solo" — окна, где остаётся только музыка.
+Между кусками старого трека новая музыка молчит; "bridge": 3 в задании проводит
+её без паузы через промежутки короче трёх секунд.
 Времена кусков старого трека берутся из раскладки Filmora в таймкодах источника;
 сборщик сам пересчитывает их в таймкоды результата с учётом вырезок, поэтому
 новый трек идёт непрерывно поверх склеек. В экспорт кладутся две звуковые
@@ -44,6 +54,7 @@
 """
 import argparse
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -170,6 +181,28 @@ def concat(files: list[str], out: str, dry: bool) -> None:
          "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", out], dry)
 
 
+def music_runs(layout: list, src_name: str, run: dict) -> list:
+    """Куски старого трека в таймкодах результата — с запасами кроссфейда и весами, как в mix_segments.
+
+    На склейке в миксе звучат хвост одного отрезка и запас следующего. Чтобы музыка вычиталась
+    и там, кусок продлевается на запас отрезка и получает тот же линейный вес.
+    """
+    runs = []
+    for seg in layout:
+        if seg["src"] != src_name or min(run["b"], seg["out"]) - max(run["a"], seg["in"]) <= 0.05:
+            continue
+        xin, xout, end = seg["xin"], seg["xout"], seg["pos"] + seg["out"] - seg["in"]
+        a, b = max(run["a"], seg["in"] - xin), min(run["b"], seg["out"] + xout)
+        item = {"a": seg["pos"] + a - seg["in"], "b": seg["pos"] + b - seg["in"],
+                "src_in": run["src_in"] + (a - run["a"])}
+        if xin > 0:
+            item["ramp_in"] = [seg["pos"] - xin, seg["pos"] + xin]
+        if xout > 0:
+            item["ramp_out"] = [end - xout, end + xout]
+        runs.append(item)
+    return runs
+
+
 def to_output(layout: list, src_name: str, t0: float, t1: float) -> list:
     """Пересекает интервал источника с отрезками плана. Возвращает куски (t_src, out_a, out_b)."""
     pieces = []
@@ -197,11 +230,9 @@ def build_remusic_spec(plan: dict, layout: list, audio_in: str, audio_out: str, 
     json.dump({"segments": [{"words": sorted(words, key=lambda x: x["start"])}]}, open(words_path, "w"))
     jobs = []
     for job in rm["jobs"]:
-        runs = []
-        for run in job["runs"]:
-            for t_src, oa, ob in to_output(layout, job["src"], run["a"], run["b"]):
-                runs.append({"a": oa, "b": ob, "src_in": run["src_in"] + (t_src - run["a"])})
+        runs = [r for run in job["runs"] for r in music_runs(layout, job["src"], run)]
         if not runs:
+            print(f"ВНИМАНИЕ: замена музыки «{job['name']}» не попала ни в один отрезок плана и пропущена")
             continue
         mute = []
         for m0, m1 in job.get("mute", []):
@@ -209,10 +240,15 @@ def build_remusic_spec(plan: dict, layout: list, audio_in: str, audio_out: str, 
         solo = []
         for m0, m1 in job.get("solo", []):
             solo += [[oa, ob] for _, oa, ob in to_output(layout, job["src"], m0, m1)]
-        jobs.append({"name": job["name"], "range": [min(r["a"] for r in runs), max(r["b"] for r in runs)],
+        jobs.append({"name": job["name"],
+                     "range": [max(0.0, min(r["a"] for r in runs)), max(r["b"] for r in runs)],
                      "old": job["old"], "runs": runs, "new": job["new"], "new_start": job.get("new_start", 0.0),
+                     # точка входа нового трека — начало музыки в результате, без запаса кроссфейда
+                     "new_at": min(oa for run in job["runs"] for _, oa, _ in to_output(layout, job["src"], run["a"], run["b"])),
                      "level_db": job.get("level_db", 0.0), "lift_db": job.get("lift_db", 4.0), "mute": mute,
-                     "solo": solo})
+                     "solo": solo, **({"bridge": job["bridge"]} if "bridge" in job else {})})
+    if not jobs:
+        raise SystemExit("ни одна замена музыки не попала в план: проверь таймкоды кусков и имя источника")
     spec_path = os.path.join(work, "remusic_spec.json")
     json.dump({"src": audio_in, "out": audio_out, "words": words_path, "words_offset": 0, "jobs": jobs},
               open(spec_path, "w"), ensure_ascii=False, indent=1)
@@ -237,6 +273,8 @@ def main() -> None:
             **plan.get("video", {})}
     acfg = {"target_lufs": -14.0, "true_peak": -1.5, "leveler": 0.6, **plan.get("audio", {})}
     fps = vcfg["fps"]
+    # правка фильтров в коде должна сбросить кеш кусков так же, как правка плана
+    vcode, acode = digest(inspect.getsource(build_video)), digest(inspect.getsource(build_audio))
 
     vfiles, afiles, total, durations, layout = [], [], 0.0, {}, []
     for i, raw in enumerate(plan["segments"]):
@@ -255,9 +293,9 @@ def main() -> None:
         # перерисованный под тем же именем титр или заменённая перебивка должны сбросить кеш куска
         stamps = [[source_stamp(o["file"]) for o in overlays]] if overlays else []
         vkey = digest([source_stamp(src), seg["in"], seg["out"], seg.get("broll"), seg.get("cards"),
-                       seg.get("fade_in"), seg.get("fade_out"), vcfg] + stamps)
+                       seg.get("fade_in"), seg.get("fade_out"), vcfg, vcode] + stamps)
         akey = digest([source_stamp(seg.get("audio_src_path", src)), seg["in"], seg["out"], seg.get("afilter"),
-                       seg.get("gain_db"), seg.get("fade_in"), seg.get("fade_out"), HANDLE])
+                       seg.get("gain_db"), seg.get("fade_in"), seg.get("fade_out"), HANDLE, acode])
         vout = os.path.join(segdir, f"v_{vkey}.mp4")
         aout = os.path.join(segdir, f"a_{akey}.wav")
         ameta = aout + ".json"
@@ -273,8 +311,12 @@ def main() -> None:
             tmp = aout + ".part.wav"
             info = build_audio(seg, src, tmp, args.dry_run)
             if not args.dry_run:
+                # звук и его описание занимают свои места переименованием: оборванная запись не оставит
+                # пару, которая выглядит готовой
+                with open(ameta + ".part", "w") as f:
+                    json.dump(info, f)
                 os.replace(tmp, aout)
-                json.dump(info, open(ameta, "w"))
+                os.replace(ameta + ".part", ameta)
         layout.append({"src": seg["src"], "in": seg["in"], "out": seg["out"], "pos": total})
         vfiles.append(vout)
         if not args.dry_run:
@@ -282,6 +324,10 @@ def main() -> None:
         total += dur
     if args.dry_run:
         return
+    # полуширина кроссфейда на каждом стыке — та же, что считает mix_segments
+    for i, seg in enumerate(layout):
+        seg["xin"] = min(afiles[i]["pre"], afiles[i - 1]["post"]) if i > 0 else 0.0
+        seg["xout"] = min(afiles[i]["post"], afiles[i + 1]["pre"]) if i + 1 < len(layout) else 0.0
 
     audio_cat = os.path.join(work, "audio_cat.wav")
     manifest = os.path.join(work, "audio_manifest.json")

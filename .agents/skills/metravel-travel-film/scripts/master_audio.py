@@ -153,7 +153,7 @@ def main() -> None:
         os.unlink(tmp_level)
     print(f"после: I {after['I']:.1f} LUFS, LRA {after['LRA']:.1f} LU, пик {after['TP']:.1f} dBFS "
           f"(общее усиление {gain:+.1f} дБ, предел ограничителя {limit_db:.1f} dBFS)")
-    if after["TP"] > args.tp + 0.2:
+    if after["TP"] > args.tp + 0.05:
         print("ВНИМАНИЕ: истинный пик выше цели, уменьшите --tp или --target")
 
 
