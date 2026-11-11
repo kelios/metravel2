@@ -8,7 +8,9 @@ import {
   buildUserMessage,
   resolveAnswerLanguage,
   sanitizeFragment,
+  selectPromptSources,
 } from '@/api/aiAssist/prompt'
+import { AI_PROMPT_SOURCES_LIMIT, AI_SOURCES_LIMIT } from '@/api/aiAssist/policy'
 import { aiAssistStaticResources } from '@/i18n/locales/ru/static/ai_assist_static'
 import type { AiHistoryItem, AiSource } from '@/api/aiAssist/types'
 import fs from 'node:fs'
@@ -85,6 +87,22 @@ describe('aiAssist prompt (#2460)', () => {
     expect(historyMessages[0].content).toBe('msg-4')
     const question = /Вопрос посетителя: (.*)$/s.exec(messages[messages.length - 1].content)![1]
     expect(question).toHaveLength(MAX_QUESTION_LENGTH)
+  })
+
+  // #3268: число источников посетителя и число карточек подсказки — разные параметры.
+  it('в подсказку модели идут первые карточки подбора, не больше AI_PROMPT_SOURCES_LIMIT', () => {
+    const sources = Array.from({ length: AI_SOURCES_LIMIT + 2 }, (_, index) =>
+      source({ source_id: `t${index}`, title: `Статья ${index + 1}`, url: `https://metravel.by/travels/statya-${index + 1}`, path: `/travels/statya-${index + 1}` }))
+    expect(AI_PROMPT_SOURCES_LIMIT).toBeGreaterThanOrEqual(1)
+    expect(AI_PROMPT_SOURCES_LIMIT).toBeLessThanOrEqual(AI_SOURCES_LIMIT)
+    expect(selectPromptSources(sources)).toEqual(sources.slice(0, AI_PROMPT_SOURCES_LIMIT))
+    expect(selectPromptSources(sources, 3).map((item) => item.source_id)).toEqual(['t0', 't1', 't2'])
+    const user = buildAssistantMessages({ question: 'q', locale: 'ru', sources }).at(-1)!.content
+    const heads = user.split('\n').filter((line) => /^\[\d+\] /.test(line))
+    expect(heads).toHaveLength(AI_PROMPT_SOURCES_LIMIT)
+    expect(heads.at(-1)).toContain(`[${AI_PROMPT_SOURCES_LIMIT}] Статья «Статья ${AI_PROMPT_SOURCES_LIMIT}»`)
+    // Список источников посетителя сборка подсказки не трогает.
+    expect(sources).toHaveLength(AI_SOURCES_LIMIT + 2)
   })
 
   it('без карточек блок данных честно пуст', () => {

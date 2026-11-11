@@ -27,6 +27,9 @@ subsampled, never repeated.
 Per mix: <out>/{train,valid,test}.jsonl (messages only, what mlx-lm reads),
 stats.json and manifest.json (sets, licences, sources, caps); with several
 stages each stage gets <out>/<stage>/. Default out: <AI_HOME>/data/sft-<name>.
+A non-empty <out> is refused: it may be the data a trained adapter's manifest
+points at, and a rebuild in place erases that evidence. Pass --force to
+overwrite it on purpose, or give a new --out.
 A single-set, single-stage mix keeps the set's order untouched, so the v1 mix
 reproduces the v1 dataset bit for bit.
 """
@@ -144,6 +147,7 @@ def main() -> int:
     ap.add_argument("--ai-home", default=None, help="training folder (default: $AI_HOME)")
     ap.add_argument("--raw", default=None, help="exported corpus (default: <AI_HOME>/data/raw)")
     ap.add_argument("--out", default=None, help="mix output (default: <AI_HOME>/data/sft-<name>)")
+    ap.add_argument("--force", action="store_true", help="overwrite a non-empty mix output")
     args = ap.parse_args()
     home = Path(args.ai_home or os.environ.get("AI_HOME") or ".").expanduser()
     mix_path = Path(args.mix)
@@ -153,6 +157,9 @@ def main() -> int:
     ctx = {"ai_home": home, "raw": Path(args.raw).expanduser() if args.raw else home / "data" / "raw",
            "sources": home / "data" / "sources", "seed": seed}
     out = Path(args.out).expanduser() if args.out else home / "data" / f"sft-{mix['name']}"
+    if out.exists() and any(out.iterdir()) and not args.force:
+        raise SystemExit(f"{out} is not empty: it may hold the data of a trained adapter. "
+                         "Build into a new --out, or pass --force to overwrite it on purpose.")
 
     for name in mix["sets"]:
         sets.load(name)  # fail before any set is written when one is not implemented yet

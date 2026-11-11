@@ -12,6 +12,7 @@ export const GROUP_RU = {
   multi_turn: 'диалог',
   languages: 'языки',
   borderline: 'по теме на грани',
+  no_material: 'материала нет',
   off_topic: 'не по теме',
   injection: 'попытки сломать',
   escalation: 'эскалация',
@@ -27,6 +28,36 @@ export const effectivePass = (turn, judge) => {
 }
 
 export const judgeKey = (caseId, turnIndex) => `${caseId}#${turnIndex}`
+
+/**
+ * Сверка автопроверок с судьёй (#3267) по оценённым ходам. Расхождение — повод разобрать проверку
+ * или вердикт: 22 из 34 срабатываний `detectLoop` были ложными (#2751), а квест чужого города в
+ * ответе автопроверки пропускали. Без судьи смысл ответов не подтверждён — это видно в отчёте.
+ */
+export function judgeAgreement(results, judges = new Map()) {
+  const agreement = { turns: 0, judged: 0, bothPass: 0, bothFail: 0, autoPassJudgeFail: [], autoFailJudgePass: [] }
+  for (const result of results) for (const [index, turn] of result.turns.entries()) {
+    agreement.turns += 1
+    const key = judgeKey(result.id, index)
+    const judge = judges.get(key)
+    if (!judge) continue
+    agreement.judged += 1
+    const judgePass = judge.verdict === 'pass'
+    if (turn.eval.pass && judgePass) agreement.bothPass += 1
+    else if (!turn.eval.pass && !judgePass) agreement.bothFail += 1
+    else if (turn.eval.pass) agreement.autoPassJudgeFail.push(key)
+    else agreement.autoFailJudgePass.push(key)
+  }
+  return agreement
+}
+
+export const renderJudgeAgreement = (agreement) => {
+  if (!agreement.judged) return 'Сверка автопроверок с судьёй: судья не прогнан — смысл ответов не подтверждён.'
+  const list = (keys) => (keys.length ? ` (${keys.join(', ')})` : '')
+  return `Сверка автопроверок с судьёй: оценено ${agreement.judged}/${agreement.turns} ходов; совпало ${agreement.bothPass + agreement.bothFail}; `
+    + `автопроверки пропустили, судья снял — ${agreement.autoPassJudgeFail.length}${list(agreement.autoPassJudgeFail)}; `
+    + `автопроверки сняли, судья принял — ${agreement.autoFailJudgePass.length}${list(agreement.autoFailJudgePass)}.`
+}
 
 /** A supplied fixed-context verdict must actually grade its full contract. */
 export function validateQualityJudges(results, judges) {
@@ -86,7 +117,8 @@ export function renderReport(meta, results, judges = new Map()) {
   lines.push(`- Модель: \`${meta.model ?? '?'}\` (${meta.modelUrl}); ${target}; дерево \`${meta.tree ?? '.'}\`, коммит \`${meta.gitSha ?? '?'}\`.`)
   if (meta.dirty?.length) lines.push(`- Незакоммиченные правки в замере: ${meta.dirty.map((item) => `\`${item.trim()}\``).join(', ')}.`)
   lines.push(`- Начало ${meta.startedAt}, длительность ${meta.durationSec ?? '?'} с; вопросов ${results.length}, ходов ${summary.turns}.`)
-  lines.push(`- Судья: ${judges.size ? `${judges.size} вердиктов` : 'не прогнан (задание — judge-task.md)'}.`, '')
+  lines.push(`- Судья: ${judges.size ? `${judges.size} вердиктов` : 'не прогнан (задание — judge-task.md)'}.`)
+  lines.push(`- ${renderJudgeAgreement(judgeAgreement(results, judges))}`, '')
   if (fixedContext) {
     lines.push('- Приоритет оценки: 1) следование запросу; 2) полезность и точность; 3) язык и естественность.')
     lines.push('- Автопроверки ищут обязательные факты и ссылки. Смысл, отрицания и естественность требуют отдельного вердикта судьи; эталон не сравнивается посимвольно.', '')
@@ -148,9 +180,16 @@ export function renderReport(meta, results, judges = new Map()) {
   return lines.join('\n')
 }
 
-/** Задание судье: рубрика (`JUDGE.md`) + по каждому ходу вопрос, карточки и показанный ответ. */
-export function renderJudgeTask(rubric, results, outDir) {
-  const lines = [rubric.trim(), '', `Папка прогона: \`${outDir}\`. Вердикты — в \`${outDir}/judge.jsonl\`.`, '', '---', '']
+/**
+ * Задание судье: рубрика (`JUDGE.md`) + по каждому ходу вопрос, карточки, сырой ответ модели и
+ * показанный ответ. `blind` (#3267) — слепая метка прогона: в задании нет ни пути прогона, ни имени
+ * модели, вердикты пишутся рядом с заданием, а соответствие меток версиям хранит команда приёмки.
+ */
+export function renderJudgeTask(rubric, results, outDir, { blind = null } = {}) {
+  const where = blind
+    ? `Прогон ${blind.label}. Какая модель отвечала, не сообщается и для оценки не нужно. Вердикты — в \`${blind.judgeFile}\`; отчёт пересобирает координатор.`
+    : `Папка прогона: \`${outDir}\`. Вердикты — в \`${outDir}/judge.jsonl\`.`
+  const lines = [rubric.trim(), '', where, '', '---', '']
   for (const result of results) {
     for (const [index, turn] of result.turns.entries()) {
       lines.push(`### ${judgeKey(result.id, index)} — группа «${GROUP_RU[result.group] ?? result.group}», ожидание \`${turn.expect}\`, язык ${result.lang}`)
@@ -170,7 +209,12 @@ export function renderJudgeTask(rubric, results, outDir) {
         lines.push(`Карточки подбора: ${turn.observed.sources?.length ? turn.observed.sources.map((source) => `«${source.title}»`).join(', ') : 'нет'}`)
       }
       lines.push('', `Статус хода: ${turn.observed.status ?? 'нет хода'}; автопроверки: ${turn.eval.pass ? 'пройдены' : turn.eval.failures.map((item) => item.check).join(', ')}`)
-      lines.push('', 'Показанный ответ:', '', '```text', (turn.observed.answerText || turn.observed.notice || '').trim(), '```', '')
+      const shown = (turn.observed.answerText || turn.observed.notice || '').trim()
+      const raw = String(turn.observed.modelCall?.text ?? '').trim()
+      lines.push('', 'Показанный ответ (его получил посетитель):', '', '```text', shown, '```', '')
+      if (!turn.observed.modelCall) lines.push('Сырой ответ модели: модель не вызывалась (ход закрыт фильтром тем или подбором).', '')
+      else if (raw === shown) lines.push('Сырой ответ модели совпадает с показанным.', '')
+      else lines.push('Сырой ответ модели (до стража ссылок и остановки генератора):', '', '```text', raw, '```', '')
     }
   }
   return lines.join('\n')

@@ -80,6 +80,7 @@ from __future__ import annotations
 import json
 import random
 import re
+from collections import Counter
 from pathlib import Path
 
 from sets.assistant_prompt import SAMPLE_CHARS_BUDGET, fit_sources, is_contour_question, max_answer_chars, sanitize_fragment, system_prompt
@@ -87,6 +88,9 @@ from sets.common import SITE, record
 from sets.site import html_to_text, load_raw
 
 NAME = "rag_answers"
+# Samples the last build() did not emit, by reason and kind — reported in the mix manifest (source_info):
+# a sample dropped by the token-budget fit disappears without a trace otherwise (49 of 1431 in edition 7).
+_dropped: Counter = Counter()
 LICENSE = "metravel.by own content (articles and quests by Julia and Sergey); answers assembled from card fields"
 MAX_CARDS = 8
 # Edition 7 `crowded`: this many quests of one city among the cards (on13 had 4, BE ln02 had 6).
@@ -616,11 +620,13 @@ def build(ctx: dict, options: dict) -> list[dict]:
     quests = [quest_card(q) for q in quests_raw if q.get("quest_id") and q.get("title") and q.get("city_alias")]
     everything = travels + quests
     out: list[dict] = []
+    _dropped.clear()
 
     def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int,
              key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None,
              keep: list[dict] | None = None) -> None:
         if is_contour_question(question):
+            _dropped[f"contour_question:{kind}"] += 1
             return
         # buildAssistantMessages sanitizes historical text, including newlines.
         history = [{**message, "content": sanitize_fragment(message["content"], 1200)} for message in history or []]
@@ -641,6 +647,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
             if seen != answer:
                 answer, user = seen, fit_sources(question, sources, seen, lang, **fit)
         if user is None or (required_evidence and sanitize_fragment(required_evidence) not in user):
+            _dropped[f"{'over_budget' if user is None else 'evidence_cut'}:{kind}"] += 1
             return
         item = record(user, answer, set_name=NAME, license=LICENSE, kind=kind, key=key or f"place:{place}",
                       id=f"{kind}:{place}:{lang}:{n}", system=system_prompt(lang))
@@ -969,4 +976,4 @@ def _emit_boundary(emit, everything: list[dict], titles: dict, rng: random.Rando
 def source_info(ctx: dict) -> dict:
     manifest = ctx["raw"] / "manifest.json"
     return {"raw": str(ctx["raw"]), "export": json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else None,
-            "prompt": "scripts/ai-train/assistant_prompt.json"}
+            "prompt": "scripts/ai-train/assistant_prompt.json", "dropped": dict(sorted(_dropped.items()))}

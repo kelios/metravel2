@@ -6,6 +6,14 @@
 
 The second form rechecks every example and its provenance; --launch-run is used
 by train.sh after review. No model weights or network resources are loaded here.
+
+Config keys read here and ignored by mlx_lm:
+  resume_data: <dir>   training data of the adapter in resume_adapter_file when its
+                       adapter_config.json (written by mlx_lm) is missing or names moved data;
+  lineage_contamination_acknowledged: true
+                       continue an adapter line whose earlier training data holds questions of
+                       the evaluation sets (or cannot be checked). The run's resolved.json lists
+                       them; the candidate's scores on those questions are not held-out evidence.
 """
 from __future__ import annotations
 
@@ -23,7 +31,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from sets.assistant_prompt import holdout_provenance, holdout_violation  # noqa: E402
+from sets.assistant_prompt import eval_slice_violation, holdout_provenance, holdout_violation  # noqa: E402
 
 PARTS = ("train", "valid", "test")
 TOKENIZER_FILES = ("config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja", "tokenizer.model")
@@ -99,7 +107,8 @@ def scan(data: Path, tokenizer, max_tokens: int):
             if metadata and metadata.get("messages") != row.get("messages"):
                 raise ValueError(f"{part}:{index + 1}: record provenance messages mismatch")
             length, target = encoded_lengths(row, tokenizer)
-            violation = holdout_violation(row["messages"])
+            # skill-slice prompts are valid/test records of the sets: only the train split must not hold them
+            violation = holdout_violation(row["messages"]) or (part == "train" and eval_slice_violation(row["messages"]))
             if violation:
                 raise ValueError(f"{part}:{index + 1}: {violation}")
             identity = digest(json_bytes({"messages": row["messages"], "tools": row.get("tools")}))
@@ -162,6 +171,14 @@ def validate(data: Path, tokenizer, identity: dict, max_tokens: int) -> dict:
         raise ValueError("prepared statistics do not match the manifest")
     if manifest.get("holdouts") != holdout_provenance():
         raise ValueError("evaluation inputs changed; prepare and audit the candidate again")
+    # build_mix.py rewrites its output in place: a prepared snapshot of an earlier build would train on old data.
+    source, source_hashes = Path(str(manifest.get("input", ""))), manifest.get("input_hashes")
+    if not isinstance(source_hashes, dict) or not source_hashes:
+        raise ValueError("prepared manifest has no source hashes; prepare the candidate again")
+    stale = sorted(name for name, sha in source_hashes.items()
+                   if not (source / name).is_file() or digest((source / name).read_bytes()) != sha)
+    if stale:
+        raise ValueError(f"source data changed or is missing since preparation ({source}: {', '.join(stale)}); prepare the candidate again")
     _, _, stats = scan(data, tokenizer, max_tokens)
     if any(stats[part]["rejected"] for part in PARTS):
         raise ValueError("prepared data contains overlength examples")
@@ -178,6 +195,58 @@ def load_config(config: Path, home: Path, contents: bytes | None = None) -> tupl
     limit = value.get("max_seq_length")
     check_limit(limit)
     return value, (home / value["data"]).resolve(), (home / value["model"]).resolve(), limit
+
+
+def lineage(home: Path, cfg: dict) -> list[dict]:
+    """Every adapter this run continues, back to the first: the data each was trained on and the held-out
+    evaluation inputs in its train split. The candidate's own data is checked by validate(); without this
+    walk a contaminated ancestor (v4 trained on 22 contour questions, v5–v7 continue it) stays invisible."""
+    chain, seen = [], set()
+    resume, data = cfg.get("resume_adapter_file"), cfg.get("resume_data")
+    while resume:
+        adapter = (home / resume).resolve()
+        if adapter in seen:
+            raise ValueError(f"resume chain loops at {resume}")
+        seen.add(adapter)
+        if not adapter.is_file():
+            raise ValueError("resume adapter file is missing")
+        parent_file = adapter.parent / "adapter_config.json"
+        parent = json.loads(parent_file.read_text(encoding="utf-8")) if parent_file.is_file() else {}
+        data = data or parent.get("data")
+        entry = {"adapter": str(resume), "adapter_sha256": digest(adapter.read_bytes()), "data": data}
+        train = home / data / "train.jsonl" if isinstance(data, str) and data else None
+        if train is None or not train.is_file():
+            entry["unknown"] = "training data of the resumed adapter is not available"
+        else:
+            raw = train.read_bytes()
+            reasons, questions, examples = Counter(), set(), 0
+            for line in raw.decode("utf-8").splitlines():
+                if not line.strip():
+                    continue
+                examples += 1
+                messages = json.loads(line)["messages"]
+                reason = holdout_violation(messages) or eval_slice_violation(messages)
+                if reason:
+                    reasons[reason] += 1
+                    asked = [m["content"] for m in messages if m["role"] == "user"]
+                    questions.add(re.split(r"Вопрос посетителя:", asked[-1], flags=re.IGNORECASE)[-1].strip()[:200] if asked else "")
+            entry.update(train_sha256=digest(raw), examples=examples, violations=sum(reasons.values()),
+                         reasons=dict(reasons), questions=sorted(questions))
+        chain.append(entry)
+        resume, data = parent.get("resume_adapter_file"), None
+    return chain
+
+
+def check_lineage(home: Path, cfg: dict) -> list[dict]:
+    chain = lineage(home, cfg)
+    dirty = [entry for entry in chain if entry.get("violations") or entry.get("unknown")]
+    if dirty and cfg.get("lineage_contamination_acknowledged") is not True:
+        details = "; ".join(f"{entry['adapter']} ({entry['data']}): " + (entry.get("unknown") or f"{entry['violations']} examples — "
+                            + " | ".join(entry["questions"][:30])) for entry in dirty)
+        raise ValueError("the resumed adapter line was trained on held-out evaluation inputs or cannot be checked: "
+                         f"{details}. Scores on these inputs are not held-out evidence; to continue this line anyway set "
+                         "lineage_contamination_acknowledged: true in the config")
+    return chain
 
 
 def launch(config: Path, home: Path, run: str, extra: list[str]) -> None:
@@ -217,6 +286,7 @@ def launch(config: Path, home: Path, run: str, extra: list[str]) -> None:
     lock.flush()
     tokenizer, identity = local_tokenizer(model)
     validate(data, tokenizer, identity, limit)
+    chain = check_lineage(home, cfg)
     adapter = overrides.get("--adapter-path", cfg.get("adapter_path", "adapters"))
     if not isinstance(adapter, str) or not adapter:
         raise ValueError("empty adapter output path")
@@ -238,7 +308,9 @@ def launch(config: Path, home: Path, run: str, extra: list[str]) -> None:
     Path(f"{base}.resolved.json").write_bytes(json_bytes({"ai_home": str(home), "model": str(model), "data": str(data),
                                                          "max_seq_length": limit, "adapter_path": str(adapter_path), "training_args": extra,
                                                          "resume_adapter": str((home / resume).resolve()) if resume else None,
-                                                         "resume_sha256": digest((home / resume).read_bytes()) if resume else None}))
+                                                         "resume_sha256": digest((home / resume).read_bytes()) if resume else None,
+                                                         "lineage": chain,
+                                                         "lineage_contamination_acknowledged": cfg.get("lineage_contamination_acknowledged") is True}))
     print(f"run={run} pid={os.getpid()} config={config} log={base}.log", flush=True)
     fd = os.open(f"{base}.log", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     os.dup2(fd, 1)
@@ -273,9 +345,12 @@ def main() -> int:
             return 0
         if extra:
             parser.error("training arguments require --launch-run")
-        _, data, model, limit = load_config(config, home)
+        cfg, data, model, limit = load_config(config, home)
         tokenizer, identity = local_tokenizer(model)
         report = validate(data, tokenizer, identity, limit)
+        for entry in check_lineage(home, cfg):
+            print(f"training-data: lineage {entry['adapter']} ← {entry['data']}: "
+                  + (entry.get("unknown") or f"{entry['violations']} held-out examples of {entry['examples']}"), file=sys.stderr)
     else:
         if not all((args.data, args.model, args.out)) or args.launch_run or args.training_args:
             parser.error("preparation needs --data, --model and --out")

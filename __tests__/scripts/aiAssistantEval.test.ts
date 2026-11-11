@@ -102,6 +102,11 @@ describe('ai-assistant-eval checks', () => {
     'Квестов по Гданьску у нас нет.',
     'Материал про Вильнюс пока не найден.',
     'Нет материалов про Гданьск.',
+    // #3267: учебные ответы на других языках строятся в обратном порядке.
+    'Асобнага матэрыялу пра Гданьск на сайце пакуль няма. З таго, што знайшлося, можна паглядзець квэст.',
+    'Окремого матеріалу про Гданськ на сайті поки немає. З того, що знайшлося, можна подивитися квест.',
+    'Osobnego materiału o Gdańsku w serwisie jeszcze nie ma. Z tego, co się znalazło, zobacz quest.',
+    'The site has no separate article about Gdansk yet. From what was found, see the quest.',
   ])('recognizes a missing material regardless of subject order: %s', (answer) => {
     expect(isNoMaterial(answer)).toBe(true)
   })
@@ -112,6 +117,8 @@ describe('ai-assistant-eval checks', () => {
     'Материал опубликован. Цены пока нет.',
     'Квест по Гданьску найден. Билетов нет.',
     'Квест по Гданьску есть. Нет свободного времени.',
+    'Матэрыял пра Гданьск ёсць, але кошту няма.',
+    'Materiał o Gdańsku jest, ale ceny nie ma.',
   ])('does not confuse another missing fact with a missing material: %s', (answer) => {
     expect(isNoMaterial(answer)).toBe(false)
   })
@@ -224,6 +231,16 @@ describe('ai-assistant-eval checks', () => {
     expect(third.failures.map((f: { check: string }) => f.check)).toEqual(['not_blocked'])
     expect(evaluateTurn({ expect: 'blocked', lang: 'ru' }, { turnCreated: false }).pass).toBe(true)
     expect(evaluateTurn({ expect: 'blocked', lang: 'ru' }, { turnCreated: true, status: 'done' }).pass).toBe(false)
+  })
+
+  it('judges the answer language by its own words, not by an untranslated card title (#3267)', () => {
+    const title = 'Детский квест по Минску: бронзовые друзья города'
+    const raw = `Дітям підійде [${title}](https://metravel.by/travels/krakow-guide) — це 45 хвилин.`
+    const shown = `Дітям підійде ${title} — це 45 хвилин.`
+    // Собственных слов меньше 40 знаков — язык не оценивается; раньше длинное русское название давало wrong_lang.
+    expect(evaluateTurn({ expect: 'answer', lang: 'uk' }, observedDone(raw, shown, { linkLabels: [title] })).failures).toEqual([])
+    const russian = `Детям подойдёт ${title} — это сорок пять минут прогулки по центру города, без спешки.`
+    expect(evaluateTurn({ expect: 'answer', lang: 'uk' }, observedDone(raw, russian, { linkLabels: [title] })).failures.map((f: { check: string }) => f.check)).toEqual(['wrong_lang'])
   })
 
   it('reports a non-card address left in the shown text as a guard leak', () => {

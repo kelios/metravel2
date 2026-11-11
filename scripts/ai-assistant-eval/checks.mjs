@@ -26,6 +26,13 @@ export const EXPECTS = ['answer', 'no_material', 'any_on_topic', 'refuse', 'refu
 /** Предел длины ответа и число рекомендаций — те же, что в `buildSystemPrompt` (`api/aiAssist/prompt.ts`; тест сверяет со слепком). */
 export const MAX_ANSWER_CHARS = 1200
 export const MAX_RECOMMENDATIONS = 3
+/**
+ * Отказ «не по теме» — короткая фраза: полторы длины самого длинного эталона (`offtopic_reply` слепка
+ * промпта, тест сверяет). Фраза отказа, за которой идёт ответ по существу чужой темы, отказом не считается.
+ */
+export const MAX_REFUSAL_CHARS = 210
+/** Ход не дошёл до конца: ответа модели в нём нет, проверять нечего. */
+const UNFINISHED_STATUSES = ['searching', 'streaming', 'aborted']
 
 const URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'«»]+/gi
 const BARE_SITE_RE = /(?<![\w/.])(?:www\.)?metravel\.by\/[^\s<>()[\]"'«»]*/gi
@@ -64,10 +71,16 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
 )
 /** «На сайте такого нет» — честный отказ по теме. */
 const NO_MATERIAL_RE =
-  /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:materials?|articles?)\s+(?:about|on)/iu
-/** Reverse Russian order: the material itself is missing, within one bounded clause. */
-const NO_MATERIAL_REVERSE_RE = /(?<![\p{L}\p{N}])(?:материал|стат(?:ь|е)|квест)\p{L}*\s+[^.!?;,\n]{0,120}?(?<!\p{L})(?:нет|не\s+найден\p{L}*)(?!\p{L})/giu
-const MATERIAL_AFFIRMED_RE = /(?<!\p{L})(?:есть|имеется|имеются|но)(?!\p{L})/iu
+  /(?:пока\s+)?нет\s+(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)/iu
+/**
+ * Обратный порядок слов: «материала про Гданьск пока нет» — сам материал отсутствует, в пределах одной
+ * фразы. Так же строятся учебные ответы на других языках (`rag_answers.py`: «Асобнага матэрыялу … няма»,
+ * «Окремого матеріалу … немає», «Osobnego materiału … nie ma»); раньше шаблон знал только русский и
+ * верный ответ на BE/UK/PL получал ложный `no_admission`.
+ */
+const NO_MATERIAL_REVERSE_RE =
+  /(?<![\p{L}\p{N}])(?:материал|стат(?:ь|е)|квест|матэрыял|артыкул|квэст|матеріал|статт|materia[łl]|artyku[łl]|quest)\p{L}*\s+[^.!?;,\n]{0,120}?(?<!\p{L})(?:нет|не\s+найден\p{L}*|няма|немає|нема|nie\s+ma)(?!\p{L})/giu
+const MATERIAL_AFFIRMED_RE = /(?<!\p{L})(?:есть|имеется|имеются|но|ёсць|але|є|jest|są|ale)(?!\p{L})/iu
 
 export const normalizeUrl = (value) =>
   String(value ?? '')
@@ -245,6 +258,23 @@ export const checkSources = (sources, expectSources) => {
   return { ok: matched.length >= min, matched: matched.length, min }
 }
 
+/**
+ * Названа карточка не того места (#3267). `expect_sources.pattern` задаёт место вопроса; если в
+ * подсказке были карточки этого места, а модель дала ссылку на карточку, которая под него не
+ * подходит ни названием, ни фрагментом, ни адресом, — это выбор модели, а не подбора: квест Бреста
+ * в ответе про Краков (UK ln03, v4, 10.11.2026) автопроверки пропускали, находил только судья.
+ * Когда карточек места в подсказке нет вовсе, виноват подбор — это `irrelevant_sources`.
+ */
+export const findOffPlaceCards = (raw, cards, expectSources) => {
+  if (!expectSources?.pattern || !cards?.length) return []
+  const place = new RegExp(expectSources.pattern, 'iu')
+  const fits = (card) => place.test(`${card.title ?? ''} ${card.snippet ?? ''} ${card.url ?? ''}`)
+  if (!cards.some(fits)) return []
+  const pathOf = (url) => normalizeUrl(url).replace(/^[^/]+/, '')
+  const named = new Set(findUrls(raw).map(pathOf))
+  return cards.filter((card) => named.has(pathOf(card.url)) && !fits(card))
+}
+
 const fail = (failures, check, layer, detail) => failures.push({ check, layer, detail })
 
 /**
@@ -263,7 +293,9 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
   const metrics = { status, answerChars: answer.length, links: links.length, sources: observed.sources?.length ?? 0, modelMs: call?.ms ?? null }
 
   if (expect === 'blocked') {
-    if (observed.turnCreated) fail(failures, 'not_blocked', 'gate', 'после третьего вопроса не по теме поле ввода не закрыто')
+    // Экран без поля ввода (упал, не догрузился) — не блокировка посетителя.
+    if (observed.inputMissing) fail(failures, 'no_input', 'infra', 'на экране нет поля ввода')
+    else if (observed.turnCreated) fail(failures, 'not_blocked', 'gate', 'после третьего вопроса не по теме поле ввода не закрыто')
     return { pass: failures.length === 0, failures, warnings, metrics }
   }
   if (!observed.turnCreated) {
@@ -275,8 +307,20 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     return { pass: false, failures, warnings, metrics }
   }
 
-  const refusedOfftopic = status === 'off_topic' || (isOfftopicRefusal(answer) && links.length === 0)
+  // Незавершённый ход и «готовый» ответ без перехваченного вызова модели раньше проходили все модельные
+  // проверки пустыми (ревью #3267): такой ход ничего не говорит о модели и идёт в слой инфраструктуры.
+  if (UNFINISHED_STATUSES.includes(status)) {
+    fail(failures, 'not_finished', 'infra', `ход не завершён: статус ${status}`)
+    return { pass: false, failures, warnings, metrics }
+  }
+  if (status === 'done' && !call) {
+    fail(failures, 'no_model_call', 'infra', 'ответ показан, но запрос к модели не перехвачен')
+    return { pass: false, failures, warnings, metrics }
+  }
+
+  const refusedOfftopic = status === 'off_topic' || (isOfftopicRefusal(answer) && links.length === 0 && answer.length <= MAX_REFUSAL_CHARS)
   const answeredByModel = status === 'done' && Boolean(call)
+  metrics.answeredByModel = answeredByModel
 
   if (expect === 'refuse' || expect === 'refuse_block') {
     if (!refusedOfftopic) {
@@ -310,17 +354,25 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     Object.assign(metrics, { cardLinks: recs.cardLinks, bullets: recs.bullets, unknownUrls: recs.unknownUrls.length })
     const onTopicAnswer = expect === 'answer' || ((expect === 'any_on_topic' || expect === 'no_material') && !isNoMaterial(answer))
     if (onTopicAnswer && !refusedOfftopic) {
-      if (Math.max(recs.cardLinks, recs.bullets) > MAX_RECOMMENDATIONS) fail(failures, 'too_many', 'model', `рекомендаций ${Math.max(recs.cardLinks, recs.bullets)} > ${MAX_RECOMMENDATIONS}`)
+      // Рекомендация — карточка: пункты-советы к одной статье без своих ссылок списком рекомендаций не считаются.
+      const recommended = Math.max(recs.cardLinks, recs.bullets - recs.bulletsWithoutLink)
+      if (recommended > MAX_RECOMMENDATIONS) fail(failures, 'too_many', 'model', `рекомендаций ${recommended} > ${MAX_RECOMMENDATIONS}`)
       // Слой модели выше считает сырой ответ; здесь — то, что дошло до посетителя после остановки генератора (#3216).
       const shown = countShownRecommendations(answer, links)
       metrics.shownRecommendations = shown
       if (shown > MAX_RECOMMENDATIONS) fail(failures, 'too_many_shown', 'guard', `в показанном ответе рекомендаций ${shown} > ${MAX_RECOMMENDATIONS}`)
       if (links.length === 0) fail(failures, 'no_links', 'model', 'в ответе нет ни одной ссылки на карточку')
       else if (recs.bulletsWithoutLink >= 2) fail(failures, 'names_without_links', 'model', `${recs.bulletsWithoutLink} пунктов без ссылки`)
+      const offPlace = findOffPlaceCards(raw, cards, expectSources)
+      metrics.offPlaceCards = offPlace.length
+      if (offPlace.length) fail(failures, 'off_place_card', 'model', `названа карточка не того места: «${offPlace[0].title}»`)
     }
     if (recs.unknownUrls.length) warnings.push({ check: 'invented_urls', layer: 'model', detail: `${recs.unknownUrls.length} адресов не из карточек вырезано стражем` })
-    const answerLang = detectLang(answer)
-    if (lang && answerLang && answerLang !== lang && answer.length >= 40) fail(failures, 'wrong_lang', 'model', `язык ответа ${answerLang}, нужен ${lang}`)
+    // Язык — по собственным словам ответа: название карточки стоит как в каталоге, а детские квесты и
+    // часть статей не переведены, поэтому короткий верный ответ с русским названием читался как русский.
+    const prose = links.reduce((text, label) => (label ? text.split(label).join(' ') : text), answer)
+    const answerLang = detectLang(prose)
+    if (lang && answerLang && answerLang !== lang && prose.trim().length >= 40) fail(failures, 'wrong_lang', 'model', `язык ответа ${answerLang}, нужен ${lang}`)
     const leaked = findUrls(answer).filter((url) => !makeCardUrlMatcher(cards)(url))
     if (leaked.length) fail(failures, 'url_leak', 'guard', `в показанном тексте адрес не из карточек: ${leaked[0]}`)
     if (/\(\s*\)|(^|\n)\s*•\s*(\n|$)/.test(answer)) warnings.push({ check: 'guard_residue', layer: 'guard', detail: 'пустые скобки или пункт после вырезания ссылки' })

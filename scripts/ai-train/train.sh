@@ -2,17 +2,23 @@
 # LoRA fine-tune of metravel-llm on the Mac (MLX). Long-running: start it in the
 # background and follow logs/train-<run>.log.
 #
-#   AI_HOME=~/metravel-ai scripts/ai-train/train.sh [extra mlx_lm lora args]
+#   AI_HOME=~/metravel-ai RUN=v8 CONFIG=scripts/ai-train/lora-qwen3.5-4b-v8.yaml \
+#     scripts/ai-train/train.sh [extra mlx_lm lora args]
+#
+# RUN and CONFIG have no defaults: a forgotten variable used to start the v0
+# recipe under a timestamp, and the run name is what logs, the adapter and the
+# GGUF export are found by.
 #
 # Prerequisites (see scripts/ai-train/README.md): $AI_HOME/venv with mlx-lm,
 # base model in $AI_HOME/models, dataset from build_mix.py (config `data:`).
 set -euo pipefail
 AI_HOME="${AI_HOME:-$HOME/metravel-ai}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="${CONFIG:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lora-qwen3.5-4b.yaml}"
+[[ -n "${RUN:-}" ]] || { echo "train.sh: задайте RUN — имя прогона (например RUN=v8-probe)" >&2; exit 2; }
+[[ -n "${CONFIG:-}" ]] || { echo "train.sh: задайте CONFIG — путь к lora-*.yaml этой версии" >&2; exit 2; }
+[[ -f "$CONFIG" ]] || { echo "train.sh: нет конфига $CONFIG" >&2; exit 2; }
 # absolute before cd "$AI_HOME", so CONFIG=scripts/ai-train/… works from the repo root
 CONFIG="$(cd "$(dirname "$CONFIG")" && pwd)/$(basename "$CONFIG")"
-RUN="${RUN:-$(date +%Y%m%d-%H%M)}"
 # mlx-lm compiles the train step (mx.compile); for Qwen3.5 the compiled graph
 # defeats gradient checkpointing in the Gated DeltaNet fallback: peak 20.9 GB
 # vs 15.4 GB uncompiled for one 1024-token sample, and 3× slower (measured

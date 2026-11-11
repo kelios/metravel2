@@ -28,5 +28,281 @@
     "title": "Краков: путеводитель по местам — что посмотреть в городе и где гулять",
     "url": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat", "path": "/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
     "snippet": "Путеводитель по местам Кракова: что посмотреть в городе и где гулять.", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-syrenka",
+    "title": "Квест по Варшаве: Сирена и Старый город",
+    "url": "https://metravel.by/quests/warsaw/warsaw-syrenka", "path": "/quests/warsaw/warsaw-syrenka",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 12. Длительность: 180 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-kids-bazyliszek",
+    "title": "Детский квест по Варшаве: знаки для базилишка",
+    "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-white-lady",
+    "title": "Варшава: Белая Дама и сказания Нового Мяста",
+    "url": "https://metravel.by/quests/warsaw/warsaw-white-lady", "path": "/quests/warsaw/warsaw-white-lady",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-royal-route-lights",
+    "title": "Квест по Варшаве: огни Королевского тракта",
+    "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "lida-castle",
+    "title": "Квест по Лиде: гости замка Гедимина",
+    "url": "https://metravel.by/quests/lida/lida-castle", "path": "/quests/lida/lida-castle",
+    "snippet": "Городской квест по городу Лида (Беларусь). Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "lida-kids-castle-squire",
+    "title": "Детский квест по Лиде: оруженосец князя и семь рыцарских знаков",
+    "url": "https://metravel.by/quests/lida/lida-kids-castle-squire", "path": "/quests/lida/lida-kids-castle-squire",
+    "snippet": "Городской квест по городу Лида (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-dva-goroda",
+    "title": "Квест по Барановичам: город на пересечении двух дорог",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-dva-goroda", "path": "/quests/baranovichi/baranovichi-dva-goroda",
+    "snippet": "Городской квест по городу Барановичи (Беларусь). Точек: 9. Длительность: 140 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-bike-manors",
+    "title": "Велоквест из Барановичей: усадьбы Котлубаев и Бохвицей",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-bike-manors", "path": "/quests/baranovichi/baranovichi-bike-manors",
+    "snippet": "Городской квест по городу Барановичи (Беларусь). Точек: 11. Длительность: 300 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-kids-iron-horse",
+    "title": "Железный конь Дымок: детский квест по Барановичам",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-kids-iron-horse", "path": "/quests/baranovichi/baranovichi-kids-iron-horse",
+    "snippet": "Городской квест по городу Барановичи (Беларусь). Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-teens-two-stations",
+    "title": "Барановичи для подростков: Розвадово и город по плану",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-teens-two-stations", "path": "/quests/baranovichi/baranovichi-teens-two-stations",
+    "snippet": "Городской квест по городу Барановичи (Беларусь). Точек: 9. Длительность: 110 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "polotsk-ancient",
+    "title": "Квест по Полоцку: древнейший город Беларуси",
+    "url": "https://metravel.by/quests/polotsk/polotsk-ancient", "path": "/quests/polotsk/polotsk-ancient",
+    "snippet": "Городской квест по городу Полоцк (Беларусь). Точек: 10. Длительность: 150 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "polotsk-kids-letter-u",
+    "title": "Детский квест по Полоцку: буква Ў и потерянная дужка",
+    "url": "https://metravel.by/quests/polotsk/polotsk-kids-letter-u", "path": "/quests/polotsk/polotsk-kids-letter-u",
+    "snippet": "Городской квест по городу Полоцк (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "lida-castle.be",
+    "title": "Квэст па Лідзе: госці замка Гедыміна",
+    "url": "https://metravel.by/quests/lida/lida-castle", "path": "/quests/lida/lida-castle",
+    "snippet": "Городской квест по городу Ліда (Беларусь). Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-dva-goroda.be",
+    "title": "Квэст па Баранавічах: горад на скрыжаванні дзвюх дарог",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-dva-goroda", "path": "/quests/baranovichi/baranovichi-dva-goroda",
+    "snippet": "Городской квест по городу Баранавічы (Беларусь). Точек: 9. Длительность: 140 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-bike-manors.be",
+    "title": "Велаквэст з Баранавічаў: сядзібы Катлубаяў і Бохвіцаў",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-bike-manors", "path": "/quests/baranovichi/baranovichi-bike-manors",
+    "snippet": "Городской квест по городу Баранавічы (Беларусь). Точек: 11. Длительность: 300 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-syrenka.be",
+    "title": "Квэст па Варшаве: Сірэна і Стары горад",
+    "url": "https://metravel.by/quests/warsaw/warsaw-syrenka", "path": "/quests/warsaw/warsaw-syrenka",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 12. Длительность: 180 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-kids-bazyliszek.be",
+    "title": "Детский квест по Варшаве: знаки для базилишка",
+    "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-white-lady.be",
+    "title": "Варшава: Белая Дама и сказания Нового Мяста",
+    "url": "https://metravel.by/quests/warsaw/warsaw-white-lady", "path": "/quests/warsaw/warsaw-white-lady",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-royal-route-lights.be",
+    "title": "Квэст па Варшаве: агні Каралеўскага тракту",
+    "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "polotsk-ancient.uk",
+    "title": "Квест Полоцьком: найдавніше місто Білорусі",
+    "url": "https://metravel.by/quests/polotsk/polotsk-ancient", "path": "/quests/polotsk/polotsk-ancient",
+    "snippet": "Городской квест по городу Полоцьк (Беларусь). Точек: 10. Длительность: 150 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "polotsk-kids-letter-u.uk",
+    "title": "Детский квест по Полоцку: буква Ў и потерянная дужка",
+    "url": "https://metravel.by/quests/polotsk/polotsk-kids-letter-u", "path": "/quests/polotsk/polotsk-kids-letter-u",
+    "snippet": "Городской квест по городу Полоцьк (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-dva-goroda.uk",
+    "title": "Квест Барановичами: місто на перетині двох доріг",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-dva-goroda", "path": "/quests/baranovichi/baranovichi-dva-goroda",
+    "snippet": "Городской квест по городу Барановичі (Беларусь). Точек: 9. Длительность: 140 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-bike-manors.uk",
+    "title": "Велоквест із Барановичів: садиби Котлубаїв і Бохвіців",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-bike-manors", "path": "/quests/baranovichi/baranovichi-bike-manors",
+    "snippet": "Городской квест по городу Барановичі (Беларусь). Точек: 11. Длительность: 300 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-syrenka.uk",
+    "title": "Квест по Варшаві: Сирена і Старе місто",
+    "url": "https://metravel.by/quests/warsaw/warsaw-syrenka", "path": "/quests/warsaw/warsaw-syrenka",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 12. Длительность: 180 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-kids-bazyliszek.uk",
+    "title": "Детский квест по Варшаве: знаки для базилишка",
+    "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-royal-route-lights.uk",
+    "title": "Квест по Варшаві: вогні Королівського тракту",
+    "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
+    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-dva-goroda.pl",
+    "title": "Quest po Baranowiczach: miasto na skrzyżowaniu dwóch dróg",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-dva-goroda", "path": "/quests/baranovichi/baranovichi-dva-goroda",
+    "snippet": "Городской квест по городу Baranowicze (Беларусь). Точек: 9. Длительность: 140 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-bike-manors.pl",
+    "title": "Quest rowerowy z Baranowicz: majątki Kotłubajów i Bohwiczów",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-bike-manors", "path": "/quests/baranovichi/baranovichi-bike-manors",
+    "snippet": "Городской квест по городу Baranowicze (Беларусь). Точек: 11. Длительность: 300 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-syrenka.pl",
+    "title": "Quest po Warszawie: Syrenka i Stare Miasto",
+    "url": "https://metravel.by/quests/warsaw/warsaw-syrenka", "path": "/quests/warsaw/warsaw-syrenka",
+    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 12. Длительность: 180 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-kids-bazyliszek.pl",
+    "title": "Детский квест по Варшаве: знаки для базилишка",
+    "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
+    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-white-lady.pl",
+    "title": "Варшава: Белая Дама и сказания Нового Мяста",
+    "url": "https://metravel.by/quests/warsaw/warsaw-white-lady", "path": "/quests/warsaw/warsaw-white-lady",
+    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 10. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-royal-route-lights.pl",
+    "title": "Quest po Warszawie: światła Traktu Królewskiego",
+    "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
+    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "polotsk-ancient.pl",
+    "title": "Quest po Połocku: najstarsze miasto Białorusi",
+    "url": "https://metravel.by/quests/polotsk/polotsk-ancient", "path": "/quests/polotsk/polotsk-ancient",
+    "snippet": "Городской квест по городу Połock (Беларусь). Точек: 10. Длительность: 150 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "baranovichi-dva-goroda.en",
+    "title": "Baranovichi quest: a city at the meeting of two railways",
+    "url": "https://metravel.by/quests/baranovichi/baranovichi-dva-goroda", "path": "/quests/baranovichi/baranovichi-dva-goroda",
+    "snippet": "Городской квест по городу Baranavichy (Беларусь). Точек: 9. Длительность: 140 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-syrenka.en",
+    "title": "Warsaw Quest: Syrenka and the Old Town",
+    "url": "https://metravel.by/quests/warsaw/warsaw-syrenka", "path": "/quests/warsaw/warsaw-syrenka",
+    "snippet": "Городской квест по городу Warsaw (Польша). Точек: 12. Длительность: 180 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "warsaw-royal-route-lights.en",
+    "title": "Warsaw Quest: Lights of the Royal Route",
+    "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
+    "snippet": "Городской квест по городу Warsaw (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "lida-castle.en",
+    "title": "Lida Quest: Guests of Gediminas's Castle",
+    "url": "https://metravel.by/quests/lida/lida-castle", "path": "/quests/lida/lida-castle",
+    "snippet": "Городской квест по городу Lida (Беларусь). Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "mogilev-stargazer.en",
+    "title": "Mogilev Quest: Visiting the Stargazer",
+    "url": "https://metravel.by/quests/mogilev/mogilev-stargazer", "path": "/quests/mogilev/mogilev-stargazer",
+    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 8. Длительность: 90 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "mogilev-kids-mogislav.en",
+    "title": "The Last Page of the City Book",
+    "url": "https://metravel.by/quests/mogilev/mogilev-kids-mogislav", "path": "/quests/mogilev/mogilev-kids-mogislav",
+    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 8. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "mogilev-teens-symbol-code.en",
+    "title": "Nine Keys: The City Code of Mogilev",
+    "url": "https://metravel.by/quests/mogilev/mogilev-teens-symbol-code", "path": "/quests/mogilev/mogilev-teens-symbol-code",
+    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 9. Длительность: 105 мин. Сложность: средний", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "mogilev-night-watch.en",
+    "title": "Quest through Mogilev: the night watch on Castle Hill",
+    "url": "https://metravel.by/quests/mogilev/mogilev-night-watch", "path": "/quests/mogilev/mogilev-night-watch",
+    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 9. Длительность: 100 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "quest", "source_id": "mogilev-winter-evening.en",
+    "title": "Mogilev quest: lights of a winter evening",
+    "url": "https://metravel.by/quests/mogilev/mogilev-winter-evening", "path": "/quests/mogilev/mogilev-winter-evening",
+    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 11. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "502",
+    "title": "Варшавские Лазенки",
+    "url": "https://metravel.by/travels/varshavskie-lazenki", "path": "/travels/varshavskie-lazenki",
+    "snippet": "Польша. Статья о варшавских Лазенках.", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "200",
+    "title": "Лидский замок: история, что посмотреть и как добраться",
+    "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia", "path": "/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+    "snippet": "Беларусь. Лидский замок: история, что посмотреть и как добраться.", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "147",
+    "title": "Барановичи, Коссово и Ружаны: маршрут на 2 дня",
+    "url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia", "path": "/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+    "snippet": "Беларусь. Маршрут на 2 дня: Барановичи, Коссово и Ружаны.", "score": 3
+  },
+  {
+    "type": "travel", "source_id": "202",
+    "title": "Что посмотреть в Полоцке.",
+    "url": "https://metravel.by/travels/chto-posmotret-v-polotske-1", "path": "/travels/chto-posmotret-v-polotske-1",
+    "snippet": "Беларусь. Что посмотреть в Полоцке.", "score": 3
   }
 ]

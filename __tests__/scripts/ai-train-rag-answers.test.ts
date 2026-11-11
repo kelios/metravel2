@@ -92,6 +92,54 @@ describe('ai-train rag_answers / offtopic (#2712)', () => {
     expect(krakow?.messages[2].content).toContain('[Квест по Кракову: Вавельский дракон](https://metravel.by/quests/krakow/krakow-dragon) — городской квест: 3 точки, около 120 мин');
   });
 
+  // Ревью #3267 (LOW-19): пример, отброшенный подгонкой под бюджет, раньше исчезал без следа.
+  it('манифест смеси считает отброшенные примеры rag_answers по причине и виду, записи набора при этом те же', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(home, 'out', 'manifest.json'), 'utf8'));
+    const dropped = manifest.sets.rag_answers.source.dropped as Record<string, number>;
+    expect(Object.keys(dropped).every((key) => /^(?:contour_question|over_budget|evidence_cut):[a-z_]+$/.test(key))).toBe(true);
+    expect(Object.values(dropped).every((count) => Number.isInteger(count) && count > 0)).toBe(true);
+    // вопросы контура про Минск и Краков в этой фикстуре генерируются и пропускаются — счётчик не пуст
+    expect(Object.keys(dropped).some((key) => key.startsWith('contour_question:'))).toBe(true);
+  });
+
+  // Ревью #3267 (MEDIUM-5): ключ offtopic по позиции сдвигается при вставке вопроса; edition 2 — ключ по хешу вопроса
+  // и пропуск вопросов среза eval_prompts/offtopic.jsonl. Edition 1 (v3–v7) остаётся прежним.
+  it('offtopic edition 2: ключ по вопросу, вопросы среза оценки не строятся; edition 1 не меняется', () => {
+    const script = [
+      'import json, sys',
+      `sys.path.insert(0, ${JSON.stringify(DIR)})`,
+      'from pathlib import Path',
+      'from sets import offtopic as o',
+      'from sets.assistant_prompt import norm_question',
+      `ctx = {"seed": 20261017, "raw": Path(${JSON.stringify(path.join(home, 'data', 'raw'))}), "sources": Path(${JSON.stringify(path.join(home, 'data', 'sources'))})}`,
+      'question = lambda r: norm_question(r["messages"][1]["content"].split("Вопрос посетителя:")[-1])',
+      'held = o.held_out_questions()',
+      'first, default, second = o.build(ctx, {"edition": 1}), o.build(ctx, {}), o.build(ctx, {"edition": 2})',
+      'inserted = dict(o.QUESTIONS["ru"]); inserted["cooking"] = ("Как засолить огурцы на зиму?",) + inserted["cooking"]',
+      'o.QUESTIONS = {**o.QUESTIONS, "ru": inserted}',
+      'shifted1, shifted2 = o.build(ctx, {"edition": 1}), o.build(ctx, {"edition": 2})',
+      'keys = lambda rows: {question(r): r["key"] for r in rows}',
+      'moved = lambda before, after: sum(1 for q, key in keys(before).items() if keys(after).get(q) != key)',
+      'try:',
+      ' o.build(ctx, {"edition": 3}); bad = False',
+      'except ValueError: bad = True',
+      'print(json.dumps({"same_default": first == default, "held": len(held),',
+      ' "held_in_1": sum(question(r) in held for r in first), "held_in_2": sum(question(r) in held for r in second),',
+      ' "positional": all(r["key"].rsplit(":", 1)[-1].isdigit() for r in first),',
+      ' "hashed": all(r["key"].rsplit(":", 1)[-1].startswith("q") and len(r["key"].rsplit(":", 1)[-1]) == 13 for r in second),',
+      ' "one_key_per_question": len(set(keys(second).values())) == len(keys(second)),',
+      ' "moved_1": moved(first, shifted1), "moved_2": moved(second, shifted2), "bad_edition": bad}))',
+    ].join('\n');
+    const res = runCli('python3', ['-I', '-c', script]);
+    expect(res.stderr).toBe('');
+    const out = JSON.parse(res.stdout);
+    expect(out).toMatchObject({ same_default: true, held_in_2: 0, positional: true, hashed: true, one_key_per_question: true, moved_2: 0, bad_edition: true });
+    expect(out.held).toBeGreaterThanOrEqual(3);
+    expect(out.held_in_1).toBeGreaterThan(0);
+    // вставка одного вопроса в начало кортежа сдвигает позиционные ключи остальных вопросов вида
+    expect(out.moved_1).toBeGreaterThan(0);
+  });
+
   it('отказ не по теме — фраза отказа локали; сплит держит место и шаблон вопроса на одной стороне', () => {
     const off = all.filter((r) => r.set === 'offtopic');
     expect(off.length).toBeGreaterThan(50);

@@ -1,0 +1,14 @@
+{
+  "version": "v7",
+  "file": "metravel-llm-v7-Q4_K_M.gguf",
+  "sha256": "b60f7f15f89f4b3cd7992fc2479e2b5897004a2c9b028d40f665d34353245e36",
+  "bytes": 2783446880,
+  "accepted": "2026-11-10",
+  "task": 2751,
+  "previous": {
+    "version": "v4",
+    "file": "metravel-llm-v4-Q4_K_M.gguf",
+    "sha256": "2bb809db8652a25ec7e7a9abae2ebe2e896f3274075848e88b6179f67caa60f6",
+    "bytes": 2783446880
+  }
+}

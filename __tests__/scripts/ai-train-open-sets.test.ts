@@ -96,6 +96,7 @@ same = {"expect": "exact", "accept": ["^\\\\s*да\\\\b|одно и то же"],
 info = {"expect": "info", "lang": "ru", "accept": ["Тарнув|Тарнов"]}
 long_ru = "По открытым данным: Тарнов — город на юге Польши, " + "старый рынок, ратуша и собор. " * 8
 filt = {"expect": "json", "accept": ['"history"']}
+strict = {"expect": "json", "accept": ['"history"', '"camper"\\\\s*:\\\\s*true'], "reject": ['"kids"\\\\s*:\\\\s*true']}
 print(json.dumps({
   "same_yes": v(same, "Да, это одно и то же место."),
   "same_no": v(same, "Нет, это разные места."),
@@ -104,11 +105,226 @@ print(json.dumps({
   "info_short": v(info, "Тарнов — город."),
   "json_ok": v(filt, '{"categories": ["history"], "radius_km": 25, "center": null}'),
   "json_bad_radius": v(filt, '{"categories": ["history"], "radius_km": 30, "center": null}'),
+  "json_reject_clean": v(strict, '{"categories": ["history"], "radius_km": 25, "center": null, "constraints": {"camper": true}}'),
+  "json_reject_extra": v(strict, '{"categories": ["history"], "radius_km": 25, "center": null, "constraints": {"camper": true, "kids": true}}'),
+  "json_reject_false": v(strict, '{"categories": ["history"], "radius_km": 25, "center": null, "constraints": {"camper": true, "kids": false}}'),
 }))
 `);
     expect(out).toEqual({
       same_yes: true, same_no: false, info_ok: true, info_link: false, info_short: false, json_ok: true, json_bad_radius: false,
+      // #3267: ограничение, о котором посетитель не просил, проваливает случай; `false` — не включённое.
+      json_reject_clean: true, json_reject_extra: false, json_reject_false: true,
     });
+  });
+
+  // Ревью #3267 (HIGH-2): regex по тексту ответа пропускал фильтр со всеми категориями, склонённым центром и
+  // четырьмя ограничениями. С полем `expected` сравнивается сам объект; `pass_accept` хранит прежнюю метрику.
+  it('eval.py: expect=json с expected сравнивает категории, радиус, центр и ограничения', () => {
+    const out = py(`
+import json
+from eval import check, verdict, verdict_accept
+case = {"id": "x", "expect": "json", "accept": ['"viewpoints"', "Несвиж", '"camper"\\\\s*:\\\\s*true'],
+        "expected": {"categories": ["viewpoints"], "center": "^(?:Несвиж)", "constraints": ["camper"], "radius_km": 50}}
+country = {"id": "y", "expect": "json", "expected": {"categories": ["history"], "center": None, "constraints": []}}
+def both(p, obj):
+    answer = json.dumps(obj, ensure_ascii=False)
+    c = check(answer, set())
+    return [verdict(p, c, answer), verdict_accept(p, c, answer)]
+good = {"categories": ["viewpoints"], "radius_km": 50, "center": {"name": "Несвиж"}, "constraints": {"camper": True}}
+print(json.dumps({
+  "exact": both(case, good),
+  "extra_false_ok": both(case, {**good, "constraints": {"camper": True, "kids": False}}),
+  "extra_category": both(case, {**good, "categories": ["viewpoints", "attractions"]}),
+  "all_categories": both(case, {**good, "categories": ["attractions", "culture", "viewpoints", "entertainment", "religion", "history"]}),
+  "extra_constraint": both(case, {**good, "constraints": {"camper": True, "dogs": True}}),
+  "missing_constraint": both(case, {k: v for k, v in good.items() if k != "constraints"}),
+  "declined_centre": both(case, {**good, "center": {"name": "Несвижем"}}),
+  "other_place": both(case, {**good, "center": {"name": "Новый Несвиж"}}),
+  "null_centre": both(case, {**good, "center": None}),
+  "other_radius": both(case, {**good, "radius_km": 25}),
+  "bad_schema": both(case, {**good, "radius_km": 30}),
+  "country_ok": both(country, {"categories": ["history"], "radius_km": 200, "center": None}),
+  "country_any_radius": both(country, {"categories": ["history"], "radius_km": 100, "center": None}),
+  "country_with_centre": both(country, {"categories": ["history"], "radius_km": 200, "center": {"name": "Минск"}}),
+}))
+`);
+    expect(out).toEqual({
+      exact: [true, true],
+      extra_false_ok: [true, true],
+      // прежняя метрика (схема + accept) эти ответы засчитывала
+      extra_category: [false, true],
+      all_categories: [false, true],
+      extra_constraint: [false, true],
+      // центр — место, а не написание: склонённое название геокодер разрешит, другое название — нет
+      declined_centre: [true, true],
+      other_place: [false, true],
+      other_radius: [false, true],
+      missing_constraint: [false, false],
+      null_centre: [false, false],
+      bad_schema: [false, false],
+      // радиус проверяется, только когда вопрос называет число
+      country_ok: [true, true],
+      country_any_radius: [true, true],
+      country_with_centre: [false, true],
+    });
+  });
+
+  it('срез osm_intents: у каждого случая есть expected, согласованный с accept и reject', () => {
+    const out = py(`
+import json
+from eval import check, verdict, verdict_accept
+from sets import osm_intents as o
+rows = [json.loads(line) for line in o.EVAL_PROMPTS.read_text(encoding="utf-8").splitlines() if line.strip()]
+def first_name(pattern):
+    # "^(?:Gdańsk|Gda[ńn]sk)" → "Gdańsk": первый вариант — название в именительном падеже, дальше — основа
+    alt, out, i = pattern[len("^(?:"):-len(")")].split("|")[0], "", 0
+    while i < len(alt):
+        if alt[i] == "[":
+            out, i = out + alt[i + 1], alt.index("]", i) + 1
+        else:
+            out, i = out + alt[i], i + 1
+    return out
+bad = []
+for row in rows:
+    e = row.get("expected")
+    if (not isinstance(e, dict) or not e.get("categories") or set(e["categories"]) - set(o.CATEGORIES) or set(e.get("constraints", [])) - set(o.CONSTRAINTS)
+            or ("radius_km" in e and e["radius_km"] not in o.RADII) or not (e["center"] is None or isinstance(e["center"], str))):
+        bad.append(row["id"]); continue
+    # ответ, собранный из expected, проходит и строгую, и прежнюю проверку, и accept/reject случая
+    name = None if e["center"] is None else first_name(e["center"])
+    ref = {"categories": e["categories"], "radius_km": e.get("radius_km", 25), "center": {"name": name} if name else None}
+    if e.get("constraints"):
+        ref["constraints"] = {c: True for c in e["constraints"]}
+    text = o.dump_filter(ref)
+    c = check(text, set())
+    legacy = {k: v for k, v in row.items() if k != "expected"}
+    if o.validate_filter(ref) or not (verdict(row, c, text) and verdict_accept(row, c, text) and verdict(legacy, c, text)):
+        bad.append(row["id"])
+print(json.dumps({"cases": len(rows), "bad": bad, "with_radius": sum("radius_km" in r["expected"] for r in rows if isinstance(r.get("expected"), dict)),
+                  "country_wide": sum(r["expected"]["center"] is None for r in rows if isinstance(r.get("expected"), dict))}))
+`);
+    expect(out.bad).toEqual([]);
+    expect(out.cases).toBeGreaterThanOrEqual(40);
+    expect(out.with_radius).toBeGreaterThanOrEqual(8);
+    expect(out.country_wide).toBeGreaterThanOrEqual(3);
+  });
+
+  // Ревью #3267 (MEDIUM-7, MEDIUM-8, LOW-10, LOW-11, LOW-17).
+  it('eval.py: offtopic без ответа по существу, rag только по карточкам подсказки, адреса и отказ', () => {
+    const out = py(`
+import json
+from eval import SITE, base_cache_valid, check, find_urls, verdict
+from sets.assistant_prompt import offtopic_reply
+known = {SITE + "/travels/krakow", SITE + "/quests/minsk/cmok", SITE + "/travels/other"}
+def v(p, answer):
+    return verdict(p, check(answer, known), answer)
+off = {"expect": "offtopic", "lang": "ru"}
+cards = "Материалы сайта:\\n[1] Статья «Краков» — " + SITE + "/travels/krakow\\n[2] Квест «Цмок» — " + SITE + "/quests/minsk/cmok\\nВопрос посетителя: Что посмотреть?"
+rag = {"expect": "rag", "lang": "ru", "group": "pick", "prompt": cards}
+absent = {**rag, "group": "no_material", "max_urls": 2}
+link = "[Краков](" + SITE + "/travels/krakow)"
+print(json.dumps({
+  "refusal": v(off, offtopic_reply("ru")),
+  "refusal_en": v({"expect": "offtopic", "lang": "en"}, offtopic_reply("en")),
+  "refusal_then_recipe": v(off, offtopic_reply("ru") + " Но вот рецепт: гречку варят 20 минут под крышкой, на стакан крупы два стакана воды, посолить в начале."),
+  "rag_card": v(rag, "Посмотрите " + link + " — путеводитель по городу."),
+  "rag_site_url_not_in_cards": v(rag, "Посмотрите [другое](" + SITE + "/travels/other) — тоже статья сайта."),
+  "no_material_admitted": v(absent, "Материалов об Австралии в карточках нет. Ближайшее из найденного:\\n- " + link),
+  "no_material_admitted_other_order": v(absent, "На сайте пока нет материалов про Австралию. Из того, что нашлось, — " + link + "."),
+  "no_material_silent": v(absent, "Посмотрите " + link + " — путеводитель по городу."),
+  "praise_is_not_refusal": check("Нет ничего лучше прогулки по набережной.", known)["refused"],
+  "real_refusal": check("На сайте пока нет ничего про Исландию.", known)["refused"],
+  "bare_site": check("Загляните на metravel.by/travels/vydumka и всё.", known)["urls_unknown"],
+  "bare_www": check("Забронируйте на www.booking.com.", known)["external"],
+  "bold_url": find_urls("**" + SITE + "/travels/krakow**"),
+  "email": find_urls("пишите на info@metravel.by/test"),
+  "cache": [
+    base_cache_valid({"source": "s#m", "max_tokens": 500, "prompts": ["q"], "systems": ["sys"], "answers": ["a"]}, "s#m", [{"prompt": "q", "system": "sys"}], 500),
+    base_cache_valid({"source": "s#m", "max_tokens": 500, "prompts": ["q"], "systems": ["sys"], "answers": ["a"]}, "s#m", [{"prompt": "q", "system": "other"}], 500),
+    base_cache_valid({"source": "s#m", "max_tokens": 500, "prompts": ["q"], "systems": ["sys"], "answers": ["a"]}, "s#m", [{"prompt": "q", "system": "sys"}], 400),
+    base_cache_valid({"source": "s#other", "max_tokens": 500, "prompts": ["q"], "systems": ["sys"], "answers": ["a"]}, "s#m", [{"prompt": "q", "system": "sys"}], 500),
+    base_cache_valid({"source": "s#m", "prompts": ["q"], "answers": ["a"]}, "s#m", [{"prompt": "q", "system": "sys"}], 500),
+  ],
+}))
+`);
+    expect(out).toEqual({
+      refusal: true,
+      refusal_en: true,
+      refusal_then_recipe: false,
+      rag_card: true,
+      rag_site_url_not_in_cards: false,
+      no_material_admitted: true,
+      no_material_admitted_other_order: true,
+      no_material_silent: false,
+      praise_is_not_refusal: false,
+      real_refusal: true,
+      bare_site: ['https://metravel.by/travels/vydumka'],
+      bare_www: ['https://www.booking.com'],
+      bold_url: ['https://metravel.by/travels/krakow'],
+      email: [],
+      // тот же источник, подсказки, системные промпты и max_tokens — иначе база генерируется заново (и старый base.json без этих полей)
+      cache: [true, false, false, false, false],
+    });
+  });
+
+  it('eval.py: неизвестный expect — ошибка, а не молчаливое «answer»', () => {
+    const dir = makeTempDir('ai-train-expect-', { root: path.join(process.cwd(), '.codex-temp') });
+    try {
+      const file = path.join(dir, 'typo.jsonl');
+      fs.writeFileSync(file, JSON.stringify({ id: 't1', group: 'g', expect: 'anwser', prompt: 'Что посмотреть?' }) + '\n');
+      const load = runCli('python3', ['-I', '-c', 'import sys, pathlib\nsys.path.insert(0, sys.argv[1])\nimport eval as e\ne.load_prompts([pathlib.Path(sys.argv[2])])', DIR, file]);
+      expect(load.status).not.toBe(0);
+      expect(load.stderr).toContain("unknown expect 'anwser'");
+      const direct = runCli('python3', ['-I', '-c', 'import sys\nsys.path.insert(0, sys.argv[1])\nimport eval as e\ne.verdict({"id": "t1", "expect": "anwser"}, e.check("ответ", set()), "ответ")', DIR]);
+      expect(direct.status).not.toBe(0);
+      expect(direct.stderr).toContain("unknown expect 'anwser'");
+      // все подсказки репозитория проходят загрузку
+      const real = runCli('python3', ['-I', '-c', 'import sys, pathlib\nsys.path.insert(0, sys.argv[1])\nimport eval as e\nprint(len(e.load_prompts(sorted((pathlib.Path(sys.argv[1]) / "eval_prompts").glob("*.jsonl")))))', DIR]);
+      expect(real.stderr).toBe('');
+      expect(Number(real.stdout)).toBeGreaterThanOrEqual(140);
+    } finally {
+      removeDir(dir);
+    }
+  });
+
+  // #3267: срез оценки фильтра карты заморожен — набор не учит его вопросы, а каждый случай проверяем.
+  it('osm_intents: вопросы eval_prompts/osm_intents.jsonl не попадают в набор', () => {
+    const out = py(`
+import json, random
+from sets import osm_intents as o
+held = o.held_out_prompts()
+rows = [json.loads(line) for line in o.EVAL_PROMPTS.read_text(encoding="utf-8").splitlines() if line.strip()]
+question = rows[0]["prompt"].split("«", 1)[1].rsplit("»", 1)[0]
+real = o.intent_sample
+calls = {"n": 0}
+def fake(rng, lang, centres):
+    calls["n"] += 1
+    if calls["n"] == 2:
+        return question.upper() + " ", {"categories": ["viewpoints"], "radius_km": 25, "center": {"name": "Несвиж"}}, "wd:Q1"
+    return real(rng, lang, centres)
+o.intent_sample = fake
+o.load_pois = lambda root: []
+o.load_centres = lambda root, pois, per: {"BY": [{"key": "wd:Q2", "ru": "Лида", "be": "Ліда", "pl": "Lida"}], "PL": [{"key": "wd:Q3", "ru": "Гданьск", "be": "Гданьск", "pl": "Gdańsk"}]}
+records = o.build({"seed": 1, "sources": None}, {"intents": 40, "describe": 0})
+users = [r["messages"][1]["content"] for r in records]
+print(json.dumps({
+  "cases": len(rows), "held": len(held), "langs": sorted({r["lang"] for r in rows}),
+  "built": len(records) > 20, "leaked": sum(1 for u in users if o.norm_question(u) in held),
+  "with_reject": sum(1 for r in rows if r.get("reject")),
+  "constraints": {c: sorted({r["lang"] for r in rows if any(c in a and "true" in a for a in r["accept"])}) for c in o.CONSTRAINTS},
+}))
+`);
+    expect(out.cases).toBeGreaterThanOrEqual(40);
+    expect(out.held).toBe(out.cases);
+    expect(out.langs).toEqual(['be', 'pl', 'ru']);
+    expect(out.built).toBe(true);
+    expect(out.leaked).toBe(0);
+    expect(out.with_reject).toBeGreaterThanOrEqual(30);
+    // Каждое ограничение — на русском и хотя бы на одном другом языке.
+    for (const langs of Object.values(out.constraints as Record<string, string[]>)) {
+      expect(langs).toContain('ru');
+      expect(langs.length).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('osm descriptions use supplied country and tags without invented access, timing or weather claims', () => {

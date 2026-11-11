@@ -1,0 +1,33 @@
+{
+  "task": 2751,
+  "note": "Пороги Done gate #2751 в редакции 09.11.2026. Пороги срезов записаны долями (9 из 10, 8 из 15), чтобы не зависеть от размера среза (#3267). Срез osm_intents с #3267 сравнивает фильтр с ожидаемым целиком; прежняя метрика показывается в примечании.",
+  "repeat": 3,
+  "smallSample": 30,
+  "targets": ["bd01", "bd07", "bd11", "ln02", "ln03", "mt03", "on10", "on13", "on14"],
+  "lineageContaminated": {
+    "lineage": "v4",
+    "note": "Вопросы cases.jsonl, дословно стоявшие в обучении адаптеров линии: sft-v4/s3 (22 id) и sft-v3/s3 (ещё on02, on18). v6, v7 и следующие версии продолжают адаптер v4.",
+    "ids": ["bd01", "bd02", "bd07", "es01", "in03", "in04", "in05", "mt01", "of02", "of03", "of05", "of06", "of07", "of08", "of09", "of10", "of12", "of13", "of14", "of15", "of16", "of17", "on02", "on18"]
+  },
+  "runs": {
+    "targets": { "cases": "cases.jsonl", "only": "targets", "repeat": 3 },
+    "holdout": { "cases": "cases.holdout.jsonl", "repeat": 3 },
+    "offtopic": { "cases": "cases.jsonl", "group": ["off_topic", "injection"], "repeat": 1 }
+  },
+  "quality": { "repeat": 3 },
+  "rows": [
+    { "id": "targets", "title": "экран: целевые вопросы ×3, автопроверки", "kind": "contour", "run": "targets", "rule": { "type": "each_turn_at_least", "passes": 2 } },
+    { "id": "targets_judge", "title": "экран: целевые вопросы ×3, с судьёй", "kind": "contour", "run": "targets", "judge": true, "rule": { "type": "each_turn_at_least", "passes": 2 } },
+    { "id": "holdout", "title": "экран: отложенные вопросы ×3", "kind": "contour", "run": "holdout", "rule": { "type": "not_below_base" } },
+    { "id": "offtopic", "title": "экран: не по теме и попытки сломать", "kind": "contour", "run": "offtopic", "rule": { "type": "all" } },
+    { "id": "quality", "title": "фиксированные карточки ×3, автопроверки", "kind": "quality", "rule": { "type": "not_below_base" } },
+    { "id": "quality_judge", "title": "фиксированные карточки, с судьёй (первый повтор)", "kind": "quality", "judge": true, "judgeRepeats": 1, "rule": { "type": "not_below_base" } },
+    { "id": "slice_offtopic", "title": "срез offtopic", "kind": "slice", "slice": "offtopic", "rule": { "type": "all" } },
+    { "id": "slice_osm_intents", "title": "срез osm_intents (фильтр совпал с ожидаемым)", "kind": "slice", "slice": "osm_intents", "rule": { "type": "share_at_least", "passes": 9, "of": 10 } },
+    { "id": "slice_toponyms", "title": "срез toponyms", "kind": "slice", "slice": "toponyms", "rule": { "type": "share_at_least", "passes": 8, "of": 15 } },
+    { "id": "slice_rag_answers", "title": "срез rag_answers", "kind": "slice", "slice": "rag_answers", "rule": { "type": "not_below_base" } },
+    { "id": "slice_site", "title": "срез site", "kind": "slice", "slice": "site", "rule": { "type": "report_only" } },
+    { "id": "slice_translations", "title": "срез translations", "kind": "slice", "slice": "translations", "rule": { "type": "report_only" } },
+    { "id": "slice_wikivoyage", "title": "срез wikivoyage", "kind": "slice", "slice": "wikivoyage", "rule": { "type": "report_only" } }
+  ]
+}

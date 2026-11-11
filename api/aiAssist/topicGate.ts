@@ -131,10 +131,32 @@ const TRAVEL_SIGNAL_RE = re(
   'падарож', 'паездк', 'вандроўк', 'падарожж', 'подорож', 'поїздк', 'мандр',
   'podróż', 'wycieczk', 'zwiedz', 'szlak', 'wakacj', 'urlop', 'muzeum', 'zamek', 'zamk', 'sanatori',
   'travel', 'trip(?![\\p{L}])', 'hiking', 'hike', 'sightseeing', 'vacation', 'holiday', 'visit', 'museum', 'castle', 'route', 'hotel', 'resort',
+  // #3270: снаряжение, сборы и ночёвка — вопрос о поездке без слова «поездка».
+  'рюкзак', 'палатк', 'спальник', 'спальн\\p{L}*\\s+мешк', 'чемодан', 'багаж', 'налегке', 'снаряжен', 'ночёвк',
+  'заплечнік', 'рукзак', 'намёт', 'валіз', 'начлег', 'начоўк', 'налёгку', 'рыштунак', 'паход',
+  'намет', 'ночівл', 'спорядженн', 'похід',
+  'plecak', 'namiot', 'walizk', 'bagaż', 'nocleg', 'śpiw[oó]r', 'biwak', 'kemping', 'ekwipun',
+  'backpack', 'daypack', 'rucksack', 'overnight', 'tents?(?![\\p{L}])', 'luggage', 'suitcase', 'pack(?:ing)?\\s+(?:light|list|for)',
+  'camping', 'campsite', 'sleeping\\s+bag', 'city\\s+break', 'getaway', 'journey', 'trek(?:king|s)?(?![\\p{L}])',
+  // Дорога и жильё: поезд, самолёт, вокзал, заселение.
+  'самол[её]т', 'перел[её]т', 'вокзал', 'заселен', 'цягнік', 'самал[её]т', 'гатэл', 'потяг', 'літак', 'готел',
+  'pociąg', 'dworz[ea]c', 'dworc', 'samolot', 'lotnisk',
+  // «train» — ещё и глагол («train for a marathon»): поезд — только во множественном числе или в сочетании.
+  'flight', 'airport', 'trains(?![\\p{L}])', '(?:by|night|overnight|sleeper)\\s+train', 'train\\s+(?:station|tickets?|ride|trip|journey)',
+  'hostel', 'accommodation', 'check-in',
 )
-/** Слово с большой буквы после предлога; вежливое «у Вас» местом не считается. */
+/**
+ * Слово с большой буквы после предлога; вежливое «у Вас» местом не считается. Предлог в начале
+ * фразы пишется с заглавной («В Катовице мы без машины», «По Дрездену…») — это тот же предлог
+ * (#3270); флаг `i` сюда нельзя: он снял бы и требование заглавной у названия места.
+ */
+// «Do» с заглавной — ещё и английский вспомогательный глагол: «Do Americans vote for the president?»
+// поездкой не становится. Польское «Do Zakopanego…» в начале фразы остаётся без этого признака.
+const NOT_CAPITALIZED = new Set(['do'])
+const withCapitalized = (prepositions: string): string =>
+  prepositions.split('|').flatMap((word) => (NOT_CAPITALIZED.has(word) ? [word] : [word, word[0].toLocaleUpperCase() + word.slice(1)])).join('|')
 const placeAfter = (prepositions: string): RegExp =>
-  new RegExp(`(?<![\\p{L}])(?:${prepositions})\\s+(?!(?:Вас|Вам|Вами|Ваш\\p{L}*)(?![\\p{L}]))\\p{Lu}\\p{Ll}{2,}`, 'u')
+  new RegExp(`(?<![\\p{L}])(?:${withCapitalized(prepositions)})\\s+(?!(?:Вас|Вам|Вами|Ваш\\p{L}*)(?![\\p{L}]))\\p{Lu}\\p{Ll}{2,}`, 'u')
 /** Где: «в Кракове», «под Гродно», «w Gdańsku», «in Vilnius» — признак поездки. */
 const PLACE_AFTER_PREPOSITION_RE = placeAfter('в|во|из|по|под|до|около|возле|у|ў|w|we|z|do|pod|in|to|from|near|around')
 /**

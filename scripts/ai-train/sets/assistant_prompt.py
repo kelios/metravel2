@@ -22,6 +22,11 @@ FIXTURE = Path(__file__).resolve().parent.parent / "assistant_prompt.json"
 # Questions of the assistant eval contour (#2710): held out by construction (#2731).
 CONTOUR_CASES = Path(__file__).resolve().parents[2] / "ai-assistant-eval" / "cases.jsonl"
 REQUIRED_CASES = ("cases.jsonl", "cases.quality.jsonl", "cases.complex.jsonl")
+# Slices eval.py scores (eval_prompts/<set>.jsonl). The skill slices are built from the sets' own valid/test
+# records or written by hand, so their questions must stay out of the TRAIN split (#3267); site, toponyms,
+# translations and wikivoyage ask for knowledge the sets teach on purpose and are only hashed.
+EVAL_PROMPTS = Path(__file__).resolve().parents[1] / "eval_prompts"
+SKILL_SLICES = ("offtopic", "osm_intents", "rag_answers")
 LOCALES = ("ru", "be", "uk", "pl", "en")
 SOURCE_TYPE_RU = {"travel": "Статья", "quest": "Квест"}
 TITLE_MAX = 160
@@ -35,11 +40,18 @@ _contour: set[str] | None = None
 _references: set[str] = set()
 _fixture_markers: set[str] = set()
 _holdout_hashes: dict[str, str] = {}
+_slice_questions: set[str] | None = None
+_slice_hashes: dict[str, str] = {}
 
 
 def _norm_question(text: str) -> str:
     text = unicodedata.normalize("NFKC", _HIDDEN_RE.sub(" ", str(text))).casefold().replace("ё", "е")
     return " ".join(re.findall(r"\w+", text))
+
+
+def norm_question(text: str) -> str:
+    """Case-, punctuation- and ё-insensitive form of a question — the one comparison of every held-out check."""
+    return _norm_question(text)
 
 
 def _load_holdouts() -> None:
@@ -107,10 +119,55 @@ def _load_holdouts() -> None:
     _contour = questions
 
 
+def _visitor_question(content: str) -> str:
+    """The visitor's question of an assistant-mode message; a message without cards is the question itself."""
+    return re.split(r"Вопрос посетителя:", content, flags=re.IGNORECASE)[-1]
+
+
+def _load_eval_slices() -> None:
+    global _slice_questions, _slice_hashes
+    if _slice_questions is not None:
+        return
+    questions, hashes = set(), {}
+    for name in SKILL_SLICES:
+        if not (EVAL_PROMPTS / f"{name}.jsonl").is_file():
+            raise ValueError(f"missing required evaluation slice: {EVAL_PROMPTS / f'{name}.jsonl'}")
+    for file in sorted(EVAL_PROMPTS.glob("*.jsonl")):
+        raw = file.read_bytes()
+        hashes[f"eval_prompts/{file.name}"] = hashlib.sha256(raw).hexdigest()
+        if file.stem not in SKILL_SLICES:
+            continue
+        rows = 0
+        for line in raw.decode("utf-8").splitlines():
+            if not line.strip():
+                continue
+            case = json.loads(line)
+            if not isinstance(case, dict) or not isinstance(case.get("prompt"), str) or not _norm_question(_visitor_question(case["prompt"])):
+                raise ValueError(f"invalid evaluation prompt in {file}")
+            questions.add(_norm_question(_visitor_question(case["prompt"])))
+            rows += 1
+        if not rows:
+            raise ValueError(f"empty required evaluation slice: {file}")
+    _slice_hashes = hashes
+    _slice_questions = questions
+
+
+def eval_slice_violation(messages: list[dict]) -> str | None:
+    """For the TRAIN split only: a question of a skill slice (offtopic, osm_intents, rag_answers) in training.
+    The slices' prompts come from valid/test records, where the same question is expected; they are held out
+    by the entity split, and a changed seed, share or record key would move them into train without a word."""
+    _load_eval_slices()
+    for message in messages:
+        if message["role"] == "user" and _norm_question(_visitor_question(message["content"])) in _slice_questions:
+            return "question of an eval_prompts skill slice in the training split"
+    return None
+
+
 def holdout_provenance() -> dict[str, str]:
     """Hashes of all protected inputs; lexical matching does not prove arbitrary paraphrase absence."""
     _load_holdouts()
-    return dict(_holdout_hashes)
+    _load_eval_slices()
+    return {**_holdout_hashes, **_slice_hashes}
 
 
 def holdout_violation(messages: list[dict]) -> str | None:
@@ -121,7 +178,7 @@ def holdout_violation(messages: list[dict]) -> str | None:
         if "/eval-fixture-" in content.casefold() or any(marker in normalized for marker in _fixture_markers):
             return "controlled evaluation fixture reused"
         if message["role"] == "user":
-            question = re.split(r"Вопрос посетителя:", content, flags=re.IGNORECASE)[-1]
+            question = _visitor_question(content)
             if is_contour_question(question):
                 return "held-out evaluation question reused"
         if message["role"] == "assistant" and normalized in _references:

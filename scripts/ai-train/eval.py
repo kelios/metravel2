@@ -31,16 +31,25 @@ or external link and no degenerate loop. The v2 slices (#2477–#2479) add:
     material and must not pretend), the prompt's language, no degenerate
     loop, `accept` regexes if given;
   * expect=json (osm_intents) — the first {…} in the answer parses and passes
-    sets.osm_intents.validate_filter() (osm_filter_schema.json), `accept`
-    regexes if given.
+    sets.osm_intents.validate_filter() (osm_filter_schema.json). With an
+    `expected` filter (#3267) the parsed object is compared with it: the same
+    set of categories, the radius when the question names one, the centre
+    (null, or a regex over center.name — the nominative the map can geocode)
+    and the same set of switched-on constraints. Without `expected`: `accept`
+    regexes and none of `reject`. `pass_accept` keeps the earlier, weaker
+    measure (schema + `accept`) next to `pass`, so old and new numbers compare.
 The assistant-mode slices (#2712) carry the screen's own system prompt in the
 prompt's `system` field (assistant_prompt.json) and the cards in `prompt`:
   * expect=rag (rag_answers) — at least one known URL, none unknown or
-    external, at most `max_urls` distinct URLs (default 3), the prompt's
-    language, no degenerate loop and none of the `reject` regexes (the site
-    set's article template «Страна: / Точки маршрута:»);
+    external, every URL is one of the prompt's cards, at most `max_urls`
+    distinct URLs (default 3), the prompt's language, no degenerate loop and
+    none of the `reject` regexes (the site set's article template «Страна: /
+    Точки маршрута:»); the `no_material` group also has to say that the site
+    has no such material;
   * expect=offtopic — the refusal of assistant_prompt.json (the model names
-    itself the metravel.by assistant) and no URL at all.
+    itself the metravel.by assistant), no URL at all and nothing but the
+    refusal: an answer longer than 1.5× the locale's refusal phrase goes on
+    to answer the foreign topic.
 Factual accuracy, tone and the quality of a translation (Russian words inside
 a Belarusian answer pass the letter check) are still read by a human — the
 report leaves a column for that.
@@ -58,12 +67,26 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+from sets.assistant_prompt import offtopic_reply  # noqa: E402
 from sets.common import SITE, SYSTEM  # noqa: E402
 from sets.osm_intents import extract_json, validate_filter  # noqa: E402
 
-URL_RE = re.compile(r"https?://[^\s)\]>»\"']+")
+EXPECTS = ("answer", "refuse", "lang", "exact", "info", "json", "rag", "offtopic")
+# The same address rules as scripts/ai-assistant-eval/checks.mjs: a full URL, a bare metravel.by/… path and a
+# bare www.… host are links; trailing punctuation and markdown emphasis are not part of the address.
+URL_RE = re.compile(r"\bhttps?://[^\s<>()\[\]\"'«»]+", re.I)
+BARE_SITE_RE = re.compile(r"(?<![\w/.@])(?:www\.)?metravel\.by/[^\s<>()\[\]\"'«»]*", re.I)
+BARE_WWW_RE = re.compile(r"(?<![\w/.@])www\.(?!metravel\.by\b)[a-z0-9-]+(?:\.[a-z0-9-]+)+[^\s<>()\[\]\"'«»]*", re.I)
+URL_TAIL = ".,;:!?…»\"')]*_/"
+OFFTOPIC_MAX_RATIO = 1.5
 OFFTOPIC_RE = re.compile(r"(?:ассистент|асістэнт|асистент|asystent\w*|assistant)\s+metravel\.by|metravel\.by\s+(?:travel\s+)?assistant", re.I)
-REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего)|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
+# «Нет ничего лучше прогулки» is praise, not a refusal: «ничего» followed by a comparative does not count.
+REFUSE_RE = re.compile(r"(пока\s+)?нет\s+(материал|стат|квест|ничего(?!\s+(?:\w+(?:ее|ей)|лучше|хуже|проще|краше|дороже|слаще)\b))"
+                       r"|не\s+нашл|нет\s+информации|brak\s+materia|nie\s+ma(my)?\s+(materia|artyku)", re.I)
+# The admission of rag_answers' `no_material` references in either word order: «Материалов о … в карточках нет»,
+# «На сайте пока нет материалов …», «…у нас пока ничего нет».
+NO_MATERIAL_RE = re.compile(r"(?:материал|стат[ьей]|квест)\w*[^.!?;\n]{0,120}?(?<!\w)(?:нет|не\s+найден\w*|отсутству\w*)(?!\w)"
+                            r"|ничего\s+(?:пока\s+)?нет(?!\w)", re.I)
 THINK_RE = re.compile(r"<think>.*?</think>\s*", re.S)
 LETTER_RE = re.compile(r"[^\W\d_]")
 DEGENERATE_RE = re.compile(r"([^\W\d_])\1{5,}")
@@ -104,6 +127,8 @@ def load_prompts(files: list[Path]) -> list[dict]:
             p = {**json.loads(line), "slice": f.stem}
             if (p["slice"], p["id"]) in seen:
                 raise SystemExit(f"{f}: duplicate prompt id {p['id']}")
+            if p.get("expect") not in EXPECTS:
+                raise SystemExit(f"{f}: prompt {p['id']} has unknown expect {p.get('expect')!r} (one of {', '.join(EXPECTS)})")
             seen.add((p["slice"], p["id"]))
             prompts.append(p)
     return prompts
@@ -132,8 +157,17 @@ def detect_lang(text: str) -> str | None:
     return min(bad, key=lambda lang: bad[lang])
 
 
+def find_urls(text: str) -> list[str]:
+    """Addresses of a text in one form: full URLs as written, bare metravel.by/… and www.… hosts with https://."""
+    rest = URL_RE.sub(" ", text)
+    found = URL_RE.findall(text)
+    found += ["https://" + re.sub(r"^www\.", "", u, flags=re.I) for u in BARE_SITE_RE.findall(rest)]
+    found += ["https://" + u for u in BARE_WWW_RE.findall(rest)]
+    return [u.rstrip(URL_TAIL) for u in found]
+
+
 def check(answer: str, known: set[str]) -> dict:
-    found = [u.rstrip(".,;:/") for u in URL_RE.findall(answer)]
+    found = find_urls(answer)
     ours = [u for u in found if u.startswith(SITE)]
     external = [u for u in found if not u.startswith(SITE)]
     unknown = [u for u in ours if u not in known]
@@ -146,6 +180,7 @@ def check(answer: str, known: set[str]) -> dict:
         "lang": detect_lang(answer),
         "degenerate": bool(DEGENERATE_RE.search(URL_RE.sub(" ", answer))),
         "json_ok": (lambda obj: obj is not None and not validate_filter(obj))(extract_json(answer)),
+        "no_material": bool(REFUSE_RE.search(answer) or NO_MATERIAL_RE.search(answer)),
     }
 
 
@@ -156,8 +191,41 @@ def matches(answer: str, patterns: list[str] | None) -> bool:
     return all(re.search(p, answer, re.I | re.M) for p in patterns or [])
 
 
+def filter_matches(obj, expected: dict) -> bool:
+    """The parsed map filter against the case's `expected` (#3267). Regexes over the answer text let a
+    filter with every category and all four constraints pass; here the object itself is compared:
+    the set of categories, the set of switched-on constraints, `radius_km` when the question names a
+    number, and the centre by the start of its name. The centre is a place, not a spelling: «Ліды» or
+    «Познани» resolve to the same city in the geocoder and pass, another name («Новоградок» for
+    Новогрудок) does not."""
+    if not isinstance(obj, dict) or not isinstance(obj.get("categories"), list):
+        return False
+    if set(map(str, obj["categories"])) != set(expected["categories"]):
+        return False
+    if "radius_km" in expected and obj.get("radius_km") != expected["radius_km"]:
+        return False
+    centre = obj.get("center")
+    if expected.get("center") is None:
+        if centre is not None:
+            return False
+    elif not (isinstance(centre, dict) and isinstance(centre.get("name"), str)
+              and re.search(expected["center"], centre["name"].strip(), re.I)):
+        return False
+    constraints = obj.get("constraints") if isinstance(obj.get("constraints"), dict) else {}
+    return {k for k, v in constraints.items() if v is True} == set(expected.get("constraints") or [])
+
+
+def verdict_accept(p: dict, c: dict, answer: str) -> bool:
+    """The measure of the osm_intents slice before #3267 (schema + `accept` regexes); every other slice — verdict()."""
+    if p["expect"] == "json":
+        return not c["external"] and not c["urls_unknown"] and c["json_ok"] and matches(answer, p.get("accept"))
+    return verdict(p, c, answer)
+
+
 def verdict(p: dict, c: dict, answer: str) -> bool:
     expect, lang = p["expect"], p.get("lang")
+    if expect not in EXPECTS:
+        raise SystemExit(f"prompt {p.get('id')}: unknown expect {expect!r} (one of {', '.join(EXPECTS)})")
     if c["external"] or c["urls_unknown"]:
         return False
     if expect == "lang":
@@ -170,12 +238,20 @@ def verdict(p: dict, c: dict, answer: str) -> bool:
         return (not c["urls"] and len(answer) >= INFO_MIN_CHARS and not c["degenerate"]
                 and (not lang or c["lang"] == lang) and matches(answer, p.get("accept")))
     if expect == "json":
-        return c["json_ok"] and matches(answer, p.get("accept"))
+        if not c["json_ok"]:
+            return False
+        if p.get("expected") is not None:
+            return filter_matches(extract_json(answer), p["expected"])
+        return matches(answer, p.get("accept")) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or [])
     if expect == "rag":
-        return (0 < c["urls_ok"] and len(set(c["urls"])) <= p.get("max_urls", 3) and not c["degenerate"]
-                and (not lang or c["lang"] == lang) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or []))
+        cards = set(find_urls(p.get("prompt", "")))
+        return (0 < c["urls_ok"] and all(u in cards for u in c["urls"])
+                and len(set(c["urls"])) <= p.get("max_urls", 3) and not c["degenerate"]
+                and (not lang or c["lang"] == lang) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or [])
+                and (p.get("group") != "no_material" or c["no_material"]))
     if expect == "offtopic":
-        return not c["urls"] and bool(OFFTOPIC_RE.search(answer))
+        return (not c["urls"] and bool(OFFTOPIC_RE.search(answer))
+                and len(answer.strip()) <= OFFTOPIC_MAX_RATIO * len(offtopic_reply(lang or "ru")))
     return c["urls_ok"] > 0
 
 
@@ -238,6 +314,30 @@ def generate_server(url: str, prompts: list[dict], max_tokens: int) -> tuple[lis
     return out, (toks / secs if secs else 0.0)
 
 
+def server_identity(url: str) -> str:
+    """URL plus the model the server reports: another GGUF on the same port is another source."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url.rstrip("/") + "/v1/models", timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        model = ((data.get("data") or [{}])[0].get("id") or (data.get("models") or [{}])[0].get("name") or "")
+    except Exception:  # noqa: BLE001 — an unreachable server fails at generation with its own message
+        model = ""
+    return f"{url.rstrip('/')}#{model}" if model else url.rstrip("/")
+
+
+def base_cache_valid(cached: dict | None, source: str, prompts: list[dict], max_tokens: int) -> bool:
+    """`--skip-base` reuses base.json only for the same engine and model, the same prompts with the same
+    system prompts and the same max_tokens — otherwise the 'base' column would be an older run."""
+    if not cached:
+        return False
+    return (cached.get("source") == source and cached.get("max_tokens") == max_tokens
+            and cached.get("prompts") == [p["prompt"] for p in prompts]
+            and cached.get("systems") == [p.get("system", SYSTEM) for p in prompts]
+            and len(cached.get("answers") or []) == len(prompts))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ai-home", default=None, help="training folder (default: $AI_HOME)")
@@ -262,39 +362,45 @@ def main() -> int:
     known = known_urls(home / "data" / "raw")
 
     base_file = out / "base.json"
-    base_source = args.base_server or args.model  # which engine produced the cached base answers
+    # which engine and model produced the cached base answers
+    base_source = server_identity(args.base_server) if args.base_server else args.model
     cached = json.loads(base_file.read_text(encoding="utf-8")) if args.skip_base and base_file.exists() else None
     texts = [p["prompt"] for p in prompts]
-    if (cached and cached.get("source", args.model) == base_source
-            and len(cached["answers"]) == len(prompts) and cached.get("prompts", texts) == texts):
+    if base_cache_valid(cached, base_source, prompts, args.max_tokens):
         base_ans, base_tps = cached["answers"], cached["tps"]
     else:
         if cached:
-            print(f"== base.json is from {cached.get('source', args.model)} or another prompt set, regenerating for {base_source}", file=sys.stderr)
+            print(f"== base.json is from {cached.get('source', args.model)}, another prompt set, system prompt or max_tokens; regenerating for {base_source}", file=sys.stderr)
         print("== base", base_source, file=sys.stderr)
         if args.base_server:
             base_ans, base_tps = generate_server(args.base_server, prompts, args.max_tokens)
         else:
             base_ans, base_tps = generate_all(str(home / args.model), None, prompts, args.max_tokens)
-        base_file.write_text(json.dumps({"source": base_source, "prompts": texts, "answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
+        base_file.write_text(json.dumps({"source": base_source, "max_tokens": args.max_tokens, "prompts": texts,
+                                         "systems": [p.get("system", SYSTEM) for p in prompts],
+                                         "answers": base_ans, "tps": base_tps}, ensure_ascii=False), encoding="utf-8")
     print("== adapter", args.server or args.adapter, file=sys.stderr)
     if args.server:
         ad_ans, ad_tps = generate_server(args.server, prompts, args.max_tokens)
     else:
         ad_ans, ad_tps = generate_all(str(home / args.model), str(home / args.adapter), prompts, args.max_tokens)
 
-    rows, totals, slices = [], {"base": {}, "v": {}}, {"base": {}, "v": {}}
+    rows, totals, slices, slices_accept = [], {"base": {}, "v": {}}, {"base": {}, "v": {}}, {"base": {}, "v": {}}
     with (out / "results.jsonl").open("w", encoding="utf-8") as fh:
         for p, b, a in zip(prompts, base_ans, ad_ans):
             cb, ca = check(b, known), check(a, known)
-            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p, cb, b)},
-                   "adapter": {"answer": a, **ca, "pass": verdict(p, ca, a)}}
+            row = {**p, "base": {"answer": b, **cb, "pass": verdict(p, cb, b), "pass_accept": verdict_accept(p, cb, b)},
+                   "adapter": {"answer": a, **ca, "pass": verdict(p, ca, a), "pass_accept": verdict_accept(p, ca, a)}}
             rows.append(row)
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
             for side, key in (("base", "base"), ("v", "adapter")):
                 for table, name in ((totals, f"{p['slice']} / {p['group']}"), (slices, p["slice"])):
                     g = table[side].setdefault(name, [0, 0])
                     g[0] += int(row[key]["pass"])
+                    g[1] += 1
+                if p["expect"] == "json":  # the earlier measure next to the exact one, #3267
+                    g = slices_accept[side].setdefault(p["slice"], [0, 0])
+                    g[0] += int(row[key]["pass_accept"])
                     g[1] += 1
 
     def cell(r: dict) -> str:
@@ -319,6 +425,9 @@ def main() -> int:
         md += [f"| {title} | база | адаптер |", "| --- | --- | --- |"]
         for g in table["v"]:
             md.append(f"| {g} | {table['base'][g][0]}/{table['base'][g][1]} | {table['v'][g][0]}/{table['v'][g][1]} |")
+            if table is slices and g in slices_accept["v"]:
+                old = slices_accept
+                md.append(f"| {g} — прежняя метрика (схема + accept) | {old['base'][g][0]}/{old['base'][g][1]} | {old['v'][g][0]}/{old['v'][g][1]} |")
         md.append("")
     md += ["| id | срез | группа | вопрос | ожидание | база | адаптер | ручная оценка |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for r in rows:
@@ -327,7 +436,8 @@ def main() -> int:
     for r in rows:
         md += [f"### {r['id']} — {r['prompt']}", "", "**База:**", "", r["base"]["answer"] or "_(пусто)_", "", f"**{args.adapter}:**", "", r["adapter"]["answer"] or "_(пусто)_", ""]
     (out / "report.md").write_text("\n".join(md), encoding="utf-8")
-    print(json.dumps({"base_tps": round(base_tps, 1), "adapter_tps": round(ad_tps, 1), "slices": slices, "totals": totals}, ensure_ascii=False), file=sys.stderr)
+    print(json.dumps({"base_tps": round(base_tps, 1), "adapter_tps": round(ad_tps, 1), "slices": slices,
+                      "slices_accept": slices_accept, "totals": totals}, ensure_ascii=False), file=sys.stderr)
     print(out / "report.md")
     return 0
 

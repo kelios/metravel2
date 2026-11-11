@@ -1,0 +1,34 @@
+{"id": "v5bd01", "group": "borderline", "lang": "ru", "q": "Собираюсь ночевать в палатке: что взять поесть без холодильника?", "expect": "any_on_topic"}
+{"id": "v5bd02", "group": "borderline", "lang": "ru", "q": "Еду налегке на субботу и воскресенье. Как сократить содержимое рюкзака?", "expect": "any_on_topic"}
+{"id": "v5bd03", "group": "borderline", "lang": "ru", "q": "Как сберечь бюджет во время короткой поездки в другой город?", "expect": "any_on_topic"}
+{"id": "v5bd04", "group": "borderline", "lang": "en", "q": "Which meals keep well in a backpack during an overnight walk?", "expect": "any_on_topic"}
+{"id": "v5bd05", "group": "borderline", "lang": "en", "q": "How can I manage a two-night city visit with just a small daypack?", "expect": "any_on_topic"}
+{"id": "v5bd06", "group": "borderline", "lang": "en", "q": "What would make a first short city break cheaper and easier?", "expect": "any_on_topic"}
+{"id": "v5ln01", "group": "languages", "lang": "be", "q": "Падкажы да трох гарадскіх квэстаў у Мінску з кароткімі спасылкамі, калі ласка.", "expect": "answer", "expect_sources": {"pattern": "мінск|минск", "min": 1}}
+{"id": "v5ln02", "group": "languages", "lang": "uk", "q": "Порадь три матеріали для дводенної прогулянки Краковом і дай посилання.", "expect": "answer", "expect_sources": {"pattern": "крак[оі]|krak", "min": 1}}
+{"id": "v5ln03", "group": "languages", "lang": "pl", "q": "Podaj najwyżej trzy questy w Grodnie, każdy z odnośnikiem.", "expect": "answer", "expect_sources": {"pattern": "grodn|гродн", "min": 1}}
+{"id": "v5ln04", "group": "languages", "lang": "en", "q": "Please pick at most three Minsk quests and include a link for each.", "expect": "answer", "expect_sources": {"pattern": "minsk|мінск|минск", "min": 1}}
+{"id": "h11", "group": "on_topic", "lang": "ru", "q": "В Лодзи будем всего один день и без машины. Что посмотреть?", "expect": "answer", "expect_sources": {"pattern": "лодз", "min": 2}}
+{"id": "h12", "group": "on_topic", "lang": "ru", "q": "В Катовице мы без машины. Куда сходить?", "expect": "answer", "expect_sources": {"pattern": "катовиц|никишов", "min": 2}}
+{"id": "h13", "group": "on_topic", "lang": "ru", "q": "По Дрездену нужно не больше двух вариантов. Что посоветуешь?", "expect": "answer", "expect_sources": {"pattern": "дрезден", "min": 1}}
+{"id": "h14", "group": "on_topic", "lang": "ru", "q": "По Мозырю интересуют только квесты, статьи не предлагай. Что у вас есть?", "expect": "answer", "expect_sources": {"pattern": "мозыр", "min": 1, "type": "quest"}}
+{"id": "h15", "group": "on_topic", "lang": "ru", "q": "Мы в Берлине на выходные. Есть прогулка с заданиями, а не просто список достопримечательностей?", "expect": "answer", "expect_sources": {"pattern": "берлин", "min": 1}}
+{"id": "h16", "group": "on_topic", "lang": "ru", "q": "Собираемся в Заславль на полдня, без ночёвки. Чем там заняться?", "expect": "answer", "expect_sources": {"pattern": "заславл", "min": 1}}
+{"id": "h17", "group": "on_topic", "lang": "ru", "q": "Калининград зимой на три дня — что посмотреть?", "expect": "answer", "expect_sources": {"pattern": "калининград", "min": 1}}
+{"id": "h18", "group": "languages", "lang": "be", "q": "Едзем у Полацк на суботу. Што там варта прайсці пешшу?", "expect": "answer", "expect_sources": {"pattern": "полац|полоц", "min": 1}}
+{"id": "h19", "group": "languages", "lang": "be", "q": "Ці ёсць у вас квэст па Навагрудку? Хочам прайсці яго за паўдня.", "expect": "answer", "expect_sources": {"pattern": "навагруд|новогруд", "min": 1, "type": "quest"}}
+{"id": "h20", "group": "languages", "lang": "uk", "q": "Будемо в Любліні лише один вечір. Що встигнемо пройти?", "expect": "answer", "expect_sources": {"pattern": "люблін|люблин", "min": 1}}
+{"id": "h21", "group": "languages", "lang": "uk", "q": "Шукаю квест у Торуні для компанії друзів, не більше двох варіантів.", "expect": "answer", "expect_sources": {"pattern": "торун", "min": 1, "type": "quest"}}
+{"id": "h22", "group": "languages", "lang": "pl", "q": "Wybieramy się do Poznania bez samochodu. Co polecacie na spacer po mieście?", "expect": "answer", "expect_sources": {"pattern": "pozna|познан", "min": 1}}
+{"id": "h23", "group": "languages", "lang": "pl", "q": "Macie jakiś quest w Białymstoku? Wystarczy jedna propozycja z linkiem.", "expect": "answer", "expect_sources": {"pattern": "białymstok|białystok|белосток", "min": 1, "type": "quest"}}
+{"id": "h24", "group": "languages", "lang": "en", "q": "We have one afternoon in Tallinn. Which walk would you suggest?", "expect": "answer", "expect_sources": {"pattern": "tallinn|таллин", "min": 1}}
+{"id": "h25", "group": "languages", "lang": "en", "q": "Only quests, please: what do you have for Budapest?", "expect": "answer", "expect_sources": {"pattern": "budapest|будапешт", "min": 1, "type": "quest"}}
+{"id": "h26", "group": "multi_turn", "lang": "ru", "turns": ["Будем в Варшаве проездом. Какие там есть квесты?", "А что из этого подойдёт детям?"], "expect": ["answer", "answer"], "expect_sources": {"pattern": "варшав", "min": 2, "type": "quest"}}
+{"id": "h27", "group": "multi_turn", "lang": "ru", "turns": ["Выбираем квест во Вроцлаве на воскресенье. Что у вас есть?", "А покороче есть? У нас всего часа полтора."], "expect": ["answer", "answer"], "expect_sources": {"pattern": "вроцлав", "min": 2, "type": "quest"}}
+{"id": "h28", "group": "multi_turn", "lang": "ru", "turns": ["Едем в Барановичи на субботу. Какие квесты там можно пройти?", "А какой из них самый длинный?"], "expect": ["answer", "answer"], "expect_sources": {"pattern": "баранович", "min": 2, "type": "quest"}}
+{"id": "h29", "group": "multi_turn", "lang": "uk", "turns": ["Збираємося до Пінська на вихідні. Які квести там є?", "А що з цього підійде дітям?"], "expect": ["answer", "answer"], "expect_sources": {"pattern": "пінськ|пинск", "min": 1, "type": "quest"}}
+{"id": "h30", "group": "borderline", "lang": "ru", "q": "Приезжаем глубокой ночью, а заселение только с двух часов дня. Как переждать это время с вещами?", "expect": "any_on_topic"}
+{"id": "h31", "group": "borderline", "lang": "ru", "q": "Что выгоднее на семью из четырёх человек — снять квартиру или два номера в гостинице?", "expect": "any_on_topic"}
+{"id": "h32", "group": "borderline", "lang": "pl", "q": "Jedziemy nocnym pociągiem z dwójką małych dzieci. Jak się przygotować, żeby wszyscy się wyspali?", "expect": "any_on_topic"}
+{"id": "h33", "group": "no_material", "lang": "ru", "q": "Летим в Сингапур на четыре дня. У вас есть что-нибудь по нему?", "expect": "no_material"}
+{"id": "h34", "group": "no_material", "lang": "ru", "q": "Планируем трекинг в Непале. Найдётся ли на сайте что-то про Катманду и окрестности?", "expect": "no_material"}

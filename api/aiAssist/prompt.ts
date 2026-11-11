@@ -8,6 +8,7 @@
  * потом не пропускает в ответ ни одного адреса вне этого блока.
  */
 
+import { AI_PROMPT_SOURCES_LIMIT } from './policy.ts'
 import type { AiChatMessage, AiHistoryItem, AiSource } from './types'
 
 /** Копия `SYSTEM` из `scripts/ai-train/sets/common.py` — менять синхронно. */
@@ -95,7 +96,15 @@ export type BuildAssistantMessagesInput = {
   history?: readonly AiHistoryItem[]
 }
 
-/** Сообщения для `/v1/chat/completions`: system → история (≤ 6) → вопрос с карточками. */
+/**
+ * Карточки, которые уходят в подсказку модели (#3268): первые `AI_PROMPT_SOURCES_LIMIT` по порядку
+ * подбора. Одно место для экрана, службы `/ai/ask` и набора quality; список источников посетителя и
+ * страж ссылок работают с полным подбором.
+ */
+export const selectPromptSources = (sources: readonly AiSource[], limit: number = AI_PROMPT_SOURCES_LIMIT): readonly AiSource[] =>
+  sources.slice(0, Math.max(0, limit))
+
+/** Сообщения для `/v1/chat/completions`: system → история (≤ 6) → вопрос с карточками подсказки. */
 export function buildAssistantMessages({
   question,
   locale,
@@ -111,6 +120,6 @@ export function buildAssistantMessages({
   return [
     { role: 'system', content: buildSystemPrompt(locale) },
     ...trimmedHistory,
-    { role: 'user', content: buildUserMessage(question, sources) },
+    { role: 'user', content: buildUserMessage(question, selectPromptSources(sources)) },
   ]
 }

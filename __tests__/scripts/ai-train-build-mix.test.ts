@@ -134,6 +134,23 @@ describe('ai-train build_mix (#2475)', () => {
     }
   });
 
+  // Ревью #3267 (LOW-18): пересборка на месте стирала данные, на которые ссылается манифест обученного адаптера.
+  it('непустой каталог смеси не перезаписывается без --force', () => {
+    const mix = { name: 'keep', sets: { site: {} } };
+    const out = path.join(home, 'out-keep');
+    expect(run(mix, out).status).toBe(0);
+    const before = fs.readFileSync(path.join(out, 'manifest.json'), 'utf8');
+    const refused = run(mix, out);
+    expect(refused.status).not.toBe(0);
+    expect(refused.stderr).toContain('is not empty');
+    expect(refused.stderr).toContain('--force');
+    expect(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8')).toBe(before);
+    const mixFile = path.join(home, 'keep.json');
+    const forced = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', out, '--force']);
+    expect(forced.status).toBe(0);
+    expect(JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8')).built_at).not.toBe(JSON.parse(before).built_at);
+  });
+
   it('этапы с replay: доля примеров прошлых этапов в следующем', () => {
     const code = `
 import random, sys

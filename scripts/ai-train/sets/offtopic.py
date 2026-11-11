@@ -15,12 +15,22 @@ Kinds: cooking, coding, politics, medicine, finance, study, chitchat, injection 
 the categories of topicGate.ts, so the eval contour (#2710) reports both layers
 on the same split. Key is the question template: its card variants stay on one
 side of the split.
+
+Options (mixes/*.yaml → sets.offtopic.options):
+  variants — card variants per Russian question (default 3);
+  edition  — 1 (default, the sets of v3–v7 bit for bit): the key is the question's position in its
+             tuple, so inserting a question shifts the keys after it and with them the split;
+             2 (#3267): the key is a hash of the question itself, and the questions of
+             eval_prompts/offtopic.jsonl are skipped — the slice eval.py scores stays held out
+             whatever the split does.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import random
 
-from sets.assistant_prompt import fit_sources, is_contour_question, offtopic_reply, system_prompt
+from sets.assistant_prompt import EVAL_PROMPTS, fit_sources, is_contour_question, norm_question, offtopic_reply, system_prompt
 from sets.common import record
 from sets.rag_answers import quest_card, travel_card
 from sets.site import load_raw
@@ -87,9 +97,20 @@ QUESTIONS = {
 }
 
 
+def held_out_questions() -> frozenset[str]:
+    """Normalised visitor questions of the frozen eval slice (edition 2 never builds a sample from them)."""
+    path = EVAL_PROMPTS / f"{NAME}.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return frozenset(norm_question(row["prompt"].split("Вопрос посетителя:")[-1]) for row in rows)
+
+
 def build(ctx: dict, options: dict) -> list[dict]:
     rng = random.Random(f"{ctx['seed']}:{NAME}")
     variants = int(options.get("variants", VARIANTS))
+    edition = int(options.get("edition", 1))
+    if edition not in (1, 2):
+        raise ValueError("offtopic edition must be 1 or 2")
+    held_out = held_out_questions() if edition >= 2 else frozenset()
     travels_raw, quests_raw = load_raw(ctx["raw"])
     cards = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
     cards += [quest_card(q) for q in quests_raw if q.get("quest_id") and q.get("title") and q.get("city_alias")]
@@ -97,8 +118,10 @@ def build(ctx: dict, options: dict) -> list[dict]:
     for lang, by_kind in QUESTIONS.items():
         for kind, questions in by_kind.items():
             for i, question in enumerate(questions):
-                if is_contour_question(question):
+                if is_contour_question(question) or norm_question(question) in held_out:
                     continue
+                key = (f"offtopic:{lang}:{kind}:q{hashlib.sha256(norm_question(question).encode('utf-8')).hexdigest()[:12]}"
+                       if edition >= 2 else f"offtopic:{lang}:{kind}:{i}")
                 for v in range(variants if lang == "ru" else 2):
                     # Lexical retrieval finds something for almost any question: the refusal must hold with cards in the prompt.
                     picked = rng.sample(cards, rng.randint(1, 4))
@@ -108,7 +131,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     if user is None:
                         continue
                     out.append(record(user, offtopic_reply(lang), set_name=NAME, license=LICENSE,
-                                      kind=kind, key=f"offtopic:{lang}:{kind}:{i}", id=f"{lang}:{kind}:{i}:{v}", system=system_prompt(lang)))
+                                      kind=kind, key=key, id=f"{lang}:{kind}:{i}:{v}", system=system_prompt(lang)))
     return out
 
 

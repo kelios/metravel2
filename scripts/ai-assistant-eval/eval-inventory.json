@@ -1,0 +1,61 @@
+{
+  "note": "Опись замороженных оценочных входов (#3267). Правка любого файла меняет то, что измеряет приёмка: хеш обновляется той же правкой командой `npm run ai:assistant:accept -- --freeze`, а числа до и после несравнимы.",
+  "files": {
+    "scripts/ai-assistant-eval/JUDGE.md": {
+      "sha256": "82f2ba7ad39e60b96990a72f677529aa8f39b40db6348b30994bedbcdb8334c4"
+    },
+    "scripts/ai-assistant-eval/acceptance.thresholds.json": {
+      "sha256": "9f2821797e8bc3718d8cdd7cd6e7f78f1b64745b8d182850da8e173b2542a0a3"
+    },
+    "scripts/ai-assistant-eval/cases.complex.jsonl": {
+      "sha256": "55fbcd40920a077c6c51f9750134002b62d0e762c8b580444ca565694bdae42e",
+      "cases": 16
+    },
+    "scripts/ai-assistant-eval/cases.holdout.jsonl": {
+      "sha256": "98a7b0829b2fff2a4a02bca03e209896c81d841c23d64590a99b4e33e196da7d",
+      "cases": 34
+    },
+    "scripts/ai-assistant-eval/cases.jsonl": {
+      "sha256": "bb91f8bef3abc8d2f42b0a7cf1b03fbf08f80ebe086fd09c053ec769450cc437",
+      "cases": 70
+    },
+    "scripts/ai-assistant-eval/cases.quality.jsonl": {
+      "sha256": "add1fea929c48ff56cbcc105fd57f1ebec9ae7a92b423a02c7a3a29dc7084987",
+      "cases": 34
+    },
+    "scripts/ai-assistant-eval/fixtures.complex.json": {
+      "sha256": "58dda232563d9b9cae6b01d40bb638a03507a260b87a4a38b34e0e9a81183b2d"
+    },
+    "scripts/ai-assistant-eval/fixtures.quality.json": {
+      "sha256": "22c6cbc00634738477dec79cb5b5030c692f4c54f3a1099c008952298abc7549"
+    },
+    "scripts/ai-train/eval_prompts/offtopic.jsonl": {
+      "sha256": "98d91c36954b302d7c406d4b2201f9f1bf233b2d6c8d61a1fd9d000316144036",
+      "cases": 12
+    },
+    "scripts/ai-train/eval_prompts/osm_intents.jsonl": {
+      "sha256": "13294ccb708ca7cc3b4d5e72bc9273acae3ccb21f6120f9e77d399f2ba345bdf",
+      "cases": 44
+    },
+    "scripts/ai-train/eval_prompts/rag_answers.jsonl": {
+      "sha256": "71784a2cb8a82854eccad5e4131009ab9c79991a02a7340a7a13ecefdf34e9a3",
+      "cases": 16
+    },
+    "scripts/ai-train/eval_prompts/site.jsonl": {
+      "sha256": "8c50587b1c407d1817eb285fdd9e38aa3976750a1331747921600018d98771e7",
+      "cases": 40
+    },
+    "scripts/ai-train/eval_prompts/toponyms.jsonl": {
+      "sha256": "aa2cdb96963d6493c512f97daa86cadb0eac208050cab4fa8fc6cfcac54aeb74",
+      "cases": 15
+    },
+    "scripts/ai-train/eval_prompts/translations.jsonl": {
+      "sha256": "ddadaaf3a2e3adf502e30d482c1fabe7a46a1e6c275586428aaf10a7faf9c8c2",
+      "cases": 10
+    },
+    "scripts/ai-train/eval_prompts/wikivoyage.jsonl": {
+      "sha256": "57b62d9a90c773fd722b59b93e43c5a7e6470851ec4ed16921efba3dff1794cc",
+      "cases": 10
+    }
+  }
+}

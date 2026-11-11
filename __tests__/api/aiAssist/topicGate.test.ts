@@ -80,6 +80,62 @@ const ON_TOPIC = [
   'Как сварить кашу на костре?',
 ]
 
+// #3270: снаряжение, сборы и ночёвка — вопрос о поездке без слов «поездка» и «маршрут».
+// Английские вопросы — отложенные v5bd04–v5bd06 контура оценки.
+const GEAR_QUESTIONS: [string, string][] = [
+  ['ru', 'Еду налегке на субботу и воскресенье. Как сократить содержимое рюкзака?'],
+  ['ru', 'Что положить в чемодан на три дня?'],
+  ['ru', 'Какой спальник нужен для ночёвки в сентябре?'],
+  ['be', 'Што пакласці ў заплечнік на два дні?'],
+  ['be', 'Які намёт узяць на начлег каля ракі?'],
+  ['uk', 'Що покласти в рюкзак на дві ночі?'],
+  ['uk', 'Який намет узяти для ночівлі восени?'],
+  ['pl', 'Co spakować do plecaka na dwa dni?'],
+  ['pl', 'Jaki namiot zabrać na nocleg nad jeziorem?'],
+  ['en', 'Which meals keep well in a backpack during an overnight walk?'],
+  ['en', 'What should I put in my suitcase for three days?'],
+  ['en', 'What would make a first short city break cheaper and easier?'],
+]
+
+// #3270: предлог в начале фразы пишется с заглавной; дорога и жильё — тоже признак поездки.
+const SENTENCE_START_PLACE = [
+  'В Катовице мы без машины. Куда сходить?',
+  'По Дрездену нужно не больше двух вариантов. Что посоветуешь?',
+  'У Гданьска есть что-нибудь для детей?',
+  'W Poznaniu jesteśmy bez samochodu. Co polecacie?',
+  'In Tallinn we have one afternoon. Which walk would you suggest?',
+]
+const ROAD_AND_STAY = [
+  'Приезжаем глубокой ночью, а заселение только с двух часов дня. Как переждать это время с вещами?',
+  'Как пережить ночной перелёт с ребёнком?',
+  'Як даехаць цягніком з дзіцём?',
+  'Чи варто брати квитки на нічний потяг?',
+  'Jedziemy nocnym pociągiem z dwójką małych dzieci. Jak się przygotować, żeby wszyscy się wyspali?',
+  'How early should we be at the airport with a toddler?',
+  'Which pills help with motion sickness on a night train?',
+]
+
+// Мягкая чужая тема со словом о снаряжении остаётся вопросом о поездке, без него — отказ.
+const SOFT_WITHOUT_TRIP = [
+  'Дай рецепт борща',
+  'Як зварыць боршч?',
+  'Як приготувати вареники?',
+  'Jak ugotować owsiankę?',
+  'What is the best treatment for flu?',
+  'У меня болит голова, какие таблетки выпить?',
+  // «tentative», «packet», «journal» не становятся признаком поездки по началу слова.
+  'What is a tentative diagnosis and its treatment?',
+  'Recipe for a packet of instant noodles',
+  // «training» — не поезд; вежливое «У Вас» и «анекдот про Лукашенко» по-прежнему не место.
+  'What treatment helps after training too hard?',
+  // «Do» в начале английского вопроса — не предлог перед местом.
+  'Do Americans vote for the president?',
+  'Do Republicans win elections?',
+  // «train» как глагол — не поезд.
+  'How do I train for a marathon with flu medication?',
+  'У Вас есть рецепт борща?',
+]
+
 describe('topicGate (#2711)', () => {
   it.each(OFF_TOPIC)('«%s» — не по теме (%s)', (question, reason) => {
     expect(classifyQuestion(question)).toEqual({ offTopic: true, reason })
@@ -87,6 +143,28 @@ describe('topicGate (#2711)', () => {
 
   it.each(ON_TOPIC)('«%s» — по теме', (question) => {
     expect(classifyQuestion(question)).toEqual({ offTopic: false })
+  })
+
+  it.each(GEAR_QUESTIONS)('[%s] «%s» — признак поездки по снаряжению и ночёвке (#3270)', (_lang, question) => {
+    expect(hasTravelSignal(question)).toBe(true)
+    expect(classifyQuestion(question)).toEqual({ offTopic: false })
+    // Отказ модели на такой вопрос — «материала нет», а не «не по теме».
+    expect(judgeModelReply(question, ru['ask.offTopic'], 0)).toBe('no_material')
+  })
+
+  it.each([...SENTENCE_START_PLACE, ...ROAD_AND_STAY])('«%s» — признак поездки: место после предлога в начале фразы, дорога и жильё (#3270)', (question) => {
+    expect(hasTravelSignal(question)).toBe(true)
+    expect(judgeModelReply(question, ru['ask.offTopic'], 0)).toBe('no_material')
+  })
+
+  it.each(SOFT_WITHOUT_TRIP)('«%s» — мягкая чужая тема без поездки по-прежнему отсекается (#3270)', (question) => {
+    expect(hasTravelSignal(question)).toBe(false)
+    expect(classifyQuestion(question).offTopic).toBe(true)
+  })
+
+  it('мягкая тема со снаряжением — вопрос о поездке (#3270)', () => {
+    expect(classifyQuestion('Какие таблетки положить в рюкзак?')).toEqual({ offTopic: false })
+    expect(classifyQuestion('What medicine should I pack for a camping weekend?')).toEqual({ offTopic: false })
   })
 
   it('признак поездки: слова о путешествии и место после предлога', () => {

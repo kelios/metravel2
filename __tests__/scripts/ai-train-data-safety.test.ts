@@ -149,7 +149,7 @@ describe('ai-train exact preparation and evaluation isolation', () => {
     expect(result.stderr).toContain('no controlled identities');
     for (const file of ['cases.jsonl', 'cases.quality.jsonl', 'cases.complex.jsonl']) fs.writeFileSync(path.join(directory, file), JSON.stringify({ q: `Independent ${file}` }) + '\n');
     fs.writeFileSync(path.join(directory, 'fixtures.complex.json'), JSON.stringify([{ title: 'Другой контрольный объект', url: 'https://metravel.by/travels/eval-fixture-future' }]));
-    const valid = python(`${setup}\nassert a.is_contour_question('INDEPENDENT cases.complex.jsonl!')\nassert a.holdout_violation([{'role':'user','content':'Другой контрольный объект'}])\nassert len(a.holdout_provenance()) == 4`);
+    const valid = python(`${setup}\nassert a.is_contour_question('INDEPENDENT cases.complex.jsonl!')\nassert a.holdout_violation([{'role':'user','content':'Другой контрольный объект'}])\nassert len([k for k in a.holdout_provenance() if not k.startswith('eval_prompts/')]) == 4`);
     expect(valid.stderr).toBe('');
     expect(valid.status).toBe(0);
   });
@@ -175,6 +175,151 @@ describe('ai-train exact preparation and evaluation isolation', () => {
     expect(python(`p.validate(pathlib.Path(${JSON.stringify(out)}), tokenizer, {'model':'different'}, 1024)`).stderr).toContain('does not match');
     fs.appendFileSync(path.join(out, 'train.jsonl'), JSON.stringify(row('modified')) + '\n');
     expect(python(`p.validate(pathlib.Path(${JSON.stringify(out)}), tokenizer, identity, 1024)`).stderr).toContain('hash mismatch');
+  });
+
+  // Ревью #3267 (MEDIUM-6): build_mix.py переписывает свой каталог на месте — подготовленный снимок прежней сборки
+  // проходил проверку и обучение шло на старых данных.
+  it('refuses a prepared snapshot whose source data was rebuilt or removed after preparation', () => {
+    const data = input();
+    const out = path.join(home, 'prepared');
+    const call = `p.validate(pathlib.Path(${JSON.stringify(out)}), tokenizer, identity, 1024)`;
+    expect(python(`p.prepare(pathlib.Path(${JSON.stringify(data)}), pathlib.Path(${JSON.stringify(out)}), tokenizer, identity, 1024)`).status).toBe(0);
+    expect(python(call).status).toBe(0);
+    fs.appendFileSync(path.join(data, 'train.jsonl'), JSON.stringify(row('rebuilt')) + '\n');
+    const stale = python(call);
+    expect(stale.status).not.toBe(0);
+    expect(stale.stderr).toContain('source data changed or is missing since preparation');
+    expect(stale.stderr).toContain('train.jsonl');
+    fs.rmSync(data, { recursive: true });
+    expect(python(call).stderr).toContain('source data changed or is missing since preparation');
+  });
+
+  // Ревью #3267 (MEDIUM-5): подсказки срезов-навыков eval.py — это valid/test записи наборов; в train их быть не должно.
+  it('keeps eval_prompts skill-slice questions out of the train split only, and hashes every slice', () => {
+    const result = python([
+      'slices = sorted(p.name for p in a.EVAL_PROMPTS.glob("*.jsonl"))',
+      'provenance = a.holdout_provenance()',
+      'assert [k for k in provenance if k.startswith("eval_prompts/")] == [f"eval_prompts/{name}" for name in slices], provenance',
+      'assert {"offtopic.jsonl", "osm_intents.jsonl", "rag_answers.jsonl"} <= set(slices)',
+      'cases = {name: [json.loads(line) for line in (a.EVAL_PROMPTS / f"{name}.jsonl").read_text().splitlines() if line.strip()] for name in a.SKILL_SLICES}',
+      'for name, rows in cases.items():',
+      ' for case in rows:',
+      '  assert a.eval_slice_violation([{"role": "user", "content": case["prompt"]}]), (name, case["id"])',
+      'question = cases["rag_answers"][0]["prompt"].split("Вопрос посетителя:")[-1]',
+      'assert a.eval_slice_violation([{"role": "user", "content": "Материалы сайта: другие карточки\\nВопрос посетителя: " + question.upper()}])',
+      'assert a.eval_slice_violation([{"role": "user", "content": "Независимый вопрос про павильон Зета"}]) is None',
+      // срез site спрашивает знание, которому набор учит намеренно: только хеш
+      'site = json.loads((a.EVAL_PROMPTS / "site.jsonl").read_text().splitlines()[0])',
+      'assert a.eval_slice_violation([{"role": "user", "content": site["prompt"]}]) is None',
+      'print(json.dumps({"question": question.strip()}))',
+    ].join('\n'));
+    expect(result.stderr).toBe('');
+    const { question } = JSON.parse(result.stdout);
+    const leak = { messages: [{ role: 'system', content: 'Fixture system' }, { role: 'user', content: `Материалы сайта: карточки\nВопрос посетителя: ${question}` }, { role: 'assistant', content: 'Complete target; TOKENS=64' }] };
+    const prepare = (data: string, out: string) => python(`p.prepare(pathlib.Path(${JSON.stringify(data)}), pathlib.Path(${JSON.stringify(path.join(home, out))}), tokenizer, identity, 1024)`);
+    // в valid та же запись законна — оттуда срез и взят
+    const inValid = prepare(input({ valid: [leak] }), 'prepared-valid');
+    expect(inValid.stderr).toBe('');
+    fs.rmSync(path.join(home, 'input'), { recursive: true });
+    const inTrain = prepare(input({ train: [leak] }), 'prepared-train');
+    expect(inTrain.status).not.toBe(0);
+    expect(inTrain.stderr).toContain('eval_prompts skill slice in the training split');
+  });
+
+  // Ревью #3267 (HIGH-1): v7 продолжает v4, обученную на 22 вопросах контура; проверка смотрела только данные кандидата.
+  it('walks the resumed adapter line and requires an explicit acknowledgment of held-out reuse', () => {
+    const contour = JSON.parse(fs.readFileSync(path.join(EVAL, 'cases.jsonl'), 'utf8').split('\n')[0]).q as string;
+    const adapters = path.join(home, 'adapters');
+    const write = (name: string, config: Record<string, unknown>, rows: ReturnType<typeof row>[] | null) => {
+      fs.mkdirSync(path.join(adapters, name), { recursive: true });
+      fs.writeFileSync(path.join(adapters, name, 'adapters.safetensors'), `weights of ${name}`);
+      fs.writeFileSync(path.join(adapters, name, 'adapter_config.json'), JSON.stringify(config));
+      if (rows) {
+        fs.mkdirSync(path.join(home, 'data', name), { recursive: true });
+        fs.writeFileSync(path.join(home, 'data', name, 'train.jsonl'), rows.map((value) => JSON.stringify(value)).join('\n') + '\n');
+      }
+    };
+    const dirty = row('dirty');
+    dirty.messages[1].content = `Материалы сайта: карточки\nВопрос посетителя: ${contour}`;
+    write('first', { data: 'data/first' }, [row('clean-a'), dirty, dirty]);
+    write('second', { data: 'data/second', resume_adapter_file: 'adapters/first/adapters.safetensors' }, [row('clean-b')]);
+    const cfg = (extra: Record<string, unknown> = {}) => JSON.stringify({ resume_adapter_file: 'adapters/second/adapters.safetensors', ...extra });
+    const run = (config: string) => python([
+      `home = pathlib.Path(${JSON.stringify(home)})`,
+      `cfg = json.loads(${JSON.stringify(config)})`,
+      'print(json.dumps(p.check_lineage(home, cfg), ensure_ascii=False))',
+    ].join('\n'));
+
+    const refused = run(cfg());
+    expect(refused.status).not.toBe(0);
+    expect(refused.stderr).toContain('trained on held-out evaluation inputs');
+    expect(refused.stderr).toContain('adapters/first/adapters.safetensors (data/first): 2 examples');
+    expect(refused.stderr).toContain(contour);
+    expect(refused.stderr).toContain('lineage_contamination_acknowledged: true');
+
+    const acknowledged = run(cfg({ lineage_contamination_acknowledged: true }));
+    expect(acknowledged.stderr).toBe('');
+    const chain = JSON.parse(acknowledged.stdout);
+    expect(chain.map((entry: { adapter: string }) => entry.adapter)).toEqual(['adapters/second/adapters.safetensors', 'adapters/first/adapters.safetensors']);
+    expect(chain[0]).toMatchObject({ data: 'data/second', examples: 1, violations: 0, questions: [] });
+    expect(chain[1]).toMatchObject({ data: 'data/first', examples: 3, violations: 2, reasons: { 'held-out evaluation question reused': 2 }, questions: [contour] });
+    expect(chain[1].adapter_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(chain[1].train_sha256).toMatch(/^[0-9a-f]{64}$/);
+    // строка "true" подтверждением не считается
+    expect(run(cfg({ lineage_contamination_acknowledged: 'true' })).status).not.toBe(0);
+
+    // чистая линия проходит без ключа; без данных предка линия непроверяема; resume_data называет их явно
+    write('first', { data: 'data/first' }, [row('clean-a')]);
+    expect(JSON.parse(run(cfg()).stdout)).toHaveLength(2);
+    fs.rmSync(path.join(home, 'data', 'second'), { recursive: true });
+    const unknown = run(cfg());
+    expect(unknown.status).not.toBe(0);
+    expect(unknown.stderr).toContain('training data of the resumed adapter is not available');
+    fs.mkdirSync(path.join(home, 'data', 'moved'), { recursive: true });
+    fs.writeFileSync(path.join(home, 'data', 'moved', 'train.jsonl'), JSON.stringify(row('clean-moved')) + '\n');
+    expect(JSON.parse(run(cfg({ resume_data: 'data/moved' })).stdout)[0]).toMatchObject({ data: 'data/moved', violations: 0 });
+    // без resume_adapter_file родословной нет
+    expect(JSON.parse(python(`print(json.dumps(p.check_lineage(pathlib.Path(${JSON.stringify(home)}), {})))`).stdout)).toEqual([]);
+  });
+
+  it('stops a launch on an unacknowledged contaminated line and records the acknowledged one in resolved.json', () => {
+    const contour = JSON.parse(fs.readFileSync(path.join(EVAL, 'cases.jsonl'), 'utf8').split('\n')[0]).q as string;
+    const dirty = row('dirty');
+    dirty.messages[1].content = contour;
+    fs.mkdirSync(path.join(home, 'adapters', 'old'), { recursive: true });
+    fs.writeFileSync(path.join(home, 'adapters', 'old', 'adapters.safetensors'), 'weights');
+    fs.writeFileSync(path.join(home, 'adapters', 'old', 'adapter_config.json'), JSON.stringify({ data: 'data/old' }));
+    fs.mkdirSync(path.join(home, 'data', 'old'), { recursive: true });
+    fs.writeFileSync(path.join(home, 'data', 'old', 'train.jsonl'), JSON.stringify(dirty) + '\n');
+    const launch = (run: string, acknowledged: boolean) => python([
+      'import types',
+      'sys.modules["yaml"] = types.SimpleNamespace(safe_load=json.loads)',
+      `home = pathlib.Path(${JSON.stringify(home)})`,
+      `config = home / "${run}.yaml"`,
+      `config.write_text(json.dumps({"data": "prepared", "model": "model", "max_seq_length": 1024, "adapter_path": "adapters/${run}", "resume_adapter_file": "adapters/old/adapters.safetensors"${acknowledged ? ', "lineage_contamination_acknowledged": True' : ''}}))`,
+      '(home / "prepared").mkdir(exist_ok=True)',
+      'for name in ("stats", "manifest"): (home / "prepared" / f"{name}.json").write_text("{}")',
+      'p.local_tokenizer = lambda model: (tokenizer, identity)',
+      'p.validate = lambda *args: {}',
+      'p.os.dup2 = lambda *args: None',
+      'class CapturedExec(Exception): pass',
+      'def capture_exec(python, args): raise CapturedExec()',
+      'p.os.execv = capture_exec',
+      'try:',
+      ` p.launch(config, home, "${run}", [])`,
+      'except CapturedExec: print("executed")',
+      'except ValueError as error: print("refused:", error)',
+    ].join('\n'));
+    const refused = launch('line-refused', false);
+    expect(refused.stdout).toContain('refused: the resumed adapter line was trained on held-out evaluation inputs');
+    expect(fs.existsSync(path.join(home, 'logs', 'train-line-refused.resolved.json'))).toBe(false);
+    const accepted = launch('line-accepted', true);
+    expect(accepted.stderr).toBe('');
+    expect(accepted.stdout).toContain('executed');
+    const resolved = JSON.parse(fs.readFileSync(path.join(home, 'logs', 'train-line-accepted.resolved.json'), 'utf8'));
+    expect(resolved.lineage_contamination_acknowledged).toBe(true);
+    expect(resolved.lineage).toHaveLength(1);
+    expect(resolved.lineage[0]).toMatchObject({ adapter: 'adapters/old/adapters.safetensors', data: 'data/old', violations: 1, questions: [contour] });
   });
 
   it.each(['empty', 'target', 'duplicate', 'group', 'metadata'])('rejects unusable or cross-split input: %s', (kind) => {

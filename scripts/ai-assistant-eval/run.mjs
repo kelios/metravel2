@@ -28,6 +28,7 @@ import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from './rep
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
+const DEFAULT_CASES = path.join(HERE, 'cases.jsonl')
 const LOCALE_PREFERENCE_STORAGE_KEY = '@metravel/locale-preference:v1'
 const TERMINAL_WAIT_MS = 240_000
 const NEW_TURN_WAIT_MS = 8_000
@@ -36,7 +37,7 @@ const MODEL_TIMEOUT_MS = 180_000
 const PAGE_LOAD_TIMEOUT_MS = 180_000
 
 const parseArgs = (argv) => {
-  const args = { baseUrl: 'http://localhost:8081', modelUrl: 'http://127.0.0.1:8080', cases: path.join(HERE, 'cases.jsonl'), repeat: 1 }
+  const args = { baseUrl: 'http://localhost:8081', modelUrl: 'http://127.0.0.1:8080', cases: null, repeat: 1 }
   for (let i = 0; i < argv.length; i += 1) {
     const [flag, inline] = argv[i].split('=', 2)
     const value = () => inline ?? argv[++i]
@@ -53,6 +54,8 @@ const parseArgs = (argv) => {
     else if (flag === '--tree') args.tree = value()
     else throw new Error(`неизвестный флаг ${flag}`)
   }
+  // `--report` без `--cases` берёт набор самого прогона; новый прогон — набор по умолчанию.
+  if (!args.cases && !args.report) args.cases = DEFAULT_CASES
   args.baseUrl = args.baseUrl.replace(/\/+$/, '')
   args.modelUrl = args.modelUrl.replace(/\/+$/, '')
   return args
@@ -94,7 +97,10 @@ const fetchJson = async (url) => {
 const writeReport = (outDir, meta, results) => {
   const judgeFile = path.join(outDir, 'judge.jsonl')
   const { judges, errors } = fs.existsSync(judgeFile) ? parseJudgeLines(fs.readFileSync(judgeFile, 'utf8')) : { judges: new Map(), errors: [] }
-  for (const error of errors) console.warn(`[judge] ${error}`)
+  // Вердикт на ход, которого в прогоне нет, — ошибка судьи (опечатка в key), а не лишняя строка.
+  const known = new Set(results.flatMap((result) => result.turns.map((_, index) => `${result.id}#${index}`)))
+  for (const key of judges.keys()) if (!known.has(key)) errors.push(`${key}: неизвестный ход судьи`)
+  if (errors.length) throw new Error(`judge.jsonl: ${errors.join('; ')}`)
   fs.writeFileSync(path.join(outDir, 'report.md'), renderReport(meta, results, judges))
   return summarize(results, judges)
 }
@@ -158,7 +164,9 @@ const readComposer = (page) =>
     const input = document.querySelector('[data-testid="assistant-input"]')
     const meta = document.querySelector('[data-testid="assistant-composer-meta"]')
     return {
-      inputBlocked: !input || input.disabled || input.readOnly || input.getAttribute('aria-disabled') === 'true',
+      // Блок — это закрытое поле; экран без поля (упал, не догрузился) блокировкой не считается.
+      inputMissing: !input,
+      inputBlocked: Boolean(input) && (input.disabled || input.readOnly || input.getAttribute('aria-disabled') === 'true'),
       composerMeta: meta ? meta.innerText.trim() : '',
     }
   })
@@ -170,6 +178,7 @@ const askTurn = async (page, question, calls) => {
   const callsBefore = calls.length
   const input = page.locator('[data-testid="assistant-input"]')
   const composerBefore = await readComposer(page)
+  if (composerBefore.inputMissing) return { turnCreated: false, status: 'error', ...composerBefore, blockedAfter: false, composerMeta: 'на экране нет поля ввода' }
   if (!composerBefore.inputBlocked) {
     await input.fill(question)
     await input.press('Enter')
@@ -296,10 +305,16 @@ async function runCases(args) {
  * `checks.mjs` (правка проверки не требует нового прогона модели), вердикты судьи
  * подмешиваются из `judge.jsonl`.
  */
-function rebuildReport(dir, casesFile) {
+export function rebuildReport(dir, casesFile) {
   const outDir = path.resolve(ROOT, dir)
   const meta = JSON.parse(fs.readFileSync(path.join(outDir, 'meta.json'), 'utf8'))
-  const cases = new Map(loadCases(casesFile).map((item) => [item.id, item]))
+  // Ожидания берутся из набора самого прогона (`meta.cases`), а не из набора по умолчанию: иначе
+  // проверки прогона на другом файле молча не пересчитывались. Явный `--cases` важнее; набор,
+  // которого уже нет (переименован), — ошибка, а не тихий пропуск.
+  const ownCases = meta.cases ? path.resolve(ROOT, meta.cases) : null
+  const source = casesFile ?? (ownCases && fs.existsSync(ownCases) ? ownCases : null)
+  if (!source) throw new Error(`набор прогона ${meta.cases ?? '?'} не найден — укажите его через --cases`)
+  const cases = new Map(loadCases(source).map((item) => [item.id, item]))
   const results = fs
     .readFileSync(path.join(outDir, 'results.jsonl'), 'utf8')
     .split('\n')
@@ -307,7 +322,7 @@ function rebuildReport(dir, casesFile) {
     .map((line) => {
       const result = JSON.parse(line)
       const item = cases.get(result.id.replace(/@\d+$/, ''))
-      if (!item) return result
+      if (!item) throw new Error(`${result.id}: вопроса нет в наборе ${path.relative(ROOT, source)}`)
       result.turns = result.turns.map((turn, index) => {
         const expectation = turnExpectation(item, index)
         return { ...turn, ...expectation, eval: scoreTurn(expectation, turn.observed) }

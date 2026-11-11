@@ -69,10 +69,11 @@ describe('fixed-context answer expectations', () => {
 })
 
 describe('fixed-context runner', () => {
-  it('ships ten reference answers that meet their own fact and source criteria', () => {
+  it('ships at least thirty reference answers in five languages that meet their own fact and source criteria (#3267)', () => {
     const dir = path.join(process.cwd(), 'scripts/ai-assistant-eval')
     const cases = loadQualityCases(path.join(dir, 'cases.quality.jsonl'), path.join(dir, 'fixtures.quality.json'))
-    expect(cases).toHaveLength(10)
+    expect(cases.length).toBeGreaterThanOrEqual(30)
+    expect(new Set(cases.map((item: { lang: string }) => item.lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']))
     for (const item of cases) expect({ id: item.id, failures: evaluateAnswerExpectations(item.criteria, item.reference_answer, item.sources) }).toEqual({ id: item.id, failures: [] })
   })
 

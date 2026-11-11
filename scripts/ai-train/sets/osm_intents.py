@@ -32,6 +32,7 @@ import random
 import re
 from pathlib import Path
 
+from sets.assistant_prompt import norm_question
 from sets.common import record
 from sets.translations import has_external
 
@@ -39,6 +40,8 @@ NAME = "osm_intents"
 LICENSE = "ODbL 1.0 (OpenStreetMap contributors) — skills only, derived cache not published"
 SOURCE = "osm"
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "osm_filter_schema.json"
+# The frozen slice eval.py scores this skill on (#3267): its questions never reach the set.
+EVAL_PROMPTS = Path(__file__).resolve().parents[1] / "eval_prompts" / "osm_intents.jsonl"
 SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 CATEGORIES: list[str] = SCHEMA["properties"]["categories"]["items"]["enum"]
 RADII: list[int] = SCHEMA["properties"]["radius_km"]["enum"]
@@ -252,6 +255,18 @@ def load_centres(sources_root: Path, pois: list[dict], per_country: int) -> dict
 
 # ----------------------------------------------------------------------------- intents
 
+def held_out_prompts(path: Path | None = None) -> frozenset[str]:
+    """Normalised prompts of the eval slice. The questions are synthetic (templates × settlements), so a
+    generated one can coincide with a frozen one; such a sample is skipped and the slice stays held out."""
+    path = path or EVAL_PROMPTS
+    if not path.is_file():
+        raise SystemExit(f"set osm_intents needs the frozen eval slice: {path}")
+    prompts = [json.loads(line)["prompt"] for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not prompts:
+        raise SystemExit(f"set osm_intents: empty eval slice {path}")
+    return frozenset(norm_question(p) for p in prompts)
+
+
 def intent_sample(rng: random.Random, lang: str, centres: dict[str, list[dict]]) -> tuple[str, dict, str]:
     country = rng.choice(["BY", "PL"])
     n_cats = 1 if rng.random() < 0.65 else 2
@@ -429,14 +444,17 @@ def build(ctx: dict, options: dict) -> list[dict]:
     centres = load_centres(ctx["sources"], pois, per_country)
     out: list[dict] = []
     seen: set[str] = set()
+    held_out = held_out_prompts()
     for n in range(n_intents):
         roll = rng.random()
         lang = "be" if roll < share["be"] else "pl" if roll < share["be"] + share["pl"] else "ru"
         q, answer, key = intent_sample(rng, lang, centres)
-        if q in seen:
+        prompt = INTENT_PROMPT.format(q=q)
+        # the draw is already made, so skipping a held-out question leaves every other sample as it was
+        if q in seen or norm_question(prompt) in held_out:
             continue
         seen.add(q)
-        out.append(rec(INTENT_PROMPT.format(q=q), dump_filter(answer), "intent", key, f"i{n}"))
+        out.append(rec(prompt, dump_filter(answer), "intent", key, f"i{n}"))
     rng.shuffle(pois)
     # alternate the countries: the complete cache holds 12× more Polish POIs (25k vs 2k, 07.11.2026), and the
     # token cap would otherwise leave Belarus with a few dozen descriptions
