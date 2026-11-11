@@ -1,0 +1,30 @@
+# metravel-llm v8 (#3278): the v7 recipe with two named mechanisms, both found by the pre-training
+# diagnosis of 11.11.2026 (scripts/ai-train/README.md → «Диагностика остатков v7 перед кругом v8»):
+#   rag_answers edition 8 — quest cards carry the children's mark and age of the catalogue (as the app
+#     writes them since #3276); a question about children is answered with the marked quest and its
+#     age, the dialogue of mt03 is covered on five languages; kind `scarce` — fewer quests of the
+#     place among the cards than the question asks for, only they are named (the acceptance of
+#     11.11.2026: v4 and v7 topped the list up with quests of other cities);
+#   osm_intents edition 2 — constraints in every position and form (edition 1: always after a comma
+#     at the end), a pair of categories in 45 % of the questions, twice the share of BE and PL, about
+#     twice as many intent samples (describe 1200 → 500, cap 100k → 180k tokens).
+# Everything else is v7: stage s3 holds rag_answers + offtopic + osm_intents + wikivoyage, the replay
+# pool (0.25) is toponyms / translations / site; only s3 is trained and the saved v4 adapter continues
+# (lora-qwen3.5-4b-v8.yaml). v4–v7 are never overwritten. Built on the corpus exported on 11.11.2026
+# (--raw data/raw-20261111: 434 articles, 343 quests, 26 of them for children); data/raw of 17.10.2026
+# (280 quests, 16 for children) stays in place for eval.py and the earlier mixes.
+name: v8
+seed: 20261017
+split: {by: key, valid_share: 0.03, test_share: 0.02}
+sets:
+  toponyms:     {weight: 1.0, cap_tokens: 350000}
+  translations: {weight: 1.0, cap_tokens: 400000, options: {kind_share: {quest_card_from_ru: 0.7, quest_card_l: 0.5, ui_strings: 0.12, quest_translate: 0.03}}}
+  site:         {weight: 1.0, cap_tokens: 1200000, options: {chunk_chars: 2600, structured: true}}
+  osm_intents:  {weight: 1.0, cap_tokens: 180000, options: {intents: 2500, describe: 500, centres: 250, lang_share: {be: 0.2, pl: 0.2}, edition: 2}}
+  wikivoyage:   {weight: 0.7, cap_tokens: 120000}
+  rag_answers:  {weight: 1.0, options: {per_place: 1, edition: 8}}
+  offtopic:     {weight: 1.0, cap_tokens: 18000, options: {variants: 1}}
+stages:
+  - {name: s1, sets: [toponyms, translations, site]}
+  - {name: s3, sets: [osm_intents, wikivoyage, rag_answers, offtopic]}
+replay: 0.25

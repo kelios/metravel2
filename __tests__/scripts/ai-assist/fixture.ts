@@ -30,6 +30,8 @@ export interface Spec {
   title: string
   text: string
   city?: string | null
+  /** Теги каталога (у квеста — `kids`, `age-8-10`…, #3276); без них — пусто. */
+  tags?: string[]
   /** Координаты источника (#2911, /ai/near-route); без них — Краков, как у всех. */
   lat?: number | null
   lng?: number | null
@@ -59,7 +61,7 @@ export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
       lat: spec.lat === undefined ? 50.06 : spec.lat,
       lng: spec.lng === undefined ? 19.94 : spec.lng,
       month: [],
-      tags: [],
+      tags: spec.tags ?? [],
       locale,
       text: spec.text,
     }

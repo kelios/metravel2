@@ -136,13 +136,15 @@ const TRAVEL_SIGNAL_RE = re(
   'заплечнік', 'рукзак', 'намёт', 'валіз', 'начлег', 'начоўк', 'налёгку', 'рыштунак', 'паход',
   'намет', 'ночівл', 'спорядженн', 'похід',
   'plecak', 'namiot', 'walizk', 'bagaż', 'nocleg', 'śpiw[oó]r', 'biwak', 'kemping', 'ekwipun',
-  'backpack', 'daypack', 'rucksack', 'overnight', 'tents?(?![\\p{L}])', 'luggage', 'suitcase', 'pack(?:ing)?\\s+(?:light|list|for)',
+  // «overnight» само по себе — ещё и «overnight oats»: ночёвка — только вместе со словом поездки.
+  'backpack', 'daypack', 'rucksack', 'overnight\\s+(?:stay|stop|walk|ride|bus|ferry|boat|layover)', 'tents?(?![\\p{L}])', 'luggage', 'suitcase',
+  'pack(?:ing)?\\s+(?:light|list|for)',
   'camping', 'campsite', 'sleeping\\s+bag', 'city\\s+break', 'getaway', 'journey', 'trek(?:king|s)?(?![\\p{L}])',
   // Дорога и жильё: поезд, самолёт, вокзал, заселение.
   'самол[её]т', 'перел[её]т', 'вокзал', 'заселен', 'цягнік', 'самал[её]т', 'гатэл', 'потяг', 'літак', 'готел',
   'pociąg', 'dworz[ea]c', 'dworc', 'samolot', 'lotnisk',
-  // «train» — ещё и глагол («train for a marathon»): поезд — только во множественном числе или в сочетании.
-  'flight', 'airport', 'trains(?![\\p{L}])', '(?:by|night|overnight|sleeper)\\s+train', 'train\\s+(?:station|tickets?|ride|trip|journey)',
+  // «train» и «trains» — ещё и глагол («train for a marathon», «the model trains overnight»): поезд — только в сочетании.
+  'flight', 'airport', '(?:by|night|overnight|sleeper)\\s+trains?', 'trains?\\s+(?:station|tickets?|ride|trip|journey|timetable|schedule)',
   'hostel', 'accommodation', 'check-in',
 )
 /**

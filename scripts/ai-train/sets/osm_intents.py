@@ -23,7 +23,10 @@ Options (mixes/*.yaml → sets.osm_intents.options):
   intents       — number of intent samples (default 2500);
   describe      — max describe samples (default 2500);
   centres       — settlement names per country used as centres (default 250);
-  lang_share    — {be: 0.1, pl: 0.1} share of non-Russian intent questions.
+  lang_share    — {be: 0.1, pl: 0.1} share of non-Russian intent questions;
+  edition       — 1 (default): a constraint always follows a comma at the end of the question;
+                  2 (#3278): constraints in every position and form (CONSTRAINT_FORMS) and a pair of
+                  categories in 45 % of the questions. Edition 1 output is unchanged.
 """
 from __future__ import annotations
 
@@ -109,6 +112,56 @@ OPENERS = {
     "be": ["Дзе {where} {cats}{cons}?", "Пакажы {cats} {where}{cons}.", "Якія {cats} ёсць {where}{cons}?"],
     "pl": ["Gdzie {where} {cats}{cons}?", "Pokaż {cats} {where}{cons}.", "Jakie {cats} są {where}{cons}?"],
 }
+
+# Edition 2 (#3278): where and how a visitor states a constraint. Edition 1 put every constraint
+# after a comma at the end of the question (130 of 130 intent samples of the v7 train split), and the
+# model lost it anywhere else: «смотровые и парковка для кемпера», «Усадьбы без платы за вход не
+# дальше…», «…od Zakopanego za darmo» (eval slice, 11.11.2026). Layouts per constraint:
+#   tail     — after the question, with or without the comma;
+#   mid      — between the categories and the place;
+#   noun     — a thing the visitor looks for, joined to the categories with «и» (camper only);
+#   lead     — an adjective before plural categories (free only);
+#   sentence — a second sentence.
+CONSTRAINT_FORMS = {
+    "ru": {
+        "dogs": {"tail": ["с собакой", "куда можно с собакой", "куда пускают с собакой", "с псом"],
+                 "mid": ["для прогулки с собакой", "куда пускают с собакой"], "sentence": ["Мы с собакой.", "Едем с собакой."]},
+        "camper": {"tail": ["где встать с кемпером", "с автодомом", "с парковкой для кемпера", "на кемпере", "на автодоме"],
+                   "noun": ["парковка для кемпера", "стоянка для автодома", "место для кемпера"],
+                   "sentence": ["Едем на кемпере.", "Мы на автодоме.", "Нужна стоянка для кемпера."]},
+        "kids": {"tail": ["с детьми", "для детей", "с ребёнком"], "mid": ["для детей", "для поездки с детьми"],
+                 "sentence": ["С нами дети.", "Едем с детьми."]},
+        "free": {"tail": ["бесплатно", "без билета", "без платы за вход", "со свободным входом"],
+                 "mid": ["без платы за вход", "со свободным входом"], "lead": ["Бесплатные"],
+                 "sentence": ["Нужно бесплатно.", "Платить за вход не хотим."]},
+    },
+    "be": {
+        "dogs": {"tail": ["з сабакам", "куды можна з сабакам"], "sentence": ["Мы з сабакам.", "Едзем з сабакам."]},
+        "camper": {"tail": ["з кемперам", "з аўтадомам", "на кемперы", "на аўтадоме"],
+                   "noun": ["стаянка для кемпера", "паркоўка для аўтадома"], "sentence": ["Едзем на кемперы.", "Мы на аўтадоме."]},
+        "kids": {"tail": ["з дзецьмі", "для дзяцей", "з дзіцем"], "mid": ["для дзяцей"], "sentence": ["З намі дзеці."]},
+        "free": {"tail": ["бясплатна", "без білета", "з вольным уваходам"], "mid": ["з вольным уваходам"], "lead": ["Бясплатныя"],
+                 "sentence": ["Трэба бясплатна."]},
+    },
+    "pl": {
+        "dogs": {"tail": ["z psem", "gdzie można wejść z psem"], "sentence": ["Jedziemy z psem."]},
+        "camper": {"tail": ["z kamperem", "kamperem"], "noun": ["parking dla kampera", "miejsce na kampera"],
+                   "sentence": ["Jedziemy kamperem.", "Podróżujemy kamperem."]},
+        "kids": {"tail": ["z dziećmi", "dla dzieci", "z dzieckiem"], "mid": ["dla dzieci"], "sentence": ["Jedziemy z dziećmi."]},
+        "free": {"tail": ["za darmo", "bez biletu", "bezpłatnie"], "mid": ["bez biletu"], "lead": ["Darmowe", "Bezpłatne"],
+                 "sentence": ["Ma być za darmo."]},
+    },
+}
+# Category phrases an adjective can stand before («Бесплатные музеи», not «Бесплатные что посмотреть»).
+PLURAL_CATS = {
+    "ru": {"достопримечательности", "интересные места", "музеи", "смотровые", "смотровые площадки", "красивые виды", "развлечения",
+           "храмы", "костёлы и церкви", "церкви", "костёлы", "замки", "усадьбы", "замки и усадьбы", "руины", "памятники истории"},
+    "be": {"славутасці", "цікавыя месцы", "музеі", "аглядныя пляцоўкі", "краявіды", "забавы", "храмы", "касцёлы і цэрквы", "замкі",
+           "сядзібы", "руіны"},
+    "pl": {"atrakcje", "ciekawe miejsca", "muzea", "punkty widokowe", "rozrywki", "kościoły i cerkwie", "świątynie", "zamki", "dwory",
+           "ruiny", "zamki i pałace"},
+}
+PAIR_SHARE_V2 = 0.45
 
 DESCRIBE_PROMPT = ("Кратко опиши место по данным OpenStreetMap в стиле metravel.by, без выдуманных фактов. "
                    "Страна по границе выборки: {country}.\nТеги:\n{tags}")
@@ -296,6 +349,59 @@ def intent_sample(rng: random.Random, lang: str, centres: dict[str, list[dict]])
     return q, answer, key
 
 
+def intent_sample_v2(rng: random.Random, lang: str, centres: dict[str, list[dict]]) -> tuple[str, dict, str]:
+    """Edition 2: the same filter as intent_sample(), the constraints in every place a visitor puts them
+    and a pair of categories in 45 % of the questions (edition 1: 35 %; pairs gave 5 of 6 category errors)."""
+    country = rng.choice(["BY", "PL"])
+    cats = rng.sample(CATEGORIES, 1 if rng.random() >= PAIR_SHARE_V2 else 2)
+    cat_phrases = [rng.choice(CAT_PHRASE[lang][c]) for c in cats]
+    cats_text = JOIN[lang].join(cat_phrases)
+    cons = [c for c in CONSTRAINTS if rng.random() < 0.2]
+    roll = rng.random()
+    if roll < 0.1 or not centres[country]:
+        where = rng.choice(COUNTRY_PHRASE[lang]).format(c=COUNTRY_L[lang][country] if lang != "ru" else COUNTRY_RU[country])
+        centre, radius, key = None, 200, f"country:{country}"
+    else:
+        place = rng.choice(centres[country])
+        x, key = place[lang], place["key"]
+        if roll < 0.55:
+            radius = rng.choice(RADII)
+            phrase = rng.choice(RADIUS_PHRASE[lang])
+        else:
+            phrase, radius = rng.choice(NEAR_PHRASE[lang])
+        where = phrase.format(r=radius, x=in_phrase(x, phrase, lang, rng))
+        centre = {"name": x}
+    lead, tails, sentences = "", [], []
+    for index, c in enumerate(cons):
+        forms = CONSTRAINT_FORMS[lang][c]
+        layouts = ["tail", "tail_plain", "sentence"] + [name for name in ("mid", "noun") if name in forms]
+        if "lead" in forms and all(p in PLURAL_CATS[lang] for p in cat_phrases):
+            layouts.append("lead")
+        # one constraint moves around; a second one keeps the plain tail so the question stays readable
+        layout = rng.choice(layouts) if index == 0 else "tail"
+        if layout == "mid":
+            cats_text = f"{cats_text} {rng.choice(forms['mid'])}"
+        elif layout == "noun":
+            cats_text = f"{cats_text}{JOIN[lang]}{rng.choice(forms['noun'])}"
+        elif layout == "lead":
+            lead = rng.choice(forms["lead"])
+        elif layout == "sentence":
+            sentences.append(rng.choice(forms["sentence"]))
+        else:
+            tails.append(("" if layout == "tail_plain" else ",") + f" {rng.choice(forms['tail'])}")
+    if lead:
+        q = f"{lead} {cats_text} {where}{''.join(tails)}"
+    else:
+        q = rng.choice(OPENERS[lang]).format(where=where, cats=cats_text, cons="".join(tails))
+    q = q[0].upper() + q[1:]
+    if sentences:
+        q = (q if q[-1] in ".?" else q + ".") + " " + " ".join(sentences)
+    answer: dict = {"categories": sorted(cats, key=CATEGORIES.index), "radius_km": radius, "center": centre}
+    if cons:
+        answer["constraints"] = {c: True for c in cons}
+    return q, answer, key
+
+
 # Russian prepositions in the templates take the genitive ("от Несвижа") or the
 # instrumental ("рядом с Несвижем"); the answer keeps the nominative, so the
 # model learns the mapping. Only one-word names with a clear ending are
@@ -432,6 +538,10 @@ def build(ctx: dict, options: dict) -> list[dict]:
     n_intents = int(options.get("intents", INTENTS))
     n_describe = int(options.get("describe", DESCRIBE))
     per_country = int(options.get("centres", CENTRES))
+    edition = int(options.get("edition", 1))
+    if edition not in (1, 2):
+        raise SystemExit("set osm_intents: edition must be 1 or 2")
+    sample = intent_sample_v2 if edition >= 2 else intent_sample
     share = {**LANG_SHARE, **{k: float(v) for k, v in (options.get("lang_share") or {}).items()}}
     if set(share) - {"be", "pl"} or sum(share.values()) > 1.0:
         raise SystemExit(f"set osm_intents: lang_share takes be/pl with a sum ≤ 1, got {share}")
@@ -448,7 +558,7 @@ def build(ctx: dict, options: dict) -> list[dict]:
     for n in range(n_intents):
         roll = rng.random()
         lang = "be" if roll < share["be"] else "pl" if roll < share["be"] + share["pl"] else "ru"
-        q, answer, key = intent_sample(rng, lang, centres)
+        q, answer, key = sample(rng, lang, centres)
         prompt = INTENT_PROMPT.format(q=q)
         # the draw is already made, so skipping a held-out question leaves every other sample as it was
         if q in seen or norm_question(prompt) in held_out:

@@ -27,7 +27,7 @@
       "sha256": "58dda232563d9b9cae6b01d40bb638a03507a260b87a4a38b34e0e9a81183b2d"
     },
     "scripts/ai-assistant-eval/fixtures.quality.json": {
-      "sha256": "22c6cbc00634738477dec79cb5b5030c692f4c54f3a1099c008952298abc7549"
+      "sha256": "c90947c8b0225ec5fc70a749f413579cf8a7609a4e5eeec72a63fe9a09508fb4"
     },
     "scripts/ai-train/eval_prompts/offtopic.jsonl": {
       "sha256": "98d91c36954b302d7c406d4b2201f9f1bf233b2d6c8d61a1fd9d000316144036",

@@ -1,0 +1,45 @@
+# metravel-llm v8 (#3278): the v7 recipe on data/sft-v8/s3-fit — rag_answers edition 8 (the
+# children's mark and age in quest cards and answers) and osm_intents edition 2 (constraints in
+# every position, more category pairs, more BE/PL) + offtopic + wikivoyage trained directly, 25 %
+# replay of toponyms / translations / site (mixes/v8.yaml). The saved v4 adapter continues and the
+# hyperparameters are those of v6/v7, so the difference between v7 and v8 is the two sets alone.
+# Separate adapter/log/GGUF paths: v4–v7 are never overwritten. Train only after exact-token
+# preparation (prepare_training_data.py) and a finite-loss 12-step probe (RUN=v8-probe,
+# --adapter-path adapters/metravel-llm-v8-probe). iters = one epoch of the prepared train split at
+# batch 1 — take the number from s3-fit/stats.json after every rebuild (it stands twice below).
+#   cd ~/metravel-ai && nohup caffeinate -i env AI_HOME=$HOME/metravel-ai RUN=v8 \
+#     CONFIG=<repo>/scripts/ai-train/lora-qwen3.5-4b-v8.yaml <repo>/scripts/ai-train/train.sh &
+model: models/Qwen3.5-4B-MLX-4bit
+data: data/sft-v8/s3-fit
+train: true
+fine_tune_type: lora
+optimizer: adamw
+mask_prompt: true
+num_layers: 6
+batch_size: 1
+grad_accumulation_steps: 1
+iters: 2932
+resume_adapter_file: adapters/metravel-llm-v4/adapters.safetensors
+# The v4 line was trained on 24 questions of the assistant contour (sft-v4/s3: 22 ids, sft-v3/s3:
+# on02, on18). They are listed in scripts/ai-assistant-eval/acceptance.thresholds.json and marked in
+# the acceptance table; the held-out set of #3267 (cases.holdout.jsonl) is clean.
+lineage_contamination_acknowledged: true
+learning_rate: 1.5e-5
+max_seq_length: 1024
+grad_checkpoint: true
+steps_per_report: 20
+steps_per_eval: 200
+val_batches: 20
+save_every: 200
+adapter_path: adapters/metravel-llm-v8
+seed: 20261111
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+  keys: ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
+lr_schedule:
+  name: cosine_decay
+  warmup: 50
+  warmup_init: 1.0e-6
+  arguments: [1.5e-5, 2932, 1.0e-6]

@@ -17,6 +17,7 @@ import http from 'node:http'
 
 import type { ChunkType } from '../ai-index/format.ts'
 import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
+import { liftForChildren, questCardLead } from '../../api/aiAssist/questAudience.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
 import type { AiSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult } from './ask.ts'
@@ -198,20 +199,37 @@ export function createApp(deps: AppDeps): http.Server {
     return result
   }
 
-  /** Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. */
-  const toSource = (item: ResultItem): AiSource => ({
-    type: item.type,
-    source_id: String(item.source_id),
-    title: item.title,
-    url: item.url,
-    path: new URL(item.url).pathname,
-    snippet: item.snippet,
-    score: item.score ?? 0,
-  })
+  /** Теги квеста и названия его города на всех локалях индекса; для статьи и источника вне индекса — `null`. */
+  const questFacts = (item: ResultItem): { tags: string[]; cities: (string | null)[] } | null => {
+    const rows = item.type === 'quest' ? index.rowsBySource.get(`quest:${item.source_id}`) : undefined
+    if (!rows?.length) return null
+    const chunks = rows.map((row) => index.artifact.chunks[row])
+    return { tags: chunks[0].tags, cities: [item.city, ...new Set(chunks.map((chunk) => chunk.city))] }
+  }
+
+  /**
+   * Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. Карточка квеста
+   * начинается, как на экране (`questToSource`): вид квеста с городом и страной, возраст, «Со взрослым»
+   * (#3276) — затем фрагмент текста квеста. Числа точек, длительности и сложности в индексе нет.
+   */
+  const toSource = (item: ResultItem): AiSource => {
+    const quest = questFacts(item)
+    const lead = quest ? questCardLead({ tags: quest.tags, city: item.city, country: item.country }) : []
+    return {
+      type: item.type,
+      source_id: String(item.source_id),
+      title: item.title,
+      url: item.url,
+      path: new URL(item.url).pathname,
+      snippet: [...lead, item.snippet].filter(Boolean).join('. '),
+      score: item.score ?? 0,
+    }
+  }
 
   async function retrieve(q: string, locale: Locale): Promise<RetrievalResult> {
     const { items, degraded } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
-    return { sources: items.map(toSource), degraded }
+    // Вопрос о детях: детские и семейные квесты города из вопроса — первыми, они уйдут в подсказку модели.
+    return { sources: liftForChildren(q, items, questFacts).map(toSource), degraded }
   }
 
   /**

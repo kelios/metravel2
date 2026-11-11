@@ -17,10 +17,13 @@ import { fetchTravels } from '@/api/travelListQueries'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
 import { useAuthStore } from '@/stores/authStore'
 import type { Travel } from '@/types/types'
+import { enabledQuestTags } from '@/utils/questTags'
 import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
 import { AI_SOURCES_LIMIT } from './policy'
+import { asksAboutChildren, childrenRank, questCardLead } from './questAudience'
+import { detectIntent, type AiSourceIntent } from './retrievalQuery'
 import type { AiSourceRef } from './sourceRef'
 import type { AiSource } from './types'
 
@@ -54,6 +57,9 @@ const QUERY_STOPWORDS = new Set([
   'для', 'или', 'под', 'при', 'про', 'это', 'этот', 'эта', 'там', 'тут', 'ещё', 'еще',
   // Маркеры уточнения (#2719): в склеенном запросе бэкенд требует все слова, «несвиж них» → 5 из 13.
   'них', 'него', 'неё', 'нее', 'этих', 'этого', 'этой', 'этим', 'туда', 'оттуда', 'какую', 'каком',
+  // Сколько вариантов просят: «не больше двух вариантов» поднимало «…на двух реках» и «…между двух озёр»
+  // в ответ про Дрезден (приёмка 11.11.2026, h13).
+  'двух', 'трех', 'четырех', 'пяти', 'больше', 'меньше', 'вариант', 'варианта', 'вариантов', 'варианты',
   'квест', 'квесты', 'квеста', 'квестов', 'квесту', 'квестом', 'квестах',
   'маршрут', 'маршруты', 'маршрута', 'маршрутов', 'маршруту',
   'статья', 'статьи', 'статью', 'статей', 'материал', 'материалы', 'сайт', 'сайте', 'metravel',
@@ -73,25 +79,10 @@ const normalizeText = (value: unknown): string =>
  * типа), поэтому вместо совпадения по тексту оно даёт бонус всему типу: иначе
  * вопрос про квесты заполняли статьи с базовым баллом поиска.
  */
-export type AiSourceIntent = AiSource['type'] | null
-// `\b` не знает кириллицы — граница слова через lookbehind по букве.
-// Кириллица — по началу слова (квест/квесты/квестов), латиница — целым словом:
-// иначе «question»/«kwestia» читались как намерение про квесты.
-const QUEST_INTENT_RE = /(?<!\p{L})(?:квест|квэст|(?:quest(?:s|y|ów|u)?|kwest(?:y|ów|u)?)(?!\p{L}))/iu
-const TRAVEL_INTENT_RE = /(?<!\p{L})(?:стать|артыкул|маршрут|путеводител|(?:articles?|artykuły?|trasy?|trasa|routes?)(?!\p{L}))/iu
 const INTENT_BONUS = 2
 
-export const detectIntent = (query: string): AiSourceIntent => {
-  const text = String(query ?? '')
-  const quest = QUEST_INTENT_RE.test(text)
-  const travel = TRAVEL_INTENT_RE.test(text)
-  if (quest && !travel) return 'quest'
-  if (travel && !quest) return 'travel'
-  return null
-}
-
-// Опора уточнений (#2719) живёт в общем с сервером модуле `retrievalQuery.ts` (#2884).
-export { buildRetrievalQuery, isFollowUpQuestion } from './retrievalQuery'
+// Опора уточнений (#2719) и намерение вопроса живут в общем с сервером модуле `retrievalQuery.ts` (#2884, #3276).
+export { buildRetrievalQuery, detectIntent, isFollowUpQuestion, type AiSourceIntent } from './retrievalQuery'
 
 /** Слова вопроса длиной от трёх знаков, без повторов; порядок сохраняется. */
 export const tokenizeQuery = (query: string): string[] => {
@@ -252,7 +243,8 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], in
   const points = Number.parseInt(String(quest.points), 10)
   const difficulty = quest.difficulty ? DIFFICULTY_RU[quest.difficulty] : ''
   const snippet = joinParts([
-    `Городской квест${city ? ` по городу ${city}` : ''}${country ? ` (${country})` : ''}`,
+    // Вид квеста, возраст и «Со взрослым» — по тегам каталога (#3276); слепок обучения строит ту же строку.
+    ...questCardLead({ tags: enabledQuestTags(quest.tags), city, country }),
     Number.isFinite(points) && points > 0 ? `Точек: ${points}` : '',
     quest.duration_min ? `Длительность: ${quest.duration_min} мин` : '',
     difficulty ? `Сложность: ${difficulty}` : '',
@@ -274,6 +266,14 @@ export const questToSource = (quest: ApiQuestMeta, tokens: readonly string[], in
  * «Кракове» (2+) — восемь мест уходили статьям, квесты города пропадали (#2709).
  */
 export const QUEST_RESERVED_SLOTS = 3
+
+/**
+ * Балл детского (место 2) и семейного (место 1) квеста города при вопросе о детях (#3276) — выше любого
+ * совпадения по словам: у статьи балл не больше `1 + слова вопроса`, у квеста — `слова + INTENT_BONUS`.
+ * В подсказку модели уходят первые карточки подбора (`AI_PROMPT_SOURCES_LIMIT`), и при равном балле
+ * детский квест Минска оставался за восемью другими квестами города.
+ */
+const childrenLift = (tokens: readonly string[], rank: number): number => tokens.length + INTENT_BONUS + rank
 
 /**
  * Слияние: по убыванию балла, при равенстве статьи раньше квестов; без дублей URL.
@@ -376,6 +376,8 @@ export async function searchSiteMaterials({
   // Вопрос из одних стоп-слов про квесты («Какие квесты есть на сайте?») статьи
   // не ищет: полная фраза у бэкенда даёт ноль, а свежие статьи тут не нужны.
   const skipTravels = intent === 'quest' && tokens.length === 0
+  // «Статья про Несвиж с детьми» просит статью: квесты наверх не поднимаются.
+  const forChildren = intent !== 'travel' && asksAboutChildren(query)
   const [travelsResult, questsResult] = await Promise.allSettled([
     skipTravels
       ? Promise.resolve({ data: [] as Travel[], total: 0 })
@@ -396,6 +398,10 @@ export async function searchSiteMaterials({
     for (const quest of questsResult.value ?? []) {
       const source = questToSource(quest, tokens, intent)
       if (!source) continue
+      if (forChildren) {
+        const rank = childrenRank(query, enabledQuestTags(quest.tags), [quest.city_name_localized, quest.city_name, quest.city_name_canonical])
+        if (rank) source.score += childrenLift(tokens, rank)
+      }
       questSources.push(source)
       // Место в резерве — только квесту про город или объект вопроса: совпадение по одной
       // стране («Замки Беларуси») отдавало бы три места квестам случайных городов.

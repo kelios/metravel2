@@ -113,6 +113,9 @@ const ROAD_AND_STAY = [
   'Jedziemy nocnym pociągiem z dwójką małych dzieci. Jak się przygotować, żeby wszyscy się wyspali?',
   'How early should we be at the airport with a toddler?',
   'Which pills help with motion sickness on a night train?',
+  // «overnight» и «trains» считаются только в сочетании со словом поездки.
+  'What medicine helps with motion sickness on sleeper trains?',
+  'Which pills should I take for an overnight bus ride?',
 ]
 
 // Мягкая чужая тема со словом о снаряжении остаётся вопросом о поездке, без него — отказ.
@@ -133,6 +136,9 @@ const SOFT_WITHOUT_TRIP = [
   'Do Republicans win elections?',
   // «train» как глагол — не поезд.
   'How do I train for a marathon with flu medication?',
+  // Голые «overnight» и «trains» — не поездка: «overnight oats», «the model trains».
+  'Recipe for overnight oats',
+  'How do I cook rice while my model trains overnight?',
   'У Вас есть рецепт борща?',
 ]
 

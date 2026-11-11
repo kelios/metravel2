@@ -138,6 +138,18 @@ describe('aiAssist retrieval (#2460)', () => {
     expect(tokenizeQuery('Что посмотреть в Несвиже? А какой из них подойдёт детям?')).not.toContain('них')
   })
 
+  it('число вариантов в вопросе карточку не выбирает: «двух» не поднимает «…на двух реках»', async () => {
+    expect(tokenizeQuery('По Дрездену нужно не больше двух вариантов. Что посоветуешь?')).toEqual(['дрездену', 'посоветуешь'])
+    expect(tokenizeQuery('Назови не больше трёх квестов')).toEqual(['назови'])
+    mockedFetchTravels.mockResolvedValue({ data: [], total: 0 } as never)
+    mockedQuests.mockResolvedValue([
+      quest('dresden-elbe', 'Дрезден: набережная Эльбы', 'dresden', 'Дрезден'),
+      quest('lublin-two-rivers', 'Люблин: город на двух реках', 'lublin', 'Люблин'),
+    ])
+    const sources = await searchSiteMaterials({ query: 'По Дрездену нужно не больше двух вариантов. Что посоветуешь?', locale: 'ru' })
+    expect(sources.map((s) => s.source_id)).toEqual(['dresden-elbe'])
+  })
+
   it('HTML описания превращается в короткий абзац', () => {
     const snippet = htmlToSnippet('<p>Два дня <b>по замкам</b>&nbsp;и озёрам.</p><script>alert(1)</script>', 40)
     expect(snippet).toBe('Два дня по замкам и озёрам.')
@@ -185,6 +197,51 @@ describe('aiAssist retrieval (#2460)', () => {
     mockedFetchTravels.mockResolvedValue({ data: [{ id: 0, name: 'без слага' }], total: 1 } as never)
     mockedQuests.mockResolvedValue([quest('x', 'Квест', '', 'Город')])
     expect(await searchSiteMaterials({ query: 'Исландия зимой', locale: 'ru' })).toEqual([])
+  })
+
+  // #3276: при вопросе о детях детский квест города должен попасть в подсказку модели (первые карточки
+  // подбора), а не остаться за статьями и другими квестами города.
+  describe('вопрос о детях поднимает детские и семейные квесты города (#3276)', () => {
+    const nesvizh = (locale: string, city: string) => [
+      // Девять квестов города: без подъёма детский и семейный остались бы за пределом карточек.
+      ...Array.from({ length: 7 }, (_, i) => quest(`nesvizh-${i}`, `Несвиж: прогулка ${i}`, 'nesvizh', 'Несвиж', { city_name_localized: city })),
+      quest('nesvizh-family', 'Старый парк и ратуша', 'nesvizh', 'Несвиж', { city_name_localized: city, tags: ['family', 'citywalk'] }),
+      // Слова «детский» в названии нет — как у 17 из 26 детских квестов каталога.
+      quest('nesvizh-kids-park-page', 'Паж Стась и тайна парка', 'nesvizh', 'Несвиж', {
+        city_name_localized: city,
+        tags: { kids: true, family: true, 'age-8-10': true, 'adult-required': true },
+      }),
+      quest('brest-kids-fonari', 'Фонари Бреста', 'brest', 'Брест', { tags: ['kids', 'age-8-10'] }),
+    ]
+    const travels = Array.from({ length: 8 }, (_, i) => travel(300 + i, `Несвиж с детьми: что посмотреть ${i}`, `nesvizh-${i}`, '<p>Несвиж, замок, дети</p>'))
+
+    it.each([
+      ['ru', 'Несвиж', 'Что посмотреть в Несвиже? А какой из них подойдёт детям?'],
+      ['be', 'Нясвіж', 'Што паглядзець у Нясвіжы з дзецьмі?'],
+      ['uk', 'Несвіж', 'Що подивитися в Несвіжі з дитиною?'],
+      ['pl', 'Nieśwież', 'Co zobaczyć w Nieświeżu z dziećmi?'],
+      ['en', 'Nesvizh', 'What to see in Nesvizh with kids?'],
+    ])('[%s] детский квест города — первая карточка, семейный — вторая', async (locale, city, query) => {
+      mockedFetchTravels.mockResolvedValue({ data: travels, total: travels.length } as never)
+      mockedQuests.mockResolvedValue(nesvizh(locale, city))
+      const sources = await searchSiteMaterials({ query, locale })
+      expect(sources.slice(0, 2).map((s) => s.source_id)).toEqual(['nesvizh-kids-park-page', 'nesvizh-family'])
+      expect(sources[0].snippet).toBe(`Детский городской квест по городу ${city}. Возраст: 8–10 лет. Со взрослым. Точек: 8. Длительность: 90 мин. Сложность: лёгкий`)
+      expect(sources[1].snippet).toContain(`Семейный городской квест по городу ${city}`)
+      // Детский квест другого города наверх не идёт.
+      expect(sources.slice(0, 4).map((s) => s.source_id)).not.toContain('brest-kids-fonari')
+      expect(sources).toHaveLength(8)
+    })
+
+    it('без вопроса о детях и при просьбе о статье порядок прежний', async () => {
+      mockedFetchTravels.mockResolvedValue({ data: travels, total: travels.length } as never)
+      mockedQuests.mockResolvedValue(nesvizh('ru', 'Несвиж'))
+      const plain = await searchSiteMaterials({ query: 'Что посмотреть в Несвиже?', locale: 'ru' })
+      expect(plain[0].type).toBe('travel')
+      expect(plain.map((s) => s.source_id)).not.toContain('nesvizh-kids-park-page')
+      const article = await searchSiteMaterials({ query: 'Есть статья про Несвиж с детьми?', locale: 'ru' })
+      expect(article.every((s) => s.type === 'travel')).toBe(true)
+    })
   })
 
   it('mergeSources убирает дубли URL и режет по лимиту', () => {

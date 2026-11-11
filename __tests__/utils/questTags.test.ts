@@ -1,4 +1,4 @@
-import { normalizeQuestTags, questTagNames } from '@/utils/questTags';
+import { enabledQuestTags, normalizeQuestTags, questTagNames } from '@/utils/questTags';
 
 // Quest.tags is JSONField(default=list) on the backend: untouched rows keep a slug
 // list, admin-edited rows a boolean map. Both shapes must read the same (#2814).
@@ -33,5 +33,15 @@ describe('questTagNames', () => {
     expect(questTagNames(null)).toBeUndefined();
     expect(questTagNames(undefined)).toBeUndefined();
     expect(questTagNames(['kids', 5])).toEqual([]);
+  });
+});
+
+describe('enabledQuestTags', () => {
+  it('returns only enabled slugs for both shapes; absent and unknown shapes give none', () => {
+    expect(enabledQuestTags(['kids', 'age-8-10'])).toEqual(['kids', 'age-8-10']);
+    expect(enabledQuestTags({ kids: true, family: false, 'adult-required': 1 })).toEqual(['kids', 'adult-required']);
+    expect(enabledQuestTags(null)).toEqual([]);
+    expect(enabledQuestTags(['kids', 5])).toEqual([]);
+    expect(enabledQuestTags('kids')).toEqual([]);
   });
 });

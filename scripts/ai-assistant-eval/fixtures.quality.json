@@ -9,7 +9,7 @@
     "type": "quest", "source_id": "pakocim-voices",
     "title": "Парк Прокоцим: семейный квест в Кракове",
     "url": "https://metravel.by/quests/krakow/pakocim-voices", "path": "/quests/krakow/pakocim-voices",
-    "snippet": "Городской квест по городу Краков (Польша). Точек: 8. Длительность: 90 мин. Сложность: Лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Краков (Польша). Точек: 8. Длительность: 90 мин. Сложность: Лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "minsk-cmok",
@@ -39,7 +39,7 @@
     "type": "quest", "source_id": "warsaw-kids-bazyliszek",
     "title": "Детский квест по Варшаве: знаки для базилишка",
     "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Варшава (Польша). Возраст: 8–10 лет. Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "warsaw-white-lady",
@@ -51,7 +51,7 @@
     "type": "quest", "source_id": "warsaw-royal-route-lights",
     "title": "Квест по Варшаве: огни Королевского тракта",
     "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "lida-castle",
@@ -63,7 +63,7 @@
     "type": "quest", "source_id": "lida-kids-castle-squire",
     "title": "Детский квест по Лиде: оруженосец князя и семь рыцарских знаков",
     "url": "https://metravel.by/quests/lida/lida-kids-castle-squire", "path": "/quests/lida/lida-kids-castle-squire",
-    "snippet": "Городской квест по городу Лида (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Лида (Беларусь). Возраст: 8–10 лет. Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "baranovichi-dva-goroda",
@@ -81,7 +81,7 @@
     "type": "quest", "source_id": "baranovichi-kids-iron-horse",
     "title": "Железный конь Дымок: детский квест по Барановичам",
     "url": "https://metravel.by/quests/baranovichi/baranovichi-kids-iron-horse", "path": "/quests/baranovichi/baranovichi-kids-iron-horse",
-    "snippet": "Городской квест по городу Барановичи (Беларусь). Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Барановичи (Беларусь). Возраст: 8–10 лет. Точек: 9. Длительность: 75 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "baranovichi-teens-two-stations",
@@ -99,7 +99,7 @@
     "type": "quest", "source_id": "polotsk-kids-letter-u",
     "title": "Детский квест по Полоцку: буква Ў и потерянная дужка",
     "url": "https://metravel.by/quests/polotsk/polotsk-kids-letter-u", "path": "/quests/polotsk/polotsk-kids-letter-u",
-    "snippet": "Городской квест по городу Полоцк (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Полоцк (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "lida-castle.be",
@@ -129,7 +129,7 @@
     "type": "quest", "source_id": "warsaw-kids-bazyliszek.be",
     "title": "Детский квест по Варшаве: знаки для базилишка",
     "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Варшава (Польша). Возраст: 8–10 лет. Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "warsaw-white-lady.be",
@@ -141,7 +141,7 @@
     "type": "quest", "source_id": "warsaw-royal-route-lights.be",
     "title": "Квэст па Варшаве: агні Каралеўскага тракту",
     "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "polotsk-ancient.uk",
@@ -153,7 +153,7 @@
     "type": "quest", "source_id": "polotsk-kids-letter-u.uk",
     "title": "Детский квест по Полоцку: буква Ў и потерянная дужка",
     "url": "https://metravel.by/quests/polotsk/polotsk-kids-letter-u", "path": "/quests/polotsk/polotsk-kids-letter-u",
-    "snippet": "Городской квест по городу Полоцьк (Беларусь). Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Полоцьк (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 9. Длительность: 90 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "baranovichi-dva-goroda.uk",
@@ -177,13 +177,13 @@
     "type": "quest", "source_id": "warsaw-kids-bazyliszek.uk",
     "title": "Детский квест по Варшаве: знаки для базилишка",
     "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Варшава (Польша). Возраст: 8–10 лет. Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "warsaw-royal-route-lights.uk",
     "title": "Квест по Варшаві: вогні Королівського тракту",
     "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
-    "snippet": "Городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Варшава (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "baranovichi-dva-goroda.pl",
@@ -207,7 +207,7 @@
     "type": "quest", "source_id": "warsaw-kids-bazyliszek.pl",
     "title": "Детский квест по Варшаве: знаки для базилишка",
     "url": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek", "path": "/quests/warsaw/warsaw-kids-bazyliszek",
-    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Warszawa (Польша). Возраст: 8–10 лет. Точек: 8. Длительность: 75 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "warsaw-white-lady.pl",
@@ -219,7 +219,7 @@
     "type": "quest", "source_id": "warsaw-royal-route-lights.pl",
     "title": "Quest po Warszawie: światła Traktu Królewskiego",
     "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
-    "snippet": "Городской квест по городу Warszawa (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Warszawa (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "polotsk-ancient.pl",
@@ -243,7 +243,7 @@
     "type": "quest", "source_id": "warsaw-royal-route-lights.en",
     "title": "Warsaw Quest: Lights of the Royal Route",
     "url": "https://metravel.by/quests/warsaw/warsaw-royal-route-lights", "path": "/quests/warsaw/warsaw-royal-route-lights",
-    "snippet": "Городской квест по городу Warsaw (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Warsaw (Польша). Точек: 10. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "lida-castle.en",
@@ -261,7 +261,7 @@
     "type": "quest", "source_id": "mogilev-kids-mogislav.en",
     "title": "The Last Page of the City Book",
     "url": "https://metravel.by/quests/mogilev/mogilev-kids-mogislav", "path": "/quests/mogilev/mogilev-kids-mogislav",
-    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 8. Длительность: 90 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Детский городской квест по городу Mogilev (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 8. Длительность: 90 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "quest", "source_id": "mogilev-teens-symbol-code.en",
@@ -279,7 +279,7 @@
     "type": "quest", "source_id": "mogilev-winter-evening.en",
     "title": "Mogilev quest: lights of a winter evening",
     "url": "https://metravel.by/quests/mogilev/mogilev-winter-evening", "path": "/quests/mogilev/mogilev-winter-evening",
-    "snippet": "Городской квест по городу Mogilev (Беларусь). Точек: 11. Длительность: 150 мин. Сложность: лёгкий", "score": 3
+    "snippet": "Семейный городской квест по городу Mogilev (Беларусь). Точек: 11. Длительность: 150 мин. Сложность: лёгкий", "score": 3
   },
   {
     "type": "travel", "source_id": "502",

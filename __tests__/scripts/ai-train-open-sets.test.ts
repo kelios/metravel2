@@ -350,3 +350,50 @@ print(json.dumps({
     expect([out.peak, out.castle, out.bare].join(' ')).not.toMatch(/по силам большинству|полчаса|свет для фото|без спешки/);
   });
 });
+
+// #3278: в edition 1 ограничение всегда стояло через запятую в конце вопроса (130 из 130 примеров train v7),
+// и модель теряла его в любом другом месте.
+describe('ai-train osm_intents edition 2 (#3278 v8)', () => {
+  it('ограничение стоит в разных местах вопроса, пар категорий больше, ответ остаётся фильтром по схеме', () => {
+    const out = py(`
+import json, re
+from sets import osm_intents as o
+o.load_pois = lambda root: []
+o.load_centres = lambda root, pois, per: {"BY": [{"key": "wd:Q2", "ru": "Лида", "be": "Ліда", "pl": "Lida"}, {"key": "wd:Q4", "ru": "Гомель", "be": "Гомель", "pl": "Homel"}],
+                                         "PL": [{"key": "wd:Q3", "ru": "Гданьск", "be": "Гданьск", "pl": "Gdańsk"}, {"key": "wd:Q5", "ru": "Краков", "be": "Кракаў", "pl": "Kraków"}]}
+def stats(edition):
+    rows = o.build({"seed": 7, "sources": None}, {"intents": 1500, "describe": 0, "edition": edition, "lang_share": {"be": 0.2, "pl": 0.2}})
+    held = o.held_out_prompts()
+    cons = tail = pairs = bad = leaked = 0
+    layouts = {"mid": 0, "noun": 0, "lead": 0, "sentence": 0}
+    for r in rows:
+        user, answer = r["messages"][1]["content"], json.loads(r["messages"][2]["content"])
+        q = user.split("«", 1)[1].rsplit("»", 1)[0]
+        bad += bool(o.validate_filter(answer))
+        leaked += o.norm_question(user) in held
+        pairs += len(answer["categories"]) == 2
+        if answer.get("constraints"):
+            cons += 1
+            tail += bool(re.search(r", [^,.?]+[?.]?$", q))
+            layouts["sentence"] += bool(re.search(r"[.?] [А-ЯA-ZЁІŁŚŻ]", q))
+            layouts["lead"] += bool(re.match(r"(?:Бесплатные|Бясплатныя|Darmowe|Bezpłatne) ", q))
+            layouts["noun"] += bool(re.search(r"парковка для кемпера|стоянка для автодома|место для кемпера|стаянка для кемпера|паркоўка для аўтадома|parking dla kampera|miejsce na kampera", q))
+            layouts["mid"] += bool(re.search(r"(?:без платы за вход|для детей|dla dzieci|для дзяцей|bez biletu) (?:в |не |около|рядом|недалеко|возле|по |у |каля|недалёка|па |w |do |niedaleko|gdzie)", q))
+    return {"n": len(rows), "bad": bad, "leaked": leaked, "pair_share": round(pairs / len(rows), 2), "cons": cons, "tail_share": round(tail / max(cons, 1), 2), "layouts": layouts}
+print(json.dumps({"e1": stats(1), "e2": stats(2)}))
+`);
+    expect(out.e1.tail_share).toBe(1);
+    expect(out.e1.layouts).toEqual({ mid: 0, noun: 0, lead: 0, sentence: 0 });
+    expect(out.e2.bad).toBe(0);
+    expect(out.e2.leaked).toBe(0);
+    expect(out.e2.tail_share).toBeLessThan(0.6);
+    for (const count of Object.values(out.e2.layouts as Record<string, number>)) expect(count).toBeGreaterThan(10);
+    expect(out.e2.pair_share).toBeGreaterThan(out.e1.pair_share + 0.05);
+  });
+
+  it('неизвестная edition — ошибка сборки', () => {
+    const res = runCli('python3', ['-I', '-c', `import sys\nsys.path.insert(0, sys.argv[1])\nfrom sets import osm_intents as o\no.build({"seed": 1, "sources": None}, {"edition": 3})`, DIR]);
+    expect(res.status).not.toBe(0);
+    expect(res.stderr).toContain('edition must be 1 or 2');
+  });
+});

@@ -161,7 +161,11 @@ export type ApiQuestMeta = {
     lng: ApiQuestCoordinate;
     duration_min: number | null;
     difficulty: 'easy' | 'medium' | 'hard' | '' | null;
-    /** `Quest.tags` is `JSONField(default=list)`: a slug list or a `{tag: true}` map — read via `@/utils/questTags`. */
+    /**
+     * `Quest.tags` is `JSONField(default=list)`: a slug list or a `{tag: true}` map — read via `@/utils/questTags`.
+     * Audience tags (#3276): `kids`, `family`, `age-<from>-<to>` (`age-5-7`, `age-8-10`, `age-11-14`),
+     * `adult-required` / `adult-recommended` — the assistant card reads them in `api/aiAssist/questAudience.ts`.
+     */
     tags: string[] | Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;

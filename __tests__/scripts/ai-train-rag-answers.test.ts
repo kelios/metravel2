@@ -608,3 +608,158 @@ describe('ai-train rag_answers edition 7 (#2751 v7)', () => {
     expect(rows.filter((r) => r.kind !== 'crowded').length).toBeGreaterThanOrEqual(rows6.length - 12);
   });
 });
+
+// #3276, #3278: признак детского квеста в карточке и в ответе. Остаток v7 mt03#1: в подсказке две карточки
+// квестов одного вида, модель отвечала «возраст не указан» и выбирала наугад.
+describe('ai-train rag_answers edition 8 (#3278 v8)', () => {
+  let home: string;
+  let rows: Record<string, any>[];
+  let rows7: Record<string, any>[];
+  const lang = (r: Record<string, any>) => r.id.split(':').at(-2);
+  const user = (r: Record<string, any>): string => r.messages.at(-2).content;
+  const answer = (r: Record<string, any>): string => r.messages.at(-1).content;
+  const answerUrls = (r: Record<string, any>): string[] => answer(r).match(URL_RE) ?? [];
+  const KIDS_URL = 'https://metravel.by/quests/krakow/krakow-kids-dragon';
+  const UNKNOWN_RE = /не указаны|не пазначаны|не вказано|nie poda(?:ją|je)|(?:do|does) not state/;
+
+  beforeAll(() => {
+    home = makeTempDir('ai-train-rag8-');
+    const raw = path.join(home, 'data', 'raw');
+    fs.mkdirSync(raw, { recursive: true });
+    writeJsonl(path.join(raw, 'travels.jsonl'), [
+      travel(1, 'Краков: путеводитель по местам', 'Краков', 'Польша'),
+      travel(2, 'Минск за выходные: путеводитель', 'Минск', 'Беларусь'),
+    ]);
+    writeJsonl(path.join(raw, 'quests.jsonl'), [
+      quest('krakow-dragon', 'Квест по Кракову: Вавельский дракон', 'Краков', 'krakow', 120),
+      quest('krakow-kazimierz', 'Квест по Кракову: Казимеж', 'Краков', 'krakow', 60, 'medium'),
+      // В названии нет слова «детский» — как у 17 из 26 детских квестов каталога.
+      { ...quest('krakow-kids-dragon', 'Экзамен смотрителя драконят', 'Краков', 'krakow', 80), tags: { kids: true, family: true, 'age-8-10': true, 'adult-required': true } },
+      { ...quest('krakow-family', 'Парк Прокоцим: голоса парка', 'Краков', 'krakow', 90), tags: ['family', 'citywalk'] },
+      // Минск без детского квеста: ответ о детях остаётся «возраст не указан».
+      quest('minsk-cmok', 'Квест по Минску: цмок', 'Минск', 'minsk', 45),
+      quest('minsk-bokhan', 'Квест по Минску: предания', 'Минск', 'minsk', 150, 'medium'),
+    ]);
+    const build = (edition: number) => {
+      const mixFile = path.join(home, `rag${edition}.json`);
+      fs.writeFileSync(mixFile, JSON.stringify({
+        name: `rag${edition}`, split: { by: 'key', valid_share: 0, test_share: 0 },
+        sets: { rag_answers: { options: { edition, per_place: 1, page_travels: 2, page_quests: 6 } } },
+      }));
+      const run = runCli('python3', ['-I', SCRIPT, '--ai-home', home, '--mix', mixFile, '--out', path.join(home, `out${edition}`)]);
+      expect(run.status).toBe(0);
+      return readJsonl(path.join(home, 'data', 'sets', 'rag_answers', 'train.jsonl'));
+    };
+    rows7 = build(7);
+    rows = build(8);
+  });
+  afterAll(() => removeDir(home));
+
+  it('карточка детского и семейного квеста несёт признак так же, как её пишет приложение', () => {
+    const prompts = rows.map(user).join('\n');
+    expect(prompts).toContain('Детский городской квест по городу Краков (Польша). Возраст: 8–10 лет. Со взрослым. Точек: 3. Длительность: 80 мин. Сложность: лёгкий');
+    expect(prompts).toContain('Семейный городской квест по городу Краков (Польша). Точек: 3. Длительность: 90 мин. Сложность: лёгкий');
+    // Фикстура `quest()` ставит всем квестам страну «Польша».
+    expect(prompts).toContain('\nГородской квест по городу Минск (Польша). Точек: 3. Длительность: 45 мин. Сложность: лёгкий');
+    // Edition 7 признака не знает: набор обученной версии не меняется.
+    expect(rows7.map(user).join('\n')).not.toMatch(/Детский городской квест|Семейный городской квест|Возраст:/);
+    expect(rows7.map(answer).join('\n')).not.toMatch(/детский квест|семейный квест/);
+  });
+
+  it('вопрос о детях получает помеченный квест с возрастом, остальные квесты города остаются в карточках', () => {
+    const kids = rows.filter((r) => r.kind === 'kids' && r.id.includes(':Краков:'));
+    expect(new Set(kids.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    for (const r of kids) {
+      expect({ id: r.id, urls: answerUrls(r) }).toEqual({ id: r.id, urls: [KIDS_URL] });
+      expect(answer(r)).not.toMatch(UNKNOWN_RE);
+      expect(user(r)).toContain('Детский городской квест');
+    }
+    const ru = kids.filter((r) => lang(r) === 'ru');
+    expect(ru.length).toBeGreaterThan(0);
+    for (const r of ru) {
+      expect(answer(r)).toContain('детский квест для 8–10 лет: 3 точки, около 80 мин');
+      // Модель видит, что подходящих карточек больше, чем названо.
+      expect((user(r).match(/\n?\[\d\] Квест «[^»]*» — https:\/\/metravel\.by\/quests\/krakow\//g) ?? []).length).toBeGreaterThanOrEqual(2);
+    }
+    expect(kids.find((r) => lang(r) === 'pl') && answer(kids.find((r) => lang(r) === 'pl')!)).toContain('quest dla dzieci w wieku 8–10 lat');
+  });
+
+  it('уточнение «что выбрать с ребёнком» на пяти языках выбирает по признаку из двух карточек', () => {
+    const follow = rows.filter((r) => r.kind === 'followup' && r.id.includes(':Краков:') && r.messages.length === 5 && /Детский городской квест/.test(user(r)));
+    expect(new Set(follow.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    for (const r of follow) {
+      const cards = [...user(r).matchAll(/\[\d\] Квест «[^»]*» — (\S+)/g)].map((m) => m[1]);
+      expect(cards).toHaveLength(2);
+      expect(cards).toContain(KIDS_URL);
+      expect(answerUrls(r)).toEqual([KIDS_URL]);
+      // Первый ответ диалога называл общие квесты, не детский.
+      expect(r.messages[2].content).not.toContain(KIDS_URL);
+    }
+  });
+
+  it('город без помеченного квеста и вопрос о странице обычного квеста — по-прежнему «возраст не указан»', () => {
+    const minsk = rows.filter((r) => r.kind === 'kids' && r.id.includes(':Минск:'));
+    expect(minsk.length).toBeGreaterThan(0);
+    for (const r of minsk) expect(answer(r)).toMatch(UNKNOWN_RE);
+    const pages = rows.filter((r) => r.kind === 'page' && /ребёнку|с детьми|дзіцяці|дитині|dziecka|child/.test(user(r).split('Вопрос посетителя:')[1] ?? ''));
+    const marked = pages.filter((r) => user(r).split('\n\n')[0].includes('Детский городской квест'));
+    const plain = pages.filter((r) => !user(r).split('\n\n')[0].includes('Детский городской квест'));
+    for (const r of marked) expect(answer(r)).toMatch(/^(?:Да|Так|Tak|Yes), \[/);
+    for (const r of plain) expect(answer(r)).toMatch(UNKNOWN_RE);
+    expect(marked.length + plain.length).toBe(pages.length);
+  });
+
+  it('квестов места в карточках меньше, чем просит вопрос: названы только они, чужие города не добавляются', () => {
+    const scarce = rows.filter((r) => r.kind === 'scarce' && r.id.includes(':Краков:'));
+    expect(new Set(scarce.map(lang))).toEqual(new Set(['ru', 'be', 'uk', 'pl', 'en']));
+    const ASKED: [RegExp, number][] = [[/три|тры|trzy|three/, 3], [/два|дв[аі]|пару|dwóch|two/, 2]];
+    for (const r of scarce) {
+      const question = user(r).split('Вопрос посетителя: ')[1];
+      const cards = [...user(r).matchAll(/\[\d\] Квест «[^»]*» — (\S+)/g)].map((m) => m[1]);
+      const own = cards.filter((url) => url.includes('/quests/krakow/'));
+      const asked = ASKED.find(([pattern]) => pattern.test(question))![1];
+      // В подсказке остались квесты другого города, а своих меньше, чем просили.
+      expect(cards.length - own.length).toBeGreaterThanOrEqual(2);
+      expect(own.length).toBeLessThan(asked);
+      expect([...answerUrls(r)].sort()).toEqual([...own].sort());
+      expect(answer(r)).toMatch(/Других квестов|Іншых квэстаў|Інших квестів|Innych questów|no other quests/);
+      expect(answer(r)).not.toMatch(/списке источников|спісе крыніц|списку джерел|liście źródeł|sources list/);
+    }
+    expect(scarce.some((r) => answerUrls(r).length === 1)).toBe(true);
+    expect(scarce.some((r) => answerUrls(r).length === 2)).toBe(true);
+    // Вида нет в обученных редакциях.
+    expect(rows7.some((r) => r.kind === 'scarce')).toBe(false);
+  });
+
+  it('первая реплика диалога о ребёнке не повторяет вопрос контура ни в одном городе и языке', () => {
+    // «Какие квесты есть в Минске?» в истории — это on02: prepare_training_data отклоняет весь набор.
+    const script = [
+      'import sys',
+      "sys.path.insert(0, 'scripts/ai-train')",
+      'from sets.assistant_prompt import is_contour_question',
+      'from sets.rag_answers import KIDS_FIRST_ASK, PLACES_L10N, PLACES_RU, be_fix',
+      'hits = []',
+      'for name, loc, _, _ in PLACES_RU:',
+      "    hits += [KIDS_FIRST_ASK['ru'].format(loc=loc)] if is_contour_question(KIDS_FIRST_ASK['ru'].format(loc=loc)) else []",
+      '    for lang, l10n in PLACES_L10N.get(name, {}).items():',
+      "        q = (be_fix if lang == 'be' else str)(KIDS_FIRST_ASK[lang].format(loc=l10n))",
+      '        hits += [q] if is_contour_question(q) else []',
+      'print(hits)',
+    ].join('\n');
+    const run = runCli('python3', ['-I', '-c', script], { cwd: process.cwd() });
+    expect(run.stdout.trim()).toBe('[]');
+    expect(rows.some((r) => r.kind === 'followup' && r.messages.length === 5)).toBe(true);
+  });
+
+  it('ни один ответ не называет признак, которого нет в его карточке после ужатия фрагментов', () => {
+    for (const r of rows) {
+      for (const line of answer(r).split('\n')) {
+        const url = (line.match(URL_RE) ?? [])[0];
+        if (!url || !/детский квест|дзіцячы квэст|дитячий квест|quest dla dzieci|kids' quest/.test(line)) continue;
+        const block = user(r).split(`— ${url}\n`)[1]?.split('\n\n')[0] ?? '';
+        expect({ id: r.id, block }).toEqual({ id: r.id, block: expect.stringContaining('Детский городской квест') });
+        if (/8–10/.test(line)) expect(block).toContain('Возраст: 8–10 лет');
+      }
+    }
+  });
+});

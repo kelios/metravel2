@@ -37,6 +37,26 @@ Edition 4 (#2731, options.edition = 4) — from the v3 contour misses (#2710):
                 language from the site_translations cache (the screen's BE/UK/PL/EN cards
                 carry translated titles; v3 wrote «Квест po Krakowie»).
 
+Edition 8 (#3276, #3278, 11.11.2026) — from the v7 residual mt03#1 («какой из них подойдёт детям?»):
+* audience    — quest cards carry the children's mark of the catalogue the way the app writes it
+                («Детский городской квест по городу …. Возраст: 8–10 лет. Со взрослым. Точек: …»,
+                «Семейный городской квест …»); every answer names such a quest as «детский квест для
+                8–10 лет: …» in the answer language;
+* kids        — a question about children is answered with the marked quests of the place (at most
+                two), the other quests of the place stay among the cards; «Возрастные ограничения в
+                карточках не указаны» remains only when no card is marked;
+* followup    — the dialogue of mt03 on five languages: the first answer lists general quests, the
+                second question asks about a child, the cards hold a general quest and the children's
+                one in a random order, the answer picks by the mark;
+* page        — «Этот квест подойдёт ребёнку?» on a marked quest is answered «Да, … — детский квест
+                для 8–10 лет…»;
+* scarce      — fewer quests of the place among the cards than the question asks for («три квеста
+                {loc}» with one or two of them next to two or three quests of other cities): the
+                answer names only the quests of the place and says there are no others. From the
+                acceptance of 11.11.2026: v4 and v7 topped the list up to the asked number with
+                quests of other cities (off_place_card on five held-out questions), and no sample of
+                editions 3–7 showed fewer matches than asked. Editions 3–7 are unchanged.
+
 Edition 7 (#2751 v7, 09.11.2026) — from the v6 acceptance (on13, BE ln02: four to six quests
 listed instead of three, on v4 and v6 alike):
 * card order  — which three of the matching cards an answer names used to follow the dump order
@@ -236,6 +256,70 @@ QUEST_BLURB = {
     "uk": "міський квест: точок — {points}, близько {duration} хв",
     "pl": "quest miejski: punktów — {points}, ok. {duration} min",
     "en": "city quest: {points} stops, about {duration} min",
+}
+# Edition 8 (#3276, #3278): the audience of a quest. The catalogue marks children's quests (`tags.kids`
+# on 26 of 343 quests, `family`, `age-8-10`, `adult-required`), but the card the assistant sent carried
+# only the city, the number of stops, the duration and the difficulty — and «детский» stands in the title
+# of 9 of those 26. Asked «какой из них подойдёт детям?», the model saw two cards of one shape, answered
+# as edition 5 taught («Возрастные ограничения в карточках не указаны») and picked at random
+# (mt03#1, 11.11.2026). The app now writes the audience into the card (questToSource); these samples teach
+# the answer to pick by it and to name the age.
+AUDIENCE_HEAD_RU = {"kids": "Детский городской квест", "family": "Семейный городской квест"}
+AUDIENCE_BLURB = {
+    "ru": {"kids": "детский квест{age}: {points} {points_word}, около {duration} мин", "family": "семейный квест: {points} {points_word}, около {duration} мин",
+           "age": " для {lo}–{hi} лет"},
+    "be": {"kids": "дзіцячы квэст{age}: пунктаў — {points}, каля {duration} хв", "family": "сямейны квэст: пунктаў — {points}, каля {duration} хв",
+           "age": " для {lo}–{hi} гадоў"},
+    "uk": {"kids": "дитячий квест{age}: точок — {points}, близько {duration} хв", "family": "сімейний квест: точок — {points}, близько {duration} хв",
+           "age": " для {lo}–{hi} років"},
+    "pl": {"kids": "quest dla dzieci{age}: punktów — {points}, ok. {duration} min", "family": "quest rodzinny: punktów — {points}, ok. {duration} min",
+           "age": " w wieku {lo}–{hi} lat"},
+    "en": {"kids": "kids' quest{age}: {points} stops, about {duration} min", "family": "family quest: {points} stops, about {duration} min",
+           "age": " for ages {lo}–{hi}"},
+}
+KIDS_PICK_INTRO = {"ru": ("Для детей {loc} есть:", "С ребёнком {loc} подойдёт:"), "be": ("Для дзяцей {loc} ёсць:",), "uk": ("Для дітей {loc} є:",),
+                   "pl": ("Dla dzieci {loc} jest:",), "en": ("For children {loc} there is:",)}
+KIDS_FOLLOW_ASK = {
+    "ru": ("Что из этого выбрать, если идём с ребёнком?", "Какой из этих квестов рассчитан на детей?", "А с ребёнком куда лучше?"),
+    "be": ("Што з гэтага выбраць, калі ідзём з дзіцем?",), "uk": ("Що з цього обрати, якщо йдемо з дитиною?",),
+    "pl": ("Co z tego wybrać, jeśli idziemy z dzieckiem?",), "en": ("Which of these should we pick if we go with a child?",),
+}
+KIDS_FOLLOW_INTRO = {"ru": "С ребёнком выбирайте:", "be": "З дзіцем выбірайце:", "uk": "З дитиною обирайте:", "pl": "Z dzieckiem wybierzcie:",
+                     "en": "With a child, choose:"}
+# Not «Какие квесты есть {loc}?»: with {loc} filled in it is the contour's on02, v01, BE ln02, UK ln04 word for word,
+# and a history turn is checked by prepare_training_data.holdout_violation like the question itself.
+KIDS_FIRST_ASK = {"ru": "Какие квесты можно пройти {loc}?", "be": "Якія квэсты можна прайсці {loc}?", "uk": "Які квести можна пройти {loc}?",
+                  "pl": "Jakie questy można przejść {loc}?", "en": "Which quests can we do {loc}?"}
+PAGE_KIDS_TAGGED = {
+    "ru": "Да, [{title}]({url}) — {blurb}.",
+    "be": "Так, [{title}]({url}) — {blurb}.",
+    "uk": "Так, [{title}]({url}) — {blurb}.",
+    "pl": "Tak, [{title}]({url}) — {blurb}.",
+    "en": "Yes, [{title}]({url}) is a {blurb}.",
+}
+# Edition 8 `scarce`: the question asks for more quests of the place than the cards hold. The wording is
+# built apart from the held-out questions of the contour (cases.holdout.jsonl is never read here).
+SCARCE_ASK = {
+    "ru": {2: ("Нужны два квеста {loc} на выходные.", "Хотим пройти пару квестов {loc}. Какие?"),
+           3: ("Хотим пройти три квеста {loc}. Какие посоветуешь?", "Подбери три квеста {loc}.")},
+    "be": {2: ("Патрэбны два квэсты {loc} на выхадныя.",), 3: ("Хочам прайсці тры квэсты {loc}. Якія параіш?",)},
+    "uk": {2: ("Потрібні два квести {loc} на вихідні.",), 3: ("Хочемо пройти три квести {loc}. Які порадиш?",)},
+    "pl": {2: ("Szukamy dwóch questów {loc} na weekend.",), 3: ("Chcemy przejść trzy questy {loc}. Które polecasz?",)},
+    "en": {2: ("We need two quests {loc} for the weekend.",), 3: ("We would like to do three quests {loc}. Which ones?",)},
+}
+SCARCE_INTRO = {
+    "ru": {1: "{Loc} в карточках один квест:", 2: "{Loc} в карточках два квеста:"},
+    "be": {1: "{Loc} у картках адзін квэст:", 2: "{Loc} у картках два квэсты:"},
+    "uk": {1: "{Loc} у картках один квест:", 2: "{Loc} у картках два квести:"},
+    "pl": {1: "{Loc} w kartach jest jeden quest:", 2: "{Loc} w kartach są dwa questy:"},
+    "en": {1: "{Loc} the cards hold one quest:", 2: "{Loc} the cards hold two quests:"},
+}
+SCARCE_TAIL = {
+    "ru": "Других квестов {loc} среди найденного нет.",
+    "be": "Іншых квэстаў {loc} сярод знойдзенага няма.",
+    "uk": "Інших квестів {loc} серед знайденого немає.",
+    "pl": "Innych questów {loc} wśród znalezionych nie ma.",
+    "en": "There are no other quests {loc} among the cards.",
 }
 NO_MATERIAL_RU = (
     "На сайте пока нет материалов {about}. Из того, что нашлось, можно посмотреть [{title}]({url}) — {blurb}.",
@@ -490,14 +574,36 @@ def quest_points(q: dict) -> int:
     return len(steps) if isinstance(steps, list) else 0
 
 
-def quest_card(q: dict) -> dict:
-    """Card as retrieval.ts questToSource builds it."""
+def quest_audience(tags) -> dict | None:
+    """`{kind, age, adult}` of a quest by its catalogue tags (a slug list or a `{tag: true}` map), or None.
+    The same rule as api/aiAssist/questAudience.ts — a test compares the two on the tag fixtures; like
+    utils/questTags.js, a list with a non-string item or any other shape reads as no tags at all."""
+    if isinstance(tags, dict):
+        slugs = [t for t, on in tags.items() if on]
+    elif isinstance(tags, list) and all(isinstance(t, str) for t in tags):
+        slugs = tags
+    else:
+        return None
+    kind = "kids" if "kids" in slugs else "family" if "family" in slugs else None
+    if not kind:
+        return None
+    ages = [tuple(map(int, m.groups())) for m in (re.fullmatch(r"age-(\d+)-(\d+)", t) for t in slugs) if m]
+    return {"kind": kind, "age": (min(a for a, _ in ages), max(b for _, b in ages)) if ages else None, "adult": "adult-required" in slugs}
+
+
+def quest_card(q: dict, audience: bool = False) -> dict:
+    """Card as retrieval.ts questToSource builds it; `audience` (edition 8) — with the children's mark."""
     city = (q.get("city_name") or "").strip()
     country = (q.get("country_name") or "").strip()
     points = quest_points(q)
     duration = int(q["duration_min"]) if str(q.get("duration_min") or "").isdigit() else 0
     difficulty = DIFFICULTY_RU.get(q.get("difficulty") or "", "")
-    parts = [f"Городской квест{f' по городу {city}' if city else ''}{f' ({country})' if country else ''}"]
+    who = quest_audience(q.get("tags")) if audience else None
+    parts = [f"{AUDIENCE_HEAD_RU[who['kind']] if who else 'Городской квест'}{f' по городу {city}' if city else ''}{f' ({country})' if country else ''}"]
+    if who and who["age"]:
+        parts.append(f"Возраст: {who['age'][0]}–{who['age'][1]} лет")
+    if who and who["adult"]:
+        parts.append("Со взрослым")
     if points:
         parts.append(f"Точек: {points}")
     if duration:
@@ -507,10 +613,20 @@ def quest_card(q: dict) -> dict:
     # buildQuestPath(city_alias, quest_id) — the address the assistant's cards carry.
     return {"type": "quest", "title": q["title"].strip(), "url": f"{SITE}/quests/{q['city_alias']}/{q['quest_id']}", "snippet": ". ".join(parts),
             "points": points, "duration": duration, "difficulty": difficulty, "country": country,
-            "haystack": f"{q['title']} {city} {country}".lower()}
+            "haystack": f"{q['title']} {city} {country}".lower(), **({"audience": who} if who else {})}
+
+
+def for_kids(card: dict) -> bool:
+    return card["type"] == "quest" and (card.get("audience") or {}).get("kind") == "kids"
 
 
 def blurb(card: dict, lang: str) -> str:
+    who = card.get("audience") if card["type"] == "quest" else None
+    if who and card["points"] and card["duration"]:
+        forms = AUDIENCE_BLURB[lang]
+        age = forms["age"].format(lo=who["age"][0], hi=who["age"][1]) if who["kind"] == "kids" and who["age"] else ""
+        return forms[who["kind"]].format(age=age, points=card["points"], points_word=ru_plural(card["points"], "точка", "точки", "точек"),
+                                         duration=card["duration"])
     if card["type"] == "quest" and card["points"] and card["duration"]:
         return QUEST_BLURB[lang].format(points=card["points"], points_word=ru_plural(card["points"], "точка", "точки", "точек"), duration=card["duration"])
     if card["type"] == "quest":
@@ -612,12 +728,12 @@ def build(ctx: dict, options: dict) -> list[dict]:
     per_place = int(options.get("per_place", 2))
     other_share = float(options.get("other_langs_share", 0.35))
     edition = int(options.get("edition", 3))
-    if edition not in (3, 4, 5, 6, 7):
-        raise ValueError("rag_answers edition must be 3, 4, 5, 6 or 7")
+    if edition not in (3, 4, 5, 6, 7, 8):
+        raise ValueError("rag_answers edition must be 3, 4, 5, 6, 7 or 8")
     titles = load_quest_titles(ctx["sources"]) if edition >= 4 else {}
     travels_raw, quests_raw = load_raw(ctx["raw"])
     travels = [travel_card(t) for t in travels_raw if t.get("slug") and (t.get("name") or t.get("title"))]
-    quests = [quest_card(q) for q in quests_raw if q.get("quest_id") and q.get("title") and q.get("city_alias")]
+    quests = [quest_card(q, audience=edition >= 8) for q in quests_raw if q.get("quest_id") and q.get("title") and q.get("city_alias")]
     everything = travels + quests
     out: list[dict] = []
     _dropped.clear()
@@ -625,7 +741,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
     def emit(kind: str, place: str, lang: str, question: str, cards: list[dict], answer: str, n: int,
              key: str | None = None, history: list[dict] | None = None, required_evidence: str | None = None,
              keep: list[dict] | None = None) -> None:
-        if is_contour_question(question):
+        # History turns too: prepare_training_data rejects the whole mix on a contour question in any user turn.
+        if is_contour_question(question) or any(m["role"] == "user" and is_contour_question(m["content"]) for m in history or []):
             _dropped[f"contour_question:{kind}"] += 1
             return
         # buildAssistantMessages sanitizes historical text, including newlines.
@@ -656,6 +773,9 @@ def build(ctx: dict, options: dict) -> list[dict]:
         out.append(item)
 
     def render(intro: str, picks: list[dict], lang: str, kind: str = "") -> str:
+        if edition >= 8 and kind == "kids" and any(for_kids(c) for c in picks):
+            # The cards say which quest is for children: name those (at most two), with the age — no «не указаны».
+            return compose(intro or KIDS_INTRO[lang], [c for c in picks if for_kids(c)][:2], lang, rng, short=True, outro=False)
         if edition >= 5 and kind == "kids":
             return compose(KIDS_INTRO[lang], picks[:2], lang, rng, compact=edition == 5, short=True, outro=False) + "\n" + KIDS_UNKNOWN[lang]
         return compose(intro, picks, lang, rng, compact=edition == 5, short=edition >= 6, rest=kind == "crowded")
@@ -690,8 +810,32 @@ def build(ctx: dict, options: dict) -> list[dict]:
                 kid = rel_quests if edition >= 5 else ([c for c in rel_quests if c["difficulty"] == "лёгкий"] or rel_quests)
                 cards = mixed_cards(kid + rel_travels[:2], pool, rng)
                 picks = ((in_card_order(cards, kid) if edition >= 7 else [c for c in kid if c in cards])[:2] + [c for c in rel_travels[:1] if c in cards])[:3]
-                emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
-                     render(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, "kids"), n)
+                marked = [c for c in in_card_order(cards, kid) if for_kids(c)] if edition >= 8 else []
+                if marked:
+                    # Edition 8: the children's quests of the place, the other quests stay among the cards.
+                    emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
+                         render(rng.choice(KIDS_PICK_INTRO[lang]).format(**fill), marked, lang, "kids"), n, keep=in_card_order(cards, kid)[:4])
+                else:
+                    emit("kids", name, lang, rng.choice(ASK_RU["kids"]).format(**fill), cards,
+                         render(rng.choice(INTRO_RU["kids"]).format(**fill), picks, lang, "kids"), n)
+                others = [c for c in rel_quests if not for_kids(c)]
+                if edition >= 8 and n == 0 and any(for_kids(c) for c in rel_quests) and others:
+                    # The follow-up of mt03: the first answer named the general quests, the second question is
+                    # about a child — the cards hold a general quest and the children's one, the answer picks by the mark.
+                    child = next(c for c in rel_quests if for_kids(c))
+                    for follow_lang in ("ru", "be", "uk", "pl", "en"):
+                        if follow_lang != "ru" and name not in PLACES_L10N:
+                            continue
+                        place = {"loc": loc} if follow_lang == "ru" else {"loc": PLACES_L10N[name][follow_lang]}
+                        fix = be_fix if follow_lang == "be" else (lambda text: text)
+                        first = [localize(c, follow_lang, titles) for c in others[:2]]
+                        pair = [localize(c, follow_lang, titles) for c in (others[0], child)]
+                        rng.shuffle(pair)
+                        history = [{"role": "user", "content": fix(KIDS_FIRST_ASK[follow_lang].format(**place))},
+                                   {"role": "assistant", "content": compose("", first, follow_lang, rng, short=True, outro=False)}]
+                        emit("followup", name, follow_lang, rng.choice(KIDS_FOLLOW_ASK[follow_lang]), pair,
+                             render(KIDS_FOLLOW_INTRO[follow_lang], pair, follow_lang, "kids"), per_place + 1, history=history,
+                             keep=pair)
                 if edition >= 5 and n == 0:
                     # A follow-up must retain the selected source link while
                     # keeping child suitability separate from easy difficulty.
@@ -744,6 +888,8 @@ def build(ctx: dict, options: dict) -> list[dict]:
                     picks = sorted((c for c in cards if c["url"] in urls), key=lambda c: urls.index(c["url"]))[:3]
                     if edition >= 7 and kind != "pick":
                         picks = in_card_order(cards, ordered)[:3]
+                    if edition >= 8 and kind == "kids" and any(for_kids(c) for c in cards):
+                        picks = [c for c in in_card_order(cards, ordered) if for_kids(c)]
                     if picks:
                         l10n = {"loc": PLACES_L10N[name][lang]}
                         fix = be_fix if lang == "be" else (lambda text: text)
@@ -777,6 +923,26 @@ def build(ctx: dict, options: dict) -> list[dict]:
                             cards = [localize(c, lang, titles) for c in crowded_cards(rel_quests, rng)]
                             emit("crowded", name, lang, fix(rng.choice(ASK_L10N6[lang]["quests"]).format(**l10n)), cards,
                                  render(intro, cards[:3], lang, "crowded"), per_place * v + n, keep=cards)
+
+            foreign = [c for c in pool if c["type"] == "quest"]
+            if edition >= 8 and n == 0 and rel_quests and len(foreign) >= 2:
+                # Fewer quests of the place among the cards than asked: only they are named, nothing is topped up.
+                for lang in ("ru", "be", "uk", "pl", "en"):
+                    if lang != "ru" and name not in PLACES_L10N:
+                        continue
+                    place = {"loc": loc} if lang == "ru" else {"loc": PLACES_L10N[name][lang]}
+                    place["Loc"] = cap(place["loc"])
+                    fix = be_fix if lang == "be" else (lambda text: text)
+                    for own_count in range(1, min(len(rel_quests), 2) + 1):
+                        own = rng.sample(rel_quests, own_count)
+                        asked = rng.randint(own_count + 1, 3)
+                        # at most four cards: with five the budget cuts every snippet down to the head
+                        cards = [localize(c, lang, titles) for c in own + rng.sample(foreign, min(len(foreign), rng.randint(2, 4 - own_count)))]
+                        rng.shuffle(cards)
+                        picks = in_card_order(cards, own)
+                        answer = (compose(fix(SCARCE_INTRO[lang][own_count].format(**place)), picks, lang, rng, short=True, outro=False)
+                                  + "\n\n" + fix(SCARCE_TAIL[lang].format(**place)))
+                        emit("scarce", name, lang, fix(rng.choice(SCARCE_ASK[lang][asked]).format(**place)), cards, answer, own_count, keep=cards)
 
     covered = " ".join(c["haystack"] for c in everything)
     for name, loc, about, pattern in ABSENT_RU:
@@ -831,6 +997,10 @@ def _observed_only(answer: str, user: str, cards: list[dict]) -> str:
             block = user.split(f"— {card['url']}\n", 1)[1].split("\n\n", 1)[0] if f"— {card['url']}\n" in user else ""
             if card["type"] == "quest":
                 facts = (f"Точек: {card['points']}", f"Длительность: {card['duration']} мин") if re.search(r"\d", tail) else ()
+                who = card.get("audience")
+                if who:
+                    # «детский квест для 8–10 лет» is a fact of the card too: the shortened snippet must still show it.
+                    facts += (AUDIENCE_HEAD_RU[who["kind"]],) + ((f"Возраст: {who['age'][0]}–{who['age'][1]} лет",) if who["kind"] == "kids" and who["age"] else ())
                 visible = all(fact in block for fact in facts)
             else:
                 visible = sanitize_fragment(tail.rstrip(".")) in block
@@ -902,6 +1072,9 @@ def _emit_page(emit, travels: list[dict], quests: list[dict], titles: dict, rng:
         kind = rng.choice(("facts", "facts", "kids") + (("difficulty",) if card["difficulty"] else ()))
         answer = {"facts": PAGE_FACTS["ru"], "kids": PAGE_KIDS["ru"], "difficulty": PAGE_DIFFICULTY_RU}[kind].format(**fill)
         evidence = f"Сложность: {card['difficulty']}" if kind == "difficulty" else f"Длительность: {card['duration']} мин"
+        if kind == "kids" and for_kids(card):
+            # Edition 8 (only then a card carries `audience`): the card answers the question itself.
+            answer, evidence = PAGE_KIDS_TAGGED["ru"].format(title=fill["title"], url=card["url"], blurb=blurb(card, "ru")), AUDIENCE_HEAD_RU["kids"]
         emit("page", card["url"].rsplit("/", 1)[-1], "ru", rng.choice(PAGE_ASK_QUEST["ru"][kind]), pin(card, "ru"), answer, 0,
              key=f"page:{card['url']}", required_evidence=evidence)
         if index % 2 == 0:
@@ -909,8 +1082,11 @@ def _emit_page(emit, travels: list[dict], quests: list[dict], titles: dict, rng:
             kind = rng.choice(("facts", "kids"))
             local = localize(card, lang, titles)
             answer = {"facts": PAGE_FACTS, "kids": PAGE_KIDS}[kind][lang].format(**{**fill, "title": short_title(local["title"])})
+            evidence = f"Длительность: {card['duration']} мин"
+            if kind == "kids" and for_kids(card):
+                answer, evidence = PAGE_KIDS_TAGGED[lang].format(title=short_title(local["title"]), url=card["url"], blurb=blurb(card, lang)), AUDIENCE_HEAD_RU["kids"]
             emit("page", card["url"].rsplit("/", 1)[-1], lang, rng.choice(PAGE_ASK_QUEST[lang][kind]), pin(card, lang), answer, 1,
-                 key=f"page:{card['url']}", required_evidence=f"Длительность: {card['duration']} мин")
+                 key=f"page:{card['url']}", required_evidence=evidence)
 
 
 def _emit_boundary(emit, everything: list[dict], titles: dict, rng: random.Random, per_place: int) -> None:

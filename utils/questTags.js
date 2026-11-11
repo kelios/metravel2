@@ -21,4 +21,9 @@ function questTagNames(value) {
   return Object.keys(normalizeQuestTags(value) ?? {});
 }
 
-module.exports = { normalizeQuestTags, questTagNames };
+/** Enabled tag slugs — what a rule over tags reads: a `{tag: false}` entry, absent tags and unknown shapes give none. */
+function enabledQuestTags(value) {
+  return Object.entries(normalizeQuestTags(value) ?? {}).filter(([, enabled]) => enabled).map(([tag]) => tag);
+}
+
+module.exports = { normalizeQuestTags, questTagNames, enabledQuestTags };

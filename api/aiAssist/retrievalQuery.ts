@@ -9,7 +9,24 @@
 
 // Явное расширение: модуль грузит и `node --experimental-strip-types` (служба), которому без него не найти файл.
 import { mentionsPlace } from './topicGate.ts'
-import type { AiHistoryItem } from './types'
+import type { AiHistoryItem, AiSource } from './types'
+
+export type AiSourceIntent = AiSource['type'] | null
+// `\b` не знает кириллицы — граница слова через lookbehind по букве.
+// Кириллица — по началу слова (квест/квесты/квестов), латиница — целым словом:
+// иначе «question»/«kwestia» читались как намерение про квесты.
+const QUEST_INTENT_RE = /(?<!\p{L})(?:квест|квэст|(?:quest(?:s|y|ów|u)?|kwest(?:y|ów|u)?)(?!\p{L}))/iu
+const TRAVEL_INTENT_RE = /(?<!\p{L})(?:стать|артыкул|маршрут|путеводител|(?:articles?|artykuły?|trasy?|trasa|routes?)(?!\p{L}))/iu
+
+/** Намерение вопроса: «квесты…» / «статья, маршрут…»; оба или ни одного — `null`. Общее с `/ai/ask` (#3276). */
+export const detectIntent = (query: string): AiSourceIntent => {
+  const text = String(query ?? '')
+  const quest = QUEST_INTENT_RE.test(text)
+  const travel = TRAVEL_INTENT_RE.test(text)
+  if (quest && !travel) return 'quest'
+  if (travel && !quest) return 'travel'
+  return null
+}
 
 // Уточнение начинается с «А/И/Ещё…» или ссылается на прошлый вопрос («из них», «там»,
 // «туда», «этот»…) — на RU/BE/UK/PL/EN. Польское «I …» — уточнение, английское

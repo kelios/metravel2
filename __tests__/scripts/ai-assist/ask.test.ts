@@ -18,7 +18,7 @@ import { createDemandLog, type DemandEntry, type DemandReason } from '@/scripts/
 import { AskLimits, createCounterStore, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 
 import { makeTempDir } from '../cli-test-utils'
-import { fakeEmbedQuery, loadFixtureIndex, MODEL } from './fixture'
+import { fakeEmbedQuery, FIXTURE_CHUNKS, loadFixtureIndex, MODEL, type Spec, writeFixtureIndex } from './fixture'
 
 /** 25.10.2026 21:30 UTC = 00:30 Minsk 26.10; 20:59:59 UTC = 23:59:59 Minsk 25.10. */
 const MINSK_LATE = new Date('2026-10-25T20:59:59Z')
@@ -172,7 +172,7 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
   }
 }
 
-function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery } = {}) {
+function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[] } = {}) {
   const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
@@ -183,7 +183,7 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
   })
   const generator = overrides.generator === undefined ? fakeGenerator(() => 'Загляните в [Ярмарки Польши](https://metravel.by/travels/816) и на https://evil.example/x') : overrides.generator
   const server = createApp({
-    index: loadFixtureIndex(),
+    index: overrides.chunks ? loadFixtureIndex(writeFixtureIndex(MODEL, overrides.chunks)) : loadFixtureIndex(),
     modelKey: MODEL,
     embedQuery: overrides.embedQuery ?? fakeEmbedQuery,
     lexical: async () => [],
@@ -381,6 +381,42 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(missing.status).toBe(200)
       expect(missing.events[0].data.sources.some((s: { source_id: string }) => s.source_id === '999')).toBe(false)
       expect(missing.events[0].data.sources.length).toBeGreaterThan(0)
+    } finally {
+      await close(server)
+    }
+  })
+
+  it('#3276: карточка квеста начинается с вида квеста, возраста и «Со взрослым»; при вопросе о детях детский квест города — первой карточкой подсказки', async () => {
+    const prompts: string[] = []
+    const generator = fakeGenerator((request) => {
+      prompts.push(String(request.messages.at(-1)?.content ?? ''))
+      return 'Загляните в [Фонари Бреста](https://metravel.by/quests/3)'
+    })
+    const chunks: Spec[] = [
+      ...FIXTURE_CHUNKS,
+      // В названии и тексте нет слова «дети»: наверх квест поднимают только теги каталога.
+      { type: 'quest', sourceId: 3, title: 'Фонари Бреста', text: 'фонарщик улица советская зажигает фонари', city: 'Брест', tags: ['kids', 'family', 'age-8-10', 'adult-required'] },
+      { type: 'quest', sourceId: 4, title: 'Набережная Гродно', text: 'неман набережная семейная прогулка', city: 'Гродно', tags: ['kids', 'age-5-7'] },
+    ]
+    const { server } = makeServer({ generator, chunks })
+    await listen(server)
+    try {
+      const kids = await post(server, '/ai/ask', { q: 'Какой квест в Бресте подойдёт детям?', locale: 'ru' })
+      expect(kids.status).toBe(200)
+      const sources = kids.events[0].data.sources as { type: string; source_id: string; snippet: string }[]
+      expect(sources[0]).toMatchObject({ type: 'quest', source_id: '3' })
+      expect(sources[0].snippet).toBe('Детский городской квест по городу Брест (Польша). Возраст: 8–10 лет. Со взрослым. фонарщик улица советская зажигает фонари')
+      // Обычный квест города несёт тот же зачин, что на экране; детский квест Гродно первым не становится.
+      expect(sources.find((s) => s.type === 'quest' && s.source_id === '2')?.snippet).toBe('Городской квест по городу Брест (Польша). квест брест крепость задание дети')
+      expect(sources.findIndex((s) => s.type === 'quest' && s.source_id === '4')).not.toBe(1)
+      expect(sources.find((s) => s.type === 'travel')?.snippet).not.toMatch(/Городской квест/)
+      // Та же карточка — первой в подсказке модели.
+      expect(prompts[0]).toContain('[1] Квест «Фонари Бреста» — https://metravel.by/quests/3\nДетский городской квест по городу Брест (Польша). Возраст: 8–10 лет. Со взрослым.')
+
+      // Без вопроса о детях порядок подбора не меняется: первым идёт не обязательно детский квест, зачин остаётся.
+      const plain = await post(server, '/ai/ask', { q: 'фонарщик улица советская зажигает фонари', locale: 'ru' })
+      const pinned = (plain.events[0].data.sources as { source_id: string; type: string; snippet: string }[]).find((s) => s.type === 'quest' && s.source_id === '3')
+      expect(pinned?.snippet.startsWith('Детский городской квест по городу Брест (Польша). Возраст: 8–10 лет. Со взрослым. ')).toBe(true)
     } finally {
       await close(server)
     }
