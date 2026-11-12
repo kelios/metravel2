@@ -1,5 +1,5 @@
 {
-  "_comment": "Зеркало 301-алиасов старых слагов /travels/, НЕ механизм редиректа. Настоящий 301 даёт только запись TravelSlugRedirect в бэкенде: голый /travels/<slug> резолвит Django (location ~ ^/travels/[^/]+$ в nginx/nginx.conf стоит РАНЬШЕ статического location с try_files), поэтому до dist/prod/travels/{from}.html дело не доходит вовсе. Статический стаб для формы со слэшем (её nginx сам разворачивает 301 на голый адрес) снят вместе со статическим конвейером (#2766). Пара, добавленная сюда без алиаса в бэкенде, остаётся мёртвой и висит в корзине regression отчёта seo:404, роняя его в код 1. Добавляй {from,to} только вместе с заведением алиаса (scripts/seo-alias-backfill.js или бэкенд-миграция); никогда не используй живой слаг как from. Проверено на проде 01.09.2026: из 60 пар, чей стаб лежит в срезе, все 60 отдают настоящий 301 и ни одна — тело стаба. См. #1689, #1693.",
+  "_comment": "Зеркало 301-алиасов старых слагов /travels/, НЕ механизм редиректа. Настоящий 301 даёт только запись TravelSlugRedirect в бэкенде: голый /travels/<slug> резолвит Django (location ~ ^/travels/[^/]+$ в nginx/nginx.conf стоит РАНЬШЕ статического location с try_files), поэтому до dist/prod/travels/{from}.html дело не доходит вовсе. Статический стаб для формы со слэшем (её nginx сам разворачивает 301 на голый адрес) снят вместе со статическим конвейером (#2766). Пара, добавленная сюда без алиаса в бэкенде, остаётся мёртвой и висит в корзине regression отчёта seo:404, роняя его в код 1. Добавляй {from,to} только вместе с заведением алиаса (scripts/seo-alias-backfill.js или бэкенд-миграция); никогда не используй живой слаг как from. Проверено на проде 01.09.2026: из 60 пар, чей стаб лежит в срезе, все 60 отдают настоящий 301 и ни одна — тело стаба. См. #1689, #1693. Зеркало неполно по построению: его пишет только scripts/seo-rename.js, а алиас бэкенд заводит при любой смене слага (редактор, seo-alias-backfill.js, миграции-бэкфиллы 0045/0050), и списка алиасов наружу не отдаёт. Полноту сверяет с живым сайтом `node scripts/seo-fix-links.js --check` (GET /travels/<slug> без следования редиректам по всем внутренним адресам из текстов статей); `--check --update-mirror` дописывает сюда пары, которые сайт редиректит, а зеркало не знает (#3330).",
   "redirects": [
     {
       "from": "forty-krakova",
@@ -1068,6 +1068,38 @@
     {
       "from": "zelena-zhivopisnaya-tropa-bobry",
       "to": "zelene-tropa-bobrov-i-vetrianaia-melnitsa"
+    },
+    {
+      "from": "mavrikiy-morskaya-ekskursiya-na-ostrov-il-o-serf-ile-aux-cerfs",
+      "to": "ostrov-il-o-serf-morskaia-ekskursiia-na-mavrikii"
+    },
+    {
+      "from": "marshrut-vykhodnogo-dnia-mogilev-usadba-tolstykh-v-grudinovke-i-park-pobedy",
+      "to": "mogilev-usadba-tolstykh-i-bykhovskii-zamok"
+    },
+    {
+      "from": "marshrut-na-odin-den-v-grodnenskuyu-oblast-usadba-grobovskih-valcevskikh-i-dobrovolskikh",
+      "to": "zheludok-i-usadby-grodnenshchiny-kak-dobratsia"
+    },
+    {
+      "from": "zamok-tenchin-solyanaya-shahta-velichka-zamok-zhupny",
+      "to": "chto-posmotret-riadom-s-krakovom-za-odin-den"
+    },
+    {
+      "from": "knyazheskiy-zamok-nemodlin-dvorec-v-kopice-3",
+      "to": "zamok-nemodlin-i-dvorets-kopitse-zabroshennaia-opolshchina"
+    },
+    {
+      "from": "zamok-olshtyn-sklad-i-peshchera-v-kelnikah-1",
+      "to": "zamok-olshtyn-peshchery-i-karer-v-kelnikakh"
+    },
+    {
+      "from": "marshrut-na-odin-den-zamok-mirov-peshchera-suha-zamok-bobolice",
+      "to": "zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+    },
+    {
+      "from": "vitebsk-chto-mozhno-posmotret",
+      "to": "vitebsk-za-1-den-chto-posmotret-i-kuda-skhodit"
     }
   ]
 }

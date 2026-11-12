@@ -908,7 +908,13 @@ not by the fastest patch that makes the symptom disappear.
 - Guard: `npm run guard:travel-links` (in `lint`, `lint:ci` and `check:fast`).
   Its exception list `AD_HOC_BUILDER_BASELINE` is closed and only shrinks.
   Links inside article bodies are editorial data and are rewritten by
-  `scripts/seo-fix-links.js`, not by the renderer.
+  `scripts/seo-fix-links.js`, not by the renderer. It walks every rich-text
+  field that can hold a link (`description`, `recommendation`, `plus`, `minus`).
+  The redirect manifest is a mirror of the backend's `TravelSlugRedirect` rows
+  and is incomplete by construction, so a zero `--dry-run` is not proof:
+  `--check` asks the live site for every internal address without following
+  redirects and passes only when each answers 200; `--check --update-mirror`
+  appends the pairs the site redirects but the mirror lacks (#3330).
 
 ### Images and placeholders
 

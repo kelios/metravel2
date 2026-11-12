@@ -247,6 +247,15 @@ head собирает `generateMetadata` маршрута `app/(tabs)/travels/[p
 отчётов (`report-travel-404.js`, `seo-fix-links.js`), не механизм редиректа:
 настоящий 301 даёт запись `TravelSlugRedirect` в бэкенде. Статические
 заглушки старых slug сняты вместе со статическим конвейером (#2766).
+Зеркало заведомо неполное: его пишет только `seo-rename.js`, а алиас бэкенд
+заводит при любой смене slug (редактор, `seo-alias-backfill.js`, миграции), и
+списка алиасов наружу он не отдаёт. Источник для сверки — живой ответ
+`GET /travels/<slug>` без следования редиректам: `node scripts/seo-fix-links.js
+--check` спрашивает так каждый внутренний адрес из `description`,
+`recommendation`, `plus` и `minus` статей и зелёный, только когда все отвечают
+200; `--check --update-mirror` дописывает в зеркало пары, которые сайт
+редиректит, а зеркало не знает (#3330). Нулевой `--dry-run` без `--check`
+полноту не доказывает.
 На рантайме slug разрешает бэкенд — `/travels/resolve-slug/{slug}/`
 (`api/travelDetailsQueries.ts:443-475`), у `articles` свой резолвер с фолбэком
 на `by-slug` (`api/articles.ts:351-374`).
@@ -277,6 +286,7 @@ head собирает `generateMetadata` маршрута `app/(tabs)/travels/[p
 | живой SSR travel | `scripts/verify-live-web-ssr.js` (из `build-prod.sh` → `deploy_prod`, до `finalize-code`) | опубликованная пара не отдаёт серверный HTML статьи (canonical, тело, Article JSON-LD) → `rollback-code` к предыдущей SSR-паре |
 | `post-deploy-seo-check.js` | `npm run test:seo:postdeploy` | длина description вне 80–170 — только на индексируемых страницах: под `noindex` сниппета в выдаче нет, и длина не меряется (#2008); отсутствие SSR-маркеров на проде |
 | `post-deploy-media-check.js` | `npm run test:media:postdeploy` | нерабочие ступени `media.article_body[*].srcset` |
+| `seo-fix-links.js --check` | вручную после каждого переименования и перед/после `--apply` | внутренняя ссылка в `description`/`recommendation`/`plus`/`minus` статьи отвечает не 200 (301 мимо зеркала, 404), ссылка в поле, которое инструмент не переписывает (#3330) |
 
 Юнит- и e2e-покрытие: `__tests__/scripts/ssg-skeletons.test.ts` (санитайзер,
 клэмп, `# Фича: article (rich-text тело статьи и редактор)
@@ -528,6 +538,15 @@ head собирает `generateMetadata` маршрута `app/(tabs)/travels/[p
 отчётов (`report-travel-404.js`, `seo-fix-links.js`), не механизм редиректа:
 настоящий 301 даёт запись `TravelSlugRedirect` в бэкенде. Статические
 заглушки старых slug сняты вместе со статическим конвейером (#2766).
+Зеркало заведомо неполное: его пишет только `seo-rename.js`, а алиас бэкенд
+заводит при любой смене slug (редактор, `seo-alias-backfill.js`, миграции), и
+списка алиасов наружу он не отдаёт. Источник для сверки — живой ответ
+`GET /travels/<slug>` без следования редиректам: `node scripts/seo-fix-links.js
+--check` спрашивает так каждый внутренний адрес из `description`,
+`recommendation`, `plus` и `minus` статей и зелёный, только когда все отвечают
+200; `--check --update-mirror` дописывает в зеркало пары, которые сайт
+редиректит, а зеркало не знает (#3330). Нулевой `--dry-run` без `--check`
+полноту не доказывает.
 На рантайме slug разрешает бэкенд — `/travels/resolve-slug/{slug}/`
 (`api/travelDetailsQueries.ts:443-475`), у `articles` свой резолвер с фолбэком
 на `by-slug` (`api/articles.ts:351-374`).
@@ -558,6 +577,7 @@ head собирает `generateMetadata` маршрута `app/(tabs)/travels/[p
 | живой SSR travel | `scripts/verify-live-web-ssr.js` (из `build-prod.sh` → `deploy_prod`, до `finalize-code`) | опубликованная пара не отдаёт серверный HTML статьи (canonical, тело, Article JSON-LD) → `rollback-code` к предыдущей SSR-паре |
 | `post-deploy-seo-check.js` | `npm run test:seo:postdeploy` | длина description вне 80–170 — только на индексируемых страницах: под `noindex` сниппета в выдаче нет, и длина не меряется (#2008); отсутствие SSR-маркеров на проде |
 | `post-deploy-media-check.js` | `npm run test:media:postdeploy` | нерабочие ступени `media.article_body[*].srcset` |
+| `seo-fix-links.js --check` | вручную после каждого переименования и перед/после `--apply` | внутренняя ссылка в `description`/`recommendation`/`plus`/`minus` статьи отвечает не 200 (301 мимо зеркала, 404), ссылка в поле, которое инструмент не переписывает (#3330) |
 
 Юнит- и e2e-покрытие: -паттерны из авторского текста), `__tests__/scripts/postprocess-route-shells.test.ts`
 (meta статических оболочек и `/article/<id>`), `__tests__/scripts/ssr-code-publication-readiness.test.ts`
