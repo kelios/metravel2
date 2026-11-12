@@ -63,17 +63,25 @@ describe('справочный корпус ассистента (#3293)', () =>
   })
 
   it('в индекс идут только утверждённые записи; запись с неподтверждённым фактом утвердить нельзя; черновики — только выключателем стенда', () => {
-    // Сейчас владелец тексты не утвердил: по умолчанию справки в индексе нет.
-    expect(corpus.entries.filter((entry) => entry.approved)).toEqual([])
-    expect(buildHelpChunks(corpus)).toEqual([])
-    const needOwner = corpus.entries.filter((entry) => entry.needs_owner)
-    expect(needOwner.map((entry) => entry.id)).toEqual(['help-price-site', 'help-how-to-register', 'help-quest-offline', 'help-app-exists', 'help-article-moderation-time', 'help-article-language'])
-    expect(needOwner.every((entry) => Boolean(entry.owner_question))).toBe(true)
-    const approved = (entry: HelpEntry): HelpEntry => ({ ...entry, approved: true })
-    expect(validateHelpCorpus({ ...corpus, entries: corpus.entries.map(approved) })).toEqual(needOwner.map((entry) => `help.ru.json ${entry.id}: утверждена запись с неподтверждённым фактом (needs_owner)`))
-    expect(() => buildHelpChunks({ ...corpus, entries: corpus.entries.map(approved) })).toThrow('needs_owner')
+    // Владелец утвердил корпус целиком 12.11.2026: все записи идут в индекс без выключателя стенда,
+    // неподтверждённых фактов не осталось.
+    expect(corpus.entries.filter((entry) => !entry.approved)).toEqual([])
+    expect(corpus.entries.filter((entry) => entry.needs_owner || entry.owner_question)).toEqual([])
+    expect(new Set(buildHelpChunks(corpus).map((chunk) => chunk.source_id)).size).toBe(corpus.entries.length)
+    // Новая запись приходит черновиком: без утверждения в индекс не попадает, с выключателем стенда — попадает.
+    const draft = (entry: HelpEntry): HelpEntry => ({ ...entry, approved: false })
+    const drafts = { ...corpus, entries: corpus.entries.map(draft) }
+    expect(buildHelpChunks(drafts)).toEqual([])
+    expect(new Set(buildHelpChunks(drafts, { drafts: true }).map((chunk) => chunk.source_id)).size).toBe(corpus.entries.length)
+    // Запись, где факт ждёт ответа владельца, утвердить нельзя: ни проверка, ни сборка её не пропустят.
+    const waiting = ['help-price-site', 'help-app-exists']
+    const needOwner = (entry: HelpEntry): HelpEntry => (waiting.includes(entry.id) ? { ...entry, needs_owner: true, owner_question: 'Подтвердите факт.' } : entry)
+    const unconfirmed = { ...corpus, entries: corpus.entries.map(needOwner) }
+    expect(validateHelpCorpus(unconfirmed)).toEqual(waiting.map((id) => `help.ru.json ${id}: утверждена запись с неподтверждённым фактом (needs_owner)`))
+    expect(() => buildHelpChunks(unconfirmed)).toThrow('needs_owner')
+    expect(validateHelpCorpus({ ...corpus, entries: corpus.entries.map((entry) => (entry.id === waiting[0] ? { ...draft(entry), needs_owner: true, owner_question: null } : entry)) })).toEqual([`help.ru.json ${waiting[0]}: needs_owner без вопроса владельцу`])
     // Утверждена одна запись — в индекс идёт она одна, на всех пяти языках.
-    const one = buildHelpChunks({ ...corpus, entries: corpus.entries.map((entry) => (entry.id === 'help-price-quests' ? approved(entry) : entry)) })
+    const one = buildHelpChunks({ ...corpus, entries: corpus.entries.map((entry) => (entry.id === 'help-price-quests' ? entry : draft(entry))) })
     expect(new Set(one.map((chunk) => chunk.source_id))).toEqual(new Set([1]))
     expect(new Set(one.map((chunk) => chunk.locale))).toEqual(new Set(HELP_LOCALES))
     expect(helpDraftsEnabled({})).toBe(false)
@@ -98,9 +106,9 @@ describe('справочный корпус ассистента (#3293)', () =>
     expect(pl.tags).toEqual(['help-quest-offline', 'квесты'])
     const plAnswer = chunks.find((chunk) => chunk.tags[0] === 'help-quest-offline' && chunk.locale === 'pl' && isAnswer(chunk))!
     expect(plAnswer).toMatchObject({ type: 'help', source_id: 13, url: pl.url, title: corpus.translations.pl!.get('help-quest-offline')!.questions[0], answer: pl.answer, text: pl.answer, tags: ['help-quest-offline', 'квесты', HELP_ANSWER_TAG] })
-    // Запись «Нужно ли приложение, чтобы пройти квест?» (lv42) есть на всех пяти языках и не утверждена.
+    // Запись «Нужно ли приложение, чтобы пройти квест?» (lv42) есть на всех пяти языках.
     const appNeeded = corpus.entries.find((entry) => entry.id === 'help-quest-app-needed')!
-    expect(appNeeded).toMatchObject({ approved: false, needs_owner: false, topic: 'квесты', url: '/quests' })
+    expect(appNeeded).toMatchObject({ approved: true, needs_owner: false, topic: 'квесты', url: '/quests' })
     for (const locale of HELP_LOCALES) expect(localizedHelp(corpus, appNeeded, locale).answer).not.toBe(locale === 'ru' ? '' : appNeeded.answer)
     // Индекс без справки считает источники как раньше — поля `help` в манифесте нет.
     expect(countSources([{ type: 'travel', source_id: 1 }, { type: 'quest', source_id: 1 }])).toEqual({ travel: 1, quest: 1 })
