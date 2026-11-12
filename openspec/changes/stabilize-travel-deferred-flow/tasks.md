@@ -9,6 +9,8 @@
 - [x] 2.1 Apply existing measured child-frame transitions at the map composition slot and Nearby content boundary without changing map internals, data or loading policy.
 - [x] 2.2 Add focused component/DOM coverage for both owners, signed growth/shrink, empty runtime and nested single correction; update only the Problem Memory causal delta.
 - [ ] 2.3 Run targeted Jest, full lint and strict OpenSpec validation; hand the complete task diff to independent review and code-review-gate.
+- [x] 2.4 Encode controlled zero-height/no-reserve flow in the existing shared module and use its typed owner for map, Nearby and related navigation, preserving loading/placeholder/keys/native behavior; exercise the actual configured owner in DOM tests.
+- [ ] 2.5 Re-review the entire still-unaccepted task after the configured-owner delta, then confirm unchanged bundle budgets in the canonical candidate build; the isolated gzip proxy does not replace this gate.
 
 ## 3. Production acceptance after reviewed publication
 

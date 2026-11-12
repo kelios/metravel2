@@ -817,7 +817,10 @@ guard, падающий в CI на попытке обойти этот конт
   фактически меняющихся child boundaries в `TravelDetailsDeferred.tsx` и
   `sections/TravelDetailsSidebarSection.tsx`; его registry объединяет
   измерение leaf и absolute ancestors до одной компенсации. Постоянного
-  `minHeight` нет, логика карты и данные не меняются. Новый контроль —
+  `minHeight` нет, логика карты и данные не меняются.
+  Типизированный `TravelDetailsMeasuredFlow` в том же shared-модуле закрепляет
+  controlled-ready/zero/no-reserve для карты, «Рядом» и related navigation;
+  generic-переход и его anchoring остаются прежними. Контроль —
   `e2e/cls-audit.spec.ts` / `travelFullScrollCls.ts`, по пять полных гостевых
   проходов `390×844` и `1440×900`, порог суммы `0.1`; прежний контроль статьи
   #2329 сохранён. Raw baseline/attribution — ignored

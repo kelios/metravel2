@@ -21,6 +21,7 @@ import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
 import {
   TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT,
   TravelDetailsDeferredTransition,
+  TravelDetailsMeasuredFlow,
   useDeferredSectionRuntimeSettle,
 } from './TravelDetailsDeferredTransition'
 
@@ -239,13 +240,11 @@ export const TravelDeferredSections: React.FC<{
         ref={setMapRef}
         collapsable={false}
       >
-        <TravelDetailsDeferredTransition
+        <TravelDetailsMeasuredFlow
           testID="travel-details-map-transition"
           isMobile={isMobile}
           pending={!shouldLoadMapSection}
           placeholder={MAP_PLACEHOLDER}
-          runtimeFrameReady
-          allowEmptyRuntime
         >
           {shouldLoadMapSection ? (
             <Suspense fallback={MAP_PLACEHOLDER}>
@@ -258,7 +257,7 @@ export const TravelDeferredSections: React.FC<{
               />
             </Suspense>
           ) : null}
-        </TravelDetailsDeferredTransition>
+        </TravelDetailsMeasuredFlow>
       </View>
 
       <View

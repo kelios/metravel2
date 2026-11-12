@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import type { Travel } from '@/types/types'
 import { TravelDetailsSidebarSection } from '@/components/travel/details/sections/TravelDetailsSidebarSection'
-import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
+import { TravelDetailsMeasuredFlow } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 // The section watches the near/popular query state to know when its lists stop
 // being in flight, so it only renders under a query client — as it does in app.
@@ -24,7 +24,7 @@ jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
   const actual = jest.requireActual('@/components/travel/details/TravelDetailsDeferredTransition')
   return {
     ...actual,
-    TravelDetailsDeferredTransition: jest.fn((props) => React.createElement(actual.TravelDetailsDeferredTransition, props)),
+    TravelDetailsMeasuredFlow: jest.fn((props) => React.createElement(actual.TravelDetailsMeasuredFlow, props)),
   }
 })
 
@@ -78,7 +78,7 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 
 describe('TravelDetailsSidebarSection', () => {
   beforeEach(() => {
-    jest.mocked(TravelDetailsDeferredTransition).mockClear()
+    jest.mocked(TravelDetailsMeasuredFlow).mockClear()
     mockNearTravelListProps = null
     mockIsFetchingCount = 0
   })
@@ -111,15 +111,10 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-near-loaded')).toBeTruthy()
-    const nearTransition = jest.mocked(TravelDetailsDeferredTransition).mock.calls.find(([props]) => props.testID === 'travel-details-near-transition')?.[0]
-    expect(nearTransition).toMatchObject({ pending: false, runtimeFrameReady: true, allowEmptyRuntime: true })
-    expect(nearTransition?.reserveHeight).toBeUndefined()
+    const nearTransition = jest.mocked(TravelDetailsMeasuredFlow).mock.calls.find(([props]) => props.testID === 'travel-details-near-transition')?.[0]
     expect((nearTransition?.children as ReactElement<{ testID: string }>).props.testID).toBe('travel-details-near-loaded')
-    expect(jest.mocked(TravelDetailsDeferredTransition).mock.calls.at(-1)?.[0]).toMatchObject({
+    expect(jest.mocked(TravelDetailsMeasuredFlow).mock.calls.at(-1)?.[0]).toMatchObject({
       testID: 'travel-details-related-navigation-transition',
-      allowEmptyRuntime: true,
-      runtimeFrameReady: true,
-      pending: false,
     })
     expect(await screen.findByTestId('mock-near-travel-list')).toBeTruthy()
     expect(screen.getByText('Рядом можно посмотреть')).toBeTruthy()

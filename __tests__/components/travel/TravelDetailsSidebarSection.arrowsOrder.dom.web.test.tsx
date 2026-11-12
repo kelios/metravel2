@@ -62,7 +62,7 @@ beforeAll(() => {
     const react = require('react')
     const rn = require('react-native')
     return {
-      TravelDetailsDeferredTransition: ({ children, testID }: { children: unknown; testID: string }) =>
+      TravelDetailsMeasuredFlow: ({ children, testID }: { children: unknown; testID: string }) =>
         react.createElement(rn.View, { testID }, children),
     }
   })

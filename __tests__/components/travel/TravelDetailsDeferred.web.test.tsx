@@ -1,11 +1,12 @@
-import { Suspense, createContext } from 'react';
+import { Suspense, createContext, type ReactNode } from 'react';
 import { render as renderTree, act } from '@testing-library/react-native'
 import type { RenderResult } from '@testing-library/react-native'
 import { Animated, Platform } from 'react-native'
-import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
+import { TravelDetailsDeferredTransition, TravelDetailsMeasuredFlow } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 type TransitionProps = Parameters<typeof TravelDetailsDeferredTransition>[0]
-const mockTransitionScope = createContext<Map<string, TransitionProps> | null>(null)
+type CapturedProps = Omit<TransitionProps, 'pending' | 'placeholder'> & { pending?: boolean; placeholder?: ReactNode }
+const mockTransitionScope = createContext<Map<string, CapturedProps> | null>(null)
 
 const mockAuthorCardSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
@@ -29,6 +30,11 @@ jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
       const scope = React.useContext(mockTransitionScope)
       scope?.set(props.testID, props)
       return React.createElement(actual.TravelDetailsDeferredTransition, props)
+    }),
+    TravelDetailsMeasuredFlow: jest.fn((props: Parameters<typeof TravelDetailsMeasuredFlow>[0]) => {
+      const scope = React.useContext(mockTransitionScope)
+      scope?.set(props.testID, props)
+      return React.createElement(actual.TravelDetailsMeasuredFlow, props)
     }),
   }
 })
@@ -117,6 +123,7 @@ describe('TravelDeferredSections (web author defer)', () => {
 
   beforeEach(() => {
     jest.mocked(TravelDetailsDeferredTransition).mockClear()
+    jest.mocked(TravelDetailsMeasuredFlow).mockClear()
     jest.useFakeTimers()
     Platform.OS = 'web'
     Platform.select = (obj: any) => obj.web || obj.default
@@ -421,9 +428,9 @@ describe('TravelDeferredSections (web author defer)', () => {
     // positive DOM measurements, pre-paint display and reserve/anchor behavior.
     // Props belong to a mounted root. Both roots below render transitions with
     // the same IDs, so a global last-call spy can read the other tree's state.
-    const sidebarTransitions = new Map<string, TransitionProps>()
-    const commentsTransitions = new Map<string, TransitionProps>()
-    const transitionProps = (scope: Map<string, TransitionProps>, testID: string) => () => scope.get(testID)!
+    const sidebarTransitions = new Map<string, CapturedProps>()
+    const commentsTransitions = new Map<string, CapturedProps>()
+    const transitionProps = (scope: Map<string, CapturedProps>, testID: string) => () => scope.get(testID)!
 
     let sidebarTree: RenderResult
     sidebarTree = await renderTree(
@@ -524,7 +531,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     const anchors: any = Object.fromEntries(['comments', 'description', 'excursions', 'gallery', 'map', 'minus',
       'near', 'plus', 'points', 'popular', 'recommendation', 'video'].map((key) => [key, { current: null }]))
     const travelOf = (id: number): any => ({ id, name: `Travel ${id}`, description: '<p>Test</p>', gallery: [] })
-    const transitions = new Map<string, TransitionProps>()
+    const transitions = new Map<string, CapturedProps>()
     const sections = (travel: any) => (
       <mockTransitionScope.Provider value={transitions}><Suspense fallback={null}>
         <TravelDeferredSections travel={travel} isMobile={false} forceOpenKey="near" anchors={anchors} scrollToMapSection={() => {}} />
@@ -545,7 +552,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     const anchors: any = Object.fromEntries(['comments', 'description', 'excursions', 'gallery', 'map', 'minus',
       'near', 'plus', 'points', 'popular', 'recommendation', 'video'].map(key => [key, { current: null }]))
     const travel: any = { id: 3382, gallery: [] }
-    const transitions = new Map<string, TransitionProps>()
+    const transitions = new Map<string, CapturedProps>()
     const scrollToMapSection = jest.fn()
     const sections = (forceOpenKey: string | null) => (
       <mockTransitionScope.Provider value={transitions}>
@@ -558,7 +565,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockMapSectionSpy).not.toHaveBeenCalled()
     await tree.rerender(sections('map'))
     const transition = transitions.get('travel-details-map-transition')!
-    expect(transition).toMatchObject({ pending: false, runtimeFrameReady: true, allowEmptyRuntime: true })
+    expect(transition).toMatchObject({ pending: false })
     expect(transition.reserveHeight).toBeUndefined()
     expect(mockMapSectionSpy).toHaveBeenCalled()
     const mapProps = mockMapSectionSpy.mock.calls.at(-1)![0]

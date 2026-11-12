@@ -3,6 +3,8 @@ import type { Root } from 'react-dom/client'
 let React: typeof import('react')
 let createRoot: typeof import('react-dom/client').createRoot
 let Transition: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
+let MeasuredFlow: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsMeasuredFlow
+let Platform: typeof import('react-native').Platform
 
 class FrameObserver {
   static instances: FrameObserver[] = []
@@ -18,7 +20,8 @@ beforeAll(() => {
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
   React = require('react')
   ;({ createRoot } = require('react-dom/client'))
-  ;({ TravelDetailsDeferredTransition: Transition } = require('@/components/travel/details/TravelDetailsDeferredTransition'))
+  ;({ TravelDetailsDeferredTransition: Transition, TravelDetailsMeasuredFlow: MeasuredFlow } = require('@/components/travel/details/TravelDetailsDeferredTransition'))
+  ;({ Platform } = require('react-native'))
   Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: FrameObserver })
 })
 
@@ -36,6 +39,7 @@ function measuredFlow(initialHeight: number, natural: boolean, initialTop = 1000
   host.append(owner)
   document.body.append(host)
   let raw = initialHeight, top = initialTop, root: Root
+  let pending: boolean | undefined
   const writes: number[] = []
   const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="flow-${id}"]`)!
   const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
@@ -60,8 +64,9 @@ function measuredFlow(initialHeight: number, natural: boolean, initialTop = 1000
   const tree = () => React.createElement(Transition, {
     testID: 'flow-outer', isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true,
     children: React.createElement('div', null,
-      React.createElement(Transition, {
-        testID: 'flow-leaf', isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true, allowEmptyRuntime: true,
+      React.createElement(MeasuredFlow, {
+        testID: 'flow-leaf', isMobile: true, pending,
+        placeholder: React.createElement('div', { 'data-testid': 'flow-placeholder' }),
         children: React.createElement('div', { style: { height: raw } }),
       }),
       React.createElement('section', { 'data-testid': 'flow-following' }),
@@ -79,6 +84,7 @@ function measuredFlow(initialHeight: number, natural: boolean, initialTop = 1000
   return {
     node, height, owner, writes,
     resize: (next: number) => React.act(() => { raw = next; resize('leaf'); resize('outer') }),
+    pending: (next: boolean) => React.act(() => { pending = next; root.render(tree()) }),
     cleanup: () => { React.act(() => root.unmount()); host.remove(); HTMLElement.prototype.getBoundingClientRect = originalRect },
   }
 }
@@ -109,6 +115,7 @@ it('releases Nearby loading height for compact empty and zero frames without a b
       f.resize(next)
       expect(f.node('following').getBoundingClientRect().top).toBe(before)
       expect(f.height('leaf')).toBe(next)
+      expect(f.node('leaf').dataset.deferredTransitionState).toBe('runtime')
       expect(f.node('leaf').style.minHeight).toBe('')
       expect(f.writes).toHaveLength(1)
     }
@@ -122,4 +129,39 @@ it('keeps the article start at zero while an upstream child grows', () => {
     expect(f.owner.scrollTop).toBe(0)
     expect(f.writes).toEqual([])
   } finally { f.cleanup() }
+})
+
+it('forwards a pending placeholder and resolves a zero frame without caller readiness flags', () => {
+  const f = measuredFlow(0, false)
+  try {
+    f.pending(true)
+    expect(f.node('leaf').dataset.deferredTransitionState).toBe('placeholder')
+    expect(f.node('leaf-runtime')).toBeNull()
+    expect(f.node('leaf').querySelector('[data-testid="flow-placeholder"]')).not.toBeNull()
+    f.pending(false)
+    expect(f.node('leaf').dataset.deferredTransitionState).toBe('runtime')
+    expect(f.height('leaf')).toBe(0)
+    expect(f.node('leaf').querySelector('[data-testid="flow-placeholder"]')).toBeNull()
+  } finally { f.cleanup() }
+})
+
+it.each(['ios', 'android'] as const)('keeps the configured flow transparent on %s', platform => {
+  const previous = Platform.OS
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
+  const host = document.createElement('div')
+  document.body.append(host)
+  const root = createRoot(host)
+  try {
+    React.act(() => root.render(React.createElement(MeasuredFlow, {
+      testID: 'native-flow', isMobile: true,
+      children: React.createElement('span', { 'data-testid': 'native-content' }),
+    })))
+    expect(host.childElementCount).toBe(1)
+    expect(host.firstElementChild?.getAttribute('data-testid')).toBe('native-content')
+    expect(host.querySelector('[data-testid="native-flow"]')).toBeNull()
+  } finally {
+    React.act(() => root.unmount())
+    host.remove()
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: previous })
+  }
 })

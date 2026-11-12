@@ -93,7 +93,7 @@ beforeAll(() => {
   })
   jest.doMock('@/components/travel/NavigationArrows', () => ({ __esModule: true, default: () => null }))
   jest.doMock('@/components/travel/details/TravelDetailsDeferredTransition', () => ({
-    TravelDetailsDeferredTransition: ({ children }: { children?: React.ReactNode }) => children ?? null,
+    TravelDetailsMeasuredFlow: ({ children }: { children?: React.ReactNode }) => children ?? null,
   }))
   ;({ createElement } = require('react'))
   ;({ renderToStaticMarkup } = require('react-dom/server.node'))

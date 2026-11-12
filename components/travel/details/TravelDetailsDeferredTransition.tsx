@@ -277,6 +277,35 @@ type TravelDetailsDeferredTransitionProps = {
   testID: string
 }
 
+type TravelDetailsMeasuredFlowProps = Pick<
+  TravelDetailsDeferredTransitionProps,
+  'children' | 'isMobile' | 'testID'
+> & {
+  pending?: boolean
+  placeholder?: React.ReactNode
+}
+
+export function TravelDetailsMeasuredFlow({
+  children,
+  isMobile,
+  testID,
+  pending = false,
+  placeholder = null,
+}: TravelDetailsMeasuredFlowProps) {
+  return (
+    <TravelDetailsDeferredTransition
+      isMobile={isMobile}
+      testID={testID}
+      pending={pending}
+      placeholder={placeholder}
+      runtimeFrameReady
+      allowEmptyRuntime
+    >
+      {children}
+    </TravelDetailsDeferredTransition>
+  )
+}
+
 export function TravelDetailsDeferredTransition({
   children,
   isMobile,

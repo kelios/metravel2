@@ -12,7 +12,7 @@ import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSi
 import { NearTravelListComponent, PopularTravelListComponent } from './travelDetailsSidebarLists'
 import { getNearbyTravelsSubtitle } from '@/constants/nearby'
 import { translate as i18nT } from '@/i18n'
-import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
+import { TravelDetailsMeasuredFlow } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { METRICS } from '@/constants/layout'
 import { NearTravelListSkeleton, PopularTravelListSkeleton } from '@/components/travel/NearTravelListSkeleton'
 
@@ -112,14 +112,11 @@ export const TravelDetailsSidebarSection: React.FC<{
         </View>
         <Text style={styles.sectionSubtitle}>{getNearbyTravelsSubtitle()}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
-          <TravelDetailsDeferredTransition
+          <TravelDetailsMeasuredFlow
             key={travel.id}
             testID="travel-details-near-transition"
             isMobile={width < METRICS.breakpoints.tablet}
-            pending={false}
             placeholder={hasValidTravelId ? <NearTravelListSkeleton travel={travel} /> : null}
-            runtimeFrameReady
-            allowEmptyRuntime
           >
             {hasValidTravelId && (
               <View testID="travel-details-near-loaded">
@@ -134,7 +131,7 @@ export const TravelDetailsSidebarSection: React.FC<{
                 </Suspense>
               </View>
             )}
-          </TravelDetailsDeferredTransition>
+          </TravelDetailsMeasuredFlow>
         </View>
       </View>
 
@@ -173,14 +170,11 @@ export const TravelDetailsSidebarSection: React.FC<{
         устоявшегося кадра не отпущен, — видимые секции не двигаются, а пустой или
         ошибочный ответ ничего не резервирует.
       */}
-      <TravelDetailsDeferredTransition
+      <TravelDetailsMeasuredFlow
         key={travel.id}
         testID="travel-details-related-navigation-transition"
         isMobile={width < METRICS.breakpoints.tablet}
-        pending={false}
         placeholder={null}
-        runtimeFrameReady
-        allowEmptyRuntime
       >
         {/*
           #2459: «Похожие статьи» по смыслу текста делят с стрелками один переход с
@@ -203,7 +197,7 @@ export const TravelDetailsSidebarSection: React.FC<{
             <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
           </View>
         )}
-      </TravelDetailsDeferredTransition>
+      </TravelDetailsMeasuredFlow>
     </View>
   )
 }
