@@ -19,5 +19,7 @@ export const questShareStaticResources = {
   "finaleShare.copyFailed": "Не вдалося скопіювати",
   "finaleShare.imageSaved": "Картинку збережено",
   "finaleShare.instagramHint": "Картинку збережено — додайте її в історію",
+  "finaleInvite.button": "Покликати друга",
+  "finaleInvite.text": "Пройди зі мною квест «{{title}}» — маршрут із завданнями на metravel.by",
   "finaleMedia.completedCaption": "Квест пройдено!",
 } as const

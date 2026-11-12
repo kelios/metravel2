@@ -105,6 +105,17 @@ export const trackShareCardClick = (params: {
 // Замыкает вирусную петлю финала: событие клика по каналу шаринга результата.
 // quest_id — slug квеста (как и в остальной воронке квеста). PII не пишем.
 
+/** Приглашение друга с финала квеста (#3230): канал — `native` или `copy`. */
+export const trackQuestInviteClick = (params: {
+  questId: string;
+  channel: 'native' | 'copy';
+}): void => {
+  void sendAnalyticsEvent('quest_invite_click', {
+    quest_id: params.questId,
+    channel: params.channel,
+  });
+};
+
 /** Пользователь поделился результатом квеста в конкретном канале. */
 export const trackQuestShareClick = (params: {
   questId: string;

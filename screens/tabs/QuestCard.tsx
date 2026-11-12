@@ -70,6 +70,8 @@ type QuestCardProps = {
     approximateDistance?: boolean;
     /** Позиция карточки в каталоге: первые получают высокий fetch-приоритет обложки. */
     index?: number;
+    /** Открытие квеста из каталога (#3228): аналитика клика с признаком порядка выдачи. */
+    onOpen?: (questId: string, position: number) => void;
 };
 
 function QuestCard({
@@ -80,6 +82,7 @@ function QuestCard({
     nearby,
     approximateDistance = false,
     index,
+    onOpen,
 }: QuestCardProps) {
     const colors = useThemedColors();
     const { activeSeasonalTheme } = useTheme();
@@ -123,16 +126,23 @@ function QuestCard({
         setImageLoaded(true);
     }, [cacheKey]);
 
-    const handlePress = useCallback(() => {
-        if (!questPath) return;
+    const navigateToQuest = useCallback(() => {
         router.push(questPath as Href);
     }, [questPath]);
+
+    const handlePress = useCallback(() => {
+        if (!questPath) return;
+        onOpen?.(quest.id, index ?? 0);
+        navigateToQuest();
+    }, [questPath, onOpen, quest.id, index, navigateToQuest]);
 
     const handleWebLinkClick = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
         if (!questPath) {
             event.preventDefault();
             return;
         }
+        // Открытие в новой вкладке — тоже клик по карточке.
+        onOpen?.(quest.id, index ?? 0);
 
         const shouldUseBrowserNavigation =
             event.button !== 0 ||
@@ -143,8 +153,8 @@ function QuestCard({
         if (shouldUseBrowserNavigation) return;
 
         event.preventDefault();
-        handlePress();
-    }, [handlePress, questPath]);
+        navigateToQuest();
+    }, [navigateToQuest, questPath, onOpen, quest.id, index]);
 
     const handleWebLinkKeyDown = useCallback((event: ReactKeyboardEvent<HTMLAnchorElement>) => {
         // Enter is handled by the anchor's native click activation. Preserve the

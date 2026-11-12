@@ -3,6 +3,8 @@ import { Link, type Href } from 'expo-router'
 
 import { translate as i18nT } from '@/i18n'
 import { buildQuestPath } from '@/utils/routePaths'
+import { buildQuestLocalePath } from '@/utils/questLocaleRouting'
+import type { SupportedLocale } from '@/i18n/config'
 import type { QuestMeta } from './questsShared'
 
 export type QuestDirectoryLink = { title: string; path: string }
@@ -31,6 +33,8 @@ type Props = {
   countries: readonly QuestDirectoryLink[]
   cities: readonly QuestDirectoryLink[]
   quests: readonly Pick<QuestMeta, 'id' | 'cityId' | 'title'>[]
+  /** #3360: языковой хаб — ссылки на страницы его языка, все участники. */
+  localeHub?: Exclude<SupportedLocale, 'ru'> | null
 }
 
 function DirectoryGroup({ title, links }: { title: string; links: QuestDirectoryLink[] }) {
@@ -55,16 +59,19 @@ function DirectoryGroup({ title, links }: { title: string; links: QuestDirectory
  * `/quests` (`QuestDiscovery.countries/cities/quests`), поэтому блок попадает в
  * серверный HTML и не добавляет ни одного запроса.
  */
-export default function QuestsCatalogDirectory({ countries, cities, quests }: Props) {
+export default function QuestsCatalogDirectory({ countries, cities, quests, localeHub = null }: Props) {
   const questLinks = useMemo(() => {
+    // У хаба нет указателя стран и городов, через который досягаемы остальные
+    // квесты, поэтому он ссылается на каждого участника (#3360).
+    const limit = localeHub ? Number.POSITIVE_INFINITY : QUEST_DIRECTORY_QUEST_LIMIT
     const links: QuestDirectoryLink[] = []
     for (const quest of quests) {
-      if (links.length >= QUEST_DIRECTORY_QUEST_LIMIT) break
-      const path = buildQuestPath(quest.cityId, quest.id)
+      if (links.length >= limit) break
+      const path = localeHub ? buildQuestLocalePath(Number(quest.cityId), quest.id, localeHub) : buildQuestPath(quest.cityId, quest.id)
       if (path && quest.title) links.push({ title: quest.title, path })
     }
     return links
-  }, [quests])
+  }, [quests, localeHub])
 
   if (!countries.length && !cities.length && !questLinks.length) return null
 

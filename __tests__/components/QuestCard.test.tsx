@@ -218,6 +218,29 @@ describe('QuestCard', () => {
         expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon');
     });
 
+    it('reports each opening of the quest once, including a new-tab click (#3228)', async () => {
+        const onOpen = jest.fn();
+        const { container } = await renderWithQueryClient(
+            <QuestCard
+                styles={styles}
+                cardWidth={340}
+                cityId="krakow"
+                quest={makeQuest()}
+                index={4}
+                onOpen={onOpen}
+            />,
+        );
+        const cardLink = getWebCardLink(container);
+
+        await fireEvent(cardLink, 'click', { button: 0, preventDefault: jest.fn() });
+        await fireEvent(cardLink, 'click', { button: 0, ctrlKey: true, preventDefault: jest.fn() });
+        await fireEvent(cardLink, 'keyDown', { key: ' ', preventDefault: jest.fn() });
+
+        expect(onOpen).toHaveBeenCalledTimes(3);
+        expect(onOpen).toHaveBeenNthCalledWith(1, 'krakow-dragon', 4);
+        expect(mockPush).toHaveBeenCalledTimes(2);
+    });
+
     it('does not expose or follow an invalid quest URL', async () => {
         const { container } = await renderWithQueryClient(
             <QuestCard

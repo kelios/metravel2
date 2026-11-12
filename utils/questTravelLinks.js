@@ -136,5 +136,29 @@ function findQuestCityTravelLinks(city, travels, limit = 4) {
     .slice(0, Math.max(0, limit));
 }
 
-module.exports = { findQuestCityTravelLinks, normalizeLocationText, parseCoordPair,
+/**
+ * Статьи страны для хаба `/quests/country/<страна>` (#3259): все опубликованные
+ * путешествия, у которых среди стран есть эта (`countryCode` снимка — список
+ * через запятую, у статьи о двух странах — обе). Без кода страны статья
+ * сверяется по названию страны. Порядок — порядок каталога статей снимка.
+ */
+function findQuestCountryTravelLinks(country, travels) {
+  const code = String(country?.countryCode || '').trim().toLowerCase();
+  const name = normalizeLocationText(country?.countryName);
+  const seen = new Set();
+  const links = [];
+  for (const travel of Array.isArray(travels) ? travels : []) {
+    const { slug, title, travelCode, travelCountry } = travelProfile(travel);
+    if (!slug || !title) continue;
+    const codes = travelCode.split(',').map((part) => part.trim()).filter(Boolean);
+    const matches = codes.length ? Boolean(code) && codes.includes(code) : Boolean(name) && travelCountry === name;
+    const path = `/travels/${encodeURIComponent(slug)}`;
+    if (!matches || seen.has(path)) continue;
+    seen.add(path);
+    links.push({ path, title });
+  }
+  return links;
+}
+
+module.exports = { findQuestCityTravelLinks, findQuestCountryTravelLinks, normalizeLocationText, parseCoordPair,
   extractTravelCoordsForQuestPromo, haversineKm, minDistanceKm };

@@ -12,7 +12,6 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
-import { createQuestCatalogSearch } from '@/utils/questCatalogSearch';
 import { rIC } from '@/utils/rIC';
 import { useIsFocused } from 'expo-router';
 import { useBreakpoints } from '@/hooks/useResponsive';
@@ -57,15 +56,16 @@ import {
     type QuestMapArea,
     type QuestCatalogLocation,
 } from './QuestsScreen.helpers';
-import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
+import { canRankQuestsByPopularity } from '@/utils/questPopularity';
 import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/utils/questThemes';
-import { canRankQuestsByRating, sortQuestsByRating } from '@/utils/questRatingOrder';
+import { canRankQuestsByRating } from '@/utils/questRatingOrder';
 import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { useQuestCatalogSelection, type QuestCatalogRouteSelection } from './useQuestCatalogSelection';
 import { useQuestCountrySelection } from './useQuestCountrySelection';
 import { useQuestCatalogSearchAnalytics } from './useQuestCatalogSearchAnalytics';
-import { useQuestCatalogSearchQuery } from './useQuestCatalogSearchQuery';
+import { useQuestCatalogSearchQuery, useQuestCatalogSearchResult } from './useQuestCatalogSearchQuery';
+import { useQuestCatalogOrder } from './useQuestCatalogOrder';
 import { translate as i18nT } from '@/i18n'
 import type { SupportedLocale } from '@/i18n/config'
 import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
@@ -141,14 +141,16 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
 
     // API data
     const { quests: listedQuests, loading: questsLoading, failed: questsError } = useQuestsList();
+    const discovery = useQuestDiscovery();
+    // #3360: the hub's server-published members cap what a client refetch may show.
+    const hubPublished = useMemo(() => (localeHub && discovery?.locale === localeHub
+        ? new Set(discovery.quests.map((quest) => quest.quest_id)) : null), [localeHub, discovery]);
     const ALL_QUESTS = useMemo(
-        () => localeHub ? selectQuestHubMembers(listedQuests, localeHub) : listedQuests,
-        [listedQuests, localeHub],
+        () => localeHub ? selectQuestHubMembers(listedQuests, localeHub, hubPublished) : listedQuests,
+        [listedQuests, localeHub, hubPublished],
     );
     const catalogPath = (localeHub && buildQuestLocaleHubPath(localeHub)) || '/quests';
-    // A server-rendered catalogue publishes its JSON-LD in the body: expo-router
-    // Head never reaches the SSR HTML, so via Head crawlers would get none (#2817).
-    const discovery = useQuestDiscovery();
+    // SSR catalogue: JSON-LD goes in the body, Head never reaches SSR HTML (#2817).
     const jsonLdInBody = Boolean(discovery);
     // A server-seeded catalogue still waits for hydration: the grid sizes its
     // cards from a measured width, so the first frame keeps the static skeleton
@@ -163,10 +165,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         () => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS),
         [ALL_QUESTS],
     );
-    const catalogSearch = useMemo(
-        () => createQuestCatalogSearch(ALL_QUESTS, cityCatalog.canonicalCityIdById),
-        [ALL_QUESTS, cityCatalog],
-    );
+    const searchResult = useQuestCatalogSearchResult(ALL_QUESTS, cityCatalog.canonicalCityIdById, searchTerm, dataLoaded);
     const CITIES = cityCatalog.cities;
     const cityQuests = cityCatalog.questsByCityId;
     const {
@@ -393,9 +392,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!dataLoaded) return EMPTY_QUESTS;
         // Свободный поиск перекрывает город/«Рядом»: ищем по всему каталогу.
-        if (searchTerm) {
-            return ALL_QUESTS.filter((q) => catalogSearch(q, searchTerm));
-        }
+        if (searchResult) return searchResult.quests;
         if (!selectedCityId) return EMPTY_QUESTS;
         if (activeMapAreaCenter) {
             // «Искать в этой области» — отдельный фильтр, не «Рядом со мной».
@@ -434,8 +431,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         ALL_QUESTS,
         dataLoaded,
         activeMapAreaCenter,
-        searchTerm,
-        catalogSearch,
+        searchResult,
         cityQuests,
         kidsQuests,
         bikeQuests,
@@ -449,6 +445,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         query: searchQuery,
         appliedSearchTerm: searchTerm,
         resultsCount: questsAll.length,
+        approximate: Boolean(searchResult?.approximate),
         ready: dataLoaded && !questsError,
         focused: isFocused,
     });
@@ -490,11 +487,16 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     const activeSortOrder: QuestSortOrder =
         sortOrder !== 'default' && availableSortOrders.includes(sortOrder) ? sortOrder : 'default';
 
-    const visibleQuests = useMemo(() => {
-        if (activeSortOrder === 'popular') return sortQuestsByPopularity(questsAll);
-        if (activeSortOrder === 'rating') return sortQuestsByRating(questsAll);
-        return questsAll;
-    }, [activeSortOrder, questsAll]);
+    // #3228: без выбранной сортировки — страна посетителя и ближайшие.
+    const { visibleQuests, handleQuestOpen } = useQuestCatalogOrder({
+        quests: questsAll,
+        sortOrder: activeSortOrder,
+        distanceOrdered,
+        searchApproximate: Boolean(searchResult?.approximate),
+        placeSelected: !searchTerm && Boolean(selectedCountry || (selectedCityId && cityQuests[selectedCityId])),
+        userLoc,
+        ready: dataLoaded,
+    });
     // #1826: инлайн-стрелка делала любую мемоизацию панели пустой.
     const handleOpenFilterDrawer = useCallback(() => setFilterDrawerOpen(true), []);
 
@@ -573,14 +575,13 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     );
 
     // #3218: указатель «страны → города → квесты» — видимые ссылки в серверном HTML
-    // общего каталога. Данные уже пришли с загрузчиком страницы; у посадочных
-    // страниц (`route`) свой подвал, языковые хабы — отдельная карточка (#3217).
-    // Указатель принадлежит только несуженному каталогу: под выдачей города,
-    // фильтра, поиска или области карты он выглядит как чужой хвост страницы.
-    const showCatalogDirectory = !route && !localeHub && !filtersActive && !searchTerm;
+    // общего каталога и языкового хаба (#3360). Данные уже пришли с загрузчиком
+    // страницы; у посадочных страниц (`route`) свой подвал. Указатель принадлежит
+    // только несуженному каталогу: под выдачей фильтра или поиска он чужой хвост.
+    const showCatalogDirectory = !route && !filtersActive && !searchTerm;
     const catalogDirectory = useMemo(() => (showCatalogDirectory && discovery ? (
-        <QuestsCatalogDirectory countries={discovery.countries} cities={discovery.cities} quests={ALL_QUESTS} />
-    ) : null), [showCatalogDirectory, discovery, ALL_QUESTS]);
+        <QuestsCatalogDirectory countries={discovery.countries} cities={discovery.cities} quests={ALL_QUESTS} localeHub={localeHub} />
+    ) : null), [showCatalogDirectory, discovery, ALL_QUESTS, localeHub]);
 
     // ── SEO ──
     const selectedCityName =
@@ -663,7 +664,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         canonical: buildCanonicalUrl(catalogPath),
         title: titleText,
         description: descText,
-        quests: ALL_QUESTS,
+        quests: ALL_QUESTS, localeHub,
     });
     const questsFaqStructuredData = useMemo(() => ({
         '@context': 'https://schema.org',
@@ -758,6 +759,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 bikeFilterId={BIKE_FILTER_ID}
                 searchQuery={searchQuery}
                 appliedSearchTerm={searchTerm}
+                searchApproximate={Boolean(searchResult?.approximate)}
+                onQuestOpen={handleQuestOpen}
                 onSearchChange={setSearchQuery}
                 questsAll={visibleQuests}
                 questCardWidth={questCardWidth}

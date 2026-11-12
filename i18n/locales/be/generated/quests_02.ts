@@ -317,6 +317,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.completedSeoTitle": "Квэсты, пройдзеныя мной | MeTravel",
   "screens.tabs.QuestsScreen.uncompletedSeoTitle": "Квэсты, яшчэ не пройдзеныя мной | MeTravel",
   "screens.tabs.QuestsContentPanel.completedEmptyAction": "Выбраць першы квэст",
+  "screens.tabs.QuestsContentPanel.searchApproximateTitle": "Дакладных супадзенняў няма — падобныя квэсты",
   "screens.tabs.QuestsSidebar.completedByOthersLabel": "Пройдзена іншымі",
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Квэсты, пройдзеныя іншымі гульцамі, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Квэсты, пройдзеныя іншымі",

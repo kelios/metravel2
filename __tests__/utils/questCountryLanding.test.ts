@@ -1,8 +1,10 @@
 const {
   ISO_ALPHA2_CODES,
+  QUEST_COUNTRY_HUB_MIN_QUESTS,
   buildQuestCountryLandingGroups,
   getQuestCountryAlias,
   normalizeIsoCountryCode,
+  questCountryHubIndexVerdict,
   questCountryLandingIsLinkable,
   resolveQuestCountryAlias,
 } = require('@/utils/questCountryLanding')
@@ -124,6 +126,21 @@ describe('quest country landing groups', () => {
 
     expect(grownPoland.cities).toHaveLength(2)
     expect(questCountryLandingIsLinkable(grownPoland)).toBe(true)
+  })
+
+  // #3259: одно правило index/noindex страны с порогом наполнения; прозовый
+  // порог бэкенда — временное условие публикации с собственной причиной.
+  it('decides country indexing by hub fill, with the publication prose floor as its own reason', () => {
+    const country = (cities: number, quests: number) => ({
+      cities: Array.from({ length: cities }, (_, index) => ({ index })),
+      quests: Array.from({ length: quests }, (_, index) => ({ index })),
+    })
+    expect(QUEST_COUNTRY_HUB_MIN_QUESTS).toBe(5)
+    expect(questCountryHubIndexVerdict(country(1, 9), { proseFloorsPass: true })).toEqual({ indexable: false, reason: 'single-city' })
+    expect(questCountryHubIndexVerdict(country(2, 4), { proseFloorsPass: true })).toEqual({ indexable: false, reason: 'thin-hub' })
+    expect(questCountryHubIndexVerdict(country(5, 6))).toEqual({ indexable: false, reason: 'publication-prose-floor' })
+    expect(questCountryHubIndexVerdict(country(2, 5), { proseFloorsPass: true })).toEqual({ indexable: true, reason: 'hub' })
+    expect(questCountryHubIndexVerdict(null, { proseFloorsPass: true }).indexable).toBe(false)
   })
 
   it('refuses a malformed country instead of guessing it is linkable', () => {

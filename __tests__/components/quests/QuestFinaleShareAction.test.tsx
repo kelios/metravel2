@@ -40,7 +40,7 @@ jest.mock('@/utils/externalLinks', () => ({
 jest.mock('@/utils/downloadUrlOnWeb', () => ({ downloadUrlOnWeb: jest.fn().mockReturnValue(true) }))
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
-jest.mock('@/utils/gamificationAnalytics', () => ({ trackQuestShareClick: jest.fn() }))
+jest.mock('@/utils/gamificationAnalytics', () => ({ trackQuestShareClick: jest.fn(), trackQuestInviteClick: jest.fn() }))
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   downloadAsync: jest.fn().mockResolvedValue({ uri: 'file:///cache/quest-result.png' }),
@@ -71,7 +71,8 @@ jest.mock('@/stores/authStore', () => ({
 
 import { QuestFinalePanel } from '@/components/quests/questWizardSections'
 import { createQuestResultCard } from '@/api/questsShare'
-import { trackQuestShareClick } from '@/utils/gamificationAnalytics'
+import { trackQuestInviteClick, trackQuestShareClick } from '@/utils/gamificationAnalytics'
+import { Platform } from 'react-native'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system/legacy'
@@ -79,6 +80,7 @@ import * as Sharing from 'expo-sharing'
 
 const mockCreateCard = createQuestResultCard as jest.MockedFunction<typeof createQuestResultCard>
 const mockTrack = trackQuestShareClick as jest.MockedFunction<typeof trackQuestShareClick>
+const mockTrackInvite = trackQuestInviteClick as jest.MockedFunction<typeof trackQuestInviteClick>
 const mockСlipboardSet = Clipboard.setStringAsync as jest.MockedFunction<typeof Clipboard.setStringAsync>
 const mockDownloadImage = FileSystem.downloadAsync as jest.MockedFunction<typeof FileSystem.downloadAsync>
 const mockShareImage = Sharing.shareAsync as jest.MockedFunction<typeof Sharing.shareAsync>
@@ -126,6 +128,7 @@ const renderCompletedFinale = async () =>
 beforeEach(() => {
   mockCreateCard.mockReset()
   mockTrack.mockReset()
+  mockTrackInvite.mockReset()
   mockСlipboardSet.mockClear()
   mockDownloadImage.mockClear()
   mockShareImage.mockClear()
@@ -290,5 +293,51 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
     const panel = StyleSheet.flatten(getByTestId('bottom-sheet-panel').props.style)
     expect(panel.paddingBottom).toBe(34)
     expect(getByTestId('quest-share-sheet').props.keyboardShouldPersistTaps).toBe('handled')
+  })
+})
+
+// #3230: «Позвать друга» ведёт на сам квест, а не на диплом, и несёт метку
+// источника по конвенции шаринга (source/medium те же, поверхность — в кампании).
+describe('QuestFinaleInviteAction (#3230)', () => {
+  const originalPlatform = Platform.OS
+  afterEach(() => {
+    ;(Platform as { OS: string }).OS = originalPlatform
+  })
+
+  it('shares the quest page with an invite campaign through the system sheet', async () => {
+    ;(Platform as { OS: string }).OS = 'ios'
+    const { getByTestId } = await renderCompletedFinale()
+
+    await fireEvent.press(getByTestId('quest-finale-invite'))
+
+    await waitFor(() => expect(Share.share).toHaveBeenCalledTimes(1))
+    const message = String((Share.share as jest.Mock).mock.calls[0][0].message)
+    expect(message).toContain('Минский шифр')
+    expect(message).toContain('/quests/4/minsk-cipher?utm_source=share&utm_medium=referral&utm_campaign=quest_invite_minsk-cipher')
+    expect(message).not.toContain('/quests/result/')
+    expect(mockCreateCard).not.toHaveBeenCalled()
+    expect(mockTrackInvite).toHaveBeenCalledWith({ questId: 'minsk-cipher', channel: 'native' })
+  })
+
+  it('does not count a dismissed system sheet as an invite', async () => {
+    ;(Platform as { OS: string }).OS = 'android'
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.dismissedAction })
+    const { getByTestId } = await renderCompletedFinale()
+
+    await fireEvent.press(getByTestId('quest-finale-invite'))
+
+    await waitFor(() => expect(Share.share).toHaveBeenCalledTimes(1))
+    expect(mockTrackInvite).not.toHaveBeenCalled()
+  })
+
+  it('copies the invite on a desktop browser without Web Share', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    const { getByTestId } = await renderCompletedFinale()
+
+    await fireEvent.press(getByTestId('quest-finale-invite'))
+
+    await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalledTimes(1))
+    expect(mockСlipboardSet.mock.calls[0][0]).toContain('utm_campaign=quest_invite_minsk-cipher')
+    expect(mockTrackInvite).toHaveBeenCalledWith({ questId: 'minsk-cipher', channel: 'copy' })
   })
 })

@@ -129,6 +129,45 @@ describe('immutable public quest projection', () => {
     expect(detail.filter((path: string) => path.startsWith('/travels/'))).toEqual(['/travels/local-walk']);
   });
 
+  // #3259: страна — хаб ссылок. В её странице (её рисует сырой HTML) есть
+  // каждый город, каждый квест и каждая статья страны; robots решает одно
+  // правило `questCountryHubIndexVerdict`, а не прозовые пороги сами по себе.
+  it('publishes the country hub with links to every city, quest and country article', () => {
+    const source = questPrivateSnapshot();
+    const base = source.catalog[0];
+    source.catalog.push({ ...base, id: 300, quest_id: 'second-city-walk', city_id: '8', title: 'Квест второго города',
+      city_name: 'Второй город', city_name_canonical: 'Второй город', lat: 52.1, lng: 23.7 });
+    source.source_snapshot.quests.push({ ...source.source_snapshot.quests[0], quest_pk: 300, city_id: 8,
+      quest_slug: 'second-city-walk', locales: { ru: source.source_snapshot.quests[0].locales.ru } });
+    const ruBundle = source.bundles.ru['7/fixture-city-walk'];
+    // Своя проза: копия истории не прошла бы порог собственного текста когорты.
+    const steps = ruBundle.steps.map((step) => ({ ...step, story: step.story.replace(/[a-z]/g,
+      (letter) => String.fromCharCode(97 + (letter.charCodeAt(0) - 97 + 7) % 26)) }));
+    (source.bundles.ru as Record<string, unknown>)['8/second-city-walk'] = {
+      ...ruBundle, quest_id: 'second-city-walk', title: 'Квест второго города', steps };
+    const article = (id: number, countryCode: string, countryName = 'Беларусь') => ({ id, name: `Статья ${id}`,
+      slug: `article-${id}`, cityName: '', countryName, countryCode, travelAddress: [] });
+    source.travel_links = [
+      ...Array.from({ length: 205 }, (_, index) => article(index + 1, 'BY')),
+      article(900, 'BY, PL'),
+      article(901, 'PL', 'Польша'),
+      article(902, '', 'Беларусь'),
+    ] as never;
+
+    const country = buildQuestWebProjection(source, catalogs).pages.find((page: { kind: string }) => page.kind === 'country');
+    const sections = country.page.sections as { heading: string; items: { path: string | null }[] }[];
+    const paths = sections.flatMap((part) => part.items).map((entry) => entry.path);
+    expect(paths).toEqual(expect.arrayContaining(['/quests/fixture', '/quests/second-city',
+      '/quests/7/fixture-city-walk', '/quests/8/second-city-walk']));
+    const articles = paths.filter((path) => path?.startsWith('/travels/'));
+    expect(articles).toHaveLength(207);
+    expect(articles).toEqual(expect.arrayContaining(['/travels/article-900', '/travels/article-902']));
+    expect(articles).not.toContain('/travels/article-901');
+    expect(sections.every((part) => part.items.length <= 256)).toBe(true);
+    // Два города, но меньше пяти квестов: хаб тонкий, страница закрыта.
+    expect(country.quality.indexable).toBe(false);
+  });
+
   // #3236: head посадочной города собран из его мест, квестов и соседей, а не
   // из одного шаблона на все города; формулу «что посмотреть» держат статьи.
   it('builds the city landing head from the shared landing builder', () => {

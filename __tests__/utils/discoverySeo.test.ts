@@ -134,6 +134,20 @@ describe('discoverySeo', () => {
     expectPageScopedGraph(jsonLd, ['CollectionPage', 'ItemList', 'BreadcrumbList']);
   });
 
+  // #3360: JSON-LD языкового хаба уходит в серверный HTML — элементы ведут
+  // на страницы языка хаба, а не на русские адреса.
+  it('points the items of a language hub to the pages in its language', () => {
+    const jsonLd = createQuestCatalogStructuredData({
+      canonical: 'https://metravel.by/en/quests',
+      title: 'Quests | MeTravel',
+      description: 'Quest catalogue.',
+      quests: [{ id: 'krakow-dragon', cityId: '1', title: 'Kraków Quest: The Wawel Dragon' }],
+      localeHub: 'en',
+    });
+    expect(JSON.stringify(jsonLd)).toContain('https://metravel.by/en/quests/1/krakow-dragon');
+    expect(JSON.stringify(jsonLd)).not.toContain('https://metravel.by/quests/1/krakow-dragon');
+  });
+
   it('creates the quest detail graph around the shared TouristTrip entity, without route facts it cannot know', () => {
     const jsonLd = createQuestDetailStructuredData({
       canonical: 'https://metravel.by/quests/minsk/minsk-cmok',

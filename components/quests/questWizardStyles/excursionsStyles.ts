@@ -125,10 +125,12 @@ export const createExcursionsStyles = (colors: QuestColors, isMobile: boolean, s
     finaleStoryText: {
         textAlign: 'left',
     },
-    // Кнопка «Поделиться» стоит между значком/заголовком и видео: без своих
-    // отступов она прилипала к карточке «Первопроходец» и к кадру видео.
+    // Кнопки «Поделиться» и «Позвать друга» (#3230) стоят между значком/заголовком
+    // и видео: без своих отступов они прилипали к карточке «Первопроходец» и к
+    // кадру видео. Колонка растягивает обе кнопки на ширину более длинной.
     finaleShareButton: {
         marginTop: SPACING.sm,
         marginBottom: isMobile ? SPACING.lg : SPACING.xl,
+        gap: SPACING.sm,
     },
 } as const);

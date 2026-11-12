@@ -62,19 +62,36 @@ function projectQuestDiscoveryRow(raw) {
     personal_status_unavailable: true, user_rating: null, is_completed_by_me: false, first_completer: null };
 }
 
-function validateQuestDiscovery(raw, view) {
+const LOCALES = ['ru', 'be', 'uk', 'pl', 'en'];
+
+/**
+ * #3360: строка языкового хаба `/{locale}/quests` — участник хаба (`served_locales`
+ * содержит его язык) с контентом на языке хаба. Оба поля сохраняются: по ним
+ * каталог выбирает участников (`selectQuestHubMembers`) и подписывает язык.
+ * Русская публикация несёт прежнюю форму строки — её сверяет бэкенд.
+ */
+function projectQuestHubRow(raw, locale) {
+  const row = projectQuestDiscoveryRow(raw);
+  const served = raw?.served_locales;
+  if (!row || !Array.isArray(served) || served.length > 5 || served.some((value) => !LOCALES.includes(value))
+      || !served.includes(locale) || raw.content_locale !== locale) return null;
+  return { ...row, content_locale: locale, served_locales: [...served] };
+}
+
+function validateQuestDiscovery(raw, view, locale = 'ru') {
   if (!raw || typeof raw !== 'object' || raw.schema_version !== 2 || raw.state !== 'available'
-      || raw.locale !== 'ru' || raw.view !== view || !VIEWS.includes(view)
+      || !LOCALES.includes(locale) || (locale !== 'ru' && view !== 'catalog')
+      || raw.locale !== locale || raw.view !== view || !VIEWS.includes(view)
       || (view === 'catalog' && (!Array.isArray(raw.cities) || !Array.isArray(raw.countries)))
       || ![raw.publication_id, raw.corpus_revision, raw.source_revision, raw.content_revision].every((value) => typeof value === 'string' && HASH.test(value))
       || !Array.isArray(raw.quests) || raw.quests.length > (view === 'home' ? 8 : 500)) return null;
-  const quests = raw.quests.map(projectQuestDiscoveryRow);
+  const quests = raw.quests.map((row) => (locale === 'ru' ? projectQuestDiscoveryRow(row) : projectQuestHubRow(row, locale)));
   if (quests.some((quest) => !quest) || new Set(quests.map((quest) => quest.quest_id)).size !== quests.length) return null;
   const cities = raw.cities ?? [], countries = raw.countries ?? [];
   const safeLinks = (links) => Array.isArray(links) && links.length <= 500 && links.every((link) =>
     typeof link?.title === 'string' && link.title.length <= 500 && safePublicPath(link.path));
   if (!safeLinks(cities) || !safeLinks(countries)) return null;
-  return { schema_version: 2, state: 'available', locale: 'ru', view,
+  return { schema_version: 2, state: 'available', locale, view,
     publication_id: raw.publication_id, corpus_revision: raw.corpus_revision, source_revision: raw.source_revision,
     content_revision: raw.content_revision, quests,
     cities: cities.map(({ title, path }) => ({ title, path })), countries: countries.map(({ title, path }) => ({ title, path })) };

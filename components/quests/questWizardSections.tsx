@@ -12,6 +12,7 @@ import { canRenderBelkrajWidget } from '@/components/belkraj/belkrajAvailability
 import { BadgeUnlockToast } from '@/components/achievements'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useQuestCompletionMeta } from '@/hooks/useQuestCompletionMeta'
+import QuestFinaleInviteAction from './QuestFinaleInviteAction'
 import QuestNextStepSection from './QuestNextStepSection'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestProgressPendingNotice from './QuestProgressPendingNotice'
@@ -350,9 +351,9 @@ function QuestFinaleContinueButton({
   )
 }
 
-/** Кнопка «Поделиться результатом» + лист шаринга. Показывается только за
- *  засчитанное прохождение — это и есть эмоциональный пик, ради которого
- *  замыкается вирусная петля ([INV2-02], #1472). */
+/** Кнопка «Поделиться результатом» + лист шаринга и «Позвать друга» (#3230).
+ *  Показывается только за засчитанное прохождение — это и есть эмоциональный
+ *  пик, ради которого замыкается вирусная петля ([INV2-02], #1472). */
 function QuestFinaleShareAction({
   styles,
   questId,
@@ -390,9 +391,9 @@ function QuestFinaleShareAction({
 
   const label = i18nT('questShareStatic:finaleShare.button')
   return (
-    <>
+    <View style={styles.finaleShareButton} testID="quest-finale-actions">
       <Pressable
-        style={[styles.primaryButton, styles.finaleShareButton]}
+        style={styles.primaryButton}
         onPress={() => setShareVisible(true)}
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -403,12 +404,13 @@ function QuestFinaleShareAction({
           <Text style={styles.buttonText}>{label}</Text>
         </View>
       </Pressable>
+      <QuestFinaleInviteAction questId={questId} questTitle={questTitle} cityId={cityId} />
       <ShareQuestResultSheet
         visible={shareVisible}
         onClose={() => setShareVisible(false)}
         subject={subject}
       />
-    </>
+    </View>
   )
 }
 

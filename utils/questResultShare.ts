@@ -69,3 +69,19 @@ export const buildQuestPublicUrl = (
   if (!city || !slug) return buildCanonicalUrl('/quests');
   return buildCanonicalUrl(`/quests/${city}/${slug}`);
 };
+
+/**
+ * Приглашение друга пройти квест (#3230): ссылка на сам квест, а не на диплом
+ * — другу нужен маршрут. Пара source/medium та же, что у диплома; поверхность
+ * по правилу `utils/utm.ts` различается кампанией (`quest_invite_<slug>`), а
+ * не medium, иначе GA4 не разложит канал.
+ */
+export const buildQuestInviteLink = (
+  cityId: string | undefined,
+  questSlug: string | undefined,
+): string => {
+  let out = buildQuestPublicUrl(cityId, questSlug);
+  out = appendQueryParam(out, 'utm_source', QUEST_RESULT_UTM_SOURCE);
+  out = appendQueryParam(out, 'utm_medium', QUEST_RESULT_UTM_MEDIUM);
+  return appendQueryParam(out, 'utm_campaign', `quest_invite_${String(questSlug ?? '').trim() || 'unknown'}`);
+};

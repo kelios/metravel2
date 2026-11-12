@@ -317,6 +317,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.completedSeoTitle": "Questy ukończone przeze mnie | MeTravel",
   "screens.tabs.QuestsScreen.uncompletedSeoTitle": "Questy jeszcze nieukończone przeze mnie | MeTravel",
   "screens.tabs.QuestsContentPanel.completedEmptyAction": "Wybierz pierwszy quest",
+  "screens.tabs.QuestsContentPanel.searchApproximateTitle": "Brak dokładnych wyników — podobne questy",
   "screens.tabs.QuestsSidebar.completedByOthersLabel": "Ukończone przez innych",
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Questy ukończone przez innych graczy, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Questy ukończone przez innych",

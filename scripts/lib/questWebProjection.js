@@ -4,9 +4,9 @@ const { createHash } = require('node:crypto');
 const { buildQuestCityLandingMeta, buildQuestSeoMetadata, buildBrandedSeoTitle, clampMetaDescription } = require('../../utils/questSeo');
 const { getQuestIntro, getQuestSteps } = require('../../utils/questStoryText');
 const { buildQuestCityAliasMap, buildQuestCityLandingGroups, findNearbyQuestCityGroups, questRouteKey } = require('../../utils/questCityAlias');
-const { buildQuestCountryLandingGroups, questCountryLandingIsLinkable, questIsoCountryCode } = require('../../utils/questCountryLanding');
+const { buildQuestCountryLandingGroups, questCountryHubIndexVerdict, questCountryLandingIsLinkable, questIsoCountryCode } = require('../../utils/questCountryLanding');
 const { buildQuestCityWalkModel } = require('../../utils/questCityWalk');
-const { findQuestCityTravelLinks } = require('../../utils/questTravelLinks');
+const { findQuestCityTravelLinks, findQuestCountryTravelLinks } = require('../../utils/questTravelLinks');
 const { buildQuestLocalePath } = require('../../utils/questLocaleRouting');
 const { buildQuestRouteDigest, findQuestSpoilerLeaks } = require('./questSpoilerGuard');
 const { scoreQuestPageLevel } = require('./questPageDepth');
@@ -188,7 +188,20 @@ function assertDistinctCityLandingMeta(cities, metaInputs) {
   }
 }
 
-function buildCountry(country) {
+// Секция публикации держит не больше 256 пунктов (бэкенд `validate_page`):
+// длинный список статей страны продолжается следующими секциями без заголовка.
+const COUNTRY_TRAVELS_PER_SECTION = 200;
+
+function buildCountryTravelSections(name, links) {
+  const sections = [];
+  for (let start = 0; start < links.length; start += COUNTRY_TRAVELS_PER_SECTION) {
+    sections.push(section(start ? '' : `Статьи и путешествия: ${name}`, [],
+      links.slice(start, start + COUNTRY_TRAVELS_PER_SECTION).map((link) => item(link.title, link.path))));
+  }
+  return sections;
+}
+
+function buildCountry(country, travels) {
   const count = country.quests.length, cities = country.cities.length, name = country.countryName;
   const path = `/quests/country/${country.countryAlias}`;
   const questLabel = `${count} ${ruPlural(count, 'квест', 'квеста', 'квестов')}`;
@@ -202,6 +215,7 @@ function buildCountry(country) {
     section('Города с квестами', ['Откройте страницу города, чтобы увидеть его маршруты и практические советы.'], country.cities.map((city) => item(city.cityName, `/quests/${city.cityAlias}`, '', `${city.questCount} ${ruPlural(city.questCount, 'квест', 'квеста', 'квестов')}`))),
     section('Как выбрать маршрут', [`Сначала выберите город в стране ${name}, затем сравните длительность и число точек. Большинство маршрутов можно проходить без гида в своём темпе.`, 'Перед поездкой проверьте погоду и дорогу до стартовой точки, зарядите телефон и оставьте время на остановки.']),
     section(`Все квесты страны: ${name}`, [], country.quests.map((quest) => item(quest.title, questRouteKey(quest).path, '', quest.city_name || ''))),
+    ...buildCountryTravelSections(name, findQuestCountryTravelLinks(country, travels)),
     section('', [], [item('Все городские квесты', '/quests')]),
   ] };
   return { kind: 'country', locale: 'ru', country_code: country.countryCode, country_alias: country.countryAlias,
@@ -220,9 +234,12 @@ function scoreCohort(cohort, kind, locale, countries) {
   const scores = scoreQuestPageLevel(cohort.map((entry) => ({ path: entry.canonical_path, kind: `quest-${kind}`, text: publicPageText(entry.page) })));
   scores.forEach((score, index) => { cohort[index].quality = { indexable: score.issues.length === 0,
     word_count: score.words, own_fivegram_ratio: score.ratio === null ? (score.words > 0 ? 1 : 0) : score.ratio }; });
+  // #3259: страна — хаб ссылок; её index/noindex решает одно правило
+  // `questCountryHubIndexVerdict`, прозовые пороги входят в него только как
+  // текущее условие публикации на бэкенде.
   if (kind === 'country') cohort.forEach((entry) => {
     const country = countries.find((row) => row.countryCode === entry.country_code);
-    if (!questCountryLandingIsLinkable(country)) entry.quality.indexable = false;
+    entry.quality.indexable = questCountryHubIndexVerdict(country, { proseFloorsPass: entry.quality.indexable }).indexable;
   });
   // A non-empty detail cohort with zero eligible pages denotes lost public content.
   if (kind !== 'country' && cohort.length && !cohort.some((entry) => entry.quality.indexable)) throw new Error(`No ${locale} ${kind} page clears the public content floors`);
@@ -269,7 +286,7 @@ function projectQuestWeb(source, catalogs, emit) {
       const metaInputs = new Map();
       const cities = cityGroups.map((city) => buildCity(city, bundles, context.travel_links, { groups: countries, cityGroups }, ru, metaInputs));
       assertDistinctCityLandingMeta(cities, metaInputs);
-      const countryPages = countries.map(buildCountry);
+      const countryPages = countries.map((country) => buildCountry(country, context.travel_links));
       scoreCohort(cities, 'city', 'ru', countries);
       scoreCohort(countryPages, 'country', 'ru', countries);
       landings = [...cities, ...countryPages];

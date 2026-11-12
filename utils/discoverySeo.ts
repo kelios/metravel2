@@ -1,6 +1,8 @@
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
+import type { SupportedLocale } from '@/i18n/config'
 import { questCatalogPathForLocale } from '@/utils/questLocaleHubs'
+import { buildQuestLocalePath } from '@/utils/questLocaleRouting'
 import { buildQuestTouristTrip } from '@/utils/questTouristTrip'
 const SITE_URL = 'https://metravel.by';
 // The static HTML shell owns the WebSite/Organization declarations. Discovery
@@ -157,11 +159,14 @@ export function createQuestCatalogStructuredData({
   title,
   description,
   quests,
+  localeHub = null,
 }: {
   canonical: string;
   title: string;
   description: string;
   quests: QuestEntry[];
+  /** #3360: языковой хаб — элементы списка ведут на страницы его языка. */
+  localeHub?: Exclude<SupportedLocale, 'ru'> | null;
 }) {
   const breadcrumbId = `${canonical}#breadcrumb`;
   const itemListId = `${canonical}#items`;
@@ -176,7 +181,9 @@ export function createQuestCatalogStructuredData({
   const items = quests.slice(0, 50).map((quest) => {
     const lat = toFiniteNumber(quest.lat);
     const lng = toFiniteNumber(quest.lng);
-    const questUrl = quest.cityId && quest.id ? `${SITE_URL}/quests/${quest.cityId}/${quest.id}` : null;
+    const questPath = !quest.cityId || !quest.id ? null
+      : localeHub ? buildQuestLocalePath(Number(quest.cityId), String(quest.id), localeHub) : `/quests/${quest.cityId}/${quest.id}`;
+    const questUrl = questPath ? `${SITE_URL}${questPath}` : null;
     return {
       '@type': 'CreativeWork',
       name: quest.title,

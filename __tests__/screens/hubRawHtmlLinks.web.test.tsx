@@ -94,6 +94,17 @@ describe('/quests: указатель каталога', () => {
     expect(html).toMatch(/<nav[^>]*data-quests-directory/)
   })
 
+  // #3360: у языкового хаба нет указателя стран и городов — он ссылается на
+  // каждого участника, и на страницу его языка.
+  it('links every member of a language hub to its page in the hub language', () => {
+    const Directory = require('@/screens/tabs/QuestsCatalogDirectory.web').default
+    const members = quests.map((quest, index) => ({ ...quest, cityId: String(index + 1) }))
+    const html = renderToString(createElement(Directory, { countries: [], cities: [], quests: members, localeHub: 'en' }))
+    const questHrefs = hrefsOf(html).filter((href) => href.startsWith('/en/quests/'))
+    expect(questHrefs).toHaveLength(members.length)
+    expect(questHrefs[0]).toBe('/en/quests/1/quest-1')
+  })
+
   // Между `</li><li>` в серверном HTML пробела нет: без точки переноса после
   // разделителя браузер рвал названия городов посреди слова («Ген/т»).
   it('gives the browser a line-break point after every separator', () => {

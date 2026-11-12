@@ -12,6 +12,7 @@ const initial = {
     query: ' Минск ',
     appliedSearchTerm: 'минск',
     resultsCount: 17,
+    approximate: false,
     ready: true,
     focused: true,
 };
@@ -38,6 +39,7 @@ it('keeps input immediate and records only after normalized matching and the ana
             query: search.searchQuery,
             appliedSearchTerm: search.searchTerm,
             resultsCount: search.searchTerm === 'минск' ? 17 : 0,
+            approximate: false,
             ready: true,
             focused: true,
         });
@@ -53,7 +55,7 @@ it('keeps input immediate and records only after normalized matching and the ana
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
     await advance(1);
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', {
-        source: 'quest_catalog', search_term: 'минск', results_count: 17,
+        source: 'quest_catalog', search_term: 'минск', results_count: 17, match_mode: 'exact',
     });
 });
 
@@ -63,7 +65,7 @@ it('records the settled normalized query and its full result count once', async 
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
     await advance(1);
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', {
-        source: 'quest_catalog', search_term: 'минск', results_count: 17,
+        source: 'quest_catalog', search_term: 'минск', results_count: 17, match_mode: 'exact',
     });
     await rerender({ ...initial, resultsCount: 18 });
     await advance(2000);
@@ -82,7 +84,7 @@ it('cancels unfinished typing and waits for the new query results', async () => 
     await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(1);
     expect(sendAnalyticsEvent).toHaveBeenLastCalledWith('quest_search', {
-        source: 'quest_catalog', search_term: 'минск', results_count: 7,
+        source: 'quest_catalog', search_term: 'минск', results_count: 7, match_mode: 'exact',
     });
 });
 
@@ -91,7 +93,7 @@ it('records zero results and permits a new search after clearing', async () => {
     const { rerender } = await renderHook(useQuestCatalogSearchAnalytics, { initialProps: props });
     await advance();
     expect(sendAnalyticsEvent).toHaveBeenLastCalledWith('quest_search', {
-        source: 'quest_catalog', search_term: 'atlantis', results_count: 0,
+        source: 'quest_catalog', search_term: 'atlantis', results_count: 0, match_mode: 'exact',
     });
     await rerender({ ...props, query: '' });
     await advance();
@@ -99,6 +101,16 @@ it('records zero results and permits a new search after clearing', async () => {
     await rerender(props);
     await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(2);
+});
+
+it('marks a typo-tolerant result set as approximate (#3239)', async () => {
+    await renderHook(useQuestCatalogSearchAnalytics, {
+        initialProps: { ...initial, query: 'грдно', appliedSearchTerm: 'грдно', resultsCount: 8, approximate: true },
+    });
+    await advance();
+    expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', {
+        source: 'quest_catalog', search_term: 'грдно', results_count: 8, match_mode: 'approximate',
+    });
 });
 
 it('waits for ready data and cancels pending work on lost readiness or focus', async () => {

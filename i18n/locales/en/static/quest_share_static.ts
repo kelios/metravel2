@@ -19,5 +19,7 @@ export const questShareStaticResources = {
   "finaleShare.copyFailed": "Couldn't copy",
   "finaleShare.imageSaved": "Image saved",
   "finaleShare.instagramHint": "Image saved — add it to your story",
+  "finaleInvite.button": "Invite a friend",
+  "finaleInvite.text": "Play the quest «{{title}}» with me — a route with tasks on metravel.by",
   "finaleMedia.completedCaption": "Quest complete!",
 } as const

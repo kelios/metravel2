@@ -46,7 +46,7 @@ describe('requested-locale city names independent of quest content (#2408)', () 
     const catalog = buildQuestCityCatalog(adapted)
     const search = createQuestCatalogSearch(adapted, catalog.canonicalCityIdById)
     for (const term of ['kraków', 'краков']) {
-      expect(adapted.filter((quest) => search(quest, term)).map((quest) => quest.id).sort())
+      expect(search(term).quests.map((quest) => quest.id).sort())
         .toEqual(['krakow-first', 'krakow-second'])
     }
     expect(catalog.cities.map((city) => city.name).sort()).toEqual(['Kraków', 'Warszawa'])
@@ -62,7 +62,7 @@ describe('requested-locale city names independent of quest content (#2408)', () 
     const adapted = adaptMeta(russianKrakow({ city_name_localized: localized }))
     expect(adapted).toMatchObject({ cityName: 'Краков', cityNameCanonical: 'Краков', contentLocale: 'ru' })
     const catalog = buildQuestCityCatalog([adapted])
-    expect(createQuestCatalogSearch([adapted], catalog.canonicalCityIdById)(adapted, 'краков')).toBe(true)
+    expect(createQuestCatalogSearch([adapted], catalog.canonicalCityIdById)('краков').quests).toEqual([adapted])
   })
 
   it('keeps content-name identity when a localized DTO has no canonical field', () => {
@@ -197,6 +197,9 @@ describe('locale hub membership', () => {
     const refetched = [served, noindex, noField, ruOnly].map(adaptMeta)
     expect(ids(selectQuestHubMembers(refetched, 'pl'))).toEqual(['served'])
     expect(ids(selectQuestHubMembers(refetched, 'en'))).toEqual(['served'])
+    // #3360: перезапрос сужает, но не расширяет состав, опубликованный в HTML хаба.
+    expect(ids(selectQuestHubMembers(refetched, 'pl', new Set(['other'])))).toEqual([])
+    expect(ids(selectQuestHubMembers(refetched, 'pl', new Set(['served'])))).toEqual(['served'])
     // The Russian catalogue is not a hub and is not filtered.
     expect(ids(refetched)).toEqual(['served', 'noindex', 'old-cache', 'ru-only'])
   })

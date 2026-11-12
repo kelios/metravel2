@@ -376,6 +376,26 @@ describe('QuestsContentPanel', () => {
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
     });
 
+    it('offers to clear an empty search and names an approximate result set (#3239)', async () => {
+        const onSearchChange = jest.fn();
+        const props = { ...makeBaseProps(), onSearchChange };
+        const { getAllByText, getByText, queryByText, rerender } = await render(
+            <QuestsContentPanel {...props} searchQuery="атлантида" questsAll={[]} />,
+        );
+        // Кнопка-крестик в поле и действие пустого состояния — одна подпись.
+        const clearActions = getAllByText('Очистить поиск');
+        await fireEvent.press(clearActions[clearActions.length - 1]);
+        expect(onSearchChange).toHaveBeenCalledWith('');
+
+        await rerender(<QuestsContentPanel {...props} searchQuery="грдно" searchApproximate />);
+        expect(getByText('Точных совпадений нет — похожие квесты')).toBeTruthy();
+        expect(queryByText('Результаты поиска')).toBeNull();
+
+        await rerender(<QuestsContentPanel {...props} searchQuery="гродно" />);
+        expect(queryByText('Точных совпадений нет — похожие квесты')).toBeNull();
+        expect(getByText('Результаты поиска')).toBeTruthy();
+    });
+
     it.each(['web', 'android'])('distinguishes location lookup from catalog loading on %s', async (platform) => {
         (Platform as { OS: string }).OS = platform;
         mockIsMobile = true;

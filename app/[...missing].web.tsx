@@ -16,6 +16,7 @@ import NotFoundScreen from './[...missing].tsx'
 import { notFoundRouteMetadata, staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 import type { ImmutableRequest } from 'expo-server'
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web'
+import QuestDiscoveryLoaderBoundary from '@/components/quests/runtime/QuestDiscoveryLoaderBoundary.web'
 import type { QuestPublicStructuredData } from '@/components/quests/runtime/questPublicStructuredData'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
@@ -72,13 +73,20 @@ export default function QuestLocaleRouteScreen() {
   const hub = useMemo(() => parseQuestLocaleHubRoute(ownPath), [ownPath])
   if (registrationOnly) return null
   if (hub) {
+    const catalog = (
+      <Suspense fallback={<QuestScreenFallback />}>
+        <LazyQuestCatalogScreen key={hub.path} localeHub={hub.locale} />
+      </Suspense>
+    )
+    // #3360: the hub's members in its language come with the page (loader below),
+    // so the server HTML already links every member, as on /quests (#3218).
     return (
       <FreezeWhenBlurred>
         <View style={styles.root}>
           <CustomHeader />
-          <Suspense fallback={<QuestScreenFallback />}>
-            <LazyQuestCatalogScreen key={hub.path} localeHub={hub.locale} />
-          </Suspense>
+          {process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
+            ? <QuestDiscoveryLoaderBoundary>{catalog}</QuestDiscoveryLoaderBoundary>
+            : catalog}
         </View>
       </FreezeWhenBlurred>
     )
@@ -109,6 +117,11 @@ const styles = StyleSheet.create({
 // #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из
 // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана
 export async function loader(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
+  const hub = parseQuestLocaleHubRoute(`/${([] as string[]).concat(params.missing ?? []).join('/')}`)
+  if (hub) {
+    const { loadQuestDiscovery } = await import('@/components/quests/runtime/questDiscoveryLoader')
+    return loadQuestDiscovery(request, 'catalog', hub.locale)
+  }
   const { loadQuestPublicRoute } = await import('@/components/quests/runtime/questRouteLoader')
   return loadQuestPublicRoute(request, params)
 }

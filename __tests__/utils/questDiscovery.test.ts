@@ -57,3 +57,36 @@ it('requires the directory arrays in a catalogue response rather than silently d
   expect(validateQuestDiscovery(raw, 'catalog')).toBeNull();
   expect(validateQuestDiscovery({ ...raw, cities: [], countries: [] }, 'catalog')).not.toBeNull();
 });
+
+// #3360: языковой хаб `/{locale}/quests` получает своих участников на своём языке.
+describe('language hub discovery (#3360)', () => {
+  const quest = questPrivateSnapshot().catalog[0];
+  const hubRow = { ...quest, title: 'Kraków Quest', content_locale: 'en', served_locales: ['ru', 'be', 'uk', 'pl', 'en'] };
+  const raw = { schema_version: 2, state: 'available', locale: 'en', view: 'catalog', quests: [hubRow], cities: [], countries: [],
+    publication_id: 'a'.repeat(64), corpus_revision: 'b'.repeat(64), source_revision: 'c'.repeat(64), content_revision: 'd'.repeat(64) };
+
+  it('accepts the hub catalogue and keeps the row language and served locales', () => {
+    const result = validateQuestDiscovery(raw, 'catalog', 'en')!;
+    expect(result.locale).toBe('en');
+    expect(result.quests[0]).toMatchObject({ title: 'Kraków Quest', content_locale: 'en', served_locales: ['ru', 'be', 'uk', 'pl', 'en'] });
+  });
+
+  it('rejects a row the hub does not serve, a foreign-language row and an envelope of another language', () => {
+    expect(validateQuestDiscovery({ ...raw, quests: [{ ...hubRow, served_locales: ['ru'] }] }, 'catalog', 'en')).toBeNull();
+    expect(validateQuestDiscovery({ ...raw, quests: [{ ...hubRow, content_locale: 'ru' }] }, 'catalog', 'en')).toBeNull();
+    expect(validateQuestDiscovery(raw, 'catalog', 'pl')).toBeNull();
+    expect(validateQuestDiscovery(raw, 'catalog')).toBeNull();
+  });
+
+  it('has no home or scenario views outside Russian', () => {
+    expect(validateQuestDiscovery({ ...raw, view: 'home' }, 'home', 'en')).toBeNull();
+    expect(validateQuestDiscovery({ ...raw, view: 'scenario' }, 'scenario', 'en')).toBeNull();
+  });
+
+  it('leaves the Russian row shape unchanged for the published RU catalogue', () => {
+    const ru = validateQuestDiscovery({ ...raw, locale: 'ru', quests: [quest] }, 'catalog')!;
+    expect(ru.quests[0].content_locale).toBe('ru');
+    expect(ru.quests[0]).not.toHaveProperty('served_locales');
+  });
+});
+

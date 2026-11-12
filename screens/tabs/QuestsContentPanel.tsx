@@ -48,6 +48,10 @@ type QuestsContentPanelProps = {
     searchQuery: string;
     /** Применённый (debounce) поисковый терм: по нему живёт список. */
     appliedSearchTerm?: string;
+    /** #3239: точных совпадений нет, в выдаче — ближайшие по написанию квесты. */
+    searchApproximate?: boolean;
+    /** #3228: клик по карточке — аналитика с признаком порядка выдачи. */
+    onQuestOpen?: (questId: string, position: number) => void;
     onSearchChange: (text: string) => void;
     /** @deprecated Radius selection is no longer shown in the quest catalog. */
     nearbyRadiusKm?: number;
@@ -110,6 +114,8 @@ function QuestsContentPanel({
     bikeFilterId = '__bike__',
     searchQuery = '',
     appliedSearchTerm,
+    searchApproximate = false,
+    onQuestOpen,
     onSearchChange = () => {},
     questsAll,
     questCardWidth,
@@ -269,15 +275,18 @@ function QuestsContentPanel({
                 approximateDistance={getQuestLocationQuality(userLoc?.accuracyMeters) !== 'precise'}
                 cardWidth={questCardWidth}
                 index={index}
+                onOpen={onQuestOpen}
             />
         </View>
-    ), [getQuestCityId, isMapAreaActive, nearbyId, questCardWidth, selectedCityId, styles, userLoc]);
+    ), [getQuestCityId, isMapAreaActive, nearbyId, onQuestOpen, questCardWidth, selectedCityId, styles, userLoc]);
 
     const questKeyExtractor = useCallback((quest: QuestListItem) => String(quest.id), []);
 
     const selectedTheme = getQuestThemeById(parseThemeSelectionId(selectedCityId));
     const contentTitleText = searchActive
-            ? i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
+            ? searchApproximate
+                ? i18nT('quests:screens.tabs.QuestsContentPanel.searchApproximateTitle')
+                : i18nT('quests:screens.tabs.QuestsContentPanel.rezultaty_poiska_5ebb750c')
             : isMapAreaActive
                 ? i18nT('quests:screens.tabs.QuestsContentPanel.kvesty_v_etoy_oblasti_f59f59da')
                 : selectedCityId === nearbyId
@@ -391,6 +400,8 @@ function QuestsContentPanel({
         </View>
     );
 
+    const clearSearch = useCallback(() => onSearchChange(''), [onSearchChange]);
+
     const searchField = (
     <View style={[styles.searchRow, usesFilterDrawer && !isMobile && styles.tabletFilterSearch]} testID="quests-search-row">
         <Feather name="search" size={16} color={colors.textMuted} />
@@ -410,7 +421,7 @@ function QuestsContentPanel({
         {searchActive && (
             <Pressable
                 style={styles.searchClearBtn}
-                onPress={() => onSearchChange('')}
+                onPress={clearSearch}
                 accessibilityRole="button"
                 accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29')}
                 hitSlop={8}
@@ -498,6 +509,10 @@ function QuestsContentPanel({
                     title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
                     description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
                     variant="empty"
+                    action={{
+                        label: i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29'),
+                        onPress: clearSearch,
+                    }}
                 />
             )}
 
@@ -574,6 +589,7 @@ function QuestsContentPanel({
                                         approximateDistance={getQuestLocationQuality(userLoc?.accuracyMeters) !== 'precise'}
                                         cardWidth={gridCardWidth}
                                         index={index}
+                                        onOpen={onQuestOpen}
                                     />
                                 ))}
                             </View>

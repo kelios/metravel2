@@ -167,6 +167,33 @@ function questCountryLandingIsLinkable(country) {
   return Array.isArray(cities) && cities.length >= QUEST_COUNTRY_LANDING_MIN_CITIES;
 }
 
+/**
+ * Порог наполнения хаба страны (#3259): кроме второго города (ссылочность)
+ * нужно столько квестов. На 12.11.2026 порог проходят 17 стран из 47.
+ */
+const QUEST_COUNTRY_HUB_MIN_QUESTS = 5;
+
+/**
+ * Единственное правило index/noindex страницы страны (#3259). Страна — хаб
+ * ссылок на свои города, квесты и статьи, без авторского текста (решение
+ * владельца 09.11.2026, текст на страну отклонён в #1929), поэтому её
+ * ценность — наполнение, а не объём прозы.
+ *
+ * `proseFloorsPass` — временное условие публикации, а не часть правила:
+ * бэкенд принимает `indexable: true` только с прозовыми порогами
+ * (`quests/services/web_publication.py` → `_quality`, ≥300 слов и ≥30% своей
+ * лексики) и иначе отклоняет весь выпуск. Пока он не различает хаб страны,
+ * хаб, прошедший порог наполнения, остаётся `noindex` с причиной
+ * `publication-prose-floor`; после правки бэкенда условие удаляется отсюда.
+ */
+function questCountryHubIndexVerdict(country, options = {}) {
+  if (!questCountryLandingIsLinkable(country)) return { indexable: false, reason: 'single-city' };
+  const quests = Array.isArray(country?.quests) ? country.quests.length : 0;
+  if (quests < QUEST_COUNTRY_HUB_MIN_QUESTS) return { indexable: false, reason: 'thin-hub' };
+  if (!options.proseFloorsPass) return { indexable: false, reason: 'publication-prose-floor' };
+  return { indexable: true, reason: 'hub' };
+}
+
 function resolveQuestCountryAlias(countryParam, quests, options = {}) {
   const alias = String(countryParam ?? '').trim().toLowerCase();
   if (!alias) return null;
@@ -177,6 +204,8 @@ function resolveQuestCountryAlias(countryParam, quests, options = {}) {
 module.exports = {
   ISO_ALPHA2_CODES,
   QUEST_COUNTRY_LANDING_MIN_CITIES,
+  QUEST_COUNTRY_HUB_MIN_QUESTS,
+  questCountryHubIndexVerdict,
   buildQuestCountryLandingGroups,
   getIsoCountryDisplayName,
   getQuestCountryAlias,

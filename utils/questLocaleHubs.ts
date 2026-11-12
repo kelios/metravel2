@@ -27,6 +27,12 @@ export function questCatalogPathForLocale(locale: unknown): string {
  * server serves (`served_locales`, #3349). A published translation alone is not
  * enough — the server withholds a noindex page (404). No field — not a member.
  */
-export function selectQuestHubMembers<T extends { servedLocales?: string[] }>(quests: T[], locale: Exclude<SupportedLocale, 'ru'>): T[] {
-  return quests.filter((quest) => quest.servedLocales?.includes(locale) ?? false)
+export function selectQuestHubMembers<T extends { id: string; servedLocales?: string[] }>(
+  quests: T[],
+  locale: Exclude<SupportedLocale, 'ru'>,
+  published?: ReadonlySet<string> | null,
+): T[] {
+  // #3360: the hub's server HTML lists the published members; a client refetch may
+  // narrow that set (a member withdrawn since) but never widens it past the page.
+  return quests.filter((quest) => (quest.servedLocales?.includes(locale) ?? false) && (!published || published.has(quest.id)))
 }

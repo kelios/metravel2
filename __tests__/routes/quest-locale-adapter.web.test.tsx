@@ -31,8 +31,30 @@ jest.mock('@/app/(tabs)/quests/[city]/[questId]', () => ({
   __esModule: true, default: (props: unknown) => mockDetail(props),
 }))
 jest.mock('@/components/screens/NotFoundContent', () => ({ __esModule: true, NotFoundContent: () => mockNotFound() }))
+const mockLoadDiscovery = jest.fn(async (..._args: unknown[]) => ({ hub: true }))
+const mockLoadPublicRoute = jest.fn(async (..._args: unknown[]) => null)
+jest.mock('@/components/quests/runtime/questDiscoveryLoader', () => ({ loadQuestDiscovery: (...args: unknown[]) => mockLoadDiscovery(...args) }))
+jest.mock('@/components/quests/runtime/questRouteLoader', () => ({ loadQuestPublicRoute: (...args: unknown[]) => mockLoadPublicRoute(...args) }))
 
-import QuestLocaleRouteScreen from '@/app/[...missing].web'
+import QuestLocaleRouteScreen, { loader } from '@/app/[...missing].web'
+
+// #3360: the hub's loader brings its members in its language, a detail keeps its own loader.
+describe('catch-all loader', () => {
+  it.each(['be', 'uk', 'pl', 'en'])('loads the %s hub catalogue from discovery', async (locale) => {
+    mockLoadDiscovery.mockClear()
+    mockLoadPublicRoute.mockClear()
+    await expect(loader(undefined, { missing: [locale, 'quests'] })).resolves.toEqual({ hub: true })
+    expect(mockLoadDiscovery).toHaveBeenCalledWith(undefined, 'catalog', locale)
+    expect(mockLoadPublicRoute).not.toHaveBeenCalled()
+  })
+
+  it('keeps a translated detail on the public route loader', async () => {
+    mockLoadDiscovery.mockClear()
+    await loader(undefined, { missing: ['en', 'quests', '4', 'minsk-cmok'] })
+    expect(mockLoadDiscovery).not.toHaveBeenCalled()
+    expect(mockLoadPublicRoute).toHaveBeenCalled()
+  })
+})
 
 const { useIsFocused } = jest.requireMock('expo-router') as { useIsFocused: () => boolean }
 

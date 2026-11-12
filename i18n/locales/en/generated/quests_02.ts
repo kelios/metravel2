@@ -317,6 +317,7 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsScreen.completedSeoTitle": "Quests completed by me | MeTravel",
   "screens.tabs.QuestsScreen.uncompletedSeoTitle": "Quests not yet completed by me | MeTravel",
   "screens.tabs.QuestsContentPanel.completedEmptyAction": "Pick your first quest",
+  "screens.tabs.QuestsContentPanel.searchApproximateTitle": "No exact matches — similar quests",
   "screens.tabs.QuestsSidebar.completedByOthersLabel": "Completed by others",
   "screens.tabs.QuestsSidebar.completedByOthersA11y": "Quests completed by other players, {{value1}}",
   "screens.tabs.QuestsContentPanel.completedByOthersTitle": "Quests completed by others",

@@ -46,9 +46,18 @@ prod; значение из окружения или `.env.prod` сильнее
 `utils/questLocaleHubs.ts`): страницы, которые сервер отдаёт, а не просто
 опубликованные переводы (noindex-перевод дал бы ссылку на 404). Элемент без
 поля (старый кэш, старый бэкенд) в хаб не попадает; русский `/quests` не
-фильтруется. Карточки хаба появляются после гидрации: публичного discovery на
-языке хаба нет (`/api/quests/web/discovery/?lang=<locale>` — 404), а RU-строки
-дали бы на языковой странице русские названия. Head хаба (title, description)
+фильтруется. Серверный HTML хаба (#3360) несёт его участников на его языке:
+loader catch-all для `/{locale}/quests` зовёт `loadQuestDiscovery(request,
+'catalog', locale)` → `GET /api/quests/web/discovery/?view=catalog&lang=<locale>`
+(бэк #3359; `home`/`scenario` на этих языках — 404), `validateQuestDiscovery`
+принимает конверт языка хаба и требует от каждой строки `served_locales` с этим
+языком и `content_locale` = язык хаба (оба поля сохраняются; форма русских
+строк не меняется). Хаб обёрнут в `QuestDiscoveryLoaderBoundary`: каталог стартует
+с этих строк, указатель `QuestsCatalogDirectory` ссылается на каждого участника
+(`/{locale}/quests/<cityId>/<slug>`), JSON-LD — на те же адреса. Клиентский
+перезапрос `/api/quests/?lang=` только сужает состав: `selectQuestHubMembers`
+получает множество опубликованных id и не добавляет квест, которого нет в HTML.
+Head хаба (title, description)
 берётся из записи `/quests` в `utils/seoRoutes/staticRoutes.js` на языке адреса.
 Общий `utils/questLocaleRouting.js` проверяет locale, положительный безопасный
 числовой ID и slug; canonical исключает query/print параметры.

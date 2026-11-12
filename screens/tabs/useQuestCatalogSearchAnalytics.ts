@@ -7,6 +7,8 @@ type SearchAnalyticsOptions = {
     query: string;
     appliedSearchTerm: string;
     resultsCount: number;
+    /** #3239: выдача — ближайшие по написанию квесты, а не точные совпадения. */
+    approximate: boolean;
     ready: boolean;
     focused: boolean;
 };
@@ -16,6 +18,7 @@ export function useQuestCatalogSearchAnalytics({
     query,
     appliedSearchTerm,
     resultsCount,
+    approximate,
     ready,
     focused,
 }: SearchAnalyticsOptions) {
@@ -33,8 +36,9 @@ export function useQuestCatalogSearchAnalytics({
                 source: 'quest_catalog',
                 search_term: term,
                 results_count: resultsCount,
+                match_mode: approximate ? 'approximate' : 'exact',
             });
         }, 900);
         return () => clearTimeout(timer);
-    }, [term, appliedSearchTerm, resultsCount, ready, focused]);
+    }, [term, appliedSearchTerm, resultsCount, approximate, ready, focused]);
 }
