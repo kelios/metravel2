@@ -11,6 +11,7 @@ import LinkPressable from '@/components/ui/LinkPressable'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel'
 import {
+  QUESTS_GRID_MIN_COLUMN_WIDTH,
   QUESTS_LANDING_CARD_MAX_WIDTH,
   QUESTS_LANDING_CARD_MIN_WIDTH,
   QUESTS_LANDING_PADDING,
@@ -342,12 +343,13 @@ export function QuestLandingGrid({
   /** Native keeps the route's responsive model; web measures its actual column. */
   cardWidth?: number
 }) {
-  const { gridRef, onGridLayout, cardWidth } = useQuestGridCardWidth(
-    fallbackCardWidth, Platform.OS === 'web', QUESTS_LANDING_CARD_MIN_WIDTH,
-  )
+  // #3302: the column floor is the catalog card's own (380), not the 240 basis of
+  // link lists: QuestCard scales its height with width/380, and a 260-wide track
+  // (three columns in an 840 block) left a 177-high card that clipped its title.
+  const { gridRef, onGridLayout, cardWidth } = useQuestGridCardWidth(fallbackCardWidth, Platform.OS === 'web')
   return (
     <View ref={gridRef} onLayout={onGridLayout}
-      style={[styles.questsGrid, { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${QUESTS_LANDING_CARD_MIN_WIDTH}px), 1fr))` } as ViewStyle]}>
+      style={[styles.questsGrid, { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${QUESTS_GRID_MIN_COLUMN_WIDTH}px), 1fr))` } as ViewStyle]}>
       {quests.map((quest, index) => (
         <QuestCard
           key={`${quest.cityId}:${quest.id}`}
