@@ -3,7 +3,7 @@ import type { Href } from 'expo-router'
 import type { NavigationIconName } from '@/constants/navigationIcons'
 import { BOTTOM_DOCK_ROUTES } from '@/constants/bottomDockRoutes'
 import { translate as i18nT } from '@/i18n'
-import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
+import { parseQuestUrlLocale } from '@/utils/questLocalePath'
 
 // Eager navigation owns only the five links; sheet/account data stays deferred.
 export const BOTTOM_DOCK_HEIGHT = 56

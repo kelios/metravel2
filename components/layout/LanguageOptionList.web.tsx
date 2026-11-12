@@ -5,7 +5,7 @@ import QuestVersionLinks from '@/components/quests/QuestVersionLinks'
 import { useQuestVersionNavigation } from '@/hooks/useQuestVersionNavigation'
 import { useLocale } from '@/i18n/LocaleProvider'
 import type { SupportedLocale } from '@/i18n/config'
-import { parseQuestLocaleHubRoute } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleHubRoute } from '@/utils/questLocalePath'
 import { localizeQuestCatalogHref } from '@/utils/questLocaleHubs'
 
 type Props = { onChosen?: () => void; testIDPrefix?: string }

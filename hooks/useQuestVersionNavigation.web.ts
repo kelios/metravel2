@@ -1,7 +1,8 @@
 import { useLayoutEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'expo-router';
 import type { SupportedLocale } from '@/i18n/config';
-import { parseQuestLocaleRoute, type QuestServingProjection } from '@/utils/questLocaleRouting';
+import { parseQuestLocaleRoute } from '@/utils/questLocalePath';
+import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 import type { QuestVersionNavigation } from './questServingTypes';
 
 let current: (QuestVersionNavigation & { pathname: string }) | null = null;

@@ -23,9 +23,13 @@ const MAX_EAGER_BROTLI_KB = 690
 // #3316: the routes of the card. The worst-route ceiling above cannot see them
 // (the home page is 214 KiB lighter), so each has its own.
 const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
-  'index.html': 475,
+  'index.html': 469.5,
   '(tabs)/travels/[param].html': 558,
 }
+// #3374: full delivered bytes of the normal 2026-11-12 SSR candidate,
+// including loader metadata. Exact equality leaves no tolerance or rounding spare.
+const ENTRY_BROTLI_BYTES = 232696
+const HOME_BROTLI_BYTES = 480758
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
 const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
@@ -172,8 +176,16 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
   if (Object.prototype.hasOwnProperty.call(requireRecord(budget.chunks, 'bundle budget.chunks'), 'index:expo-video')) {
     throw new Error('native expo-video must keep the zero-payload rule instead of a byte allowance.')
   }
+  const entry = requireRecord(requireRecord(budget.chunks, 'bundle budget.chunks').entry, 'bundle budget.chunks.entry')
+  if (entry.maxBrotliBytes !== ENTRY_BROTLI_BYTES) {
+    throw new Error('bundle budget entry exact Brotli bytes must match the committed measured pin.')
+  }
 
   const eager = requireRecord(budget.eager, 'bundle budget.eager')
+  const exactRoutes = requireRecord(eager.maxBrotliBytesByRoute, 'bundle budget.eager.maxBrotliBytesByRoute')
+  if (exactRoutes['index.html'] !== HOME_BROTLI_BYTES) {
+    throw new Error('bundle budget home exact Brotli bytes must match the committed measured pin.')
+  }
   const eagerChunks = requireStringArray(eager.chunks, 'bundle budget.eager.chunks')
   if (eagerChunks.length !== 2 || eagerChunks[0] !== 'entry' || eagerChunks[1] !== '__expo-metro-runtime') {
     throw new Error('bundle budget.eager.chunks must keep entry and __expo-metro-runtime.')
@@ -248,6 +260,20 @@ describe('bundle budget release contract', () => {
       buildIndex < eagerGuardIndex && eagerGuardIndex < budgetGuardIndex,
       'scripts.release:check must run eager and bundle budget guards after build:web:prod.',
     )
+  })
+
+  it.each(['entry', 'home'])('rejects one-byte relaxation of the measured %s ceiling', (target) => {
+    const tmpDir = makeTempDir('bundle-measured-byte-pin-')
+    try {
+      const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
+      expect(ENTRY_BROTLI_BYTES).toBeLessThan(233211)
+      expect(HOME_BROTLI_BYTES).toBeLessThan(481252)
+      if (target === 'entry') budget.chunks.entry.maxBrotliBytes += 1
+      else budget.eager.maxBrotliBytesByRoute['index.html'] += 1
+      const changed = path.join(tmpDir, 'budget.json')
+      fs.writeFileSync(changed, JSON.stringify(budget))
+      expect(() => validateCommittedBudget(changed)).toThrow('exact Brotli bytes must match the committed measured pin')
+    } finally { fs.rmSync(tmpDir, { recursive: true, force: true }) }
   })
 
   it('keeps the committed bundle budget spare at or below five percent', () => {

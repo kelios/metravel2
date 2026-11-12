@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 import { isCompactHeaderWidth } from './headerLayoutContract'
 import { isQuestDetailHeaderPath } from './questHeaderPresentation'
 import { isTopLevelSectionPath, needsGlobalBackAffordance } from './topLevelSections'
-import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
+import { parseQuestUrlLocale } from '@/utils/questLocalePath'
 
 export const isHeaderTestEnv =
   typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined

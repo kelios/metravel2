@@ -2,7 +2,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './config'
 import { LOCALE_PREFERENCE_STORAGE_KEY } from './localeStorage'
 import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
-import { getQuestLocaleRouteParserScript } from '@/utils/questLocaleRouting'
+import { getQuestLocaleRouteParserScript } from '@/utils/questLocaleShell'
 
 export const LOCALE_BOOT_PENDING_CLASS = 'locale-boot-pending'
 

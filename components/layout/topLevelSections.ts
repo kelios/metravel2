@@ -1,6 +1,6 @@
 import { BOTTOM_DOCK_SECTION_PATHS } from '@/constants/bottomDockRoutes'
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
-import { parseQuestLocaleHubRoute } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleHubRoute } from '@/utils/questLocalePath'
 
 /**
  * Разделы верхней навигации: их адресуют основное меню (desktop) и нижний док

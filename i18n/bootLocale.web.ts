@@ -9,7 +9,7 @@ import { isSupportedLocale, DEFAULT_LOCALE, type SupportedLocale } from './confi
 import i18n from './instance'
 import { readWebLocalePreferenceSync, resolveLocalePreference } from './localeStorage'
 import { isWebLocaleLoaded, loadWebLocale } from './translate'
-import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
+import { parseQuestUrlLocale } from '@/utils/questLocalePath'
 
 /**
  * Каталог сохранённой локали — до гидратации (#2239, `I18N-LOCALE-BOOT-REMOUNT-001`).

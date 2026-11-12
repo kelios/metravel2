@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Platform } from 'react-native'
-import { parseQuestUrlLocale } from '@/utils/questLocaleRouting'
+import { parseQuestUrlLocale } from '@/utils/questLocalePath'
 import { shouldPrefetchTravelStatics } from '@/utils/staticPrefetchRoutes'
 import { UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID } from '@/utils/unknownCityNotFoundHydration'
 

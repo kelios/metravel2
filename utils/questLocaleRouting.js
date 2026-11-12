@@ -1,7 +1,8 @@
-/* global module */
+/* global module, require */
 
-// Quest-only URL contract #2208. Keep parity with the production registry in tests.
-const QUEST_LOCALES = ['ru', 'be', 'uk', 'pl', 'en'];
+// Compatibility facade; boot and shell consumers use their narrower owners.
+const { QUEST_LOCALES, parseQuestLocaleRoute, parseQuestLocaleHubRoute, parseQuestUrlLocale } = require('./questLocalePath');
+const { buildQuestLocaleHubPath, getQuestLocaleRouteParserScript } = require('./questLocaleShell');
 const QUEST_SLUG = /^[a-z0-9][a-z0-9_-]{0,159}$/;
 const QUEST_ORIGIN = 'https://metravel.by';
 
@@ -11,41 +12,6 @@ function buildQuestLocalePath(cityId, questSlug, locale) {
   return `${locale === 'ru' ? '' : `/${locale}`}/quests/${cityId}/${questSlug}`;
 }
 
-function parseQuestLocaleRoute(path) {
-  if (typeof path !== 'string') return null;
-  const pathname = path.split(/[?#]/, 1)[0];
-  const match = /^\/(be|uk|pl|en)\/quests\/([1-9]\d*)\/([a-z0-9][a-z0-9_-]{0,159})\/?$/.exec(pathname);
-  if (!match) return null;
-  const cityId = Number(match[2]);
-  if (!Number.isSafeInteger(cityId) || cityId <= 0) return null;
-  return { locale: match[1], cityId, questSlug: match[3], path: `/${match[1]}/quests/${cityId}/${match[3]}` };
-}
-
-// #3217: the catalogue hub of a translated locale. Its list holds only quests
-// published in that locale, so it binds the UI to the URL like a detail does.
-function parseQuestLocaleHubRoute(path) {
-  if (typeof path !== 'string') return null;
-  const match = /^\/(be|uk|pl|en)\/quests\/?$/.exec(path.split(/[?#]/, 1)[0]);
-  return match ? { locale: match[1], path: `/${match[1]}/quests` } : null;
-}
-
-function buildQuestLocaleHubPath(locale) {
-  if (!QUEST_LOCALES.includes(locale)) return null;
-  return locale === 'ru' ? '/quests' : `/${locale}/quests`;
-}
-
-/** The one rule «which URL owns the interface language»: a translated detail or hub. */
-function parseQuestUrlLocale(path) {
-  return (parseQuestLocaleRoute(path) || parseQuestLocaleHubRoute(path))?.locale ?? null;
-}
-
-// The pre-bundle head bootstrap uses the same self-contained parser.
-function getQuestLocaleRouteParserScript() {
-  return `(function(path){var detail=(${parseQuestLocaleRoute.toString()})(path);if(detail)return detail;`
-    + `return (${parseQuestLocaleHubRoute.toString()})(path);})`;
-}
-
-/** Validate identity and every navigable path; never infer membership from gameplay. */
 function validateQuestServingProjection(raw, expected) {
   if (!raw || typeof raw !== 'object' || raw.schema_version !== 1) return null;
   const { cityId, questSlug, locale } = expected;

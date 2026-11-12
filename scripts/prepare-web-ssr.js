@@ -151,7 +151,7 @@ async function prepareWebSsr({ exportDir, staticDir, runtimeDir, envFile, sha, d
     fs.copyFileSync(path.join(__dirname, 'lib', helper), path.join(runtime, 'lib', helper))
   }
   fs.mkdirSync(path.join(runtimeDir, 'utils', 'ssr'), { recursive: true })
-  for (const helper of ['ssr/requestLocale.js', 'ssr/criticalCss.js', 'questLocaleRouting.js']) {
+  for (const helper of ['ssr/requestLocale.js', 'ssr/criticalCss.js', 'questLocaleRouting.js', 'questLocalePath.js', 'questLocaleShell.js']) {
     fs.copyFileSync(path.join(__dirname, '..', 'utils', helper), path.join(runtimeDir, 'utils', helper))
   }
   const packageRoot = path.dirname(require.resolve('expo-server/package.json'))

@@ -24,7 +24,7 @@ import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
 import { getFirstSearchParamValue, normalizeInternalReturnPath } from '@/utils/navigationReturnPath';
-import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting';
+import { parseQuestLocaleRoute } from '@/utils/questLocalePath';
 import { localizeQuestCatalogHref } from '@/utils/questLocaleHubs';
 import type { SupportedLocale } from '@/i18n/config';
 import { getActiveLocale, translate as i18nT } from '@/i18n'

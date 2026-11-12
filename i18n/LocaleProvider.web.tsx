@@ -11,7 +11,7 @@ import React, {
   useState,
 } from 'react'
 import { usePathname } from 'expo-router'
-import { parseQuestLocaleRoute, parseQuestUrlLocale } from '@/utils/questLocaleRouting'
+import { parseQuestLocaleRoute, parseQuestUrlLocale } from '@/utils/questLocalePath'
 
 import { BOOT_LOCALE_TIMEOUT_MS, normalizeActiveLocale, resolvePendingBootLocale } from './bootLocale'
 import { getLocaleDefinition, SUPPORTED_LOCALES, type SupportedLocale } from './config'

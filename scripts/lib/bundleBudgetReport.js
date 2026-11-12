@@ -80,7 +80,7 @@ function validateReport(value) {
     if (!record(breach) || typeof breach.label !== 'string' || !['bytes', 'count', 'unavailable'].includes(breach.unit)) invalid('breach')
     if (!(breach.actual === null || integer(breach.actual)) || !(breach.limit === null || integer(breach.limit))) invalid('breach actual/limit')
     if (breach.unit !== 'unavailable' && (breach.actual === null || breach.limit === null)) invalid('breach measurement')
-    if (breach.basis !== undefined && !['html_scripts_with_loader_metadata', 'configured_chunks_without_loader_metadata'].includes(breach.basis)) invalid('breach basis')
+    if (breach.basis !== undefined && !['html_scripts_with_loader_metadata', 'configured_chunks_without_loader_metadata', 'full_chunk_with_loader_metadata'].includes(breach.basis)) invalid('breach basis')
   }
   if (value.verdict === 'pass' && (value.breaches.length || value.measurement_status !== 'complete' || value.sha === null || value.dirty === null)) invalid('pass without complete evidence')
   if (value.measurements === null) {

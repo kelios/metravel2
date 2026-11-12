@@ -1,6 +1,6 @@
 import { Platform } from 'react-native'
 import { isSupportedLocale, type SupportedLocale } from '@/i18n/config'
-import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
+import { buildQuestLocaleHubPath } from '@/utils/questLocaleShell'
 
 /**
  * #3217: the hubs `/{be,uk,pl,en}/quests` go public only together with their

@@ -1,7 +1,7 @@
 /* global module, require, process */
 'use strict'
 
-const { QUEST_LOCALES, parseQuestUrlLocale } = require('../questLocaleRouting')
+const { QUEST_LOCALES, parseQuestUrlLocale } = require('../questLocalePath')
 
 const REQUEST_LOCALE = Symbol.for('metravel.ssr.locale')
 const SERVER_CATALOGS = Symbol.for('metravel.ssr.localeCatalogs')

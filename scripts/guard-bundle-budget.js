@@ -345,12 +345,40 @@ function readForbiddenPayloads(value) {
     return [name, markers]
   }))
 }
+function readExactBrotliBudget(config) {
+  const requireBytes = (value, label) => {
+    if (!Number.isSafeInteger(value) || value < 0) die(`${label} must be a non-negative safe integer.`)
+    return value
+  }
+  const chunks = new Map()
+  for (const [name, row] of Object.entries(config?.chunks || {})) {
+    if (row && Object.prototype.hasOwnProperty.call(row, 'maxBrotliBytes')) {
+      chunks.set(name, requireBytes(row.maxBrotliBytes, `chunks.${name}.maxBrotliBytes`))
+    }
+  }
+  const routes = new Map()
+  if (config?.eager && Object.prototype.hasOwnProperty.call(config.eager, 'maxBrotliBytesByRoute')) {
+    const rows = config.eager.maxBrotliBytesByRoute
+    if (!rows || typeof rows !== 'object' || Array.isArray(rows)) die('eager.maxBrotliBytesByRoute must be an object.')
+    if (config.eager.htmlRoutes !== true) die('eager.maxBrotliBytesByRoute requires htmlRoutes=true.')
+    for (const [route, value] of Object.entries(rows)) {
+      if (!route.endsWith('.html') || route.startsWith('/') || route.includes('\\') || route.split('/').some((part) => !part || part === '..' || part === '.')) {
+        die(`eager.maxBrotliBytesByRoute must use a normalized relative .html path: ${route}`)
+      }
+      const limit = requireBytes(value, `eager.maxBrotliBytesByRoute.${route}`)
+      const key = toRouteKey(route)
+      routes.set(key, Math.min(limit, routes.get(key) ?? Infinity))
+    }
+  }
+  return { chunks, routes }
+}
 let attributionBudget
 try { attributionBudget = JSON.parse(fs.readFileSync(budgetPath, 'utf8')) } catch {
   // Preserve the existing update/check diagnostics for missing or invalid config.
 }
 const ownerSplits = readOwnerSplits(attributionBudget)
 const forbiddenPayloads = readForbiddenPayloads(attributionBudget?.forbiddenPayloads)
+const exactBrotliBudget = readExactBrotliBudget(attributionBudget)
 const ownerCandidates = []
 
 // Aggregate per logical chunk (a logical name can map to >1 hashed file
@@ -440,6 +468,9 @@ for (const [logical, owners] of ownerSplits) {
 }
 
 if (UPDATE) {
+  for (const name of exactBrotliBudget.chunks.keys()) {
+    if (!chunks.has(name)) die(`Cannot update bundle budget: exact byte chunk missing from build: ${name}`)
+  }
   if (!fs.existsSync(budgetPath)) {
     die(`Cannot update bundle budget: config not found at ${path.relative(repoRoot, budgetPath)}.`)
   }
@@ -507,6 +538,7 @@ if (UPDATE) {
   for (const [name, c] of [...chunks.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
     budget.chunks[name] = {
       ...(ownerFiles.has(name) ? { marker: ownerFiles.get(name).marker } : {}),
+      ...(exactBrotliBudget.chunks.has(name) ? { maxBrotliBytes: exactBrotliBudget.chunks.get(name) } : {}),
       maxRawKB: toKB(c.raw),
       maxGzipKB: toKB(c.gzip),
       maxBrotliKB: toKB(c.brotli),
@@ -617,6 +649,12 @@ function check(label, actualKB, maxKB, tolerance = tol, actualBytes) {
     })
   }
 }
+function checkBytes(label, actual, limit, basis) {
+  if (actual > limit) {
+    breaches.push({ label, actual, max: limit })
+    exactBreaches.set(label, { label, actual, limit, unit: 'bytes', policy: 'exact_bytes', basis })
+  }
+}
 
 // #1372: счётчик, а не байты. После сплита #1286 маршрут стал тянуть десятки
 // отдельных JS-файлов, и на мобильной задержке 150 мс round-trip'ы доминируют
@@ -658,8 +696,17 @@ for (const [route, limit] of Object.entries(budget?.eager?.maxBrotliKBByRoute ||
   eagerBrotliLimits.set(key, Math.min(limit, eagerBrotliLimits.get(key) ?? Infinity))
 }
 
+const exactChunkBrotli = new Map()
 for (const [name, b] of Object.entries(budget.chunks || {})) {
   const c = chunks.get(name)
+  if (exactBrotliBudget.chunks.has(name)) {
+    if (!c) breaches.push({ label: `Exact byte chunk missing from build: ${name}`, missing: true })
+    else {
+      const delivered = Object.keys(namedFiles.get(name)).reduce((sum, file) => sum + fileSizes.get(file).brotli, 0)
+      exactChunkBrotli.set(name, delivered)
+      checkBytes(`${name} (brotli bytes)`, delivered, exactBrotliBudget.chunks.get(name), 'full_chunk_with_loader_metadata')
+    }
+  }
   if (!c) continue // chunk dropped/renamed — not a size regression
   check(`${name} (raw)`, toKB(c.raw), b.maxRawKB, tol, c.raw)
   check(`${name} (gzip)`, toKB(c.gzip), b.maxGzipKB, tol, c.gzip)
@@ -769,7 +816,7 @@ if (budget?.eager?.htmlRoutes === true) {
         const routeKey = toRouteKey(
           path.relative(htmlDir, candidate.file) || path.basename(candidate.file),
         )
-        if (eagerBrotliLimits.has(routeKey)) {
+        if (eagerBrotliLimits.has(routeKey) || exactBrotliBudget.routes.has(routeKey)) {
           eagerRouteBrotli.set(routeKey, Math.max(candidate.brotli, eagerRouteBrotli.get(routeKey) ?? 0))
         }
         const routeMax = eagerRequestLimits.get(routeKey)
@@ -879,6 +926,11 @@ if (budget.eager) {
       // A request-pinned route reports its absence below; do not say it twice.
       breaches.push({ label: `EAGER budgeted route missing from build: ${routeKey}`, missing: true })
     }
+  }
+  for (const [routeKey, limit] of exactBrotliBudget.routes) {
+    const bytes = eagerRouteBrotli.get(routeKey)
+    if (bytes == null) breaches.push({ label: `Exact byte route missing from build: ${routeKey}`, missing: true })
+    else checkBytes(`EAGER (brotli bytes, ${routeKey})`, bytes, limit, 'html_scripts_with_loader_metadata')
   }
   const wantsRequestBudget =
     budget.eager.maxRequests != null || budget.eager.maxRequestsByRoute != null
@@ -1009,7 +1061,14 @@ if (JSON_OUT) {
     )
   }
   for (const [routeKey, bytes] of eagerRouteBrotli) {
-    console.log(`  eager (${routeKey}): ${toKB(bytes)} KB brotli (budget ${eagerBrotliLimits.get(routeKey)} KB)`)
+    if (exactBrotliBudget.routes.has(routeKey)) {
+      console.log(`  eager (${routeKey}): ${bytes} B brotli (budget ${exactBrotliBudget.routes.get(routeKey)} B)`)
+    } else {
+      console.log(`  eager (${routeKey}): ${toKB(bytes)} KB brotli (budget ${eagerBrotliLimits.get(routeKey)} KB)`)
+    }
+  }
+  for (const [name, bytes] of exactChunkBrotli) {
+    console.log(`  ${name} delivered: ${bytes} B brotli (budget ${exactBrotliBudget.chunks.get(name)} B)`)
   }
   if (eagerRequests) {
     console.log(
@@ -1042,6 +1101,8 @@ if (JSON_OUT) {
       // budget, и общий формат печатал бы «undefined KB > undefined KB».
       if (b.missing || b.forbidden || b.attribution) {
         console.log(`  - ${b.label}`)
+      } else if (exactBreaches.get(b.label)?.policy === 'exact_bytes') {
+        console.log(`  - ${b.label}: ${b.actual} B > ${b.max} B (budget ${b.max} B)`)
       } else if (b.actual != null) {
         console.log(`  - ${b.label}: ${b.actual} > ${b.max} (budget ${b.max})`)
       } else {
