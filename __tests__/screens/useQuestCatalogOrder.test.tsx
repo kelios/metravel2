@@ -2,16 +2,21 @@
 import { cleanup, renderHook } from '@testing-library/react-native/pure';
 
 import { sendAnalyticsEvent } from '@/utils/analytics';
-import { useQuestCatalogOrder } from '@/screens/tabs/useQuestCatalogOrder';
+import { useQuestCatalogOrder } from '@/screens/tabs/useQuestCatalogEngines';
 import type { QuestMeta } from '@/utils/questAdapters';
 
 jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn().mockResolvedValue(undefined) }));
 
+// Пояс устройства читает хук синхронно через Intl — подменяем только его.
 let mockTimeZone: string | null = 'Europe/Minsk';
-jest.mock('@/utils/questVisitorOrder', () => ({
-    ...jest.requireActual('@/utils/questVisitorOrder'),
-    readDeviceTimeZone: () => mockTimeZone,
-}));
+const RealDateTimeFormat = Intl.DateTimeFormat;
+// setup.ts восстанавливает шпионов после каждого теста — ставим заново.
+const mockDeviceTimeZone = () => jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(((...args: ConstructorParameters<typeof Intl.DateTimeFormat>) => {
+    const real = new RealDateTimeFormat(...args);
+    return Object.assign(Object.create(real), {
+        resolvedOptions: () => ({ ...real.resolvedOptions(), timeZone: mockTimeZone ?? undefined }),
+    });
+}) as unknown as typeof Intl.DateTimeFormat);
 
 const quest = (id: string, countryCode: string, lat: number, lng: number, completionsCount = 0) =>
     ({ id, numericId: 1, countryCode, lat, lng, completionsCount, viewsCount: 0, ratingAvg: null, ratingCount: 0 }) as unknown as QuestMeta;
@@ -33,6 +38,7 @@ const ids = (list: QuestMeta[]) => list.map((item) => item.id);
 
 beforeEach(() => {
     mockTimeZone = 'Europe/Minsk';
+    mockDeviceTimeZone();
     jest.clearAllMocks();
 });
 afterEach(async () => {

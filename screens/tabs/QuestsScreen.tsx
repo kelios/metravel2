@@ -63,9 +63,8 @@ import type { QuestSortOrder } from './questsShared';
 import { useQuestCatalogHandoff } from './useQuestCatalogHandoff';
 import { useQuestCatalogSelection, type QuestCatalogRouteSelection } from './useQuestCatalogSelection';
 import { useQuestCountrySelection } from './useQuestCountrySelection';
-import { useQuestCatalogSearchAnalytics } from './useQuestCatalogSearchAnalytics';
-import { useQuestCatalogSearchQuery, useQuestCatalogSearchResult } from './useQuestCatalogSearchQuery';
-import { useQuestCatalogOrder } from './useQuestCatalogOrder';
+import { useQuestCatalogSearchQuery } from './useQuestCatalogSearchQuery';
+import { useQuestCatalogOrder, useQuestCatalogSearchAnalytics, useQuestCatalogSearchResult } from './useQuestCatalogEngines';
 import { translate as i18nT } from '@/i18n'
 import type { SupportedLocale } from '@/i18n/config'
 import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
@@ -166,6 +165,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         [ALL_QUESTS],
     );
     const searchResult = useQuestCatalogSearchResult(ALL_QUESTS, cityCatalog.canonicalCityIdById, searchTerm, dataLoaded);
+    const searchApproximate = Boolean(searchResult?.approximate);
     const CITIES = cityCatalog.cities;
     const cityQuests = cityCatalog.questsByCityId;
     const {
@@ -445,8 +445,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         query: searchQuery,
         appliedSearchTerm: searchTerm,
         resultsCount: questsAll.length,
-        approximate: Boolean(searchResult?.approximate),
-        ready: dataLoaded && !questsError,
+        approximate: searchApproximate,
+        ready: dataLoaded && !questsError && !searchResult?.pending,
         focused: isFocused,
     });
 
@@ -492,7 +492,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         quests: questsAll,
         sortOrder: activeSortOrder,
         distanceOrdered,
-        searchApproximate: Boolean(searchResult?.approximate),
+        searchApproximate,
         placeSelected: !searchTerm && Boolean(selectedCountry || (selectedCityId && cityQuests[selectedCityId])),
         userLoc,
         ready: dataLoaded,
@@ -750,7 +750,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 noticeSlot={reviewPromptSlot}
                 styles={s}
                 colors={colors}
-                dataLoaded={dataLoaded}
+                dataLoaded={dataLoaded && !searchResult?.pending}
                 viewMode={viewMode}
                 selectedCityId={selectedCityId}
                 selectedCityName={selectedCityName}
@@ -759,7 +759,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 bikeFilterId={BIKE_FILTER_ID}
                 searchQuery={searchQuery}
                 appliedSearchTerm={searchTerm}
-                searchApproximate={Boolean(searchResult?.approximate)}
+                searchApproximate={searchApproximate}
                 onQuestOpen={handleQuestOpen}
                 onSearchChange={setSearchQuery}
                 questsAll={visibleQuests}

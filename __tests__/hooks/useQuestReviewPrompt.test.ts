@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   QUEST_REVIEW_PROMPT_MIN_GAP_MS,
   evaluateQuestReviewPrompt,
-} from '@/hooks/useQuestReviewPrompt'
+} from '@/utils/questReviewPromptCheck'
 import {
   RETURN_VISIT_WINDOW_MS,
   markQuestReviewLeft,

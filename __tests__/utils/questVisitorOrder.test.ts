@@ -1,5 +1,6 @@
 // #3228: каталог квестов — сначала страна посетителя, затем ближайшие.
 import {
+    orderQuestsByVisitor,
     resolveQuestVisitorOrigin,
     resolveTimeZoneOrigin,
     sortQuestsByVisitorOrigin,
@@ -59,5 +60,18 @@ describe('sortQuestsByVisitorOrigin', () => {
         const copy = catalog.slice()
         sortQuestsByVisitorOrigin(catalog, resolveTimeZoneOrigin('Europe/Minsk')!)
         expect(catalog).toEqual(copy)
+    })
+})
+
+describe('orderQuestsByVisitor', () => {
+    it('отдаёт выдачу по месту и источник сигнала', () => {
+        const ordered = orderQuestsByVisitor(catalog, null, 'Europe/Minsk')
+        expect(ordered?.source).toBe('timezone')
+        expect(ordered?.quests.map((quest) => quest.id).slice(0, 3)).toEqual(['minsk', 'barkovshchina', 'grodno'])
+        expect(orderQuestsByVisitor(catalog, { lat: 54.69, lng: 25.28 }, 'Europe/Minsk')?.source).toBe('location')
+    })
+
+    it('без сигнала — null, порядок каталога остаётся прежним', () => {
+        expect(orderQuestsByVisitor(catalog, null, 'America/Bogota')).toBeNull()
     })
 })

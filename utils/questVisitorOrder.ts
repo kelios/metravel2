@@ -89,12 +89,6 @@ export function resolveTimeZoneOrigin(timeZone: string | null | undefined): Ques
     return { source: 'timezone', countryCode, lat, lng };
 }
 
-/** Часовой пояс устройства (IANA); движок без `Intl` его не знает. */
-export function readDeviceTimeZone(): string | null {
-    if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return null;
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-}
-
 export function resolveQuestVisitorOrigin(
     location: { lat: number; lng: number } | null,
     timeZone: string | null,
@@ -126,4 +120,17 @@ export function sortQuestsByVisitorOrigin<T extends OrderableQuest>(quests: T[],
     }));
     keyed.sort((a, b) => a.foreign - b.foreign || compareDistance(a.distance, b.distance));
     return keyed.map(({ quest }) => quest);
+}
+
+/**
+ * Выдача по месту посетителя и источник сигнала для признака порядка;
+ * `null` — сигнала нет, порядок каталога прежний.
+ */
+export function orderQuestsByVisitor<T extends OrderableQuest>(
+    quests: T[],
+    location: { lat: number; lng: number } | null,
+    timeZone: string | null,
+): { quests: T[]; source: QuestVisitorOrigin['source'] } | null {
+    const origin = resolveQuestVisitorOrigin(location, timeZone);
+    return origin && { quests: sortQuestsByVisitorOrigin(quests, origin), source: origin.source };
 }

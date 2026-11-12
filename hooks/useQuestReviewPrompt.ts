@@ -8,45 +8,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useAuthStore } from '@/stores/authStore'
-import {
-  RETURN_VISIT_WINDOW_MS,
-  markQuestReviewPrompted,
-  questRetentionOwnerId,
-  readQuestFinishRecord,
-  type QuestFinishRecord,
-} from '@/utils/questReturnVisit'
+import { questRetentionOwnerId } from '@/utils/questReturnVisit'
+import type { QuestReviewPrompt } from '@/utils/questReviewPromptCheck'
 
-/**
- * Пауза между финишем и просьбой. Сразу после финала просить незачем: форма и
- * так на экране финала, а второе напоминание в том же заходе — это навязчивость.
- */
-export const QUEST_REVIEW_PROMPT_MIN_GAP_MS = 30 * 60 * 1000
-
-export type QuestReviewPrompt = {
-  questId: string
-  cityId?: string
-  cityName?: string
-}
-
-export type QuestReviewPromptDecision =
-  | { show: false }
-  | { show: true; prompt: QuestReviewPrompt }
-
-/** Чистое решение «просить ли отзыв по этой записи финиша» — вынесено для тестов. */
-export function evaluateQuestReviewPrompt(
-  record: QuestFinishRecord | null,
-  now: number,
-): QuestReviewPromptDecision {
-  if (!record || record.reviewPromptedAt) return { show: false }
-  const elapsed = now - record.finishedAt
-  // Часы устройства могли уехать назад — отрицательный разрыв не считаем.
-  if (elapsed < QUEST_REVIEW_PROMPT_MIN_GAP_MS) return { show: false }
-  if (elapsed > RETURN_VISIT_WINDOW_MS) return { show: false }
-  return {
-    show: true,
-    prompt: { questId: record.questId, cityId: record.cityId, cityName: record.cityName },
-  }
-}
+export type { QuestReviewPrompt } from '@/utils/questReviewPromptCheck'
 
 /**
  * Возвращает просьбу об отзыве для каталога квестов. Гостю не показывается:
@@ -70,18 +35,14 @@ export function useQuestReviewPrompt(enabled = true): {
     checkedRef.current = ownerId
 
     let cancelled = false
-    void (async () => {
-      const record = await readQuestFinishRecord(ownerId)
-      if (cancelled) return
-      const decision = evaluateQuestReviewPrompt(record, Date.now())
-      if (!decision.show || !record) return
-      // Отметку ставим в момент показа: «не чаще одного раза на квест» — это про
-      // показ, а не про закрытие. Иначе проигнорированная просьба возвращалась бы
-      // на каждый заход в каталог.
-      await markQuestReviewPrompted(record, Date.now())
-      if (cancelled) return
-      setPrompt(decision.prompt)
-    })()
+    // Решение и отметка — за async-границей (`utils/questReviewPromptCheck`):
+    // сюда доходит только вошедший пользователь. Чанк не догрузился — просьбы
+    // в этот заход нет, как и при отсутствии записи финиша.
+    void import('@/utils/questReviewPromptCheck')
+      .then(({ claimQuestReviewPrompt }) => claimQuestReviewPrompt(ownerId, () => cancelled))
+      .then((next) => {
+        if (!cancelled && next) setPrompt(next)
+      }, () => undefined)
 
     return () => {
       cancelled = true

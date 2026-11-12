@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react-native/pure';
 import { Platform } from 'react-native';
 import { sendAnalyticsEvent } from '@/utils/analytics';
-import { useQuestCatalogSearchAnalytics } from '@/screens/tabs/useQuestCatalogSearchAnalytics';
+import { useQuestCatalogSearchAnalytics } from '@/screens/tabs/useQuestCatalogEngines';
 import { useQuestCatalogSearchQuery } from '@/screens/tabs/useQuestCatalogSearchQuery';
 
 jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn().mockResolvedValue(undefined) }));

@@ -52,7 +52,9 @@ loader catch-all для `/{locale}/quests` зовёт `loadQuestDiscovery(reques
 (бэк #3359; `home`/`scenario` на этих языках — 404), `validateQuestDiscovery`
 принимает конверт языка хаба и требует от каждой строки `served_locales` с этим
 языком и `content_locale` = язык хаба (оба поля сохраняются; форма русских
-строк не меняется). Хаб обёрнут в `QuestDiscoveryLoaderBoundary`: каталог стартует
+строк не меняется). Хаб обёрнут в `QuestDiscoveryLoaderBoundary` внутри ленивого
+`components/quests/runtime/QuestLocaleHubCatalog.web.tsx` (статический импорт
+границы в catch-all переносил FAQ каталога в `__shared:quests-catalog`): каталог стартует
 с этих строк, указатель `QuestsCatalogDirectory` ссылается на каждого участника
 (`/{locale}/quests/<cityId>/<slug>`), JSON-LD — на те же адреса. Клиентский
 перезапрос `/api/quests/?lang=` только сужает состав: `selectQuestHubMembers`

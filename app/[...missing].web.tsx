@@ -16,7 +16,6 @@ import NotFoundScreen from './[...missing].tsx'
 import { notFoundRouteMetadata, staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 import type { ImmutableRequest } from 'expo-server'
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web'
-import QuestDiscoveryLoaderBoundary from '@/components/quests/runtime/QuestDiscoveryLoaderBoundary.web'
 import type { QuestPublicStructuredData } from '@/components/quests/runtime/questPublicStructuredData'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
@@ -47,8 +46,10 @@ if (typeof window !== 'undefined' && parseQuestLocaleRoute(window.location.pathn
 }
 
 // #3217: `/{locale}/quests` — the catalogue of quests published in that locale.
-// Lazy for the same reason as the detail: the catalogue stays out of this chunk.
-const LazyQuestCatalogScreen = React.lazy(() => import('@/screens/tabs/QuestsScreenRoute'))
+// Lazy for the same reason as the detail: the catalogue stays out of this chunk,
+// and so does its loader boundary (#3360): a static import made this route an
+// owner of the boundary and moved the catalogue FAQ into the catalogue chunk.
+const LazyQuestCatalogScreen = React.lazy(() => import('@/components/quests/runtime/QuestLocaleHubCatalog.web'))
 
 function QuestScreenFallback() {
   const colors = useThemedColors()
@@ -73,20 +74,15 @@ export default function QuestLocaleRouteScreen() {
   const hub = useMemo(() => parseQuestLocaleHubRoute(ownPath), [ownPath])
   if (registrationOnly) return null
   if (hub) {
-    const catalog = (
-      <Suspense fallback={<QuestScreenFallback />}>
-        <LazyQuestCatalogScreen key={hub.path} localeHub={hub.locale} />
-      </Suspense>
-    )
     // #3360: the hub's members in its language come with the page (loader below),
     // so the server HTML already links every member, as on /quests (#3218).
     return (
       <FreezeWhenBlurred>
         <View style={styles.root}>
           <CustomHeader />
-          {process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-            ? <QuestDiscoveryLoaderBoundary>{catalog}</QuestDiscoveryLoaderBoundary>
-            : catalog}
+          <Suspense fallback={<QuestScreenFallback />}>
+            <LazyQuestCatalogScreen key={hub.path} localeHub={hub.locale} />
+          </Suspense>
         </View>
       </FreezeWhenBlurred>
     )
