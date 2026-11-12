@@ -3,8 +3,9 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 
 import { NotFoundContent } from '@/components/screens/NotFoundContent'
+import { rememberPrehydrationInput } from '@/hooks/usePrehydrationInputValue'
 import { useThemedColors } from '@/hooks/useTheme'
-import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
+import { ASSISTANT_INPUT_TEST_ID, isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 import { translate as i18nT } from '@/i18n'
 import { ASSISTANT_SEO } from '@/components/screens/assistant/assistantSeo'
 import { notFoundRouteMetadata, routeMetadata } from '@/utils/seoRoutes/routeMetadata'
@@ -12,11 +13,16 @@ import { notFoundRouteMetadata, routeMetadata } from '@/utils/seoRoutes/routeMet
 // #2460: экран грузится отложенным чанком и только под флагом — в сборке с
 // выключенным ассистентом (прод) его код на страницу не попадает.
 // #2738: и в сборку тоже — условие литералом `process.env` (см. aiAssistantConfig).
-const AssistantScreen = React.lazy(() =>
-  process.env.EXPO_PUBLIC_AI_ASSISTANT
+const AssistantScreen = React.lazy(() => {
+  // #3346: экран есть в статическом HTML, а его чанк запрашивается только сейчас.
+  // Обновление от предков приходит раньше чанка, React бросает гидрацию этой границы
+  // и заменяет серверную разметку — вместе с полем, в которое уже могли печатать.
+  // Узел поля запоминается, пока разметка цела; композер заберёт набранное из него.
+  rememberPrehydrationInput(ASSISTANT_INPUT_TEST_ID)
+  return process.env.EXPO_PUBLIC_AI_ASSISTANT
     ? import('@/components/screens/assistant/AssistantScreen')
-    : Promise.resolve({ default: NotFoundContent }),
-)
+    : Promise.resolve({ default: NotFoundContent })
+})
 
 function AssistantFallback() {
   const colors = useThemedColors()

@@ -60,6 +60,13 @@ export type AiAssistantSourceRef = { type: 'travel' | 'quest'; id: number }
 export const buildAssistantSourceHref = (ref: AiAssistantSourceRef): string =>
   `/assistant?source=${ref.type}:${ref.id}`
 
+/**
+ * `testID` поля вопроса. Общий для композера и роута: роут запоминает узел поля из
+ * статической разметки до загрузки чанка экрана (#3346), а подключать сам композер
+ * ему нельзя (#2738).
+ */
+export const ASSISTANT_INPUT_TEST_ID = 'assistant-input'
+
 /** Базовый адрес `llama-server` без завершающего слэша; пустая строка — не задан. */
 export const getAiAssistantBaseUrl = (): string =>
   String(process.env.EXPO_PUBLIC_AI_ASSISTANT_URL ?? '')

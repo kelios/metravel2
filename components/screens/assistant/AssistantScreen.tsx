@@ -23,6 +23,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout'
 import { buildCanonicalUrl } from '@/utils/seo'
+import { webDataSetProps } from '@/utils/webProps'
 
 import { ASSISTANT_SEO } from './assistantSeo'
 import { AssistantComposer } from './AssistantComposer'
@@ -37,6 +38,9 @@ export type AssistantScreenProps = {
   /** `?source=` роута; невалидное значение — обычный вход без источника. */
   sourceParam?: string | string[] | null
 }
+
+// `data-live`: экран смонтирован React, а не показан из статического HTML (#3346, e2e).
+const LIVE_SCREEN_PROPS = webDataSetProps({ live: 'true' })
 
 export default function AssistantScreen({ sourceParam = null }: AssistantScreenProps = {}) {
   const pathname = usePathname()
@@ -103,7 +107,7 @@ export default function AssistantScreen({ sourceParam = null }: AssistantScreenP
   const sourceTitle = chat.sourceCard?.title ?? ''
 
   return (
-    <View style={styles.screen} testID="assistant-screen">
+    <View style={styles.screen} testID="assistant-screen" {...(isMounted ? LIVE_SCREEN_PROPS : null)}>
       {isFocused && Platform.OS === 'web' ? (
         <InstantSEO
           headKey="assistant"

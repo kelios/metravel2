@@ -4,8 +4,10 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/prompt'
 import UIButton from '@/components/ui/Button'
+import { usePrehydrationInputValue } from '@/hooks/usePrehydrationInputValue'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { ASSISTANT_INPUT_TEST_ID } from '@/utils/aiAssistantConfig'
 
 import type { AssistantStyles } from './assistantStyles'
 import type { AssistantInputError } from './useAssistantChat'
@@ -38,6 +40,8 @@ function AssistantComposerComponent({
   onStop,
 }: AssistantComposerProps) {
   const [focused, setFocused] = useState(false)
+  // Web: вопрос, набранный в статической разметке до гидрации, становится черновиком (#3346).
+  usePrehydrationInputValue(ASSISTANT_INPUT_TEST_ID, draft, onChangeDraft)
   const limitReached = remaining !== null && remaining <= 0
   const canSend = !busy && !limitReached && !offTopicBlocked && draft.trim().length > 0
 
@@ -95,7 +99,7 @@ function AssistantComposerComponent({
           returnKeyType="default"
           accessibilityLabel={i18nT('aiAssistStatic:ask.inputLabel')}
           style={[styles.input, inputError ? styles.inputError : null, focused ? { borderColor: colors.primary } : null]}
-          testID="assistant-input"
+          testID={ASSISTANT_INPUT_TEST_ID}
         />
         {busy ? (
           <UIButton
