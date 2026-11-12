@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { router, usePathname } from 'expo-router'
+import { router, usePathname, type Href } from 'expo-router'
 
 import { DialogMenu } from '@/ui/paper'
 import ThemeToggle from '@/components/layout/ThemeToggle'
@@ -30,6 +30,7 @@ import {
 import { isNavRouteAvailable } from '@/constants/platformNavRoutes'
 import { handleHeaderNavPress } from './customHeaderNavModel'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { buildAccountMenuModel, runAccountMenuTarget, type AccountMenuEntry } from './accountMenuModel'
 import type { NavigationIconName } from '@/constants/navigationIcons'
@@ -256,12 +257,13 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   // Внешний пункт (абсолютный URL) — через общую модель шапки, как в мобильном
   // меню: `router.push` с абсолютным URL на native уводил его в Safari мимо
   // `utils/externalLinks.ts`, где ссылка на наш сайт открывается в приложении.
+  const localizeHref = useLocalizedNavHref()
   const navigate = useCallback(
     (path: string, external?: boolean) => {
       closeMenu()
-      handleHeaderNavPress(router, path, external, pathname)
+      handleHeaderNavPress(router, String(localizeHref(path as Href)), external, pathname)
     },
-    [closeMenu, pathname],
+    [closeMenu, localizeHref, pathname],
   )
 
   const handleLogout = useCallback(async () => {

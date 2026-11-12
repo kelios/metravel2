@@ -87,3 +87,61 @@ describe('persistent real SSR dock (#2216)', () => {
     expect(container.querySelectorAll('[data-testid="footer-dock-row"]')).toHaveLength(1)
   })
 })
+
+// #3217: the dock «Quests» item goes through the same nav helper as the header —
+// the locale hub on web with published hubs, `/quests` otherwise and on native.
+describe('dock «Quests» href follows the interface locale (#3217)', () => {
+  const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+  let i18n: typeof import('@/i18n/instance').default, Platform: typeof import('react-native').Platform, originalOs: string
+  beforeAll(() => {
+    i18n = require('@/i18n/instance').default
+    ;({ Platform } = require('react-native'))
+    originalOs = Platform.OS
+  })
+  afterEach(async () => {
+    if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+    else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs })
+    await i18n.changeLanguage('ru')
+  })
+  const renderDock = async (opts: { os: string; flag: string; locale: string; path: string }) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: opts.os })
+    process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = opts.flag
+    await i18n.changeLanguage(opts.locale)
+    mockPath = opts.path
+    const doc = new DOMParser().parseFromString(renderToString(createElement(Dock)), 'text/html')
+    const quests = doc.querySelector('[data-testid="footer-item-quests"]')!
+    const more = new DOMParser().parseFromString(renderToString(createElement(More)), 'text/html')
+    return { href: quests.getAttribute('href'), active: quests.getAttribute('aria-current'), moreHrefs: [...more.querySelectorAll('a')].map(a => a.getAttribute('href')) }
+  }
+
+  it.each(['pl', 'en'])('web + published hubs + %s → /%s/quests, active on the hub', async (locale) => {
+    const dock = await renderDock({ os: 'web', flag: 'true', locale, path: `/${locale}/quests` })
+    expect(dock.href).toBe(`/${locale}/quests`)
+    expect(dock.active).toBe('page')
+    expect(dock.moreHrefs).toContain(`/${locale}/quests`)
+    expect(dock.moreHrefs).not.toContain('/quests')
+  })
+
+  it.each([
+    ['ru on web with published hubs', { os: 'web', flag: 'true', locale: 'ru' }],
+    ['pl on web with hubs unpublished', { os: 'web', flag: 'false', locale: 'pl' }],
+    ['pl on native', { os: 'ios', flag: 'true', locale: 'pl' }],
+  ])('%s → /quests', async (_name, opts) => {
+    const dock = await renderDock({ ...opts, path: '/quests' })
+    expect(dock.href).toBe('/quests')
+    expect(dock.active).toBe('page')
+  })
+
+  // The dock row rendered by `BottomDock` itself (web without the root shell, native):
+  // activity is computed from the canonical route, not from the localized href.
+  it('BottomDock row keeps «Quests» active on the locale hub', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'true'
+    await i18n.changeLanguage('pl')
+    mockPath = '/pl/quests/12/some-quest'
+    const BottomDock = require('@/components/layout/BottomDock').default
+    const doc = new DOMParser().parseFromString(renderToString(createElement(BottomDock)), 'text/html')
+    expect([...doc.querySelectorAll('[aria-selected="true"]')].map(el => el.getAttribute('data-testid'))).toEqual(['footer-item-quests'])
+  })
+})

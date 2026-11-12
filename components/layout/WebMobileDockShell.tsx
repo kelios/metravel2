@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref'
 import { translate as i18nT } from '@/i18n'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { webViewStyle } from '@/utils/webProps'
@@ -19,6 +20,7 @@ export default function WebMobileDockShell() {
   const router = useRouter()
   const pathname = usePathname() || '/'
   const documentView = useDocumentView()
+  const localizeHref = useLocalizedNavHref()
   const activePath = documentView?.kind === 'not-found' ? '' : normalizeBottomDockActivePath(pathname)
   // Web reserves the dock through CSS --mt-dock-h. Avoid an eager root/context
   // state update while route Suspense boundaries may still be hydrating.
@@ -37,8 +39,9 @@ export default function WebMobileDockShell() {
             {BOTTOM_DOCK_ITEM_DEFS.map(item => {
               const active = activePath === String(item.route)
               const tabProps = getTabA11yProps(active)
+              const route = localizeHref(item.route)
               return <View key={item.key} style={styles.slot}>
-                <a href={String(item.route)} data-testid={`footer-item-${item.key}`} role={tabProps.accessibilityRole} aria-selected={tabProps['aria-selected']} aria-label={item.accessibilityLabel} aria-current={active ? 'page' : undefined} onClick={e => onClick(e, item.route, item.isMore)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: '100%', minHeight: 44, minWidth: 0, paddingLeft: 1, paddingRight: 1, borderRadius: active ? DESIGN_TOKENS.radii.sm : 8, background: active ? colors.primarySoft : 'transparent' }}>
+                <a href={String(route)} data-testid={`footer-item-${item.key}`} role={tabProps.accessibilityRole} aria-selected={tabProps['aria-selected']} aria-label={item.accessibilityLabel} aria-current={active ? 'page' : undefined} onClick={e => onClick(e, route, item.isMore)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: '100%', minHeight: 44, minWidth: 0, paddingLeft: 1, paddingRight: 1, borderRadius: active ? DESIGN_TOKENS.radii.sm : 8, background: active ? colors.primarySoft : 'transparent' }}>
                   <View style={styles.inner}>
                     <View style={styles.iconBox}><NavigationIcon name={item.iconName} size={22} color={active ? colors.primary : colors.textMuted} /></View>
                     <Text numberOfLines={1} style={[styles.label, breakpointStyle(WEB_MOBILE_DOCK_LABEL_LAYOUT, 'text', false), active && styles.activeLabel]} {...breakpointLayoutProps(WEB_MOBILE_DOCK_LABEL_LAYOUT, 'text')}>{item.label}</Text>

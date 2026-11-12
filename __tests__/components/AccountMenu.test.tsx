@@ -389,4 +389,31 @@ describe('AccountMenu', () => {
     );
     expect(rerender).toBeDefined();
   });
+
+  // #3217: «Квесты» в «Навигации» ведёт на языковой хаб, как шапка и док.
+  it.each([
+    ['web', 'true', 'pl', '/pl/quests'],
+    ['web', 'true', 'ru', '/quests'],
+    ['web', 'false', 'pl', '/quests'],
+    ['ios', 'true', 'pl', '/quests'],
+  ])('quests item on %s, hubs=%s, locale %s → %s', async (os, flag, locale, expected) => {
+    const { i18n } = require('@/i18n');
+    const { HEADER_NAV_ITEMS } = require('@/constants/headerNavigation');
+    const originalOS = Platform.OS;
+    const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
+    process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = flag;
+    try {
+      await i18n.changeLanguage(locale);
+      const questsLabel = HEADER_NAV_ITEMS.find((item: { path: string }) => item.path === '/quests').label;
+      const { getByText } = await renderWithClient(<AccountMenu />);
+      await fireEvent.press(getByText(questsLabel));
+      await waitFor(() => expect(router.push).toHaveBeenCalledWith(expected));
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS });
+      if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+      else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag;
+      await i18n.changeLanguage('ru');
+    }
+  });
 });

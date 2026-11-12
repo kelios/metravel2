@@ -68,6 +68,7 @@ type DockItem = {
   accessibilityLabel: string;
   route: Href;
   icon: React.ReactNode;
+  isActive: boolean;
   isMore?: boolean;
 };
 
@@ -295,6 +296,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
           accessibilityLabel: def.accessibilityLabel,
           route: localizeHref(def.route),
           icon: <NavigationIcon name={def.iconName} size={22} color={iconColor} />,
+          isActive: !def.isMore && isActive,
           isMore: def.isMore,
         };
       }),
@@ -335,7 +337,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
             accessibilityLabel={i18nT('navigation:components.layout.BottomDock.navigatsiya_24d0f434')}
           >
             {items.map((item) => {
-              const isActive = !item.isMore && activePath === String(item.route);
+              const { isActive } = item;
               return (
                 <View key={item.key} style={styles.itemSlot}>
                   <DockButton

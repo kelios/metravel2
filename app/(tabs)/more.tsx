@@ -3,6 +3,7 @@ import { Link, type Href } from 'expo-router'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref'
 import { translate as i18nT } from '@/i18n'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
@@ -19,6 +20,7 @@ import { ADVENT_ROUTE, isAdventCampaignWindow } from '@/constants/advent'
 // сайта — пункты-действия (язык, тема) и внешние ссылки требуют приложения.
 export default function MoreScreen() {
   const colors = useThemedColors()
+  const localizeHref = useLocalizedNavHref()
   const title = BOTTOM_DOCK_ITEM_DEFS.find(item => item.isMore)!.label
   useScreenHeader({ title })
   const bottom = useScrollBottomPadding(DESIGN_TOKENS.spacing.lg)
@@ -29,7 +31,7 @@ export default function MoreScreen() {
     setAdventVisible(isAdventCampaignWindow())
   }, [])
   const links: { route: Href; label: string }[] = [
-    ...BOTTOM_DOCK_ITEM_DEFS.filter(item => !item.isMore).map(item => ({ route: item.route, label: item.label })),
+    ...BOTTOM_DOCK_ITEM_DEFS.filter(item => !item.isMore).map(item => ({ route: localizeHref(item.route), label: item.label })),
     ...BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap(section => section.items)
       .filter(item => item.route !== undefined && !item.external)
       .filter(item => item.route !== ADVENT_ROUTE || adventVisible)
