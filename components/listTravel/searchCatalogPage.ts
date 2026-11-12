@@ -41,8 +41,3 @@ export function searchParamsEntries(params: Record<string, string | string[] | u
 export function searchCatalogPagePath(page: number): string {
   return page > 1 ? `${SEARCH_CATALOG_PATH}?page=${page}` : SEARCH_CATALOG_PATH
 }
-
-/** Canonical каталога: своя страница у чистого адреса, иначе `/search`. */
-export function searchCatalogCanonicalPath(query: SearchCatalogQuery): string {
-  return query.kind === 'catalog' ? searchCatalogPagePath(query.page) : SEARCH_CATALOG_PATH
-}

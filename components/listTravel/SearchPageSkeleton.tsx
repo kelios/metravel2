@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useContext, useMemo } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
 import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
@@ -13,6 +13,7 @@ import { useStickySearchBarStyles } from '@/components/mainPage/StickySearchBar.
 import { getRightColumnHeaderMinHeight } from './rightColumnModel'
 import { AiSearchPanelPlaceholder } from '@/components/aiPicks/AiSearchPanelFrame'
 import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
+import { SearchCatalogPageContext } from './searchCatalogPageContext'
 
 export const SEARCH_SKELETON_FIRST_FRAME_CSS = `
 [data-search-skeleton-unknown="true"] [data-search-skeleton-padding="true"]{padding-left:10px!important;padding-right:10px!important}
@@ -174,6 +175,7 @@ export const SearchPageSkeleton = memo(({ initialViewportWidth }: SearchPageSkel
   // Suspense монтируется уже после гидрации маршрута — ему отдаём ширину родителя,
   // иначе он рисуется мобильным и перестраивается в desktop (CLS 0,62 на 1440, #2759).
   const responsive = useResponsive()
+  const catalogPage = useContext(SearchCatalogPageContext)
   const viewportWidth = resolveListTravelRawWidth(responsive.width, initialViewportWidth)
 
   const isUnknownWebWidth = Platform.OS === 'web' && viewportWidth === 0
@@ -211,6 +213,8 @@ export const SearchPageSkeleton = memo(({ initialViewportWidth }: SearchPageSkel
           {/* #2459: панель подбора живёт в заголовке списка — её idle-геометрия есть уже в первом кадре. */}
           {isAiPicksEnabled() ? <AiSearchPanelPlaceholder /> : null}
           <SearchCardsSkeleton columns={columns} count={cardCount} isMobile={isMobile} cardSpacing={viewport.gapSize} />
+          {/* #3335: указатель страницы каталога — там же, где подвал списка. */}
+          {catalogPage?.footer}
           </View>
         </ScrollView>
       </View>

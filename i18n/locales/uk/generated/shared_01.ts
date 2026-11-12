@@ -85,6 +85,7 @@ export const sharedGenerated1 = {
   "app.tabs.roulette.poprobuy_ubrat_chast_filtrov_ili_izmeni_zapr_355b9ced": "Спробуй прибрати частину фільтрів або зміни запит.",
   "app.tabs.roulette.sluchaynyy_marshrut_059a8a1d": "Випадковий маршрут",
   "app.tabs.roulette.sluchaynyy_vybor_iz_value1_value2_02b741a7": "Випадковий вибір з {{value1}} {{value2}}",
+  "app.tabs.search.catalogPageHeading": "Статті каталогу — сторінка {{page}}",
   "app.tabs.search.catalogPagesNav": "Статті каталогу за сторінками",
   "app.tabs.search.loadError": "Неможливо завантажити пошук маршрутів",
   "app.tabs.search.otkryvaet_master_sozdaniya_novogo_marshruta_1167875d": "Відкриває майстер створення нового маршруту",

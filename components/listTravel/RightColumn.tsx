@@ -1,4 +1,4 @@
-import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -32,6 +32,7 @@ import {
   RecommendationsTabs,
 } from '@/components/listTravel/RightColumn.parts'
 import RightColumnListStatus from '@/components/listTravel/RightColumnListStatus'
+import { SearchCatalogPageContext } from '@/components/listTravel/searchCatalogPageContext'
 import ListCatalogToolbar, {
   type ListStatusMode,
   type ListSortOption,
@@ -503,6 +504,8 @@ const RightColumn: React.FC<RightColumnProps> = (
 
     // Always render the search bar, even on mobile
 
+    // #3335: указатель страницы каталога /search?page=N — последним в подвале.
+    const catalogPageFooter = useContext(SearchCatalogPageContext)?.footer ?? null
     const listFooter = useMemo(
       () => (
         <>
@@ -520,9 +523,10 @@ const RightColumn: React.FC<RightColumnProps> = (
             </View>
           ) : null}
           <ContributionBanner variant={contributionBannerVariant} />
+          {catalogPageFooter}
         </>
       ),
-      [showNextPageLoading, footerLoaderStyle, colors.textMuted, contributionBannerVariant]
+      [showNextPageLoading, footerLoaderStyle, colors.textMuted, contributionBannerVariant, catalogPageFooter]
     )
 
     // Стабильная ссылка: новый массив на каждом рендере заставил бы FlashList
@@ -584,7 +588,7 @@ const RightColumn: React.FC<RightColumnProps> = (
           keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={listStatus}
-          ListFooterComponent={hasLoadedResults ? listFooter : null}
+          ListFooterComponent={hasLoadedResults ? listFooter : catalogPageFooter}
           ItemSeparatorComponent={RowSeparator}
           onEndReached={isWeb ? undefined : onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
@@ -620,6 +624,7 @@ const RightColumn: React.FC<RightColumnProps> = (
     }, [
       ListHeader,
       RowSeparator,
+      catalogPageFooter,
       listFooter,
       flashListExtraData,
       gridColumns,

@@ -2,7 +2,6 @@ import type { ImmutableRequest } from 'expo-server'
 import { loadSearchCatalogLinks } from '@/components/listTravel/searchCatalogLinksLoader'
 import {
   parseSearchCatalogQuery,
-  searchCatalogCanonicalPath,
   searchCatalogPagePath,
   searchParamsEntries,
 } from '@/components/listTravel/searchCatalogPage'
@@ -46,13 +45,9 @@ describe('search catalog query', () => {
     ['sort=new&page=abc', { kind: 'filtered' }],
   ])('?%s → %j', (query, expected) => expect(parse(query)).toEqual(expected))
 
-  it('gives page 1 the bare /search address and keeps filters on /search', () => {
+  it('gives page 1 the bare /search address', () => {
     expect(searchCatalogPagePath(1)).toBe('/search')
     expect(searchCatalogPagePath(3)).toBe('/search?page=3')
-    expect(searchCatalogCanonicalPath(parse('page=1'))).toBe('/search')
-    expect(searchCatalogCanonicalPath(parse('page=4'))).toBe('/search?page=4')
-    expect(searchCatalogCanonicalPath(parse('page=4&search=x'))).toBe('/search')
-    expect(searchCatalogCanonicalPath(parse('page=x'))).toBe('/search')
   })
 
   it('flattens expo-router params into query pairs', () => {

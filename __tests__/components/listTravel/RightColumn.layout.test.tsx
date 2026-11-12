@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/hooks/useTheme';
 import RightColumn from '@/components/listTravel/RightColumn';
 import { getRightColumnVirtualizationConfig } from '@/components/listTravel/rightColumnModel';
+import { SearchCatalogPageContext } from '@/components/listTravel/searchCatalogPageContext';
 
 const mockFlashListProps = jest.fn();
 
@@ -148,6 +149,38 @@ describe('RightColumn layout invariants', () => {
     expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
     expect(view.getByText('author-catalog')).toBeTruthy();
     expect(view.queryByText('search')).toBeNull();
+  });
+
+  it('puts the visible /search?page=N pointer last in the list footer, also before results load (#3335)', async () => {
+    const { Text } = require('react-native');
+    const props = {
+      search: '', setSearch: jest.fn(), isRecommendationsVisible: false,
+      handleRecommendationsVisibilityChange: jest.fn(), activeFiltersCount: 0,
+      total: travels.length, contentPadding: 16, showInitialLoading: false,
+      isError: false, showEmptyState: false, getEmptyStateMessage: null,
+      travels, gridColumns: 1, isMobile: true, showNextPageLoading: false,
+      refetch: jest.fn(), renderItem, contributionBannerVariant: 'search' as const,
+    };
+    const page = { page: 2, footer: <Text testID="catalog-page-pointer">page 2</Text> };
+    const view = await renderWithProviders(
+      <SearchCatalogPageContext.Provider value={page}><RightColumn {...props} /></SearchCatalogPageContext.Provider>
+    );
+    const pointer = view.getByTestId('catalog-page-pointer');
+    const siblings = pointer.parent!.children;
+    expect(siblings.at(-1)).toBe(pointer);
+    expect(siblings.at(-2)).toBe(view.getByTestId('contribution-footer'));
+
+    await view.rerender(
+      <SearchCatalogPageContext.Provider value={page}>
+        <RightColumn {...props} travels={[]} total={0} showInitialLoading />
+      </SearchCatalogPageContext.Provider>
+    );
+    expect(view.getByTestId('catalog-page-pointer')).toBeTruthy();
+    expect(view.queryByTestId('contribution-footer')).toBeNull();
+
+    await view.rerender(<RightColumn {...props} />);
+    expect(view.queryByTestId('catalog-page-pointer')).toBeNull();
+    expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
   });
 
   it('passes the bounded FlashList v2 draw distance without legacy no-op tuning props', async () => {

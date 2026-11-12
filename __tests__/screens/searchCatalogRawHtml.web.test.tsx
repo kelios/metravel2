@@ -37,9 +37,12 @@ beforeAll(() => {
       throw new Error('the server reads the request, not the router params')
     },
   }))
+  jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => ({ primaryText: '#547769' }) }))
+  // #3335: экран каталога рисует указатель в подвале списка (из контекста границы).
   jest.doMock(path.resolve(__dirname, '../../app/(tabs)/search.tsx'), () => ({
     __esModule: true,
-    default: () => require('react').createElement('main', null, 'catalog'),
+    default: CatalogScreen,
   }))
   ;({ createElement } = require('react'))
   ;({ renderToString } = require('react-dom/server.node'))
@@ -54,9 +57,16 @@ afterEach(() => {
   delete process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR
 })
 
+function CatalogScreen() {
+  const { useContext, createElement: h } = require('react') as typeof import('react')
+  const { SearchCatalogPageContext } = require('@/components/listTravel/searchCatalogPageContext')
+  const visible = useContext(SearchCatalogPageContext) as { footer: React.ReactNode } | null
+  return h('main', null, 'catalog', visible?.footer)
+}
+
 const renderBoundary = () => {
   const Boundary = require('@/components/listTravel/SearchCatalogLinks.web').default as React.ComponentType<{ children: React.ReactNode }>
-  return renderToString(createElement(Boundary, null, createElement('main', null, 'catalog')))
+  return renderToString(createElement(Boundary, null, createElement(CatalogScreen)))
 }
 
 describe('/search?page=N: server HTML', () => {
@@ -65,7 +75,10 @@ describe('/search?page=N: server HTML', () => {
     const html = renderBoundary()
 
     expect(hrefsOf(html)).toEqual([...PAGE_2.links.map((link) => link.path), '/search', '/search?page=3'])
-    expect(html).toContain('<main>catalog</main>')
+    expect(html).toMatch(/^<main>catalog<nav /)
+    // Видимый номер страницы, без sr-only обрезки блока.
+    expect(html).toMatch(/<h2>[^<]*\b2<\/h2>/)
+    expect(html).not.toMatch(/clip-path|:focus-within/)
     expect(html).toMatch(/<nav[^>]*data-search-catalog-links="2"/)
     expect(html).toMatch(/<a href="\/search" rel="prev">/)
     expect(html).toMatch(/<a href="\/search\?page=3" rel="next">/)

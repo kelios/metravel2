@@ -68,3 +68,15 @@ it('Suspense fallback takes the parent route width while its own width is still 
   expect(host.querySelector('[data-search-skeleton-unknown="true"]')).toBeNull()
   expect(host.querySelector('style')).toBeNull()
 })
+
+it('renders the /search?page=N pointer after the card skeletons, below the first screen (#3335)', () => {
+  mockWidth = 0
+  const { SearchCatalogPageContext } = require('@/components/listTravel/searchCatalogPageContext')
+  const footer = createElement('nav', { 'data-testid': 'search-catalog-links' }, createElement('a', { href: '/travels/a' }, 'A'))
+  const host = render(createElement(SearchCatalogPageContext.Provider, { value: { page: 2, footer } }, createElement(SearchPageSkeleton)))
+  const nav = host.querySelector('[data-testid="search-catalog-links"]')!
+  const rows = host.querySelector('[data-testid="search-page-skeleton-rows"]')!
+  expect(rows.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(rows.contains(nav)).toBe(false)
+  expect(render(createElement(SearchPageSkeleton)).querySelector('[data-testid="search-catalog-links"]')).toBeNull()
+})

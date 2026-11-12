@@ -1,25 +1,31 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useLoaderData, useLocalSearchParams } from 'expo-router'
+import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
+import { useThemedColors } from '@/hooks/useTheme'
 import { parseSearchCatalogQuery, searchParamsEntries } from './searchCatalogPage'
+import { SearchCatalogPageContext, type SearchCatalogVisiblePage } from './searchCatalogPageContext'
 import type { SearchCatalogLinks, SearchCatalogLinksPayload } from './searchCatalogLinksLoader'
 
 const IS_SERVER = typeof window === 'undefined'
 
-// Блок визуально скрыт: каталог на web листается внутри FlashList, а его на
-// сервере нет (до замера ширины рисуется скелетон), так что видимому списку под
-// карточками в серверном HTML некуда встать. Ссылки остаются в доступности, и
-// при фокусе с клавиатуры блок показывается, как skip-link.
+// Видимый подвал каталога (#3335): горизонтальные отступы даёт контейнер списка
+// или скелетона, тач-цели не ниже 44px.
 const NAV_CSS = `
-[data-search-catalog-links]:not(:focus-within){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
-[data-search-catalog-links]:focus-within{padding:12px 16px;background:var(--color-background);color:var(--color-text);font-size:15px;line-height:1.8}
-[data-search-catalog-links] ul{list-style:none;margin:0;padding:0}
-[data-search-catalog-links] a{color:var(--color-primary)}
-[data-search-catalog-links] a[rel]{margin-right:16px}
+[data-search-catalog-links]{margin:24px 0 8px;padding-top:16px;border-top:1px solid var(--color-borderStrong);color:var(--color-text);font-size:15px;line-height:1.45}
+[data-search-catalog-links] h2{margin:0 0 4px;font-size:17px;font-weight:600;line-height:1.3}
+[data-search-catalog-links] ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);column-gap:24px}
+[data-search-catalog-links] li a{display:flex;align-items:center;min-height:44px;color:var(--color-primaryText);overflow-wrap:anywhere;text-underline-offset:3px}
+[data-search-catalog-links] [data-pager]{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:12px}
+[data-search-catalog-links] [data-pager] a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border:1px solid var(--color-borderStrong);border-radius:999px;color:var(--color-primaryText);text-decoration:none}
+[data-search-catalog-links] a[rel="next"]{margin-left:auto}
+@media(min-width:768px){[data-search-catalog-links] ul{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1280px){[data-search-catalog-links] ul{grid-template-columns:repeat(3,minmax(0,1fr))}}
 `
 
-/** Разметка блока: одна и та же на сервере и при гидрации. */
+/** Разметка указателя: одна и та же на сервере и при гидрации. */
 export function SearchCatalogLinksNav({ data }: { data: SearchCatalogLinks }) {
+  const colors = useThemedColors()
   return (
     <nav
       aria-label={i18nT('shared:app.tabs.search.catalogPagesNav')}
@@ -27,6 +33,7 @@ export function SearchCatalogLinksNav({ data }: { data: SearchCatalogLinks }) {
       data-testid="search-catalog-links"
     >
       <style>{NAV_CSS}</style>
+      <h2>{i18nT('shared:app.tabs.search.catalogPageHeading', { page: data.page })}</h2>
       <ul>
         {data.links.map((link) => (
           <li key={link.path}>
@@ -34,20 +41,29 @@ export function SearchCatalogLinksNav({ data }: { data: SearchCatalogLinks }) {
           </li>
         ))}
       </ul>
-      {data.prevPath ? (
-        <a href={data.prevPath} rel="prev">{i18nT('shared:components.ui.PaginationComponent.predyduschaya_stranitsa_b461eb43')}</a>
-      ) : null}
-      {data.nextPath ? (
-        <a href={data.nextPath} rel="next">{i18nT('shared:components.ui.PaginationComponent.sleduyuschaya_stranitsa_b4472dd4')}</a>
+      {data.prevPath || data.nextPath ? (
+        <div data-pager="">
+          {data.prevPath ? (
+            <a href={data.prevPath} rel="prev">
+              <Feather name="chevron-left" size={18} color={colors.primaryText} aria-hidden />
+              {i18nT('shared:components.ui.PaginationComponent.predyduschaya_stranitsa_b461eb43')}
+            </a>
+          ) : null}
+          {data.nextPath ? (
+            <a href={data.nextPath} rel="next">
+              {i18nT('shared:components.ui.PaginationComponent.sleduyuschaya_stranitsa_b4472dd4')}
+              <Feather name="chevron-right" size={18} color={colors.primaryText} aria-hidden />
+            </a>
+          ) : null}
+        </div>
       ) : null}
     </nav>
   )
 }
 
 /** Сервер: данные loader'а уже лежат в контексте запроса, сети нет. */
-function ServerCatalogLinks() {
-  const payload = useLoaderData() as SearchCatalogLinksPayload | undefined
-  return payload ? <SearchCatalogLinksNav data={payload} /> : null
+function useServerCatalogLinks(): SearchCatalogLinks | null {
+  return (useLoaderData() as SearchCatalogLinksPayload | undefined) ?? null
 }
 
 /** Блок серверного HTML в данных: ссылки, номер страницы и соседние страницы. */
@@ -70,22 +86,27 @@ function readServerCatalogLinks(): SearchCatalogLinks | null {
 /**
  * Клиент loader НЕ читает: `/_expo/loaders/(tabs)/search` nginx не проксирует,
  * `useLoaderData` без данных в HTML ушёл бы туда за 404, и вместо каталога встал
- * бы экран ошибки loader'а. При гидрации блок повторяется из серверного DOM; при
- * переходе внутри приложения его нет, а со сменой query (фильтры) он снимается.
+ * бы экран ошибки loader'а. При гидрации указатель повторяется из серверного DOM;
+ * при переходе внутри приложения его нет, а со сменой query (фильтры) он снимается.
  */
-function HydratedCatalogLinks() {
+function useHydratedCatalogLinks(): SearchCatalogLinks | null {
   const query = parseSearchCatalogQuery(searchParamsEntries(useLocalSearchParams<Record<string, string | string[]>>()))
   const [server] = useState(readServerCatalogLinks)
-  if (!server || query.kind !== 'catalog' || query.page !== server.page) return null
-  return <SearchCatalogLinksNav data={server} />
+  return server && query.kind === 'catalog' && query.page === server.page ? server : null
 }
 
-/** #3323: ссылки на статьи страницы каталога и соседние страницы в серверном HTML /search. */
+const useCatalogLinks = IS_SERVER ? useServerCatalogLinks : useHydratedCatalogLinks
+
+/**
+ * #3323/#3335: ссылки на статьи страницы каталога и соседние страницы. Указатель
+ * рисует подвал списка (`RightColumn`) и скелетон до него — в серверном HTML и
+ * после гидрации он стоит на одном месте, ниже карточек первого экрана.
+ */
 export default function SearchCatalogLinksBoundary({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {children}
-      {IS_SERVER ? <ServerCatalogLinks /> : <HydratedCatalogLinks />}
-    </>
+  const data = useCatalogLinks()
+  const value = useMemo<SearchCatalogVisiblePage | null>(
+    () => (data ? { page: data.page, footer: <SearchCatalogLinksNav data={data} /> } : null),
+    [data],
   )
+  return <SearchCatalogPageContext.Provider value={value}>{children}</SearchCatalogPageContext.Provider>
 }

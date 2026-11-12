@@ -1,6 +1,6 @@
-import { memo, Suspense, useCallback, useMemo } from 'react'
+import { memo, Suspense, useCallback, useContext, useMemo } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
+import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -19,18 +19,13 @@ import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 import UIButton from '@/components/ui/Button'
 import Feather from '@expo/vector-icons/Feather'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
-import {
-  parseSearchCatalogQuery,
-  searchCatalogCanonicalPath,
-  searchParamsEntries,
-  SEARCH_CATALOG_PATH,
-} from '@/components/listTravel/searchCatalogPage'
+import { searchCatalogPagePath, SEARCH_CATALOG_PATH } from '@/components/listTravel/searchCatalogPage'
+import { SearchCatalogPageContext } from '@/components/listTravel/searchCatalogPageContext'
 
 
 function SearchScreen() {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useLocalSearchParams<Record<string, string | string[]>>()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }))
@@ -55,11 +50,13 @@ function SearchScreen() {
     router.push('/travel/new' as any)
   }, [router])
 
-  // #3323: тот же canonical, что у серверного head: `/search?page=N` у чистого
-  // каталога, иначе `/search` — клиентская голова не должна его перебивать.
+  // #3323/#3335: `/search?page=N` в canonical — только пока на экране указатель
+  // этой страницы (его даёт серверный HTML SSR-рантайма). На статике, при
+  // фильтрах и переходе внутри приложения — `/search`, как у серверного head.
+  const catalogPage = useContext(SearchCatalogPageContext)
   const canonicalPath = pathname && pathname !== SEARCH_CATALOG_PATH
     ? pathname
-    : searchCatalogCanonicalPath(parseSearchCatalogQuery(searchParamsEntries(searchParams)))
+    : searchCatalogPagePath(catalogPage?.page ?? 1)
 
   const createTravelAction = useMemo(() => {
     if (!isAuthenticated || Platform.OS === 'web') return undefined
