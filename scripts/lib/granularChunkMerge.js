@@ -13,13 +13,25 @@
  * Merging cannot break the closure: every entry requires ALL chunks holding a
  * module it reaches synchronously (upstream's rule, recomputed after the merge).
  * A module that a merge delivers to a route which never reaches it is defined
- * there but never executed.
+ * there but never executed: foreign code the route still downloads and parses.
+ * The merge therefore prices every pair in bytes (#3316): it takes the pair
+ * that adds the least foreign code per saved request, and no route receives
+ * more than ROUTE_FOREIGN_BUDGET_BYTES of foreign shared code in total.
  */
 const path = require('path')
 
-// Raising it to 0.3 cut requests 28 -> 20 but added ~600 KB raw on the worst
-// route; 0.35 gave 31 requests, worse than 0.4 (#1721, measured 2026-08).
-const MIN_ROUTE_SIMILARITY = 0.4
+// #3316: the ceiling of foreign factory bytes one HTML route may receive from
+// merged shared files. Until then groups merged on route-set similarity alone
+// (Jaccard >= 0.4, #1721), blind to sizes: on the SSR export of 71ff27fe8 the
+// home page received 492 KiB of shared factories it never reaches (of 1306 KiB
+// outside the entry file), the article 454 KiB of 1581.
+// The value is the knee of a replay of that export's raw plan (68 routes,
+// Brotli of the factories each route loads, summed): merging identical route
+// sets only is the floor and costs up to 84 requests a page; the similarity
+// merge stood 15% above the floor at 19 requests; 128 KiB stands 3% above at
+// 24 (11 instead of 14 on the home page); 64 KiB buys one more percent for 33
+// requests, 256 KiB gives back 3% to return to 19.
+const ROUTE_FOREIGN_BUDGET_BYTES = 128 * 1024
 const TINY_SHARED_MAX_BYTES = 2 * 1024
 const MAX_EXTRA_FACTORY_BYTES_PER_ENTRY = 4 * 1024
 const LAYOUT_FILE = /^_layout(\.[^/]+)?\.[jt]sx?$/
@@ -37,14 +49,22 @@ function orBits(left, right) {
   return out
 }
 
-function similarity(left, right) {
-  let intersection = 0
-  let union = 0
-  for (let i = 0; i < left.length; i += 1) {
-    intersection += popcount32(left[i] & right[i])
-    union += popcount32(left[i] | right[i])
+function hasBit(bits, index) {
+  return (bits[index >>> 5] & (1 << (index & 31))) !== 0
+}
+
+function forEachBit(bits, visit) {
+  for (let word = 0; word < bits.length; word += 1) {
+    for (let rest = bits[word] >>> 0; rest !== 0; rest &= rest - 1) {
+      visit(word * 32 + 31 - Math.clz32(rest & -rest))
+    }
   }
-  return union ? intersection / union : 0
+}
+
+function sharedBitCount(left, right) {
+  let count = 0
+  for (let i = 0; i < left.length; i += 1) count += popcount32(left[i] & right[i])
+  return count
 }
 
 function* ownerIndices(bits) {
@@ -62,14 +82,21 @@ function createRouteCoverage(entryPaths, appDir) {
   const prefix = appDir.endsWith(path.sep) ? appDir : appDir + path.sep
   const inApp = entryPaths.filter((entryPath) => entryPath.startsWith(prefix))
   // Expo keeps the fallback context key beside its .web override. They are
-  // two async entries, but the browser can visit only one delivery route.
+  // two async entries, but the browser can visit only one delivery route, and
+  // its HTML lists the files of the .web entry alone. The shadowed fallback is
+  // therefore an entry point of no route (#3316: /map, whose fallback is a
+  // different implementation, counted as a consumer of everything that
+  // fallback reaches); what the facade imports from it arrives through the
+  // facade.
+  const inAppSet = new Set(inApp)
+  const shadowed = new Set(inApp.filter((entryPath) => webFallbackPath(entryPath) !== entryPath).map(webFallbackPath).filter((entryPath) => inAppSet.has(entryPath)))
   const routes = [...new Set(inApp.filter((entryPath) => !LAYOUT_FILE.test(path.basename(entryPath))).map(webFallbackPath))]
   const routeIndex = new Map(routes.map((route, index) => [route, index]))
   const words = Math.max(1, Math.ceil(routes.length / 32))
   const coverage = new Map()
   for (const entryPath of entryPaths) {
     const bits = new Uint32Array(words)
-    if (entryPath.startsWith(prefix)) {
+    if (entryPath.startsWith(prefix) && !shadowed.has(entryPath)) {
       const covered = LAYOUT_FILE.test(path.basename(entryPath))
         ? routes.filter((route) => route.startsWith(path.dirname(entryPath) + path.sep))
         : [webFallbackPath(entryPath)]
@@ -120,12 +147,170 @@ function placeAtoms(rawAtoms, initialOwners, webAliases) {
     .sort(byOwners)
 }
 
+/** Bytes a module adds to the file that carries it: its transformed factories. */
+function factoryBytes(module) {
+  let bytes = 0
+  for (const output of module.output ?? []) {
+    if (typeof output.data?.code === 'string') bytes += Buffer.byteLength(output.data.code, 'utf8')
+  }
+  return bytes
+}
+
+/**
+ * A shared group: atoms shipped as one file. `needed[route]` is the part of
+ * `bytes` the route reaches; a route of the group receives the rest as foreign.
+ */
+function foreignBytes(group, route) {
+  return hasBit(group.routes, route) ? group.bytes - group.needed[route] : 0
+}
+
+/**
+ * METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups on the same route set
+ * always ship together, at no cost to any route. Groups no route delivers
+ * (shared by lazy components only) share the empty key and become one
+ * on-demand file, as with the pre-SDK 58 patch: measured on #2741, keeping
+ * them apart (28 files) cost +16.5 KB gzip on the release total for no change
+ * in any HTML route. Equal owner sets are merged too: upstream names a shared
+ * file by its owners and materializes one file per owner set.
+ */
+function mergeIdenticalGroups(groups) {
+  const parent = groups.map((_, index) => index)
+  const find = (index) => (parent[index] === index ? index : (parent[index] = find(parent[index])))
+  const firstByKey = new Map()
+  groups.forEach((group, index) => {
+    for (const key of [`o:${group.ownerEntries.toString(16)}`, `r:${routeKey(group.routes)}`]) {
+      if (firstByKey.has(key)) parent[find(index)] = find(firstByKey.get(key))
+      else firstByKey.set(key, index)
+    }
+  })
+  const mergedByRoot = new Map()
+  groups.forEach((group, index) => {
+    const rootIndex = find(index)
+    const existing = mergedByRoot.get(rootIndex)
+    mergedByRoot.set(rootIndex, existing ? mergeGroups(existing, group) : group)
+  })
+  // A union above can land two results on one owner set; fold those too.
+  const groupByOwners = new Map()
+  for (const group of mergedByRoot.values()) {
+    const existing = groupByOwners.get(group.ownerEntries)
+    groupByOwners.set(group.ownerEntries, existing ? mergeGroups(existing, group) : group)
+  }
+  return [...groupByOwners.values()]
+}
+
+/**
+ * Min-heap of merge candidates: cheapest price first, equal prices in pair
+ * order (left index, then right), the order a full scan of the pairs gives.
+ */
+function candidateBefore(a, b) {
+  return a.price !== b.price ? a.price < b.price : a.left !== b.left ? a.left < b.left : a.right < b.right
+}
+
+function pushCandidate(heap, candidate) {
+  let index = heap.length
+  heap.push(candidate)
+  while (index > 0) {
+    const parent = (index - 1) >> 1
+    if (!candidateBefore(candidate, heap[parent])) break
+    heap[index] = heap[parent]
+    index = parent
+  }
+  heap[index] = candidate
+}
+
+function popCandidate(heap) {
+  const top = heap[0]
+  const last = heap.pop()
+  const size = heap.length
+  if (size > 0) {
+    let index = 0
+    for (;;) {
+      let child = index * 2 + 1
+      if (child >= size) break
+      if (child + 1 < size && candidateBefore(heap[child + 1], heap[child])) child += 1
+      if (!candidateBefore(heap[child], last)) break
+      heap[index] = heap[child]
+      index = child
+    }
+    heap[index] = last
+  }
+  return top
+}
+
+/**
+ * METRAVEL_ROUTE_FOREIGN_BUDGET (#3316, replaces the #1721 similarity floor).
+ * Merging two groups saves one request on every route that loads both and
+ * hands each of them to the routes that load only the other. Take the pair
+ * with the fewest foreign bytes added per saved request, until every remaining
+ * pair would push some route over `budgetBytes` of foreign shared code. Groups
+ * with no common route are never merged: nothing is saved.
+ * Two groups on one route set, equal owner sets among them, merge for free and
+ * therefore first, so the result keeps one group per owner set.
+ *
+ * Each quoted pair is looked at once: a refused pair leaves the heap and comes
+ * back only with a new quote, after one of its groups has changed. `stats`
+ * counts quotes and candidates taken from the heap.
+ */
+function mergeGroupsWithinRouteBudget(groups, budgetBytes, stats) {
+  const live = groups.slice()
+  const count = live.length
+  const routeSlots = count ? live[0].needed.length : 0
+  const foreignByRoute = new Float64Array(routeSlots)
+  for (const group of live) forEachBit(group.routes, (route) => { foreignByRoute[route] += foreignBytes(group, route) })
+  // A candidate quotes two groups as they were: any later change of either
+  // (its revision moves, or it is merged away) makes the candidate stale.
+  const revision = new Uint32Array(count)
+  const heap = []
+  const quote = (a, b) => {
+    const left = Math.min(a, b)
+    const right = Math.max(a, b)
+    const saved = sharedBitCount(live[left].routes, live[right].routes)
+    if (saved === 0) return
+    const merged = mergeGroups(live[left], live[right])
+    let added = 0
+    forEachBit(merged.routes, (route) => {
+      added += foreignBytes(merged, route) - foreignBytes(live[left], route) - foreignBytes(live[right], route)
+    })
+    // Foreign bytes per saved request.
+    pushCandidate(heap, { price: added / saved, left, right, leftRevision: revision[left], rightRevision: revision[right] })
+    if (stats) stats.quotes += 1
+  }
+  for (let left = 0; left < count; left += 1) {
+    for (let right = left + 1; right < count; right += 1) quote(left, right)
+  }
+  while (heap.length > 0) {
+    const { left, right, leftRevision, rightRevision } = popCandidate(heap)
+    if (!live[left] || !live[right] || revision[left] !== leftRevision || revision[right] !== rightRevision) continue
+    if (stats) stats.candidates += 1
+    const merged = mergeGroups(live[left], live[right])
+    const added = new Map()
+    let fits = true
+    forEachBit(merged.routes, (route) => {
+      const extra = foreignBytes(merged, route) - foreignBytes(live[left], route) - foreignBytes(live[right], route)
+      added.set(route, extra)
+      if (foreignByRoute[route] + extra > budgetBytes) fits = false
+    })
+    // Budgets only fill up, so a refused pair stays refused until it changes.
+    if (!fits) continue
+    for (const [route, extra] of added) foreignByRoute[route] += extra
+    live[left] = merged
+    live[right] = null
+    revision[left] += 1
+    for (let other = 0; other < count; other += 1) {
+      if (live[other] && other !== left) quote(left, other)
+    }
+  }
+  return live.filter(Boolean)
+}
+
 /**
  * @param plan result of upstream `computeBitSetChunkPlan`
  * @param context granular strategy context ({ options: { projectRoot, serverRoot } })
+ * @param options.routeForeignBudgetBytes foreign shared bytes a route may receive; negative: merge identical sets only
+ * @param options.stats optional `{ quotes, candidates }` counters of the budget merge, incremented in place
  * @returns the plan with `chunks` and `requiredChunksByEntryPath` replaced
  */
-function mergeGranularChunkPlan(plan, context, { minRouteSimilarity = MIN_ROUTE_SIMILARITY, appDir } = {}) {
+function mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes = ROUTE_FOREIGN_BUDGET_BYTES, appDir, stats } = {}) {
   const { entryPoints, rawAtoms, dependentEntriesByModule } = plan
   const root = context?.options?.serverRoot ?? context?.options?.projectRoot ?? process.cwd()
   const entryPaths = entryPoints.map((entry) => entry.module.path)
@@ -158,81 +343,21 @@ function mergeGranularChunkPlan(plan, context, { minRouteSimilarity = MIN_ROUTE_
     }
     let routes = new Uint32Array(words)
     for (const index of owners) routes = orBits(routes, coverage.get(entryPaths[index]))
+    let bytes = 0
     for (const module of atom.modules) {
       if (entryPathSet.has(module.path)) routes = orBits(routes, coverage.get(module.path))
+      bytes += factoryBytes(module)
     }
-    groups.push({ ownerEntries: atom.ownerEntries, atoms: [atom], routes })
+    // Every route of an atom reaches all of it.
+    const needed = new Float64Array(words * 32)
+    forEachBit(routes, (route) => { needed[route] = bytes })
+    groups.push({ ownerEntries: atom.ownerEntries, atoms: [atom], routes, bytes, needed })
   }
 
-  // METRAVEL_ROUTE_SET_SIMILARITY (#1721): merge the most similar pair while it
-  // stays above the floor. Similarity is measured on delivery routes, not on
-  // owner entries: two groups riding almost the same routes ship together
-  // almost always, and splitting them only buys requests and worse compression.
-  // No size ceiling: 1 MiB vs 512 KiB gave a byte-identical release in #1721.
-  const live = groups.slice()
-  const alive = live.map(() => true)
-  const n = live.length
-  const matrix = new Float64Array(n * n)
-  for (let left = 0; left < n; left += 1) {
-    for (let right = left + 1; right < n; right += 1) {
-      matrix[left * n + right] = similarity(live[left].routes, live[right].routes)
-    }
-  }
-  for (;;) {
-    let bestLeft = -1
-    let bestRight = -1
-    let best = minRouteSimilarity
-    for (let left = 0; left < n; left += 1) {
-      if (!alive[left]) continue
-      for (let right = left + 1; right < n; right += 1) {
-        if (alive[right] && matrix[left * n + right] > best) {
-          best = matrix[left * n + right]
-          bestLeft = left
-          bestRight = right
-        }
-      }
-    }
-    if (bestLeft < 0) break
-    live[bestLeft] = mergeGroups(live[bestLeft], live[bestRight])
-    alive[bestRight] = false
-    for (let other = 0; other < n; other += 1) {
-      if (!alive[other] || other === bestLeft) continue
-      const value = similarity(live[bestLeft].routes, live[other].routes)
-      if (other < bestLeft) matrix[other * n + bestLeft] = value
-      else matrix[bestLeft * n + other] = value
-    }
-  }
-  const survivors = live.filter((_, index) => alive[index])
-
-  // METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups on the same route set
-  // always ship together. Groups no route delivers (shared by lazy components
-  // only) share the empty key and become one on-demand file, as with the
-  // pre-SDK 58 patch: measured on #2741, keeping them apart (28 files) cost
-  // +16.5 KB gzip on the release total for no change in any HTML route.
-  // Equal owner sets are merged too, as upstream names a chunk by its owners.
-  const parent = survivors.map((_, index) => index)
-  const find = (index) => (parent[index] === index ? index : (parent[index] = find(parent[index])))
-  const firstByKey = new Map()
-  survivors.forEach((group, index) => {
-    for (const key of [`o:${group.ownerEntries.toString(16)}`, `r:${routeKey(group.routes)}`]) {
-      if (firstByKey.has(key)) parent[find(index)] = find(firstByKey.get(key))
-      else firstByKey.set(key, index)
-    }
-  })
-  const mergedByRoot = new Map()
-  survivors.forEach((group, index) => {
-    const rootIndex = find(index)
-    const existing = mergedByRoot.get(rootIndex)
-    mergedByRoot.set(rootIndex, existing ? mergeGroups(existing, group) : group)
-  })
-  // A union above can land two results on one owner set; fold those too:
-  // upstream materializes one file per owner set.
-  const groupByOwners = new Map()
-  for (const group of mergedByRoot.values()) {
-    const existing = groupByOwners.get(group.ownerEntries)
-    groupByOwners.set(group.ownerEntries, existing ? mergeGroups(existing, group) : group)
-  }
-  for (const group of groupByOwners.values()) {
+  // The closing pass is a no-op unless the budget refused even free merges:
+  // upstream needs one group per owner set whatever the budget.
+  const merged = mergeIdenticalGroups(mergeGroupsWithinRouteBudget(mergeIdenticalGroups(groups), routeForeignBudgetBytes, stats))
+  for (const group of merged) {
     const modules = group.atoms.flatMap((atom) => [...atom.modules]).sort(byPath)
     chunks.push({ ownerEntries: group.ownerEntries, modules: new Set(modules) })
   }
@@ -309,11 +434,15 @@ function packTinySharedChunks(chunks, dependentEntriesByModule, initialOwners, e
 }
 
 function mergeGroups(left, right) {
+  const needed = new Float64Array(left.needed.length)
+  for (let route = 0; route < needed.length; route += 1) needed[route] = left.needed[route] + right.needed[route]
   return {
     ownerEntries: left.ownerEntries | right.ownerEntries,
     atoms: [...left.atoms, ...right.atoms],
     routes: orBits(left.routes, right.routes),
+    bytes: left.bytes + right.bytes,
+    needed,
   }
 }
 
-module.exports = { mergeGranularChunkPlan, createRouteCoverage, MIN_ROUTE_SIMILARITY }
+module.exports = { mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES }

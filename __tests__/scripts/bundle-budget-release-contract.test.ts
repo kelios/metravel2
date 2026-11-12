@@ -16,7 +16,16 @@ type EagerRequestBudget = {
 }
 
 const MAX_BUDGET_TOLERANCE_PCT = 5
-const MAX_EAGER_BROTLI_KB = 800
+// Byte ceilings only go down. #3316 measured the worst HTML route at 684.0 KiB
+// Brotli after the chunk plan stopped shipping foreign code; the 800 KiB owner
+// allowance of 2026-11-03 was an upper bound and is no longer needed.
+const MAX_EAGER_BROTLI_KB = 690
+// #3316: the routes of the card. The worst-route ceiling above cannot see them
+// (the home page is 214 KiB lighter), so each has its own.
+const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
+  'index.html': 475,
+  '(tabs)/travels/[param].html': 558,
+}
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
 const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
@@ -25,13 +34,13 @@ const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
 // {
 //   "maxRequests": 27,
 //   "maxRequestsByRoute": {
-//     "index.html": 16,
+//     "index.html": 13,
 //     "search.html": 11,
-//     "map.html": 23,
-//     "quests.html": 15,
-//     "(tabs)/travels/[param].html": 23,
-//     "(tabs)/profile.html": 27,
-//     "(tabs)/trips/plan/[id].html": 26
+//     "map.html": 10,
+//     "quests.html": 17,
+//     "(tabs)/travels/[param].html": 18,
+//     "(tabs)/profile.html": 26,
+//     "(tabs)/trips/plan/[id].html": 22
 //   }
 // }
 // bundle-budget-sync:eager-requests:end
@@ -176,6 +185,13 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
   const eagerBrotliKB = requireBudgetNumber(eager.maxBrotliKB, 'bundle budget.eager.maxBrotliKB')
   if (eagerBrotliKB > MAX_EAGER_BROTLI_KB) {
     throw new Error(`bundle budget.eager.maxBrotliKB must stay at or below ${MAX_EAGER_BROTLI_KB} KiB.`)
+  }
+  const routeBrotli = requireRecord(eager.maxBrotliKBByRoute, 'bundle budget.eager.maxBrotliKBByRoute')
+  for (const [route, ceiling] of Object.entries(MAX_EAGER_ROUTE_BROTLI_KB)) {
+    const limit = requireBudgetNumber(routeBrotli[route], `bundle budget.eager.maxBrotliKBByRoute.${route}`)
+    if (limit > ceiling || limit > eagerBrotliKB) {
+      throw new Error(`bundle budget.eager.maxBrotliKBByRoute.${route} must stay at or below ${Math.min(ceiling, eagerBrotliKB)} KiB.`)
+    }
   }
   const eagerTolerancePct = requireBudgetNumber(
     eager.tolerancePct,
@@ -490,6 +506,60 @@ describe('bundle budget release contract', () => {
       expect(JSON.parse(run().stdout).breaches).toContainEqual({ label: 'EAGER (requests, profile.html)', actual: 2, max: 1 })
       fs.renameSync(path.join(htmlDir, 'profile.html'), path.join(htmlDir, 'other.html'))
       expect(JSON.parse(run().stdout).breaches).toContainEqual({ label: 'EAGER budgeted route missing from build: profile.html', missing: true })
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('holds a named HTML route to its own Brotli ceiling below the worst route (#3316)', () => {
+    const tmpDir = makeTempDir('metravel-bundle-budget-route-brotli-')
+    try {
+      const jsDir = path.join(tmpDir, 'js')
+      const htmlDir = path.join(tmpDir, 'html')
+      const testBudgetPath = path.join(tmpDir, 'budget.json')
+      fs.mkdirSync(path.join(htmlDir, 'travels'), { recursive: true })
+      fs.mkdirSync(jsDir, { recursive: true })
+      // Incompressible payloads: Brotli size tracks the byte length.
+      let state = 0x9e3779b9
+      const noise = (length: number) => {
+        const payload = Buffer.alloc(length)
+        for (let index = 0; index < length; index += 1) {
+          state ^= state << 13
+          state ^= state >>> 17
+          state ^= state << 5
+          payload[index] = state & 0xff
+        }
+        return payload
+      }
+      fs.writeFileSync(path.join(jsDir, 'home-abcdef.js'), noise(2048))
+      fs.writeFileSync(path.join(jsDir, 'heavy-abcdef.js'), noise(16384))
+      const script = (name: string) => `<script src="/_expo/static/js/web/${name}-abcdef.js"></script>`
+      fs.writeFileSync(path.join(htmlDir, 'index.html'), script('home'))
+      fs.writeFileSync(path.join(htmlDir, 'profile.html'), script('home') + script('heavy'))
+      fs.writeFileSync(path.join(htmlDir, 'travels', '[param].html'), script('home'))
+      const budget = { eager: {
+        htmlRoutes: true, tolerancePct: 0, maxBrotliKB: 32,
+        maxBrotliKBByRoute: { 'index.html': 3, '(tabs)/travels/[param].html': 3 },
+      } }
+      fs.writeFileSync(testBudgetPath, JSON.stringify(budget))
+      const run = () => runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: jsDir, BUNDLE_BUDGET_HTML_DIR: htmlDir, BUNDLE_BUDGET_CONFIG: testBudgetPath,
+      })
+      expect(run().status).toBe(0)
+
+      // The home page takes the heavy file back: the worst route is unchanged
+      // and stays under its ceiling, only the route's own line sees it.
+      fs.appendFileSync(path.join(htmlDir, 'index.html'), script('heavy'))
+      const regressed = run()
+      expect(regressed.status).toBe(1)
+      const breaches = JSON.parse(regressed.stdout).breaches
+      expect(breaches).toHaveLength(1)
+      expect(breaches[0]).toEqual(expect.objectContaining({ label: 'EAGER (brotli, index.html)', maxKB: 3, limitKB: 3 }))
+
+      fs.rmSync(path.join(htmlDir, 'travels'), { recursive: true })
+      expect(JSON.parse(run().stdout).breaches).toContainEqual({
+        label: 'EAGER budgeted route missing from build: travels/[param].html', missing: true,
+      })
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true })
     }

@@ -648,6 +648,15 @@ for (const [route, limit] of Object.entries(budget?.eager?.maxRequestsByRoute ||
   const key = toRouteKey(route)
   eagerRequestLimits.set(key, Math.min(limit, eagerRequestLimits.get(key) ?? Infinity))
 }
+// #3316: `eager.maxBrotliKB` holds only the heaviest HTML route, so a lighter
+// route could take back all the foreign code a chunk plan had removed from it
+// and stay green: the home page is ~210 KB below the worst route. Routes named
+// here get their own Brotli ceiling over the same <script> set.
+const eagerBrotliLimits = new Map()
+for (const [route, limit] of Object.entries(budget?.eager?.maxBrotliKBByRoute || {})) {
+  const key = toRouteKey(route)
+  eagerBrotliLimits.set(key, Math.min(limit, eagerBrotliLimits.get(key) ?? Infinity))
+}
 
 for (const [name, b] of Object.entries(budget.chunks || {})) {
   const c = chunks.get(name)
@@ -692,6 +701,7 @@ let eagerRequestsPage = null
 const eagerRequestBreaches = new Map()
 const eagerRequestRoutes = new Set()
 const allRouteRequests = new Map()
+const eagerRouteBrotli = new Map()
 const payloadRouteCounts = new Map()
 if (budget?.eager?.htmlRoutes === true) {
   if (!fs.existsSync(htmlDir)) {
@@ -759,6 +769,9 @@ if (budget?.eager?.htmlRoutes === true) {
         const routeKey = toRouteKey(
           path.relative(htmlDir, candidate.file) || path.basename(candidate.file),
         )
+        if (eagerBrotliLimits.has(routeKey)) {
+          eagerRouteBrotli.set(routeKey, Math.max(candidate.brotli, eagerRouteBrotli.get(routeKey) ?? 0))
+        }
         const routeMax = eagerRequestLimits.get(routeKey)
         const previous = allRouteRequests.get(routeKey)
         allRouteRequests.set(routeKey, {
@@ -858,6 +871,15 @@ if (budget.eager) {
   check('EAGER (raw)', toKB(eager.raw), budget.eager.maxRawKB, eagerTol, eager.raw)
   check('EAGER (gzip)', toKB(eager.gzip), budget.eager.maxGzipKB, eagerTol, eager.gzip)
   check('EAGER (brotli)', toKB(eager.brotli), budget.eager.maxBrotliKB, eagerTol, eager.brotli)
+  for (const [routeKey, limit] of eagerBrotliLimits) {
+    const bytes = eagerRouteBrotli.get(routeKey)
+    if (bytes != null) {
+      check(`EAGER (brotli, ${routeKey})`, toKB(bytes), limit, eagerTol, bytes)
+    } else if (!eagerRequestLimits.has(routeKey)) {
+      // A request-pinned route reports its absence below; do not say it twice.
+      breaches.push({ label: `EAGER budgeted route missing from build: ${routeKey}`, missing: true })
+    }
+  }
   const wantsRequestBudget =
     budget.eager.maxRequests != null || budget.eager.maxRequestsByRoute != null
   if (wantsRequestBudget && !eagerRequests) {
@@ -985,6 +1007,9 @@ if (JSON_OUT) {
       `  eager (${eagerPage ? `worst HTML ${eagerPage}` : eagerChunkNames.join(' + ')}): ${toKB(eager.raw)} KB raw / ` +
         `${toKB(eager.gzip)} KB gzip / ${toKB(eager.brotli)} KB brotli`,
     )
+  }
+  for (const [routeKey, bytes] of eagerRouteBrotli) {
+    console.log(`  eager (${routeKey}): ${toKB(bytes)} KB brotli (budget ${eagerBrotliLimits.get(routeKey)} KB)`)
   }
   if (eagerRequests) {
     console.log(

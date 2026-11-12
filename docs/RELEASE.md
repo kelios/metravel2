@@ -203,6 +203,39 @@ Sitemap ownership:
 - Frontend release/build scripts must not generate or overwrite production sitemap files.
 - If sitemap contents are wrong, fix the backend generator or backend deploy configuration, then verify with `npm run test:seo:postdeploy`.
 
+## Web chunk plan and the route budget
+
+Expo's granular planner emits one group per exact set of entries that reach a
+module. `scripts/lib/granularChunkMerge.js` (wired in `metro.config.js`) merges
+those groups into the `__shared-*` files a page loads. A merge saves a request
+on every route that loads both groups and hands each group to the routes that
+load only the other one: code those routes download and parse without running.
+
+Rule since #3316 (it replaced the route-set similarity floor of #1721):
+
+- groups on one route set always ship together: that costs no route anything;
+- every other pair is priced in bytes: foreign factory bytes added over all
+  routes per saved request. The cheapest pair is merged first;
+- no HTML route receives more than `ROUTE_FOREIGN_BUDGET_BYTES` (128 KiB of
+  factory code) of shared code it does not reach. A pair that would cross the
+  budget on any route stays apart. Tiny-file packing may add up to 4 KiB per
+  entry on top;
+- a route is delivered through its `.web` entry; the fallback it shadows is a
+  consumer of no route.
+
+`config/bundle-budget.json` holds the result: `eager.maxBrotliKB` for the
+heaviest HTML route, `eager.maxBrotliKBByRoute` for the home page and the
+article, `eager.maxRequestsByRoute` for request counts. Byte ceilings only go
+down. Request ceilings may be raised where that lowers first-screen script
+bytes (owner decision 2026-11-12); the pins sit at the measurement plus 2,
+because the plan is greedy and a count moves by one or two with unrelated
+import changes.
+
+To change the budget, measure before and after on a production export
+(`node scripts/guard-bundle-budget.js --fail` with `BUNDLE_BUDGET_JS_DIR` and
+`BUNDLE_BUDGET_HTML_DIR` pointing at it) and record the numbers in the
+description of `config/bundle-budget.json`, as #3316 did.
+
 ## Mobile travel Lighthouse budget guard
 
 Runtime-metric regression tripwire for the mobile travel-details page, complementing

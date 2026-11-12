@@ -1,5 +1,5 @@
 const path = require('path')
-const { mergeGranularChunkPlan, createRouteCoverage } = require('../../scripts/lib/granularChunkMerge')
+const { mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES } = require('../../scripts/lib/granularChunkMerge')
 
 const ROOT = '/repo'
 const APP = path.join(ROOT, 'app')
@@ -25,13 +25,24 @@ const context = { options: { projectRoot: ROOT } }
 const names = (atom: Atom) => [...atom.modules].map((m) => path.relative(ROOT, m.path))
 const chunkOf = (merged: { chunks: Atom[] }, file: string) => merged.chunks.find((atom) => names(atom).includes(file))
 
+const factory = (bytes: number) => `__d(function(){/*${'.'.repeat(bytes - 22)}*/});`
+function setFactory(plan: ReturnType<typeof makePlan>, file: string, bytes: number) {
+  const module = plan.rawAtoms.flatMap((atom) => [...atom.modules]).find((item) => item.path === at(file))!
+  module.output = [{ type: 'js/module', data: { code: factory(bytes) } }]
+  return module
+}
+
 describe('granularChunkMerge', () => {
-  it('counts fallback and web route/layout entries as the same delivery routes', () => {
+  it('delivers a route through its .web entry: the shadowed fallback is an entry point of no route', () => {
     const entries = ['app/_layout.tsx', 'app/_layout.web.tsx', 'app/index.tsx', 'app/index.web.tsx', 'app/map.tsx'].map(at)
     const { coverage } = createRouteCoverage(entries, APP)
-    expect(coverage.get(at('app/index.web.tsx'))).toEqual(coverage.get(at('app/index.tsx')))
-    expect(coverage.get(at('app/_layout.web.tsx'))).toEqual(coverage.get(at('app/_layout.tsx')))
-    expect(coverage.get(at('app/_layout.tsx'))).toEqual(new Uint32Array([3]))
+    // Two routes (index, map): the .web pair is one delivery route, not two.
+    expect(coverage.get(at('app/index.web.tsx'))).toEqual(new Uint32Array([1]))
+    expect(coverage.get(at('app/map.tsx'))).toEqual(new Uint32Array([2]))
+    expect(coverage.get(at('app/_layout.web.tsx'))).toEqual(new Uint32Array([3]))
+    // The HTML of a route lists the files of the .web entry only (#3316).
+    expect(coverage.get(at('app/index.tsx'))).toEqual(new Uint32Array([0]))
+    expect(coverage.get(at('app/_layout.tsx'))).toEqual(new Uint32Array([0]))
   })
 
   it('keeps an SSR wrapper and its fallback in the web facade with closed requirements for both context keys', () => {
@@ -45,7 +56,7 @@ describe('granularChunkMerge', () => {
         [[1, 2, 3], ['shared.ts']],
       ],
     )
-    const merged = mergeGranularChunkPlan(plan, context, { minRouteSimilarity: 1 })
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: -1 })
     const facade = chunkOf(merged, 'app/index.web.tsx')
     expect(facade.ownerEntries).toBe(0b100n)
     expect(names(facade)).toEqual(['app/index.tsx', 'app/index.web.tsx', 'components/Home.tsx'])
@@ -72,7 +83,7 @@ describe('granularChunkMerge', () => {
     expect(count('components/Editor.tsx')).toBe(0)
   })
 
-  it('merges shared groups riding similar routes and remaps every requirement', () => {
+  it('merges shared groups within the route budget and remaps every requirement', () => {
     const plan = makePlan(
       [
         ['entry.js', 'initial'],
@@ -90,8 +101,10 @@ describe('granularChunkMerge', () => {
         [[3, 4], ['c.ts']],
       ],
     )
-    const merged = mergeGranularChunkPlan(plan, context)
-    // {index,map} vs {index,map,search}: 2/3 > 0.4 -> one file; {search,about}: 1/4 stays.
+    for (const file of ['a.ts', 'b.ts', 'c.ts']) setFactory(plan, file, 3000)
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: 3500 })
+    // a+b saves a request on index and map for 3000 foreign bytes on search: one
+    // file. Adding c would hand 6000 bytes to about, over the budget: c stays.
     const shared = merged.chunks.filter((atom: Atom) => names(atom).some((n) => !n.startsWith('app/') && n !== 'entry.js'))
     expect(shared.map(names)).toEqual(expect.arrayContaining([['a.ts', 'b.ts'], ['c.ts']]))
     expect(shared).toHaveLength(2)
@@ -172,13 +185,195 @@ describe('granularChunkMerge', () => {
 })
 
 
-const factory = (bytes: number) => `__d(function(){/*${'.'.repeat(bytes - 22)}*/});`
-function setFactory(plan: ReturnType<typeof makePlan>, file: string, bytes: number) {
-  const module = plan.rawAtoms.flatMap((atom) => [...atom.modules]).find((item) => item.path === at(file))!
-  module.output = [{ type: 'js/module', data: { code: factory(bytes) } }]
-  return module
+const KB = 1024
+const moduleBytes = (module: TestModule) => (module.output ?? []).reduce((bytes, output) => bytes + Buffer.byteLength(output.data?.code ?? '', 'utf8'), 0)
+const isShared = (chunk: Atom) => (chunk.ownerEntries & 1n) === 0n && chunk.ownerEntries.toString(2).replace(/0/g, '').length > 1
+
+/**
+ * Foreign shared bytes per HTML route of a merged plan: what the files of the
+ * route's entries (layouts above it and the route file) carry beyond the
+ * modules those entries reach. Test plans have no .web pairs.
+ */
+function foreignByRoute(plan: ReturnType<typeof makePlan>, merged: { chunks: Atom[]; requiredChunksByEntryPath: Map<string, Atom[]> }) {
+  const entryPaths = plan.entryPoints.map((entry) => entry.module.path)
+  const isLayout = (entryPath: string) => path.basename(entryPath).startsWith('_layout.')
+  const result = new Map<string, number>()
+  entryPaths.forEach((routePath, routeIndex) => {
+    if (!routePath.startsWith(APP + path.sep) || isLayout(routePath)) return
+    let chain = 1n << BigInt(routeIndex)
+    entryPaths.forEach((entryPath, index) => {
+      if (isLayout(entryPath) && routePath.startsWith(path.dirname(entryPath) + path.sep)) chain |= 1n << BigInt(index)
+    })
+    const files = new Set<Atom>()
+    entryPaths.forEach((entryPath, index) => {
+      if ((chain & (1n << BigInt(index))) !== 0n) for (const chunk of merged.requiredChunksByEntryPath.get(entryPath) ?? []) files.add(chunk)
+    })
+    let foreign = 0
+    for (const chunk of files) {
+      if (!isShared(chunk)) continue
+      for (const module of chunk.modules) {
+        if ((plan.dependentEntriesByModule.get(module) & chain) === 0n) foreign += moduleBytes(module)
+      }
+    }
+    result.set(path.relative(ROOT, routePath), foreign)
+  })
+  return result
 }
-const noRouteMerging = { minRouteSimilarity: 1 }
+
+// Deterministic generator (LCG): a root layout, eight routes, four lazy
+// components and shared groups of 2.1-60 KB with random owners. Factories stay
+// above the tiny-packing threshold, so the budget is the only source of foreign code.
+function randomPlan(seed: number) {
+  let state = seed >>> 0
+  const next = (limit: number) => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+    return state % limit
+  }
+  const entries: [string, 'initial' | 'dynamic'][] = [
+    ['entry.js', 'initial'],
+    ['app/_layout.tsx', 'dynamic'],
+    ...Array.from({ length: 8 }, (_, index): [string, 'dynamic'] => [`app/r${index}.tsx`, 'dynamic']),
+    ...Array.from({ length: 4 }, (_, index): [string, 'dynamic'] => [`components/L${index}.tsx`, 'dynamic']),
+  ]
+  const ownerSets = new Map<string, number[]>()
+  while (ownerSets.size < 40) {
+    const owners = new Set<number>()
+    const size = 2 + next(4)
+    while (owners.size < size) owners.add(1 + next(entries.length - 1))
+    const sorted = [...owners].sort((a, b) => a - b)
+    ownerSets.set(sorted.join(','), sorted)
+  }
+  const atoms = [...ownerSets.values()].map((owners, index): [number[], string[]] => [owners, [`m${index}.ts`]])
+  const plan = makePlan(entries, atoms)
+  atoms.forEach(([, [file]]) => setFactory(plan, file, 2100 + next(58 * KB)))
+  return plan
+}
+
+describe('route foreign budget (#3316)', () => {
+  const homeMapPlan = (engineBytes: number) => {
+    const plan = makePlan(
+      [['entry.js', 'initial'], ['app/index.tsx', 'dynamic'], ['app/map.tsx', 'dynamic'], ['app/places.tsx', 'dynamic']],
+      [[[1, 2, 3], ['gradient.ts']], [[2, 3], ['mapEngine.ts']]],
+    )
+    setFactory(plan, 'gradient.ts', 400)
+    setFactory(plan, 'mapEngine.ts', engineBytes)
+    return plan
+  }
+
+  it('pins the budget the committed bundle ceilings were measured with', () => {
+    expect(ROUTE_FOREIGN_BUDGET_BYTES).toBe(128 * KB)
+  })
+
+  it('does not hand a route a large group for the sake of a small one it shares', () => {
+    // The audited case: the home page reaches a 0.4 KB gradient the map routes
+    // use too. The route sets are 2/3 alike, so the similarity merge shipped the
+    // whole map file to the home page.
+    const plan = homeMapPlan(150 * KB)
+    const merged = mergeGranularChunkPlan(plan, context)
+    expect(chunkOf(merged, 'gradient.ts')).not.toBe(chunkOf(merged, 'mapEngine.ts'))
+    expect(merged.requiredChunksByEntryPath.get(at('app/index.tsx')).map(names)).toEqual([['gradient.ts']])
+    expect(foreignByRoute(plan, merged).get('app/index.tsx')).toBe(0)
+  })
+
+  it('saves the request when the foreign code fits the budget', () => {
+    const plan = homeMapPlan(100 * KB)
+    const merged = mergeGranularChunkPlan(plan, context)
+    expect(chunkOf(merged, 'gradient.ts')).toBe(chunkOf(merged, 'mapEngine.ts'))
+    expect(foreignByRoute(plan, merged).get('app/index.tsx')).toBe(100 * KB)
+  })
+
+  it('counts the budget per route across all its shared files', () => {
+    const plan = makePlan(
+      [['entry.js', 'initial'], ...['home', 'a', 'b', 'c'].map((name): [string, 'dynamic'] => [`app/${name}.tsx`, 'dynamic'])],
+      [[[1, 2, 3, 4], ['base.ts']], [[2, 3], ['first.ts']], [[3, 4], ['second.ts']]],
+    )
+    setFactory(plan, 'base.ts', 3000)
+    setFactory(plan, 'first.ts', 80 * KB)
+    setFactory(plan, 'second.ts', 80 * KB)
+    const merged = mergeGranularChunkPlan(plan, context)
+    // Either group alone fits beside base.ts; both would give home 160 KB.
+    expect(chunkOf(merged, 'first.ts')).toBe(chunkOf(merged, 'base.ts'))
+    expect(chunkOf(merged, 'second.ts')).not.toBe(chunkOf(merged, 'base.ts'))
+    expect(foreignByRoute(plan, merged).get('app/home.tsx')).toBe(80 * KB)
+  })
+
+  it('spends the budget on the cheapest foreign bytes per saved request first', () => {
+    const plan = makePlan(
+      [['entry.js', 'initial'], ...['a', 'b', 'c', 'd'].map((name): [string, 'dynamic'] => [`app/${name}.tsx`, 'dynamic'])],
+      [[[1, 2, 3, 4], ['base.ts']], [[1, 2, 3], ['small.ts']], [[1, 2], ['large.ts']]],
+    )
+    setFactory(plan, 'base.ts', 3000)
+    setFactory(plan, 'small.ts', 10 * KB)
+    setFactory(plan, 'large.ts', 100 * KB)
+    // base+small: 10 KB to d for three requests; base+large: 200 KB for two.
+    // Taking large first would leave no room for small on d (110 KB > 105 KB).
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: 105 * KB })
+    expect(chunkOf(merged, 'small.ts')).toBe(chunkOf(merged, 'base.ts'))
+    expect(chunkOf(merged, 'large.ts')).not.toBe(chunkOf(merged, 'base.ts'))
+    const roomy = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: 110 * KB })
+    expect(chunkOf(roomy, 'large.ts')).toBe(chunkOf(roomy, 'base.ts'))
+  })
+
+  it('never merges groups that share no route: there is no request to save', () => {
+    const plan = makePlan(
+      [['entry.js', 'initial'], ...['a', 'b', 'c', 'd'].map((name): [string, 'dynamic'] => [`app/${name}.tsx`, 'dynamic'])],
+      [[[1, 2], ['ab.ts']], [[3, 4], ['cd.ts']]],
+    )
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: Infinity })
+    expect(chunkOf(merged, 'ab.ts')).not.toBe(chunkOf(merged, 'cd.ts'))
+  })
+
+  it('looks at a refused pair once instead of rescanning every pair after each refusal', () => {
+    // Forty groups meet on one hub route and each has a route of its own: every
+    // pair saves a request there, and the budget refuses all 780 of them.
+    const groups = 40
+    const plan = makePlan(
+      [['entry.js', 'initial'], ['app/hub.tsx', 'dynamic'], ...Array.from({ length: groups }, (_, index): [string, 'dynamic'] => [`app/r${index}.tsx`, 'dynamic'])],
+      Array.from({ length: groups }, (_, index): [number[], string[]] => [[1, 2 + index], [`g${index}.ts`]]),
+    )
+    for (let index = 0; index < groups; index += 1) setFactory(plan, `g${index}.ts`, 3000)
+    const stats = { quotes: 0, candidates: 0 }
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: 1000, stats })
+    expect(merged.chunks.filter(isShared)).toHaveLength(groups)
+    const pairs = (groups * (groups - 1)) / 2
+    expect(stats).toEqual({ quotes: pairs, candidates: pairs })
+  })
+
+  it.each([1, 21, 144])('re-quotes only the pairs of a merged group on a random plan (seed %i)', (seed) => {
+    const stats = { quotes: 0, candidates: 0 }
+    const merged = mergeGranularChunkPlan(randomPlan(seed), context, { routeForeignBudgetBytes: 50 * KB, stats })
+    // At most 40 groups: their pairs once, then one row per merge.
+    const merges = 40 - merged.chunks.filter(isShared).length
+    expect(merges).toBeGreaterThan(0)
+    expect(stats.quotes).toBeLessThanOrEqual((40 * 39) / 2 + merges * 39)
+    expect(stats.candidates).toBeLessThanOrEqual(stats.quotes)
+  })
+
+  it.each([1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233])('holds the budget, one file per owner set and closed requirements on a random plan (seed %i)', (seed) => {
+    const budget = 50 * KB
+    const plan = randomPlan(seed)
+    const merged = mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes: budget })
+    const shared = merged.chunks.filter(isShared)
+    expect(shared.length).toBeLessThan(40)
+    expect(new Set(shared.map((chunk: Atom) => chunk.ownerEntries)).size).toBe(shared.length)
+    for (const [route, foreign] of foreignByRoute(plan, merged)) {
+      expect({ route, withinBudget: foreign <= budget }).toEqual({ route, withinBudget: true })
+    }
+    plan.entryPoints.forEach((entry, index) => {
+      const required = merged.requiredChunksByEntryPath.get(entry.module.path)
+      for (const [module, consumers] of plan.dependentEntriesByModule) {
+        if ((consumers & (1n << BigInt(index))) !== 0n) {
+          expect(required.filter((chunk: Atom) => chunk.modules.has(module))).toHaveLength(1)
+        }
+      }
+    })
+    const reordered = { ...plan, rawAtoms: [...plan.rawAtoms].reverse() }
+    expect(snapshotPlan(mergeGranularChunkPlan(reordered, context, { routeForeignBudgetBytes: budget }))).toEqual(snapshotPlan(merged))
+  })
+})
+
+// A negative budget refuses every priced merge: only identical route sets ship together.
+const noRouteMerging = { routeForeignBudgetBytes: -1 }
 function snapshotPlan(plan: { chunks: Atom[]; requiredChunksByEntryPath: Map<string, Atom[]> }) {
   return {
     chunks: plan.chunks.map((chunk) => [chunk.ownerEntries.toString(), names(chunk)]),
