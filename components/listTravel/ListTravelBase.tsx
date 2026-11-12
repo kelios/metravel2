@@ -42,6 +42,7 @@ import {
   buildCardsGridDynamicStyle,
   buildListTravelSearchPendingState,
   getListTravelActiveFiltersCount,
+  hasListTravelLeftCleanCatalog,
   getCatalogCardMediaLoading,
   getSearchCardImageHeight,
   getSearchCardWidth,
@@ -57,6 +58,7 @@ import type { ListTravelBaseProps } from './ListTravelBase.types'
 import AiSearchPanel from '@/components/aiPicks/AiSearchPanel';
 import { isAiPicksEnabled } from '@/utils/aiPicksConfig';
 import { translate as i18nT } from '@/i18n';
+import { useDismissSearchCatalogPage } from './searchCatalogPageContext';
 
 const isSearchPathname = (value: string | null | undefined): boolean =>
   /(^|\/)search\/?$/.test(String(value ?? ''));
@@ -415,6 +417,8 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
 
     // Оптимизируем расчет путем использования стабильных ссылок на filter
     const activeFiltersCount = useMemo(() => getListTravelActiveFiltersCount(filter, debSearch), [filter, debSearch]);
+    // #3335: указатель /search?page=N и его canonical — только у нетронутого каталога.
+    useDismissSearchCatalogPage(hasListTravelLeftCleanCatalog(filter, search));
 
     const isSiteSearch = !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
 

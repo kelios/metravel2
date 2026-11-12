@@ -44,7 +44,7 @@ beforeEach(() => {
   canonicals.length = 0
 })
 
-const canonicalWith = (visible: { page: number; footer: null } | null) => {
+const canonicalWith = (visible: { page: number; footer: null; dismiss: () => void } | null) => {
   renderToStaticMarkup(createElement(PageContext.Provider, { value: visible }, createElement(SearchScreen)))
   return canonicals.at(-1)
 }
@@ -54,6 +54,6 @@ it('keeps /search as canonical while no page pointer is on screen (static /searc
 })
 
 it('follows the visible catalogue page and gives page 1 the bare /search', () => {
-  expect(canonicalWith({ page: 7, footer: null })).toBe('https://metravel.by/search?page=7')
-  expect(canonicalWith({ page: 1, footer: null })).toBe('https://metravel.by/search')
+  expect(canonicalWith({ page: 7, footer: null, dismiss: jest.fn() })).toBe('https://metravel.by/search?page=7')
+  expect(canonicalWith({ page: 1, footer: null, dismiss: jest.fn() })).toBe('https://metravel.by/search')
 })

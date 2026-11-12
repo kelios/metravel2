@@ -73,7 +73,7 @@ it('renders the /search?page=N pointer after the card skeletons, below the first
   mockWidth = 0
   const { SearchCatalogPageContext } = require('@/components/listTravel/searchCatalogPageContext')
   const footer = createElement('nav', { 'data-testid': 'search-catalog-links' }, createElement('a', { href: '/travels/a' }, 'A'))
-  const host = render(createElement(SearchCatalogPageContext.Provider, { value: { page: 2, footer } }, createElement(SearchPageSkeleton)))
+  const host = render(createElement(SearchCatalogPageContext.Provider, { value: { page: 2, footer, dismiss: () => undefined } }, createElement(SearchPageSkeleton)))
   const nav = host.querySelector('[data-testid="search-catalog-links"]')!
   const rows = host.querySelector('[data-testid="search-page-skeleton-rows"]')!
   expect(rows.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

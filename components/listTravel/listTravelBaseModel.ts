@@ -3,6 +3,7 @@ import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeom
 import { getCatalogViewportGeometry } from '@/components/listTravel/travelCatalogGeometry'
 import type { ViewStyle } from 'react-native'
 import { BREAKPOINTS } from './utils/listTravelConstants'
+import type { FilterState } from './utils/listTravelTypes'
 
 export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
   const styleArray: ViewStyle[] = [cardsGridStyle]
@@ -316,4 +317,18 @@ export function getListTravelActiveFiltersCount(filter: Record<string, any>, deb
   if (debSearch && debSearch.trim().length > 0) count += 1
 
   return count
+}
+
+const isEmptyFilterValue = (value: unknown) =>
+  value === undefined || value === null || value === '' || value === false ||
+  (Array.isArray(value) && value.length === 0)
+
+/**
+ * #3335: список отошёл от чистого каталога — введён поиск или у любого ключа
+ * фильтра непустое значение (начальное состояние — `INITIAL_FILTER = {}`).
+ * Ключи не перечисляются: новый фильтр попадает под правило сам, в отличие от
+ * счётчика на кнопке панели.
+ */
+export function hasListTravelLeftCleanCatalog(filter: FilterState, search: string): boolean {
+  return search.trim().length > 0 || Object.values(filter).some((value) => !isEmptyFilterValue(value))
 }

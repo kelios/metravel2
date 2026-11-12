@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useLoaderData, useLocalSearchParams } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { translate as i18nT } from '@/i18n'
@@ -87,7 +87,8 @@ function readServerCatalogLinks(): SearchCatalogLinks | null {
  * Клиент loader НЕ читает: `/_expo/loaders/(tabs)/search` nginx не проксирует,
  * `useLoaderData` без данных в HTML ушёл бы туда за 404, и вместо каталога встал
  * бы экран ошибки loader'а. При гидрации указатель повторяется из серверного DOM;
- * при переходе внутри приложения его нет, а со сменой query (фильтры) он снимается.
+ * при переходе внутри приложения его нет, со сменой параметров маршрута он
+ * снимается, а смену поиска и фильтров внутри списка сообщает сам список (`dismiss`).
  */
 function useHydratedCatalogLinks(): SearchCatalogLinks | null {
   const query = parseSearchCatalogQuery(searchParamsEntries(useLocalSearchParams<Record<string, string | string[]>>()))
@@ -104,9 +105,11 @@ const useCatalogLinks = IS_SERVER ? useServerCatalogLinks : useHydratedCatalogLi
  */
 export default function SearchCatalogLinksBoundary({ children }: { children: ReactNode }) {
   const data = useCatalogLinks()
+  const [dismissed, setDismissed] = useState(false)
+  const dismiss = useCallback(() => setDismissed(true), [])
   const value = useMemo<SearchCatalogVisiblePage | null>(
-    () => (data ? { page: data.page, footer: <SearchCatalogLinksNav data={data} /> } : null),
-    [data],
+    () => (data && !dismissed ? { page: data.page, footer: <SearchCatalogLinksNav data={data} />, dismiss } : null),
+    [data, dismiss, dismissed],
   )
   return <SearchCatalogPageContext.Provider value={value}>{children}</SearchCatalogPageContext.Provider>
 }

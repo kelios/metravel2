@@ -161,7 +161,7 @@ describe('RightColumn layout invariants', () => {
       travels, gridColumns: 1, isMobile: true, showNextPageLoading: false,
       refetch: jest.fn(), renderItem, contributionBannerVariant: 'search' as const,
     };
-    const page = { page: 2, footer: <Text testID="catalog-page-pointer">page 2</Text> };
+    const page = { page: 2, footer: <Text testID="catalog-page-pointer">page 2</Text>, dismiss: jest.fn() };
     const view = await renderWithProviders(
       <SearchCatalogPageContext.Provider value={page}><RightColumn {...props} /></SearchCatalogPageContext.Provider>
     );

@@ -2,6 +2,7 @@ import {
   applyListDensity,
   getCatalogCardMediaLoading,
   getListTravelActiveFiltersCount,
+  hasListTravelLeftCleanCatalog,
   resolveListTravelRawWidth,
   shouldSidebarIncludeSort,
 } from '@/components/listTravel/listTravelBaseModel'
@@ -10,6 +11,8 @@ import {
   WEB_ROW_HEIGHT_DESKTOP,
   WEB_ROW_HEIGHT_MOBILE,
 } from '@/components/listTravel/rightColumnModel'
+import type { FilterState } from '@/components/listTravel/utils/listTravelTypes'
+import { INITIAL_FILTER } from '@/components/listTravel/utils/listTravelConstants'
 
 describe('getListTravelActiveFiltersCount', () => {
   it('counts the all-authors unpublished filter only while enabled', () => {
@@ -167,5 +170,49 @@ describe('resolveListTravelRawWidth (#2759)', () => {
   it('ignores the parent width on native', () => {
     setOS('ios')
     expect(resolveListTravelRawWidth(0, 1440)).toBe(0)
+  })
+})
+
+// #3335: указатель /search?page=N снимается при любом отходе от чистого каталога.
+// `Required<FilterState>` держит перечень полным: новый ключ типа не соберётся,
+// пока его не добавят сюда.
+const FILTER_VALUE_BY_KEY: Required<FilterState> = {
+  year: '2024',
+  sort: 'new',
+  moderation: 0,
+  draftsOnly: true,
+  publishedOnly: true,
+  allAuthorsUnpublishedOnly: true,
+  countries: [3],
+  categories: [1],
+  categoryTravelAddress: [84],
+  transports: [2],
+  companions: [1],
+  complexity: [1],
+  month: [7],
+  over_nights_stay: [1],
+}
+
+describe('hasListTravelLeftCleanCatalog', () => {
+  it('keeps the initial catalogue clean (first frame of /search?page=N)', () => {
+    expect(hasListTravelLeftCleanCatalog(INITIAL_FILTER, '')).toBe(false)
+    expect(hasListTravelLeftCleanCatalog({}, '   ')).toBe(false)
+  })
+
+  it.each(Object.entries(FILTER_VALUE_BY_KEY))('leaves the clean catalogue once %s is set', (key, value) => {
+    expect(hasListTravelLeftCleanCatalog({ [key]: value } as FilterState, '')).toBe(true)
+  })
+
+  it('treats a typed search as leaving the catalogue', () => {
+    expect(hasListTravelLeftCleanCatalog({}, 'Минск')).toBe(true)
+  })
+
+  it('ignores cleared values that onSelect/applyFilter would drop', () => {
+    expect(hasListTravelLeftCleanCatalog({ countries: [], year: '', sort: undefined, draftsOnly: false }, '')).toBe(false)
+  })
+
+  it('sees the country filter that the panel counter does not count', () => {
+    expect(getListTravelActiveFiltersCount({ countries: [3] }, '')).toBe(0)
+    expect(hasListTravelLeftCleanCatalog({ countries: [3] }, '')).toBe(true)
   })
 })
