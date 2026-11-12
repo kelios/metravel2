@@ -239,7 +239,9 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   }, [router])
   // Загруженный список остаётся на экране и при сбое фонового обновления или
   // дозагрузки: блок ошибки заменяет его, только когда показать нечего.
-  const isInitialLoading = !urlParamsApplied || placesQuery.isLoading || (!queryReady && !placesQuery.data)
+  // Restoration can leave a committed URL's query pending/idle before fetching
+  // starts. It has no result yet: keep the grid instead of flashing empty (#3387).
+  const isInitialLoading = !urlParamsApplied || placesQuery.isPending || (!queryReady && !placesQuery.data)
   const isResultsRefreshing = !isInitialLoading && (!queryReady || placesQuery.isPlaceholderData || placesQuery.isRefetching)
   const hasResultCount = placesQuery.data !== undefined && !isInitialLoading && !isResultsRefreshing
   const resultsStatus: 'loading' | 'error' | 'empty' | 'list' =

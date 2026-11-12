@@ -1,7 +1,7 @@
 import { act as domAct, useLayoutEffect } from 'react'
 import { hydrateRoot, type Root } from 'react-dom/client'
 import { renderToString } from 'react-dom/server.node'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { IsRestoringProvider, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePlacesCatalogController } from '@/screens/tabs/usePlacesCatalogController'
 import { render, within } from '@testing-library/react-native'
 import { createRootRegistry } from '../helpers/rawRootLifecycle'
@@ -124,6 +124,51 @@ describe('PlacesScreen pre-hydration chrome', () => {
       })
     }
   })
+
+  // #3387: route intent can commit while persistence still blocks fetching.
+  // This is a real pending/idle query, not a settled empty catalog.
+  it.each([{}, { category: '' }, { category: 'Замок' }])(
+    'keeps the pending catalog grid mounted through restoration for %j',
+    async (params) => {
+      mockParams = params
+      let releaseCatalog!: (page: PlacesCatalogPage) => void
+      const pendingCatalog = new Promise<PlacesCatalogPage>((resolve) => { releaseCatalog = resolve })
+      jest.mocked(fetchPlacesCatalog).mockImplementation(() => pendingCatalog)
+      const queryClient = new QueryClient()
+      webQueryClients.push(queryClient)
+      const root = webRoots.createRoot()
+      const tree = (restoring: boolean) => (
+        <QueryClientProvider client={queryClient}>
+          <IsRestoringProvider value={restoring}><PlacesScreen /></IsRestoringProvider>
+        </QueryClientProvider>
+      )
+      try {
+        await domAct(() => root.render(tree(true)))
+        const screen = within(root.container)
+        const query = queryClient.getQueryCache().findAll({ queryKey: ['places-catalog', 'list'] }).at(-1)
+        expect(query?.state).toMatchObject({ status: 'pending', fetchStatus: 'idle', data: undefined })
+        expect(fetchPlacesCatalog).not.toHaveBeenCalled()
+        const grid = screen.getByTestId('places-cards-grid')
+        const geometry = StyleSheet.flatten(grid.props.style)
+        expect(screen.queryByTestId('empty-state')).toBeNull()
+        expect(screen.getByTestId('places-results-meta').props.children).toBe('Загружаем подборку...')
+
+        await domAct(() => root.render(tree(false)))
+        expect(fetchPlacesCatalog).toHaveBeenCalledTimes(1)
+        expect(screen.getByTestId('places-cards-grid')).toBe(grid)
+        expect(StyleSheet.flatten(screen.getByTestId('places-cards-grid').props.style)).toEqual(geometry)
+
+        mockWidth = 390
+        await domAct(() => root.render(tree(false)))
+        expect(screen.getByTestId('places-cards-grid')).toBe(grid)
+        await domAct(() => { releaseCatalog(catalogPage) })
+        await screen.findByTestId('empty-state')
+        expect(screen.queryByTestId('places-cards-grid')).toBeNull()
+      } finally {
+        await domAct(() => { releaseCatalog(catalogPage) })
+      }
+    },
+  )
 
   it('keeps only the compact bar once a phone width is measured', async () => {
     mockWidth = 412
