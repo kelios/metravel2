@@ -63,7 +63,9 @@ export function readTravelFullScrollFrame(options: { preserveMobilePoint: boolea
     section, document.querySelector(`[data-testid="travel-details-${section}-transition"]`)?.getAttribute('data-deferred-transition-state') ?? null,
   ])) : null;
   // This article is eligible for Excursions. A runtime flow alone can still
-  // contain its 160px Suspense fallback, so require the real section/widget.
+  // contain its 160px Suspense fallback, so require the real section. Its
+  // iframe has a separate viewport gate and may remain unloaded after a fast
+  // traversal; record that fact and verify activation in targeted viewport QA.
   const excursions = options.includeSections ? document.querySelector('[data-section-key="excursions"]') : null;
   const widget = excursions?.querySelector('iframe[src]');
   const excursionsFrame = excursions?.getBoundingClientRect();
@@ -80,7 +82,7 @@ export function readTravelFullScrollFrame(options: { preserveMobilePoint: boolea
       sectionMounted: Boolean(excursions), widgetMounted: Boolean(widget),
       sectionHeight: excursionsFrame?.height ?? null, widgetHeight: widgetFrame?.height ?? null,
     } : null,
-    excursionsResolved: options.includeSections ? Boolean(excursionsFrame && excursionsFrame.height > 0 && widgetFrame && widgetFrame.height > 0) : null,
+    excursionsResolved: options.includeSections ? Boolean(excursionsFrame && excursionsFrame.height > 0) : null,
     footerVisible: options.includeSections ? Boolean(footer && footer.height > 0 && footer.bottom > Math.max(0, bounds.top) && footer.top < Math.min(innerHeight, bounds.bottom)) : null,
   };
 }

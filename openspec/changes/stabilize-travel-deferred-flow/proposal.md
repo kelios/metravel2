@@ -4,10 +4,13 @@ Task #3382 reproduces cumulative full-scroll article CLS of 0.325/0.972/0.090/1.
 
 The published outer-owner candidate `4c829` still fails two of five mobile visits (CLS 0.95615/0.00111/0.00111/0.95636/0.00111). A separate causal timeline proves that the real Excursions 160px fallback→1050px section+32px margin (+922), followed by another +264px, moves Map/Points inside that outer owner before its ResizeObserver runs. Native scroll anchoring later restores position, after the shift has been recorded. The nearest replacement boundary must own its flow height too.
 
+The published leaf candidate `c7b7345` removes that Map/Points signature but exposes an initial-mount failure: new leaf first height 1082 is anchored to a freshly inserted Map sibling during parent transport fallback 1100→payload 4963. Both ancestors are available in the reproducing unit. The initial transaction now gives pending/unknown ancestor payloads external capture authority, including null. Later published reading frames retain their existing capture contract. Production acceptance remains pending after the earlier failed releases.
+
 ## What Changes
 
 - Apply the existing measured deferred transition at the actual changing child boundaries: the map slot's outer composition, its whole Excursions replacement and the Nearby list's content.
 - Keep parent/child height updates in the existing single anchored transaction, without additional fixed-height guesses.
+- Preserve already-painted reading frames during the initial parent payload replacement; freshly inserted descendants must not become the transaction's prior reading anchor.
 - Add full-scroll regression cases for the affected article at 390×844 and 1440×900, five real guest visits each, cumulative CLS ≤0.1.
 - Hit-test wheel input against the actual scroll owner, record point/bounds, and require first-wheel advancement. The old desktop series that stayed at top 0 is withdrawn; five corrected traversals on `4c829` establish the desktop baseline (0.01994/0.01157/0.01157/0.01157/0.01157).
 

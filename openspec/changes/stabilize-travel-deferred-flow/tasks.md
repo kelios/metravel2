@@ -14,6 +14,9 @@
 - [ ] 2.5 Re-review the entire still-unaccepted task after the configured-owner delta, then confirm unchanged bundle budgets in the canonical candidate build; the isolated gzip proxy does not replace this gate.
 - [x] 2.6 Reuse the measured-flow owner around the entire Excursions replacement in MapSection; retain the outer owner, 160px fallback, loaded UI, eligibility/refs/native/iframe/loading behavior and generic algorithm.
 - [x] 2.7 Capture RED (2/2 failures, Points+922 before leaf RO) then GREEN for the real MapSection + Excursions composition, covering +922/+264/empty 0 with native and manual single compensation. Correct the production wheel driver without weakening cadence, bottom, runtime or CLS assertions.
+- [x] 2.8 Retain initial mount writes and capture the missing initial parent Suspense regression: visible Sidebar control passes, exact R3 placement fails with new Map anchor and+1082 despite available measured ancestors; preserve forensic and unit raw evidence.
+- [x] 2.9 Fix first-measurement transaction ownership through pending/unknown ancestor external capture authority, preserving later/reserve capture. Prove initial visible/offscreen/native/top0/empty0/unregistered-parent controls alongside unchanged later geometry, responsive and generation cases (3 suites/116 tests); reject blanket later authority and scheduling-only variants.
+- [x] 2.10 Align primary Excursions readiness to the actual positive-height section and runtime flow; preserve iframe facts and require separate targeted activation while its slot is in view, retaining existing widget lazy policy.
 
 ## 3. Production acceptance after reviewed publication
 

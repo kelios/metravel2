@@ -118,6 +118,7 @@ type MeasuredReserveSlack = {
 const measuredTransitions = new WeakMap<HTMLElement, {
   measure: () => boolean
   hasResponsiveWidthChange: () => boolean
+  payloadState: () => 'settled' | 'pending' | 'unknown'
   captureReserveSlack: () => void
 }>()
 
@@ -231,7 +232,7 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
   return { anchor, owner, beforeTop: rect.top }
 }
 
-function findMeasuredTransactionAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
+function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = false): ReserveReleaseAnchor | null {
   const owner = findMeasuredScrollOwner(node)
   if (!owner) return null
   if (measuredTransitions.get(node)?.hasResponsiveWidthChange()) return null
@@ -242,7 +243,14 @@ function findMeasuredTransactionAnchor(node: HTMLElement): ReserveReleaseAnchor 
     if (transition) {
       if (transition.hasResponsiveWidthChange()) return null
       const following = findReserveReleaseAnchor(ancestor)
-      if (following) capture = following
+      // A first measurement cannot treat new payload siblings as prior anchors.
+      // Later measurements have a published reading frame; ancestor differences
+      // can then be existing nested flow/reserve changes, not a fresh payload.
+      if ((initialMeasurement && transition.payloadState() !== 'settled') || following) capture = following
+    } else if (initialMeasurement && ancestor.hasAttribute('data-deferred-transition-state')) {
+      // React commits child layout effects before a new parent's refs/registry.
+      // Publish sizes normally, but let that parent own its first correction.
+      capture = findReserveReleaseAnchor(ancestor)
     }
     ancestor = ancestor.parentElement
   }
@@ -372,6 +380,16 @@ export function TravelDetailsDeferredTransition({
     const transition = {
       measure: () => currentMeasureRef.current?.() ?? false,
       hasResponsiveWidthChange: () => currentResponsiveWidthChangeRef.current?.() ?? false,
+      payloadState: (): 'settled' | 'pending' | 'unknown' => {
+        const runtime = connectedDOMView(runtimeRef.current)
+        const height = measuredHeightRef.current
+        const width = measuredWidthRef.current
+        if (!runtime || height == null || width == null) return 'unknown'
+        const next = runtime.getBoundingClientRect()
+        if (!Number.isFinite(next.height) || next.height < 0 || !Number.isFinite(next.width) || next.width <= 0 ||
+            Math.abs(next.width - width) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return 'unknown'
+        return Math.abs(next.height - height) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX ? 'pending' : 'settled'
+      },
       captureReserveSlack: () => currentReserveSlackCaptureRef.current?.(),
     }
     measuredTransitions.set(node, transition)
@@ -480,7 +498,7 @@ export function TravelDetailsDeferredTransition({
         if (!obsoleteSlack) currentReserveSlackCaptureRef.current?.()
         captureAncestorReserveSlack(node)
       }
-      const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node)
+      const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node, measuredHeightRef.current == null)
       if (!measureRuntimeHeight()) return
       measureAncestorTransitions(node)
       const corrected = correctMeasuredAnchor(capture, node)

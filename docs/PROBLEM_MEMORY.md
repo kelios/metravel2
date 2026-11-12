@@ -835,6 +835,22 @@ guard, падающий в CI на попытке обойти этот конт
   продвижения первого wheel; cadence и bottom/runtime/CLS assertions прежние.
   Исправленные пять desktop-проходов на `4c829` реально дошли до низа:
   `0.01994/0.01157/0.01157/0.01157/0.01157` — baseline перед leaf fix.
+  Выкат `c7b7345` убрал прежние Map/Points entries, но CLS снова FAIL:
+  initial map transport1100→payload 4963 и первый leaf 1082 вызывают JS scroll
+  +1082 до RO; Sidebar остаётся drawn/placeholder1089.59, ZERO означает уход
+  из видимого rect, не hide/shrink. Новый initial RED сохраняет mount writes:
+  видимый Sidebar удерживается, но R3 placement выбирает freshly inserted Map
+  при уже доступных измеренных ancestors. Shared capture теперь отдаёт первому
+  measurement visible epoch внешний anchor pending/unknown ancestor, включая null;
+  DOM-marked parent без registry также сохраняет внешнюю authority. Высоты
+  публикуются; later capture/reserve release прежние. Blanket правило для later
+  epochs отвергнуто после 22 reserve/Comments regressions; scheduling-only microtask
+  также не исправил RED. Initial manual/native/top0/empty и unknown-parent controls
+  дополняют прежний later-growth coverage; production PASS пока не заявлен.
+  Actual загрузка — MapIO200→module→BelkrajIO300, outer ExcursionsIO1000 нет.
+  Primary требует runtime + реальную positive-height section; iframe facts
+  записываются, activation проверяется отдельно при реально видимом widget-slot.
+  Прежнее unconditional iframe-positive требование после быстрого scroll отозвано.
   Контроль —
   `e2e/cls-audit.spec.ts` / `travelFullScrollCls.ts`, по пять полных гостевых
   проходов `390×844` и `1440×900`, порог суммы `0.1`; прежний контроль статьи
