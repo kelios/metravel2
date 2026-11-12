@@ -196,9 +196,10 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/quests',
-    title: 'Городские квесты и маршруты с заданиями | Metravel',
-    description:
-      'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
+    // #3217: the hubs /{be,uk,pl,en}/quests take their head from this entry in
+    // the request locale; RU literals here left those heads in Russian.
+    titleKey: 'seoStatic:root.quests.title',
+    descriptionKey: 'seoStatic:root.quests.description',
     breadcrumb: 'Квесты',
   },
   {

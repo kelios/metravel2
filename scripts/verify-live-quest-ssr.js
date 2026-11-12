@@ -39,7 +39,7 @@ function verifyQuestRuntimeResponse(response, html, { sha, projection, requireHi
   const breadcrumb = graph.find((entry) => entry?.['@type'] === 'BreadcrumbList');
   if (entity?.url !== canonical || breadcrumb?.itemListElement?.at(-1)?.item !== canonical
       || (projection.kind === 'detail' && (entity.mainEntityOfPage !== canonical || entity.inLanguage !== projection.locale
-        || entity.name !== page.meta.title || entity.description !== page.meta.description
+        || entity.name !== page.heading || entity.description !== page.meta.description
         || entity.touristType !== page.meta.tourist_type || (page.meta.city_name && entity.location?.name !== page.meta.city_name)))) {
     throw new Error('Quest schema differs from the selected public route');
   }

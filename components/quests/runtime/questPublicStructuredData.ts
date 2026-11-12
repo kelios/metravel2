@@ -1,6 +1,7 @@
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import { normalizeOgImageUrl } from '@/utils/seo';
 import { translate } from '@/i18n';
+import { questCatalogPathForLocale } from '@/utils/questLocaleHubs';
 
 export function questPublicAlternates(data: QuestPublicProjection): Record<string, string> {
   if (data.versions.length < 2 || !data.ru_source_path) return {};
@@ -12,11 +13,12 @@ export function buildQuestPublicStructuredData(data: QuestPublicProjection) {
   const { page } = data;
   const breadcrumb = { '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: translate('seoStatic:structuredData.home'), item: 'https://metravel.by/' },
-    { '@type': 'ListItem', position: 2, name: translate('seoStatic:structuredData.quests'), item: 'https://metravel.by/quests' },
+    { '@type': 'ListItem', position: 2, name: translate('seoStatic:structuredData.quests'), item: 'https://metravel.by' + questCatalogPathForLocale(data.locale) },
     { '@type': 'ListItem', position: 3, name: page.heading, item: page.meta.canonical },
   ] };
+  // #3238: the trip is named by the quest itself (the H1), not by the branded `<title>`.
   const entity = data.kind === 'detail' ? {
-    '@type': 'TouristTrip', name: page.meta.title, description: page.meta.description,
+    '@type': 'TouristTrip', name: page.heading, description: page.meta.description,
     url: page.meta.canonical, mainEntityOfPage: page.meta.canonical, inLanguage: data.locale,
     touristType: page.meta.tourist_type,
     provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },

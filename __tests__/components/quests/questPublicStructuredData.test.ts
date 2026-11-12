@@ -1,6 +1,8 @@
 import { buildQuestPublicStructuredData, questPublicAlternates } from '@/components/quests/runtime/questPublicStructuredData';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
+import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
+import { Platform } from 'react-native';
 import { questPrivateSnapshot, questPublicLocales } from '../../fixtures/questPublicProjection';
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
@@ -35,18 +37,51 @@ describe('client quest structured data', () => {
     const data = buildQuestPublicStructuredData(detail);
     expect(data['@context']).toBe('https://schema.org');
     expect(data['@graph'][0]).toMatchObject({
-      '@type': 'TouristTrip', inLanguage: locale, name: detail.page.meta.title,
+      '@type': 'TouristTrip', inLanguage: locale, name: detail.page.heading,
       description: detail.page.meta.description, url: detail.page.meta.canonical,
       mainEntityOfPage: detail.page.meta.canonical,
       touristType: detail.page.meta.tourist_type,
       location: { '@type': 'City', name: detail.page.meta.city_name },
       provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },
     });
+    // #3238: the quest name, never the branded `<title>`.
+    expect(data['@graph'][0].name).not.toMatch(/\|\s*Metravel/i);
     expect(data['@graph'][1]).toMatchObject({ '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, item: 'https://metravel.by/' },
       { '@type': 'ListItem', position: 2, item: 'https://metravel.by/quests' },
       { '@type': 'ListItem', position: 3, name: detail.page.heading, item: detail.page.meta.canonical },
     ] });
+  });
+
+  // #3217: the «Quests» crumb follows the visible navigation rule — the locale hub
+  // only while the hubs are published, `/quests` for ru and with hubs off.
+  describe('catalogue crumb of a translated page', () => {
+    const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+    const originalOs = Platform.OS;
+    afterEach(() => {
+      if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+      else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag;
+      Object.defineProperty(Platform, 'OS', { configurable: true, get: () => originalOs });
+    });
+    const crumbs = (published: boolean, locale: string) => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
+      process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = published ? 'true' : 'false';
+      const ssr = buildQuestPublicStructuredData(detailFor(locale))['@graph'][1].itemListElement[1].item;
+      const runtime = createQuestDetailStructuredData({
+        canonical: `https://metravel.by/${locale}/quests/7/fixture-city-walk`, title: 'T | Metravel',
+        description: 'D', questId: 'fixture-city-walk', inLanguage: locale,
+      })['@graph'].find((node: { '@type'?: string }) => node['@type'] === 'BreadcrumbList') as { itemListElement: Array<{ item: string }> };
+      return [ssr, runtime.itemListElement[1].item];
+    };
+
+    it('points to the locale hub when the hubs are published', () => {
+      expect(crumbs(true, 'pl')).toEqual(['https://metravel.by/pl/quests', 'https://metravel.by/pl/quests']);
+      expect(crumbs(true, 'ru')).toEqual(['https://metravel.by/quests', 'https://metravel.by/quests']);
+    });
+
+    it('keeps /quests while the hubs are off', () => {
+      expect(crumbs(false, 'en')).toEqual(['https://metravel.by/quests', 'https://metravel.by/quests']);
+    });
   });
 
   it.each(['city', 'country'] as const)('preserves the real %s projection list and breadcrumb', (kind) => {
@@ -85,7 +120,7 @@ describe('client quest structured data', () => {
     const detail = detailFor('ru');
     const title = '</script><script>alert(1)</script>\u2028&';
     const structured = buildQuestPublicStructuredData({ ...detail,
-      page: { ...detail.page, meta: { ...detail.page.meta, title } },
+      page: { ...detail.page, heading: title },
     });
     const script = jsonLdScript(structured);
     expect(script.props.type).toBe('application/ld+json');

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import type { SupportedLocale } from '@/i18n/config'
+import { isSupportedLocale, type SupportedLocale } from '@/i18n/config'
 import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
 
 /**
@@ -15,4 +15,9 @@ export function areQuestLocaleHubsPublished(): boolean {
 export function localizeQuestCatalogHref<T extends string | object>(href: T, locale: SupportedLocale): T | string {
   if (href !== '/quests' || locale === 'ru' || !areQuestLocaleHubsPublished()) return href
   return buildQuestLocaleHubPath(locale) ?? href
+}
+
+/** Catalogue path for a content language from data (`inLanguage`, projection locale). */
+export function questCatalogPathForLocale(locale: unknown): string {
+  return isSupportedLocale(locale) ? String(localizeQuestCatalogHref('/quests', locale)) : '/quests'
 }

@@ -32,13 +32,20 @@ function normalizeText(value, fallback = '') {
     .trim();
 }
 
-function stripRepeatedCityPrefix(title, cityName) {
-  if (!title || !cityName) return title;
-  if (!title.toLowerCase().startsWith(cityName.toLowerCase())) return title;
+// Префикс названия до «: » или « — », который называет город, снимается, остаток
+// начинается с заглавной; иначе название остаётся целиком (#3332). Город без
+// разделителя — часть фразы: «Витебск как галерея: …» не превращается в «как галерея: …».
+function stripCityHeadPrefix(title, isCityPrefix) {
+  const text = normalizeText(title);
+  const match = /^(.+?)(?::\s+|\s+[—–]\s+)(.+)$/u.exec(text);
+  if (!match || !isCityPrefix(match[1])) return text;
+  const rest = match[2].trim();
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
+}
 
-  const remainder = title.slice(cityName.length);
-  if (remainder && !/^[\s:–—-]/u.test(remainder)) return title;
-  return remainder.replace(/^[\s:–—-]+/u, '').trim() || title;
+function isBareCityPrefix(prefix, ...cityNames) {
+  const value = prefix.toLowerCase();
+  return cityNames.some((name) => Boolean(name) && value === name.toLowerCase());
 }
 
 function buildBrandedSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
@@ -152,7 +159,6 @@ function buildQuestSeoMetadata({
       : (key, count, params) => translate(key, { ...params, count }));
   const questTitle = normalizeText(title, translate('seo:utils.questSeo.gorodskoy_kvest_2737d6fc'));
   const city = normalizeText(cityName);
-  const shortTitle = stripRepeatedCityPrefix(questTitle, city);
   // SEO-QUESTS #1756: заголовок больше не открывается формулой «<Город>: что
   // посмотреть». Замер GSC 05.08–01.09.2026 показал, что кластер «что посмотреть
   // / куда сходить / достопримечательности» на сайте держат статьи /travels
@@ -165,6 +171,7 @@ function buildQuestSeoMetadata({
   const searchTitle = cityLabel && !questTitleNamesCity(questTitle, cityLabel)
     ? translate('seo:utils.questSeo.city_prefixed_quest_title', { value1: cityLabel, value2: questTitle })
     : questTitle;
+  const shortTitle = stripCityHeadPrefix(questTitle, (prefix) => isBareCityPrefix(prefix, city, cityLabel));
 
   // #3284: сразу после названия идёт формат — «сами, в любой день, без записи».
   // Посетитель из поиска принял квест за мероприятие с датой, записью и ценой:
@@ -252,23 +259,17 @@ function questCityLandingPlaceLabels(places, cityName) {
 }
 
 // «Минск: звезда над батлейкой» и «Квест по Минску: звезда над батлейкой» на
-// странице Минска — это «звезда над батлейкой»: город уже открывает описание.
-// Снимается только префикс до двоеточия или тире, целиком состоящий из города
-// («Минск:») или из «Квест <предлог> <город>». «Витебск как галерея: …»,
-// «Квест по дворикам Минска: …» и «Велоквест из Гродно: …» несут смысл и
-// остаются целиком.
+// странице Минска — это «Звезда над батлейкой»: город уже открывает описание.
+// Кроме самого города («Минск:») снимается «Квест <предлог> <город>».
+// «Витебск как галерея: …», «Квест по дворикам Минска: …» и «Велоквест из
+// Гродно: …» несут смысл и остаются целиком.
 function questLandingQuestTitle(title, cityLabel) {
-  const text = normalizeText(title);
-  const match = /^(.+?)(?::\s+|\s+[—–]\s+)(.+)$/u.exec(text);
-  if (!match || !cityLabel) return text;
-  const prefix = match[1];
-  const words = prefix.split(/\s+/u);
-  const namesCity = prefix.toLowerCase() === cityLabel.toLowerCase()
-    || (words.length === 3 && QUEST_WORD.test(words[0]) && questTitleNamesCity(words[2], cityLabel));
-  if (!namesCity) return text;
-  // «Брест: пока горит свеча» в списке посадочной читается как «Пока горит свеча».
-  const rest = match[2].trim();
-  return rest.charAt(0).toUpperCase() + rest.slice(1);
+  if (!cityLabel) return normalizeText(title);
+  return stripCityHeadPrefix(title, (prefix) => {
+    const words = prefix.split(/\s+/u);
+    return isBareCityPrefix(prefix, cityLabel)
+      || (words.length === 3 && QUEST_WORD.test(words[0]) && questTitleNamesCity(words[2], cityLabel));
+  });
 }
 
 function buildQuestCityLandingMeta({

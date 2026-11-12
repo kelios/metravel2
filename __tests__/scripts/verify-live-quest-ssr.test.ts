@@ -12,7 +12,7 @@ const projection = { ...detail, schema_version: 2, state: 'available', publicati
   ru_source_path: detail.canonical_path, versions: [] };
 const page = projection.page;
 const graph = { '@graph': [
-  { '@type': 'TouristTrip', name: page.meta.title, description: page.meta.description, touristType: page.meta.tourist_type,
+  { '@type': 'TouristTrip', name: page.heading, description: page.meta.description, touristType: page.meta.tourist_type,
     location: { '@type': 'City', name: page.meta.city_name }, url: page.meta.canonical, mainEntityOfPage: page.meta.canonical, inLanguage: 'ru' },
   { '@type': 'BreadcrumbList', itemListElement: [{ item: page.meta.canonical }] },
 ] };

@@ -24,7 +24,7 @@ describe('quest SEO metadata', () => {
 
     expect(seo.title).toBe('Витебск: столица авангарда | Metravel')
     expect(seo.title).not.toContain('что посмотреть')
-    expect(seo.description).toContain('Город Витебск: бесплатный пеший маршрут «столица авангарда»')
+    expect(seo.description).toContain('Город Витебск: бесплатный пеший маршрут «Столица авангарда»')
     expect(seo.description).toContain('8 точек. Примерно 2 ч.')
     expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
   })
@@ -101,7 +101,7 @@ describe('quest SEO metadata', () => {
   it('says the quest is self-guided right after the title and never cuts a sentence (#3284)', () => {
     const fits = buildQuestSeoMetadata({ title: 'Витебск: столица авангарда', cityName: 'Витебск', points: 8, durationMin: 120 })
     expect(fits.description).toBe(
-      'Город Витебск: бесплатный пеший маршрут «столица авангарда» по достопримечательностям. Проходите сами в любой день, без записи. 8 точек. Примерно 2 ч.',
+      'Город Витебск: бесплатный пеший маршрут «Столица авангарда» по достопримечательностям. Проходите сами в любой день, без записи. 8 точек. Примерно 2 ч.',
     )
 
     // Длинное название: формат помещается, а число точек и время опускаются целиком.
@@ -109,6 +109,35 @@ describe('quest SEO metadata', () => {
     expect(tight.description).toContain('Проходите сами в любой день, без записи.')
     expect(tight.description).toMatch(/\.$/u)
     expect(encodedAttributeLength(tight.description)).toBeLessThanOrEqual(160)
+  })
+
+  // #3238: the EN lead reads as a sentence («City Grodno: …» did not), the PL
+  // lead carries the searched phrase «gra miejska»; both stay whole sentences.
+  it.each([
+    ['en', 'Grodno: a free walking route “The Royal City on the Neman” past the sights. Self-guided, any day, no booking.'],
+    ['pl', 'Grodno: bezpłatna gra miejska „The Royal City on the Neman” — trasa piesza po zabytkach. Przejdź samodzielnie'],
+  ])('builds the %s detail lead from its own catalog', (locale, lead) => {
+    const ssg = createSsgTranslator(loadSsgCatalogs(path.resolve(__dirname, '../..')).catalogs, locale)
+    const seo = buildQuestSeoMetadata({
+      title: 'Grodno: The Royal City on the Neman', cityName: 'Grodno', points: 9, durationMin: 120,
+      translate: ssg.t, translatePlural: ssg.tp, locale: ssg.languageTag,
+    })
+    expect(seo.description.startsWith(lead)).toBe(true)
+    expect(seo.description).toMatch(/\.$/u)
+    expect(encodedAttributeLength(seo.description)).toBeLessThanOrEqual(160)
+  })
+
+  // #3332: the city goes only as a standalone head before «: » or « — »; the
+  // rest starts with a capital. A city inside the phrase keeps the title whole.
+  it.each([
+    ['Витебск как галерея: опись девяти стен', 'Витебск', '«Витебск как галерея: опись девяти стен»'],
+    ['Минск: столица авангарда', 'Минск', '«Столица авангарда»'],
+    ['Минск — звезда над батлейкой', 'Минск', '«Звезда над батлейкой»'],
+    ['Квест по Минску: предания пана Бохана', 'Минск', '«Квест по Минску: предания пана Бохана»'],
+    ['Вашково: усадьба у озера', 'д.Вашково (Ушачского района)', '«Усадьба у озера»'],
+  ])('names «%s» in the description whole unless the city is its own head', (title, cityName, quoted) => {
+    const seo = buildQuestSeoMetadata({ title, cityName, points: 8 })
+    expect(seo.description).toContain(`маршрут ${quoted} по достопримечательностям.`)
   })
 
   it('builds native quest metadata when Intl.PluralRules is unavailable', () => {

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict')
 const { parseDocument, DomUtils } = require('htmlparser2')
 const { STATIC_PAGES } = require('./postprocess-route-shells')
 const { parseCliArgs, requireNonEmptySelection, runCli } = require('./lib/cli-contract')
+const { parseQuestLocaleHubRoute } = require('../utils/questLocaleRouting')
 
 const SITE_URL = 'https://metravel.by'
 const LOCALES = ['be', 'uk', 'pl', 'en']
@@ -56,11 +57,17 @@ if (require.main === module) runCli(async () => {
     const base = await readCanonicalBreadcrumbs(page, 'ru')
     for (const locale of LOCALES) {
       assert.deepEqual(await readCanonicalBreadcrumbs(page, locale), base, `${page.route} (${locale})`)
-      // The locale-prefixed public URL contract covers quest details only.
-      const { response, context, breadcrumbs } = await readDocument(`/${locale}${page.route}`, locale)
+      // The locale-prefixed public URL contract covers quest details and the
+      // catalogue hubs `/{locale}/quests` (#3217); every other prefix is 404.
+      const prefixed = `/${locale}${page.route}`
+      const { response, context, breadcrumbs } = await readDocument(prefixed, locale)
+      if (parseQuestLocaleHubRoute(prefixed)) {
+        assert.equal(response.status, 200, context)
+        continue
+      }
       assert.equal(response.status, 404, context)
       assert.equal(breadcrumbs.length, 0, context)
     }
-    console.log(`${page.route} | RU: ${base.map((item) => item.name).join(' › ')} | BE/UK/PL/EN prefixes: 404`)
+    console.log(`${page.route} | RU: ${base.map((item) => item.name).join(' › ')} | BE/UK/PL/EN prefixes: checked`)
   }
 }, CLI_SPEC)

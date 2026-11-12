@@ -1,5 +1,6 @@
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
+import { questCatalogPathForLocale } from '@/utils/questLocaleHubs'
 const SITE_URL = 'https://metravel.by';
 // The static HTML shell owns the WebSite/Organization declarations. Discovery
 // payloads only link to that shared identity and must not re-declare it.
@@ -33,7 +34,7 @@ type QuestEntry = {
 type QuestDetailInput = {
   canonical: string;
   title: string;
-  /** Plain quest name for the last crumb; `title` carries the « | Metravel» suffix. */
+  /** Plain quest name for the last crumb and the quest entity; `title` carries the « | Metravel» suffix. */
   crumbName?: string;
   description: string;
   questId: string;
@@ -241,7 +242,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
   const breadcrumb = buildBreadcrumbList(
     [
       { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
-      { name: i18nT('seoStatic:structuredData.quests'), item: `${SITE_URL}/quests` },
+      { name: i18nT('seoStatic:structuredData.quests'), item: `${SITE_URL}${questCatalogPathForLocale(input.inLanguage)}` },
       { name: input.crumbName || input.title, item: input.canonical },
     ],
     breadcrumbId
@@ -267,7 +268,8 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
       {
         '@type': 'CreativeWork',
         '@id': creativeWorkId,
-        name: input.title,
+        // #3238: the quest is named by itself; the branded `<title>` names the page.
+        name: input.crumbName || input.title,
         description: input.description,
         url: input.canonical,
         inLanguage: input.inLanguage ?? getActiveLocaleDefinition().htmlLang,

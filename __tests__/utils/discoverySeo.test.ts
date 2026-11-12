@@ -137,6 +137,7 @@ describe('discoverySeo', () => {
     const jsonLd = createQuestDetailStructuredData({
       canonical: 'https://metravel.by/quests/minsk/minsk-cmok',
       title: 'Минский цмок | MeTravel',
+      crumbName: 'Минский цмок',
       description: 'Маршрут и задания городского квеста.',
       questId: 'minsk-cmok',
       cityId: 'minsk',
@@ -158,6 +159,7 @@ describe('discoverySeo', () => {
           '@type': 'CreativeWork',
           '@id': 'https://metravel.by/quests/minsk/minsk-cmok#quest',
           identifier: 'minsk:minsk-cmok',
+          name: 'Минский цмок',
         }),
         expect.objectContaining({
           '@type': 'BreadcrumbList',

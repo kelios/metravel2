@@ -1,7 +1,7 @@
 {
-  "utils.questSeo.besplatnyy_peshiy_marshrut_value1_po_dostopr_8cbbea0f": "Free walking route “{{value1}}” around the sights.",
+  "utils.questSeo.besplatnyy_peshiy_marshrut_value1_po_dostopr_8cbbea0f": "A free walking route “{{value1}}” past the sights.",
   "utils.questSeo.city_prefixed_quest_title": "{{value1}} — {{value2}}",
-  "utils.questSeo.gorod_value1_besplatnyy_peshiy_marshrut_valu_951719a3": "City {{value1}}: free walking route “{{value2}}” along the sights.",
+  "utils.questSeo.gorod_value1_besplatnyy_peshiy_marshrut_valu_951719a3": "{{value1}}: a free walking route “{{value2}}” past the sights.",
   "utils.questSeo.gorodskoy_kvest_2737d6fc": "City quest",
   "utils.questSeo.pointNoun": "points",
   "utils.questSeo.pointNoun_few": "points",

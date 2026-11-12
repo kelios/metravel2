@@ -39,7 +39,12 @@ RU сохраняет `/quests/{numericCityId}/{questSlug}` и существу�
 на хаб включаются флагом сборки `EXPO_PUBLIC_QUEST_LOCALE_HUBS=true`, только
 web. Порядок выпуска тот же, что у деталей (#2364): сначала бэкенд отдаёт
 хаб (gateway, Nginx location, loader, sitemap), затем включается флаг. До
-этого nginx отвечает на `/{locale}/quests` 404, и ссылок туда нет.
+этого nginx отвечает на `/{locale}/quests` 404, и ссылок туда нет. Бэкенд
+выкачен (#3261), и хабы отвечают 200, но флаг в prod-сборке пока не включён:
+список хаба фильтруется по наличию перевода, а не по тому, отдаёт ли сервер
+переводную страницу, и квест с noindex-переводом дал бы ссылку на 404. Флаг
+включается после поля `served_locales` в API списка (#3349). Head хаба (title, description)
+берётся из записи `/quests` в `utils/seoRoutes/staticRoutes.js` на языке адреса.
 Общий `utils/questLocaleRouting.js` проверяет locale, положительный безопасный
 числовой ID и slug; canonical исключает query/print параметры.
 

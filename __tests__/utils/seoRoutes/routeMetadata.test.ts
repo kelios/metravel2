@@ -1,3 +1,4 @@
+import { i18n, translate } from '@/i18n';
 import { notFoundRouteMetadata, routeMetadata, staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
 
 describe('utils/seoRoutes/routeMetadata (#2740)', () => {
@@ -26,6 +27,21 @@ describe('utils/seoRoutes/routeMetadata (#2740)', () => {
     expect(metadata.openGraph.url).toBeUndefined();
     expect(metadata.openGraph.images).toBeUndefined();
     expect(metadata.twitter.card).toBe('summary');
+  });
+
+  // #3217: the locale hubs reuse the /quests entry; its head follows the request locale.
+  it('localizes the /quests head for the locale hubs', async () => {
+    try {
+      await i18n.changeLanguage('en');
+      const hub = staticRouteMetadata('/quests', { canonical: '/en/quests' });
+      expect(hub.title).toBe('City quests and routes with tasks | Metravel');
+      expect(hub.description).toBe(translate('seoStatic:root.quests.description'));
+      expect(hub.description).not.toMatch(/[а-яё]/i);
+      expect(hub.alternates?.canonical).toMatch(/\/en\/quests$/);
+    } finally {
+      await i18n.changeLanguage('ru');
+    }
+    expect(staticRouteMetadata('/quests').title).toBe('Городские квесты и маршруты с заданиями | Metravel');
   });
 
   it('refuses a route that is not in the shared table', () => {
