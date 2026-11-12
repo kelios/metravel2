@@ -1,0 +1,143 @@
+{
+  "contractVersion": 1,
+  "note": "Известные расхождения меты квеста (meta.lat/lng, duration_min, difficulty, tags, pet_friendly) data-файла с каталогом прода на 12.11.2026 (#3373): 29 квестов, 79 полей. Ключ — <quest_id>|<поле>. Верная сторона по каждому квесту не разобрана: у части квестов теги есть только на проде, массовый перенос файла на прод их сотрёт. Ратчет только вниз: новое расхождение валит scan-quest-prod-drift, а запись, которой расхождение больше не отвечает, тоже валит до node scripts/scan-quest-prod-drift.js --prune-baseline. Пополнять baseline нельзя.",
+  "known": {
+    "scripts/amsterdam-quest-data.js": [
+      "amsterdam-on-piles|lat",
+      "amsterdam-on-piles|lng"
+    ],
+    "scripts/astana-samruk-tree-quest-data.js": [
+      "astana-samruk-tree|lat",
+      "astana-samruk-tree|lng",
+      "astana-samruk-tree|tags"
+    ],
+    "scripts/belgrade-quest-data.js": [
+      "belgrade-white-city|lat",
+      "belgrade-white-city|lng",
+      "belgrade-white-city|tags"
+    ],
+    "scripts/brest-teens-erased-city-quest-data.js": [
+      "brest-teens-erased-city|duration_min",
+      "brest-teens-erased-city|tags"
+    ],
+    "scripts/grodno-teens-time-capsule-quest-data.js": [
+      "grodno-teens-time-capsule|duration_min",
+      "grodno-teens-time-capsule|difficulty",
+      "grodno-teens-time-capsule|tags"
+    ],
+    "scripts/hel-fishermen-quest-data.js": [
+      "hel-fishermen|lat",
+      "hel-fishermen|lng",
+      "hel-fishermen|duration_min",
+      "hel-fishermen|tags"
+    ],
+    "scripts/karpacz-quest-data.js": [
+      "karpacz-duch-gor|lat",
+      "karpacz-duch-gor|lng",
+      "karpacz-duch-gor|difficulty",
+      "karpacz-duch-gor|tags"
+    ],
+    "scripts/kazan-zilant-syuyumbike-quest-data.js": [
+      "kazan-zilant-syuyumbike|lat",
+      "kazan-zilant-syuyumbike|lng",
+      "kazan-zilant-syuyumbike|tags"
+    ],
+    "scripts/khotomlya-lakes-quest-data.js": [
+      "khotomlya-emerald-lakes|lat",
+      "khotomlya-emerald-lakes|lng",
+      "khotomlya-emerald-lakes|duration_min"
+    ],
+    "scripts/krakow-dragon-quest-data.js": [
+      "krakow-dragon|lat",
+      "krakow-dragon|lng"
+    ],
+    "scripts/krakow-kazimierz-quest-data.js": [
+      "krakow-kazimierz|lat",
+      "krakow-kazimierz|lng",
+      "krakow-kazimierz|tags"
+    ],
+    "scripts/krakow-nowahuta-quest-data.js": [
+      "krakow-nowahuta|duration_min"
+    ],
+    "scripts/lepel-quest-data.js": [
+      "lepel-tsmok|lat",
+      "lepel-tsmok|lng",
+      "lepel-tsmok|duration_min",
+      "lepel-tsmok|tags"
+    ],
+    "scripts/lida-castle-quest-data.js": [
+      "lida-castle|lat",
+      "lida-castle|lng",
+      "lida-castle|duration_min",
+      "lida-castle|tags"
+    ],
+    "scripts/luninets-quest-data.js": [
+      "luninets-bike-polesie|duration_min"
+    ],
+    "scripts/minsk-loshitsa-quest-data.js": [
+      "minsk-loshitsa|lat",
+      "minsk-loshitsa|lng",
+      "minsk-loshitsa|duration_min"
+    ],
+    "scripts/mogilev-night-watch-quest-data.js": [
+      "mogilev-night-watch|tags"
+    ],
+    "scripts/mogilev-teens-symbol-code-quest-data.js": [
+      "mogilev-teens-symbol-code|duration_min",
+      "mogilev-teens-symbol-code|tags"
+    ],
+    "scripts/nesvizh-radziwill-quest-data.js": [
+      "nesvizh-radziwill|lat",
+      "nesvizh-radziwill|lng",
+      "nesvizh-radziwill|difficulty",
+      "nesvizh-radziwill|tags"
+    ],
+    "scripts/shchuchin-quest-data.js": [
+      "shchuchin-versal|lat",
+      "shchuchin-versal|lng"
+    ],
+    "scripts/split-quest-data.js": [
+      "split-dioklecijanova-palaca|lat",
+      "split-dioklecijanova-palaca|lng"
+    ],
+    "scripts/turkestan-yasawi-quest-data.js": [
+      "turkestan-yasawi|lat",
+      "turkestan-yasawi|lng",
+      "turkestan-yasawi|duration_min",
+      "turkestan-yasawi|tags"
+    ],
+    "scripts/vilnius-kids-quest-data.js": [
+      "vilnius-kids-iron-wolf|lat",
+      "vilnius-kids-iron-wolf|lng"
+    ],
+    "scripts/vitebsk-avangard-quest-data.js": [
+      "vitebsk-avangard|lat",
+      "vitebsk-avangard|lng",
+      "vitebsk-avangard|duration_min",
+      "vitebsk-avangard|tags"
+    ],
+    "scripts/vitebsk-kids-living-drawing-quest-data.js": [
+      "vitebsk-kids-living-drawing|duration_min",
+      "vitebsk-kids-living-drawing|tags"
+    ],
+    "scripts/vitebsk-teens-street-art-map-quest-data.js": [
+      "vitebsk-teens-street-art-map|duration_min",
+      "vitebsk-teens-street-art-map|tags"
+    ],
+    "scripts/warsaw-quest-data.js": [
+      "warsaw-syrenka|lat",
+      "warsaw-syrenka|lng"
+    ],
+    "scripts/yerevan-quest-data.js": [
+      "yerevan-ararat|lat",
+      "yerevan-ararat|lng",
+      "yerevan-ararat|tags"
+    ],
+    "scripts/zheludok-quest-data.js": [
+      "zheludok-palace|lat",
+      "zheludok-palace|lng",
+      "zheludok-palace|duration_min",
+      "zheludok-palace|tags"
+    ]
+  }
+}

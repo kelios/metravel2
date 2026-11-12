@@ -51,13 +51,33 @@
  * проверки итог был бы «Расхождений с продом нет» с кодом 0, то есть отчёт о
  * чистоте вслепую.
  *
+ * Мета квеста (#3373) — точка старта, длительность, сложность, теги,
+ * pet_friendly — в бандле `by-quest-id` не приходит, её отдаёт строка каталога.
+ * Каталог читается ОДИН раз на прогон (`/api/quests/?page_size=200`, два
+ * запроса на весь корпус), а не по запросу на город или квест: у прода 1 CPU.
+ * Источник правды для меты — файл, поэтому её расхождение лечит не
+ * `sync-quest-data-from-prod.js`, а `sync-quest-to-prod.js --meta-only`.
+ * Квест с живым бандлом, которого нет в каталоге, — несверенная мета, и она
+ * валит код: иначе пустой или недочитанный каталог давал бы «чисто» по мете
+ * всего корпуса.
+ *
+ * Известные на 12.11.2026 расхождения меты лежат в baseline
+ * `scripts/quest-meta-drift-baseline.json` (ключ `<quest_id>|<поле>` по файлу)
+ * и применяются по умолчанию: такое расхождение печатается жёлтой строкой и код
+ * не валит. Ратчет только вниз: расхождение вне baseline — красный, и запись
+ * baseline, которой расхождение больше не отвечает (мету перенесли, поле
+ * сошлось, квест ушёл из файла), — тоже красный, пока её не уберут
+ * `--prune-baseline`. Пополнять baseline инструментом нельзя.
+ *
  * Exit code 1, если хоть один файл разошёлся с продом.
  */
 
-const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
-const { localQuestDataFiles } = require('./lib/scanBaseline')
+const { DEFAULT_USER_AGENT, fetchQuestBundles, fetchQuestCatalog, loadLocalBundles, parseSteps } = require('./lib/questBundles')
+const path = require('path')
+
+const { loadBaseline, localQuestDataFiles, splitByBaseline, writeBaseline } = require('./lib/scanBaseline')
 const { QUEST_DATA_FILE_PATTERN } = require('./scan-quest-answer-reachability')
-const { diffQuest, comparableFields, DEFAULT_API } = require('./lib/questProdDiff')
+const { diffQuest, diffQuestMeta, formatMetaValue, comparableFields, QUEST_META_FIELDS, DEFAULT_API } = require('./lib/questProdDiff')
 const {
   EmptySelectionError,
   parseCliArgs,
@@ -70,10 +90,12 @@ const {
 const USAGE = `Сверка локальных data-файлов квестов с продом — #1554
 
 Usage:
-  node scripts/scan-quest-prod-drift.js [--source <file>] [--api-url <url>] [--json]
+  node scripts/scan-quest-prod-drift.js [--source <file>] [--api-url <url>] [--baseline <file>] [--prune-baseline] [--json]
 
 Options:
   --source <file>       сверить один data-файл вместо всего корпуса
+  --baseline <file>     известные расхождения меты (по умолчанию scripts/quest-meta-drift-baseline.json)
+  --prune-baseline      убрать из baseline записи, которым расхождение больше не отвечает (только убирает)
   --api-url <url>       адрес прода (по умолчанию METRAVEL_API_URL или https://metravel.by)
   --json                machine-readable результат на stdout
   --help, -h            напечатать эту справку и выйти`
@@ -90,9 +112,17 @@ const CLI_SPEC = {
   flags: {
     'api-url': { type: 'string', default: DEFAULT_API, stripTrailingSlash: true },
     source: { type: 'string' },
+    baseline: { type: 'string', default: 'scripts/quest-meta-drift-baseline.json' },
+    'prune-baseline': { type: 'boolean' },
     json: { type: 'boolean' },
   },
 }
+
+const BASELINE_PATH = CLI_SPEC.flags.baseline.default
+const BASELINE_CONTRACT_VERSION = 1
+const PRUNE_COMMAND = 'node scripts/scan-quest-prod-drift.js --prune-baseline'
+
+const metaKey = (questId, field) => `${questId}|${field}`
 
 /**
  * 404 по конкретному квесту — это результат замера, а не сбой замера: сравнивать
@@ -116,9 +146,16 @@ function isMissingOnProd(error) {
  * (сравнили всё, расхождений нет) от корпуса, который не сравнили вовсе: в
  * обоих случаях `rows` не содержит ни одного расхождения.
  */
-async function scanFile(file, apiUrl) {
+async function scanFile(file, apiUrl, prodMetaByQuestId, knownMetaKeys = []) {
   const quests = loadLocalBundles(file, null)
+  const known = new Set(knownMetaKeys)
   const rows = []
+  const staleBaseline = []
+  const localIds = new Set(quests.map((q) => q?.quest_id).filter(Boolean))
+  for (const key of known) {
+    const [questId, field] = key.split('|')
+    if (!localIds.has(questId)) staleBaseline.push({ file, quest_id: questId, field, reason: 'квеста нет в файле' })
+  }
   let compared = 0
   for (const quest of quests) {
     if (!quest?.quest_id) continue
@@ -132,16 +169,35 @@ async function scanFile(file, apiUrl) {
     }
     compared += 1
     const diff = diffQuest(quest, bundle, parseSteps(bundle))
+    // Без каталога (вызов без третьего аргумента) мету не сверяем вовсе; квест,
+    // которого в каталоге нет при живом бандле, — отдельная пометка, а не «чисто».
+    const prodMeta = prodMetaByQuestId ? prodMetaByQuestId.get(quest.quest_id) : undefined
+    const metaAll = quest.meta && prodMeta ? diffQuestMeta(quest.meta, prodMeta) : []
+    const split = splitByBaseline(metaAll, knownMetaKeys, (m) => [metaKey(quest.quest_id, m.field)])
+    diff.meta = split.fresh
+    diff.metaKnown = split.known
+    diff.metaUnchecked = Boolean(prodMetaByQuestId && quest.meta && !prodMeta)
+    // Запись baseline судится только по реально сверенной мете: 404 и «нет в
+    // каталоге» ничего не доказывают ни в одну сторону.
+    if (quest.meta && prodMeta) {
+      const drifting = new Set(metaAll.map((m) => m.field))
+      for (const key of known) {
+        const [questId, field] = key.split('|')
+        if (questId === quest.quest_id && !drifting.has(field)) {
+          staleBaseline.push({ file, quest_id: questId, field, reason: 'расхождения больше нет' })
+        }
+      }
+    }
     // Гейт валит то, что заливка реально перенесёт, — расхождения полей шага и
     // текста интро/финала, — и отставший порядок точек: по нему файл меряет
     // гейт маршрута (#2426). Разошедшийся состав шагов заливка не применяет ни
     // в одну сторону (`sync-quest-to-prod.js:107` пропускает шаг, которого нет
     // на проде), поэтому он идёт в отчёт, но не в код возврата.
-    const drifted = diff.changed.length || diff.questLevel.length || diff.order
+    const drifted = diff.changed.length || diff.questLevel.length || diff.order || diff.meta.length
     const structure = diff.onlyLocal.length || diff.onlyProd.length
-    if (drifted || structure) rows.push({ file, ...diff, drifted: Boolean(drifted) })
+    if (drifted || structure || diff.metaUnchecked || diff.metaKnown.length) rows.push({ file, ...diff, drifted: Boolean(drifted) })
   }
-  return { rows, compared }
+  return { rows, compared, staleBaseline }
 }
 
 /**
@@ -151,8 +207,21 @@ async function scanFile(file, apiUrl) {
  */
 const parseArgs = (tokens) => parseCliTokens(tokens, CLI_SPEC)
 
-function reportText(rows, files, compared) {
-  console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')} и порядок точек`)
+/**
+ * Мета квеста с прода по `quest_id` — из одного обхода каталога. Строки каталога
+ * несут ровно те поля, что показывает карточка квеста: `lat`, `lng`,
+ * `duration_min`, `difficulty`, `tags`, `pet_friendly`.
+ */
+async function fetchProdMeta(apiUrl) {
+  const rows = await fetchQuestCatalog(apiUrl, DEFAULT_USER_AGENT, { pageSize: 200 })
+  return new Map(rows.filter((row) => row?.quest_id).map((row) => [row.quest_id, row]))
+}
+
+/** Строки с полями шага / интро / финала / порядком — то, что переносит `sync-quest-data-from-prod.js`. */
+const hasContentDrift = (row) => Boolean(row.changed?.length || row.questLevel?.length || row.order)
+
+function reportText(rows, files, compared, staleBaseline = []) {
+  console.log(`Сверка локальных data-файлов с продом: ${files} файлов, поля ${comparableFields.join(', ')}, порядок точек и мета квеста (${QUEST_META_FIELDS.join(', ')})`)
 
   const missing = rows.filter((r) => r.missingOnProd)
   const diffRows = rows.filter((r) => !r.missingOnProd)
@@ -170,11 +239,17 @@ function reportText(rows, files, compared) {
     for (const c of row.changed) console.log(`    ${c.step_id} (id ${c.prod_db_id ?? '?'}): ${c.fields.join(', ')}`)
     for (const q of row.questLevel) console.log(`    ${q.scope} / ${q.field}: расходится`)
     if (row.order) console.log(`    порядок точек: файл ${row.order.local.join(' → ')}; прод ${row.order.prod.join(' → ')}`)
+    for (const m of row.meta || []) console.log(`    мета / ${m.field}: файл ${formatMetaValue(m.field, m.local)}; прод ${formatMetaValue(m.field, m.prod)}`)
+    if (row.metaUnchecked) console.log('    мета не сверена: квеста нет в каталоге /api/quests/ (бандл при этом отвечает)')
+    for (const m of row.metaKnown || []) console.log(`    ⚠️ известное расхождение меты (#3373): ${m.field} — файл ${formatMetaValue(m.field, m.local)}; прод ${formatMetaValue(m.field, m.prod)}`)
+    if (row.meta?.length) console.log(`    перенести мету файла на прод — node scripts/sync-quest-to-prod.js --source-file=${row.file} --meta-only --dry-run`)
   }
 
   const drifted = diffRows.filter((r) => r.drifted)
   const steps = drifted.reduce((n, r) => n + r.changed.length, 0)
-  const infoOnly = diffRows.length - drifted.length
+  const metaDrifted = drifted.filter((r) => r.meta?.length).length
+  const contentDrifted = drifted.filter(hasContentDrift).length
+  const infoOnly = diffRows.filter((r) => !r.drifted && (r.onlyLocal?.length || r.onlyProd?.length)).length
   if (infoOnly) console.log(`\nРазошёлся состав шагов (заливка его не применяет, гейт не валит): ${infoOnly} квестов`)
   // Охват печатается всегда и рядом с вердиктом: «расхождений нет» после
   // сравнения одного квеста из корпуса — это не чистота, а несравнённый
@@ -183,9 +258,28 @@ function reportText(rows, files, compared) {
   // читался бы как зелёный.
   const visited = Number.isFinite(compared) ? compared + missing.length : null
   const coverage = visited ? ` (сравнено ${compared} из ${visited} квестов)` : ''
-  console.log(drifted.length
-    ? `\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов${coverage}. Перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`
-    : `\nРасхождений с продом нет${coverage}.`)
+  const knownMeta = diffRows.filter((r) => r.metaKnown?.length)
+  if (knownMeta.length) console.log(`\nИзвестные расхождения меты (#3373, baseline ${BASELINE_PATH}): ${knownMeta.length} квестов — код не валят`)
+  if (staleBaseline.length) {
+    console.log(`\nУстаревшие записи baseline меты — потолок только опускается, убрать: ${PRUNE_COMMAND}`)
+    for (const s of staleBaseline) console.log(`  ${s.file} [${s.quest_id}] ${s.field}: ${s.reason}`)
+  }
+  // Бандл и каталог отдаёт один queryset (`status=1`), поэтому живой бандл без
+  // строки каталога — неполный замер меты (каталог не прочитался целиком), а не
+  // «чисто»: такие квесты валят код так же, как расхождение.
+  const unchecked = diffRows.filter((r) => r.metaUnchecked).length
+  if (unchecked) console.log(`\nМета не сверена у ${unchecked} квестов: их нет в каталоге /api/quests/ — замер неполный`)
+  if (!drifted.length) {
+    // Устаревшая запись baseline валит код (`main`), поэтому и текст не зелёный.
+    if (!unchecked && !staleBaseline.length) console.log(`\nРасхождений с продом нет${coverage}.`)
+    return
+  }
+  // Два направления — две команды. Контент шагов правят на проде, файл догоняет
+  // (`sync-quest-data-from-prod.js`); мету правят в файле, прод догоняет
+  // (`sync-quest-to-prod.js --meta-only`, команда — у каждого квеста выше).
+  console.log(`\nРазошлись с продом: ${drifted.length} квестов, ${steps} шагов, мета у ${metaDrifted}${coverage}.`)
+  if (contentDrifted) console.log(`  Контент шагов (${contentDrifted} квестов): перенести прод в файл — node scripts/sync-quest-data-from-prod.js --all`)
+  if (metaDrifted) console.log(`  Мета (${metaDrifted} квестов): источник правды — файл; перенести на прод — node scripts/sync-quest-to-prod.js --source-file=<файл> --meta-only --dry-run, затем --apply`)
 }
 
 async function main() {
@@ -199,12 +293,33 @@ async function main() {
     },
   )
 
+  const baselinePath = path.resolve(process.cwd(), args.baseline)
+  const baseline = loadBaseline(baselinePath, BASELINE_CONTRACT_VERSION)
+  const prodMeta = await fetchProdMeta(args.apiUrl)
   const rows = []
+  let staleBaseline = []
   let compared = 0
   for (const file of files) {
-    const result = await scanFile(file, args.apiUrl)
+    const result = await scanFile(file, args.apiUrl, prodMeta, baseline.known?.[file])
     rows.push(...result.rows)
+    staleBaseline.push(...result.staleBaseline)
     compared += result.compared
+  }
+  // Файл, которого больше нет в корпусе, — тоже устаревшая запись (только на
+  // корпусном прогоне: точечный `--source` о чужих файлах не судит).
+  if (!args.source) {
+    for (const [file, keys] of Object.entries(baseline.known || {})) {
+      if (files.includes(file)) continue
+      for (const key of keys) {
+        const [questId, field] = key.split('|')
+        staleBaseline.push({ file, quest_id: questId, field, reason: 'файла нет в корпусе' })
+      }
+    }
+  }
+  if (args.pruneBaseline && staleBaseline.length) {
+    pruneBaseline(baselinePath, baseline, staleBaseline)
+    console.error(`Baseline меты: убрано ${staleBaseline.length} устаревших записей из ${args.baseline}`)
+    staleBaseline = []
   }
 
   // Весь корпус ответил 404 — измерения не было. Отдельная категория «на проде
@@ -221,19 +336,39 @@ async function main() {
     )
   }
 
-  if (args.json) console.log(JSON.stringify({ files: files.length, rows }, null, 2))
-  else reportText(rows, files.length, compared)
+  if (args.json) {
+    const flat = (key) => rows.flatMap((r) => (r[key] || []).map((m) => ({ file: r.file, quest_id: r.quest_id, ...m })))
+    console.log(JSON.stringify({ files: files.length, compared, metaDrift: flat('meta'), metaKnown: flat('metaKnown'), staleBaseline, rows }, null, 2))
+  } else reportText(rows, files.length, compared, staleBaseline)
 
   // После отчёта, а не вместо него: найденное расхождение — это результат
   // замера, и оператор должен увидеть список раньше вердикта.
+  // Единица счёта — сравненный квест и запись baseline: на одном `--source`
+  // бывает и несколько разошедшихся квестов, и несколько устаревших записей,
+  // а `requireNoBatchFailures` при failed > total отвечает TypeError вместо вердикта.
   const drifted = rows.filter((r) => r.drifted)
-  requireNoBatchFailures(drifted.length, {
-    total: files.length,
-    message: `разошлись с продом: ${drifted.length} из ${files.length} файлов`,
+  const unchecked = rows.filter((r) => r.metaUnchecked)
+  const failingQuests = rows.filter((r) => r.drifted || r.metaUnchecked).length
+  requireNoBatchFailures(failingQuests + staleBaseline.length, {
+    total: compared + staleBaseline.length,
+    message: `разошлись с продом: ${drifted.length} из ${files.length} файлов; устаревших записей baseline меты: ${staleBaseline.length}`
+      + (staleBaseline.length ? ` — ${PRUNE_COMMAND}` : '')
+      + (unchecked.length ? `; мета не сверена (нет в каталоге): ${unchecked.length}` : ''),
   })
 }
 
-module.exports = { CLI_SPEC, USAGE, isMissingOnProd, scanFile, parseArgs, reportText, main }
+/** Ратчет вниз: из baseline только убираются записи, добавить их отсюда нельзя. */
+function pruneBaseline(baselinePath, baseline, staleBaseline) {
+  const drop = new Set(staleBaseline.map((s) => `${s.file}\n${metaKey(s.quest_id, s.field)}`))
+  const known = {}
+  for (const [file, keys] of Object.entries(baseline.known || {})) {
+    const left = keys.filter((key) => !drop.has(`${file}\n${key}`))
+    if (left.length) known[file] = left
+  }
+  writeBaseline(baselinePath, { contractVersion: baseline.contractVersion, note: baseline.note, known })
+}
+
+module.exports = { BASELINE_CONTRACT_VERSION, BASELINE_PATH, CLI_SPEC, USAGE, isMissingOnProd, scanFile, fetchProdMeta, parseArgs, pruneBaseline, reportText, main }
 
 if (require.main === module) {
   runCli(main, { name: CLI_SPEC.name, usage: USAGE })

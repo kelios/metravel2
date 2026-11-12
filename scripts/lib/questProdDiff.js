@@ -187,8 +187,68 @@ function diffQuest(quest, bundle, prodSteps) {
   }
 }
 
+/**
+ * Мета квеста — то, что каталог и карта показывают до входа в квест: точка
+ * старта, длительность, сложность, теги, «можно с собакой» (#3373). Шаговый
+ * бандл `by-quest-id` её не отдаёт; она приходит строкой каталога
+ * (`/api/quests/`, `/api/quests/by-city/<id>/`). Источник правды — `meta`
+ * data-файла, на прод её переносит `sync-quest-to-prod.js`.
+ */
+const QUEST_META_FIELDS = Object.freeze(['lat', 'lng', 'duration_min', 'difficulty', 'tags', 'pet_friendly'])
+
+/** Координаты старта: БД хранит 7 знаков, файл — 6; меньше микроградуса (~0,1 м) расхождением не считается. */
+const META_COORD_TOLERANCE = 1e-6
+
+/** Теги: в файле массив, в API объект `{tag: true}` (у старых строк — тоже массив). */
+function metaTagSet(value) {
+  if (value == null) return []
+  const keys = Array.isArray(value) ? value : Object.keys(value).filter((key) => value[key])
+  return [...new Set(keys.map(String))].sort()
+}
+
+function sameMetaValue(field, local, prod) {
+  if (field === 'lat' || field === 'lng') {
+    const a = Number(local)
+    const b = Number(prod)
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b
+    // 1e-9 — запас на двоичное представление: 52.120117 − 52.120116 даёт 1.0000000003e-6.
+    return Math.abs(a - b) <= META_COORD_TOLERANCE + 1e-9
+  }
+  if (field === 'tags') return metaTagSet(local).join('\n') === metaTagSet(prod).join('\n')
+  if (field === 'pet_friendly') return Boolean(local) === Boolean(prod)
+  if (field === 'duration_min') return Number(local) === Number(prod)
+  return (local ?? null) === (prod ?? null)
+}
+
+/** Значение поля так, как его печатает отчёт: теги — списком через запятую. */
+function formatMetaValue(field, value) {
+  if (field === 'tags') return metaTagSet(value).join(',') || '—'
+  return value == null ? '—' : String(value)
+}
+
+/**
+ * Разошедшиеся поля меты: `[{ field, local, prod }]`.
+ *
+ * Сравниваются только поля, записанные в файле: заливка шлёт ровно их, и
+ * отсутствующее в `meta` поле (у части файлов нет `pet_friendly` или точки
+ * старта) прод не трогает — значит и откатить его не может. `null` — то же
+ * «не задано»: иначе `lat: null` ушёл бы на прод нулевой координатой.
+ */
+function diffQuestMeta(localMeta, prodRow) {
+  if (!localMeta || !prodRow) return []
+  return QUEST_META_FIELDS
+    .filter((field) => localMeta[field] != null)
+    .filter((field) => !sameMetaValue(field, localMeta[field], prodRow[field]))
+    .map((field) => ({ field, local: localMeta[field], prod: prodRow[field] ?? null }))
+}
+
 module.exports = {
   DEFAULT_API,
+  QUEST_META_FIELDS,
+  META_COORD_TOLERANCE,
+  diffQuestMeta,
+  formatMetaValue,
+  metaTagSet,
   comparableFields,
   normalizeField,
   diffStep,

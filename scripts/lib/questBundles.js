@@ -31,11 +31,13 @@ function parseSteps(bundle) {
  * Строки каталога `/api/quests/` целиком. Список пагинируется (`{ data | results, next_page_url | next }`),
  * поэтому идём по страницам, а не берём первую: `page_size` на этом API кламится.
  */
-async function fetchQuestCatalog(base, userAgent = DEFAULT_USER_AGENT) {
+async function fetchQuestCatalog(base, userAgent = DEFAULT_USER_AGENT, { pageSize } = {}) {
   const root = base.replace(/\/+$/, '')
   const rows = []
   const seen = new Set()
-  let url = `${root}/api/quests/`
+  // `pageSize` — для корпусного свипа: потолок API 200 (`QuestCatalogPaginator`),
+  // при умолчании 20 весь каталог — это 18 запросов вместо двух.
+  let url = pageSize ? `${root}/api/quests/?page_size=${pageSize}` : `${root}/api/quests/`
   while (url && !seen.has(url)) {
     seen.add(url)
     const page = await fetchJson(url, { userAgent })
@@ -85,6 +87,7 @@ function loadLocalBundles(sourceFile, questId) {
     quest_id: quest.quest_id,
     title: quest.title,
     city: quest.city,
+    meta: quest.meta ?? null,
     intro: quest.intro ?? null,
     finale: quest.finale ?? null,
     steps: quest.steps || [],
