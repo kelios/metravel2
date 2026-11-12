@@ -12,6 +12,15 @@
  *   - og:image is a large image (not thumb_200)
  *   - robots meta for noindex pages
  *
+ * And the server contracts the head cannot show (no JS, redirects not followed):
+ *   - hub and catalogue links in raw HTML (#3218, #3323), sitemap shape and
+ *     <lastmod>, per article too (#3235, #3344)
+ *   - ETag + 304 on an article, /quests and an author profile (#3233)
+ *   - /travels/<id> → 301 to the slug, /quests/<id>/ → one redirect (#3282)
+ *   - hreflang of a quest page = sitemap alternates, each answering 200 (#3282)
+ *   - a missing profile is a 404 with X-Robots-Tag: noindex (#3240)
+ *   - trip_facts of the quest API = the TouristTrip node of its page (#3356)
+ *
  * `--help` prints USAGE below; every flag goes through the shared SEO CLI
  * contract (#1391). The hand-rolled `args.indexOf('--url')` this replaced turned
  * a typo into the default target: `--ur https://dev.metravel.by` quietly gated
@@ -89,12 +98,12 @@ const FALLBACK_DESC = 'Найди место для путешествия и п
  * The 404 template (#1441) is only reachable this way — `fetchHtml` below treats
  * a 404 as a transport failure and would never see that head.
  */
-function fetchRaw(url) {
+function fetchRaw(url, requestHeaders = {}) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
     const opts = {
       timeout: 30000,
-      headers: withAcceptEncoding({ 'User-Agent': 'MeTravelSEOTest/1.0' }),
+      headers: withAcceptEncoding({ 'User-Agent': 'MeTravelSEOTest/1.0', ...requestHeaders }),
     };
     if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS;
     const req = mod.get(url, opts, (res) => {
@@ -102,6 +111,7 @@ function fetchRaw(url) {
       readResponseText(res).then((body) => resolve({
         status: res.statusCode,
         location: res.headers.location,
+        headers: res.headers,
         html: body,
       }), reject);
     });
@@ -588,6 +598,9 @@ function parseSitemap(xml) {
   return urls.length ? urls : null;
 }
 
+/** `<loc>` статьи: `/travels/<slug>` на любом origin. */
+const isArticleLoc = (loc) => /^https?:\/\/[^/]+\/travels\/[^/]+$/.test(String(loc || ''));
+
 /** Факты о sitemap для проверок: всё считается по документу, без сети. */
 function evaluateSitemap(xml, { site, rootPath = '/' } = {}) {
   const urls = parseSitemap(xml);
@@ -600,10 +613,13 @@ function evaluateSitemap(xml, { site, rootPath = '/' } = {}) {
     urlCount: urls.length,
     hasRoot: locs.has(`${String(site || '').replace(/\/+$/, '')}${rootPath}`),
     withoutLastmod: urls.filter((url) => !url.hasLastmod).map((url) => url.loc),
+    articleCount: urls.filter((url) => isArticleLoc(url.loc)).length,
+    articlesWithoutLastmod: urls.filter((url) => !url.hasLastmod && isArticleLoc(url.loc)).map((url) => url.loc),
     alternateUrlCount: withAlternates.length,
     missingAlternates,
   };
 }
+
 
 /**
  * `301` на `/quests/<alias>`: ровно один сегмент после `/quests/`, и он не число.
@@ -631,17 +647,24 @@ async function testSitemap({ path, rootPath, maxWithoutLastmod }) {
     const msg = `FETCH FAILED: ${describeFetchError(e)}`;
     failures.push(`${path}: ${msg}`);
     console.log(`  ❌ ${msg}`);
-    return;
+    return null;
   }
   assert(res.status === 200, `${path} answers 200`, `got HTTP ${res.status}`);
   const facts = evaluateSitemap(res.html, { site: SITE, rootPath });
   assert(facts.parsed, `${path} parses as a <urlset> sitemap`, 'no <urlset> with <url><loc> entries');
-  if (!facts.parsed) return;
+  if (!facts.parsed) return null;
   assert(facts.hasRoot, `${path} lists the home page ${SITE}${rootPath}`, `${facts.urlCount} URLs, none is the home page`);
   assert(
     facts.withoutLastmod.length <= maxWithoutLastmod,
     `${path} has at most ${maxWithoutLastmod} URLs without <lastmod>`,
     `found ${facts.withoutLastmod.length} of ${facts.urlCount}, e.g. ${facts.withoutLastmod.slice(0, 5).join(', ')}`
+  );
+  // #3344: the threshold above is for static pages; an article has a date of its
+  // own, so not one `/travels/<slug>` may go without it.
+  assert(
+    facts.articlesWithoutLastmod.length === 0,
+    `${path}: every /travels/<slug> has <lastmod>`,
+    `${facts.articlesWithoutLastmod.length} of ${facts.articleCount} articles without it, e.g. ${facts.articlesWithoutLastmod.slice(0, 3).join(', ')}`
   );
   assert(facts.alternateUrlCount > 0, `${path} carries xhtml:link alternates`, `0 of ${facts.urlCount} URLs have them`);
   assert(
@@ -649,6 +672,7 @@ async function testSitemap({ path, rootPath, maxWithoutLastmod }) {
     `${path}: every xhtml:link href is itself a <loc>`,
     `${facts.missingAlternates.length} missing, e.g. ${facts.missingAlternates.slice(0, 5).join(', ')}`
   );
+  return parseSitemap(res.html);
 }
 
 async function testQuestCityAliasRedirect(path) {
@@ -671,6 +695,238 @@ async function testQuestCityAliasRedirect(path) {
     `${path} answers 301 to /quests/<alias>`,
     `got HTTP ${verdict.status}, location "${res.location || ''}"`
   );
+}
+
+/**
+ * #3329: контракты бэк-поезда спринта 35 (#3233, #3282, #3240) под постоянным
+ * контролем. Оценка каждой пробы — чистая функция от уже полученного ответа:
+ * её проверяют фикстуры, а сеть остаётся в тонких `test*`-обёртках.
+ */
+
+/** Несуществующий профиль: id заведомо вне диапазона выданных. */
+const MISSING_PROFILE_PATH = '/user/999999999';
+/** Тот же числовой id города со слэшем: один редирект, а не «снять слэш, потом алиас». */
+const NUMERIC_QUEST_CITY_SLASH_PATH = '/quests/58/';
+/** Запасной id статьи, когда список статей API недоступен. */
+const FALLBACK_TRAVEL_ID = 586;
+
+const headerOf = (response, name) => String((response && response.headers && response.headers[name]) || '');
+const pathOfLocation = (location) => String(location || '').replace(/^https?:\/\/[^/]+/i, '').split('?')[0].split('#')[0];
+
+/**
+ * #3233: страница отдаёт валидатор, а повтор с ним получает 304 без тела.
+ * `second` отсутствует, когда валидатора нет и повторять нечем.
+ */
+function evaluateConditionalGet({ first, second } = {}) {
+  const etag = headerOf(first, 'etag');
+  const failures = [];
+  if (!first || first.status !== 200) failures.push(`first answer is HTTP ${first ? first.status : 'none'}`);
+  if (!etag) failures.push('no ETag header');
+  if (etag && (!second || second.status !== 304)) {
+    failures.push(`If-None-Match answered HTTP ${second ? second.status : 'none'}, expected 304`);
+  } else if (etag && second.html) {
+    failures.push('the 304 answer carries a body');
+  }
+  return { ok: failures.length === 0, etag, failures };
+}
+
+/**
+ * #3282: `/travels/<id>` — 301 на `/travels/<slug>`. Slug не число (иначе это
+ * редирект id на id) и, когда он известен из API, ровно тот, что у статьи.
+ */
+function evaluateNumericTravelRedirect({ status, location } = {}, expectedSlug = '') {
+  const target = pathOfLocation(location);
+  const slug = (target.match(/^\/travels\/([^/]+)$/) || [])[1] || '';
+  return {
+    ok: status === 301 && Boolean(slug) && !/^\d+$/.test(slug) && (!expectedSlug || slug === expectedSlug),
+    status,
+    target,
+  };
+}
+
+/** #3240: несуществующий профиль — 404 и запрет индексации заголовком. */
+function evaluateMissingProfile(response = {}) {
+  const robots = headerOf(response, 'x-robots-tag');
+  return { ok: response.status === 404 && isBlockedFromIndexing(robots), status: response.status, robots };
+}
+
+/** `<link rel="alternate" hreflang>` сырого HTML, атрибуты в любом порядке. */
+function readHreflangLinks(html) {
+  const links = [];
+  for (const [tag] of String(html || '').matchAll(/<link\b[^>]*>/gi)) {
+    const attr = (name) => (tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'i')) || [])[1];
+    if (String(attr('rel') || '').toLowerCase() !== 'alternate' || !attr('hreflang')) continue;
+    links.push({ hreflang: attr('hreflang'), href: decodeXmlEntities(attr('href')) });
+  }
+  return links;
+}
+
+/**
+ * #3282: hreflang страницы — только живые локали. «Живые» бэкенд считает одной
+ * функцией для страницы и для sitemap, поэтому набор адресов в HTML обязан
+ * совпасть с альтернативами этой же страницы в sitemap, а каждый адрес —
+ * отвечать 200 (`statuses`: href → код ответа без следования редиректам).
+ */
+function evaluateHreflang({ html, sitemapAlternates = [], statuses = {} } = {}) {
+  const links = readHreflangLinks(html);
+  const failures = [];
+  const codes = links.map((link) => link.hreflang);
+  const repeated = [...new Set(codes.filter((code, index) => codes.indexOf(code) !== index))];
+  if (!links.length) failures.push('no hreflang links in the raw HTML');
+  if (repeated.length) failures.push(`hreflang repeated: ${repeated.join(', ')}`);
+  const inHtml = new Set(links.map((link) => link.href));
+  const inSitemap = new Set(sitemapAlternates);
+  const onlyHtml = [...inHtml].filter((href) => !inSitemap.has(href));
+  const onlySitemap = [...inSitemap].filter((href) => !inHtml.has(href));
+  if (onlyHtml.length) failures.push(`in HTML but not in sitemap: ${onlyHtml.join(', ')}`);
+  if (onlySitemap.length) failures.push(`in sitemap but not in HTML: ${onlySitemap.join(', ')}`);
+  const dead = [...inHtml].filter((href) => statuses[href] !== 200);
+  if (dead.length) failures.push(`not answering 200: ${dead.map((href) => `${href} (${statuses[href] ?? 'not probed'})`).join(', ')}`);
+  return { ok: failures.length === 0, hrefs: [...inHtml], failures };
+}
+
+/** Первая русская страница квеста из sitemap, у которой есть альтернативы. */
+function pickQuestSample(urls, site) {
+  const origin = String(site || '').replace(/\/+$/, '');
+  const found = (urls || []).find((url) => url.alternates.length > 0
+    && url.loc.startsWith(`${origin}/quests/`) && /^\/quests\/[^/]+\/[^/]+$/.test(url.loc.slice(origin.length)));
+  if (!found) return null;
+  const [, , city, slug] = found.loc.slice(origin.length).split('/');
+  return { path: `/quests/${city}/${slug}`, apiPath: `/api/quests/web/detail/${city}/${slug}/?lang=ru`, alternates: found.alternates };
+}
+
+/** Узел квеста из графа `data-seo-jsonld="quest-public"`; `null` — графа или узла нет. */
+function readQuestTouristTrip(html) {
+  for (const [tag, body] of String(html || '').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
+    if (!/\bdata-seo-jsonld="quest-public"/i.test(tag.slice(0, tag.indexOf('>') + 1))) continue;
+    try {
+      const graph = JSON.parse(body)['@graph'];
+      const isTrip = (entry) => [].concat((entry && entry['@type']) || []).includes('TouristTrip');
+      return (Array.isArray(graph) && graph.find(isTrip)) || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * #3356 (пункт «а»): `trip_facts` из API и узел TouristTrip в HTML описывают один
+ * маршрут. Сверка живёт здесь, в ежедневной пробе, а не в шлюзе выката
+ * `verify-live-quest-ssr.js`: расхождение фактов не делает выкат негодным, а
+ * новая причина автоотката стоит дороже суток до сигнала. Неизвестный факт в
+ * узле отсутствует, а не подставлен — как в `utils/questTouristTrip.ts`
+ * (соответствие закреплено тестом на общих фикстурах).
+ */
+function evaluateTripFacts({ tripFacts, entity } = {}) {
+  if (tripFacts === undefined) return { ok: false, failures: ['API detail has no trip_facts key'] };
+  if (!entity) return { ok: false, failures: ['no TouristTrip node in the quest-public JSON-LD graph'] };
+  const facts = tripFacts || {};
+  const geo = (entity.tripOrigin && entity.tripOrigin.geo) || null;
+  const expected = {
+    timeRequired: facts.duration_min ? `PT${facts.duration_min}M` : undefined,
+    'potentialAction.distance': facts.distance_m ? `${facts.distance_m} m` : undefined,
+    'tripOrigin.geo': facts.start ? `${facts.start.lat},${facts.start.lng}` : undefined,
+    isAccessibleForFree: tripFacts ? facts.is_free : undefined,
+  };
+  const actual = {
+    timeRequired: entity.timeRequired,
+    'potentialAction.distance': entity.potentialAction ? entity.potentialAction.distance : undefined,
+    'tripOrigin.geo': geo ? `${geo.latitude},${geo.longitude}` : undefined,
+    isAccessibleForFree: entity.isAccessibleForFree,
+  };
+  const failures = Object.keys(expected)
+    .filter((key) => expected[key] !== actual[key])
+    .map((key) => `${key}: API says ${JSON.stringify(expected[key])}, HTML has ${JSON.stringify(actual[key])}`);
+  return { ok: failures.length === 0, failures };
+}
+
+/** Сетевая ошибка пробы — красный результат с адресом, а не падение набора. */
+async function fetchForProbe(path, requestHeaders) {
+  try {
+    return await fetchRaw(path.startsWith('http') ? path : `${SITE}${path}`, requestHeaders);
+  } catch (e) {
+    totalTests++;
+    failed++;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
+    failures.push(`${path}: ${msg}`);
+    console.log(`  ❌ ${msg}`);
+    return null;
+  }
+}
+
+async function testConditionalGet(path) {
+  console.log(`\n🔍 ${SITE}${path} (ETag → 304)`);
+  const first = await fetchForProbe(path);
+  if (!first) return;
+  const etag = headerOf(first, 'etag');
+  const second = etag ? await fetchForProbe(path, { 'If-None-Match': etag }) : null;
+  if (etag && !second) return;
+  const verdict = evaluateConditionalGet({ first, second });
+  assert(verdict.ok, `${path} sends an ETag and answers 304 to If-None-Match`, verdict.failures.join('; '));
+}
+
+async function testNumericTravelRedirect(id, expectedSlug) {
+  const path = `/travels/${id}`;
+  console.log(`\n🔍 ${SITE}${path} (article id → slug)`);
+  const res = await fetchForProbe(path);
+  if (!res) return;
+  const verdict = evaluateNumericTravelRedirect(res, expectedSlug);
+  assert(
+    verdict.ok,
+    `${path} answers 301 to /travels/${expectedSlug || '<slug>'}`,
+    `got HTTP ${verdict.status}, location "${res.location || ''}"`
+  );
+}
+
+async function testSingleQuestCityRedirect(path) {
+  console.log(`\n🔍 ${SITE}${path} (one redirect to the alias)`);
+  const res = await fetchForProbe(path);
+  if (!res) return;
+  const verdict = evaluateQuestCityAliasRedirect(res);
+  assert(verdict.ok, `${path} answers 301 to /quests/<alias>`, `got HTTP ${verdict.status}, location "${res.location || ''}"`);
+  if (!verdict.ok) return;
+  const landing = await fetchForProbe(verdict.target);
+  if (!landing) return;
+  assert(landing.status === 200, `${path} needs one redirect only`, `${verdict.target} answered HTTP ${landing.status}, location "${landing.location || ''}"`);
+}
+
+async function testMissingProfile(path) {
+  console.log(`\n🔍 ${SITE}${path} (missing profile)`);
+  const res = await fetchForProbe(path);
+  if (!res) return;
+  const verdict = evaluateMissingProfile(res);
+  assert(verdict.ok, `${path} answers 404 with X-Robots-Tag: noindex`, `got HTTP ${verdict.status}, X-Robots-Tag "${verdict.robots}"`);
+}
+
+/** Образец квеста один на две пробы: hreflang (#3282) и сверка trip_facts (#3356). */
+async function testQuestSample(sitemapUrls) {
+  const sample = pickQuestSample(sitemapUrls, SITE);
+  console.log(`\n🔍 ${SITE}${sample ? sample.path : '/quests/<city>/<quest>'} (hreflang, trip_facts)`);
+  assert(Boolean(sample), 'sitemap offers a quest page with alternates to probe', 'sitemap unavailable or lists no such quest');
+  if (!sample) return;
+  const page = await fetchForProbe(sample.path);
+  if (!page) return;
+  assert(page.status === 200, `${sample.path} answers 200`, `got HTTP ${page.status}`);
+
+  const statuses = {};
+  for (const href of new Set(readHreflangLinks(page.html).map((link) => link.href))) {
+    if (href === `${SITE}${sample.path}`) { statuses[href] = page.status; continue; }
+    const res = await fetchForProbe(href);
+    if (!res) return;
+    statuses[href] = res.status;
+  }
+  const hreflang = evaluateHreflang({ html: page.html, sitemapAlternates: sample.alternates, statuses });
+  assert(hreflang.ok, `${sample.path} hreflang lists only live locales, same as the sitemap`, hreflang.failures.join('; '));
+
+  const api = await fetchForProbe(sample.apiPath);
+  if (!api) return;
+  let payload = null;
+  try { payload = JSON.parse(api.html); } catch { /* reported by the assertion below */ }
+  assert(api.status === 200 && Boolean(payload), `${sample.apiPath} answers 200 with JSON`, `got HTTP ${api.status}`);
+  if (api.status !== 200 || !payload) return;
+  const tripFacts = evaluateTripFacts({ tripFacts: payload.trip_facts, entity: readQuestTouristTrip(page.html) });
+  assert(tripFacts.ok, `${sample.path} TouristTrip node matches trip_facts of the API`, tripFacts.failures.join('; '));
 }
 
 // ---------------------------------------------------------------------------
@@ -758,8 +1014,14 @@ async function main() {
   await testSearchCatalogPages(SEARCH_CATALOG_PAGES);
 
   // --- 6b. Sitemap and the numeric city redirect stay as the backend shipped them (#3235) ---
-  await testSitemap(SITEMAP_EXPECTATIONS);
+  const sitemapUrls = await testSitemap(SITEMAP_EXPECTATIONS);
   await testQuestCityAliasRedirect(NUMERIC_QUEST_CITY_PATH);
+
+  // --- 6c. Backend train of sprint 35 (#3329): one redirect, live hreflang, 404 profile ---
+  await testSingleQuestCityRedirect(NUMERIC_QUEST_CITY_SLASH_PATH);
+  await testQuestSample(sitemapUrls);
+  await testMissingProfile(MISSING_PROFILE_PATH);
+  await testConditionalGet('/quests');
 
   // --- 7. About page ---
   await testPage('/about', {
@@ -774,6 +1036,8 @@ async function main() {
   // --- 8. Travel detail pages (the main issue) ---
   // Fetch a few known travels from the API to test
   let travelSlugs = [];
+  // First listed article: its id, slug and author feed the #3329 probes below.
+  let leadTravel = null;
   try {
     const apiUrl = `${SITE}/api/travels/?page=1&perPage=5&where=${encodeURIComponent(JSON.stringify({ publish: 1, moderation: 1 }))}`;
     const apiHtml = await fetchHtml(apiUrl);
@@ -783,6 +1047,7 @@ async function main() {
       .filter((t) => t.slug)
       .map((t) => t.slug)
       .slice(0, 5);
+    leadTravel = items.find((t) => t.slug && Number.isInteger(t.id)) || null;
   } catch (e) {
     console.log(`\n⚠️  Could not fetch travel list from API: ${e.message}`);
     // Hardcode known slugs as fallback
@@ -811,6 +1076,11 @@ async function main() {
       ogImageNotThumb: true,
     });
   }
+
+  // --- 8a. Backend train of sprint 35 (#3329): validators and the numeric article address ---
+  await testConditionalGet(`/travels/${leadTravel ? leadTravel.slug : travelSlugs[0]}`);
+  await testConditionalGet(`/user/${(leadTravel && leadTravel.user && leadTravel.user.id) || 1}`);
+  await testNumericTravelRedirect(leadTravel ? leadTravel.id : FALLBACK_TRAVEL_ID, leadTravel ? leadTravel.slug : '');
 
   // --- 7. Also test the specific page from the bug report ---
   if (!travelSlugs.includes('ispaniya-rondo-malaga-peshchera-pileta-i-ushchele-el-chorro')) {
@@ -872,4 +1142,6 @@ module.exports = {
   HUB_CONTENT_LINKS, collectAnchorPaths, countContentLinks,
   SEARCH_CATALOG_PAGES, evaluateSearchCatalogPages,
   SITEMAP_EXPECTATIONS, NUMERIC_QUEST_CITY_PATH, parseSitemap, evaluateSitemap, evaluateQuestCityAliasRedirect,
+  MISSING_PROFILE_PATH, NUMERIC_QUEST_CITY_SLASH_PATH, evaluateConditionalGet, evaluateNumericTravelRedirect,
+  evaluateMissingProfile, readHreflangLinks, evaluateHreflang, pickQuestSample, readQuestTouristTrip, evaluateTripFacts,
 };

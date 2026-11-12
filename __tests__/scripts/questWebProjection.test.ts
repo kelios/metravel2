@@ -27,6 +27,25 @@ describe('immutable public quest projection', () => {
     expect(page.source_revision).toBe(source.source_snapshot.quests[0].source_revision);
   });
 
+  // #3356: `touristType` of the quest node follows the way the route is travelled.
+  // The catalogue row's enabled tags decide; both stored shapes of Quest.tags are read.
+  it.each([
+    ['a list with the bike tag', ['history', 'bike'], true],
+    ['an admin-edited map with the bike tag on', { bike: true, loop: true }, true],
+    ['the manual velo synonym', ['velo'], true],
+    ['a map with the bike tag switched off', { bike: false, citywalk: true }, false],
+    ['no tags at all', undefined, false],
+  ])('names a cycling route in every locale for %s and a walking route otherwise', (_label, tags, cycling) => {
+    const source = questPrivateSnapshot();
+    Object.assign(source.catalog[0], tags === undefined ? {} : { tags });
+    const details = buildQuestWebProjection(source, catalogs).pages.filter((page: { kind: string }) => page.kind === 'detail');
+    expect(details.map((page: { locale: string; page: { meta: { tourist_type: string } } }) => [page.locale, page.page.meta.tourist_type])).toEqual(
+      questPublicLocales.map((locale) => [locale, catalogs.get(locale).get(`seoSsg:questDetail.${cycling ? 'touristTypeBike' : 'touristType'}`)]));
+    const walking = new Set(questPublicLocales.map((locale) => catalogs.get(locale).get('seoSsg:questDetail.touristType')));
+    const cyclingNames = questPublicLocales.map((locale) => catalogs.get(locale).get('seoSsg:questDetail.touristTypeBike'));
+    expect(cyclingNames.every((name: string) => name && !walking.has(name))).toBe(true);
+  });
+
   it('rejects an incomplete snapshot rather than withdrawing translations or classifying missing bodies as thin', () => {
     const source = questPrivateSnapshot();
     delete source.bundles.pl['7/fixture-city-walk'];

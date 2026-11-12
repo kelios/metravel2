@@ -1565,6 +1565,12 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   провал — `rollback-code` к предыдущей SSR-паре. Статическая проверка `dist`
   снята в #2766; sitemap (в том числе country, backend-задача `#1606`) —
   backend-owned, HTTP 200 и отсутствие 3xx проверяет post-deploy.
+- Сверка `trip_facts` API с узлом TouristTrip в HTML (`timeRequired`,
+  `potentialAction.distance`, `tripOrigin`, `isAccessibleForFree`) — проба в
+  `npm run test:seo:prod` (`evaluateTripFacts`), а не в шлюзе выката: расхождение
+  фактов не делает выкат негодным, а новая причина автоотката дороже суток до
+  сигнала (#3356, пункт «а»). Там же hreflang страницы квеста: набор адресов
+  совпадает с альтернативами sitemap, каждый отвечает 200 (#3329).
 
 ## Внешние зависимости
 

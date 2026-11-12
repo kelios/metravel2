@@ -159,23 +159,8 @@ const expectSingleImageHead = (image: string) => {
   }
 }
 
-const appendBootstrapQuestJsonLd = () => {
-  const script = document.createElement('script')
-  script.type = 'application/ld+json'
-  script.setAttribute('data-seo-jsonld', 'quest')
-  script.textContent = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'TouristTrip',
-    image: ['https://metravel.by/quest-cover/previous.webp?w=800'],
-  })
-  document.head.appendChild(script)
-  return script
-}
-
 const expectSingleQuestGraph = (image: string) => {
-  const scripts = document.head.querySelectorAll(
-    'script#quest-structured-data[type="application/ld+json"], script[data-seo-jsonld="quest"][type="application/ld+json"]',
-  )
+  const scripts = document.head.querySelectorAll('script#quest-structured-data[type="application/ld+json"]')
   expect(scripts).toHaveLength(1)
   expect(JSON.parse(scripts[0].textContent ?? '')['@graph']).toContainEqual(expect.objectContaining({
     '@type': ['TouristTrip', 'CreativeWork'],
@@ -579,7 +564,6 @@ describe('Quest screen title sync', () => {
   })
 
   it('cancels stale image writes when the focused route changes to another quest', async () => {
-    appendBootstrapQuestJsonLd()
     const current = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({
       ...current,
@@ -608,8 +592,7 @@ describe('Quest screen title sync', () => {
     await screen.rerender(<QuestScreen />)
     const expected = 'https://metravel.by/quest-cover/quests/78/main/next.webp?w=800'
     await expectRenderedImage(screen, expected)
-    // Helmet replaces its own script on navigation; the old unowned SSG graph
-    // must already be gone instead of surviving next to the destination graph.
+    // Helmet replaces its own script on navigation.
     document.head.querySelector('script#quest-structured-data')?.remove()
     document.head.insertAdjacentHTML('beforeend', (await readHelmetStructuredData(screen)).html)
 
@@ -626,64 +609,17 @@ describe('Quest screen title sync', () => {
     }
   })
 
-  it('preserves bootstrap JSON-LD until Helmet mounts a ready owner after the last head timer', async () => {
-    const bootstrap = appendBootstrapQuestJsonLd()
-    const unrelated = document.createElement('script')
-    unrelated.type = 'application/ld+json'
-    unrelated.setAttribute('data-seo-jsonld', 'website')
-    unrelated.textContent = JSON.stringify({ '@type': 'WebSite', name: 'MeTravel' })
-    document.head.appendChild(unrelated)
-    const screen = await render(<QuestScreen />)
-    const { html } = await readHelmetStructuredData(screen)
-
-    await act(async () => {
-      jest.advanceTimersByTime(500)
-      await Promise.resolve()
-    })
-    expect(bootstrap.isConnected).toBe(true)
-
-    // An empty managed node is not a ready replacement for the no-JS graph.
-    const template = document.createElement('template')
-    template.innerHTML = html
-    const managed = template.content.querySelector('script')!
-    const payload = managed.textContent
-    managed.textContent = ''
-    await act(async () => {
-      document.head.appendChild(managed)
-      await Promise.resolve()
-    })
-    expect(bootstrap.isConnected).toBe(true)
-
-    await act(async () => {
-      managed.textContent = payload
-      await Promise.resolve()
-    })
-    expect(bootstrap.isConnected).toBe(false)
-    expectSingleQuestGraph('https://metravel.by/assets/icons/logo_yellow_512x512.png')
-    expect(unrelated.isConnected).toBe(true)
-  })
-
-  it('hands the SSG BreadcrumbList over to the graph: one list with the plain name and locale URL (#2466)', async () => {
+  // #2466: the managed graph is the page's only JSON-LD owner of the trail. The server
+  // document's own graph lives in the React tree and leaves with it (#2766), so no
+  // unowned copy is handed over here.
+  it('carries one BreadcrumbList with the plain name and locale URL in the managed graph (#2466)', async () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', city: { ...original.bundle.city, id: 4 } } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    appendBootstrapQuestJsonLd()
-    const ssgCrumbs = document.createElement('script')
-    ssgCrumbs.type = 'application/ld+json'
-    ssgCrumbs.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [] })
-    document.head.appendChild(ssgCrumbs)
     const screen = await render(<QuestScreen route={plRoute} />)
-    const { html } = await readHelmetStructuredData(screen)
-    await act(async () => {
-      document.head.insertAdjacentHTML('beforeend', html)
-      await Promise.resolve()
-    })
+    const { jsonLd } = await readHelmetStructuredData(screen)
 
-    const lists = [...document.head.querySelectorAll('script[type="application/ld+json"]')].flatMap((node) => {
-      const payload = JSON.parse(node.textContent ?? 'null')
-      return [payload, ...(payload?.['@graph'] ?? [])].filter((entry) => entry?.['@type'] === 'BreadcrumbList')
-    })
-    expect(ssgCrumbs.isConnected).toBe(false)
+    const lists = jsonLd['@graph'].filter((entry: { '@type': unknown }) => entry['@type'] === 'BreadcrumbList')
     expect(lists).toHaveLength(1)
     expect(lists[0].itemListElement.at(-1)).toEqual(expect.objectContaining({
       name: 'Тайна Свислочского Цмока: Легенда оживает',
@@ -699,25 +635,6 @@ describe('Quest screen title sync', () => {
     await screen.rerender(<QuestScreen />)
 
     expect(mockUseQuestProgressSync).toHaveBeenLastCalledWith(undefined, true)
-  })
-
-  it.each(['blur', 'unmount'])('stops bootstrap JSON-LD handover after quest %s', async (transition) => {
-    const bootstrap = appendBootstrapQuestJsonLd()
-    const screen = await render(<QuestScreen />)
-    const { html } = await readHelmetStructuredData(screen)
-    if (transition === 'blur') {
-      mockUseIsFocused.mockReturnValue(false)
-      await screen.rerender(<QuestScreen />)
-    } else {
-      await screen.unmount()
-    }
-
-    await act(async () => {
-      document.head.insertAdjacentHTML('beforeend', html)
-      jest.runOnlyPendingTimers()
-      await Promise.resolve()
-    })
-    expect(bootstrap.isConnected).toBe(true)
   })
 
   it('keeps untrusted cover text escaped in the script emitted by Helmet', async () => {

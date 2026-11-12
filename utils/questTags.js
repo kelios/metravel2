@@ -26,4 +26,14 @@ function questTagNames(value) {
   return enabledQuestTags(value);
 }
 
-module.exports = { normalizeQuestTags, questTagNames, enabledQuestTags };
+// Slugs of a cycling route: `bike` is canonical, `velo` is accepted from manual
+// markup. One list for the app's badge and filter (questAudience.isBikeQuest) and
+// for the public projection's `touristType` (scripts/lib/questWebProjection.js).
+const BIKE_QUEST_TAG_SLUGS = ['bike', 'velo'];
+
+/** Whether the enabled tags mark a cycling route; reads both stored shapes. */
+function hasBikeQuestTag(value) {
+  return enabledQuestTags(value).some((tag) => BIKE_QUEST_TAG_SLUGS.includes(tag.trim().toLowerCase()));
+}
+
+module.exports = { normalizeQuestTags, questTagNames, enabledQuestTags, BIKE_QUEST_TAG_SLUGS, hasBikeQuestTag };

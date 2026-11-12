@@ -1,5 +1,7 @@
 import type React from 'react';
-import { questPrivateSnapshot } from '../../fixtures/questPublicProjection';
+import { questPrivateSnapshot, questPublicApiResponse } from '../../fixtures/questPublicProjection';
+
+const snapshot = questPrivateSnapshot();
 
 let createElement: typeof import('react').createElement;
 let act: typeof import('react').act;
@@ -8,7 +10,7 @@ let hydrateRoot: typeof import('react-dom/client').hydrateRoot;
 let createRoot: typeof import('react-dom/client').createRoot;
 let Screen: React.ComponentType<{ children: (projection: { locale: string; release_id: string } | null) => React.ReactNode }>;
 let payload: Record<string, unknown>;
-let pages: Array<Record<string, unknown>>;
+let pages: Array<Record<string, unknown> & Parameters<typeof questPublicApiResponse>[0][number]>;
 
 beforeAll(() => {
   jest.resetModules();
@@ -24,17 +26,15 @@ beforeAll(() => {
   Screen = require('@/components/quests/runtime/QuestPublicLoaderScreen.web').default;
   const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
   const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
-  pages = buildQuestWebProjection(questPrivateSnapshot(), loadSsgCatalogs(require('node:path').resolve(__dirname, '../../..')).catalogs).pages;
+  pages = buildQuestWebProjection(snapshot, loadSsgCatalogs(require('node:path').resolve(__dirname, '../../..')).catalogs).pages;
 });
 
 const appScreen = (projection: { locale: string; release_id: string } | null) =>
   createElement('p', { 'data-testid': 'legacy' }, projection ? `Legacy ${projection.locale} ${projection.release_id}` : 'Legacy');
 
 function detailPayload() {
-  const page = pages.find((entry) => entry.kind === 'detail' && entry.locale === 'pl')!;
-  payload = { ...page, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
-    ru_source_path: '/quests/7/fixture-city-walk', versions: [] };
-  return page;
+  payload = questPublicApiResponse(pages, snapshot, 'pl');
+  return pages.find((entry) => entry.kind === 'detail' && entry.locale === 'pl')!;
 }
 
 it.each([390, 768, 1440])('serves the public body as server HTML and hands off to the app screen after hydration at %spx', async (width) => {
@@ -123,7 +123,6 @@ it('hands the published landing head to the app screen and none on a not-found a
 // #3321: the server document and the hydrated app screen carry one and the same graph.
 it('hands the app screen exactly the quest graph of the server document', async () => {
   detailPayload();
-  payload = { ...payload, trip_facts: { duration_min: 120, distance_m: 2303, start: { lat: 50.05, lng: 19.93 }, is_free: true } };
   const seen: Array<{ structuredData: unknown }> = [];
   const LoaderScreen = Screen as unknown as React.ComponentType<{
     children: (projection: unknown, state: { structuredData: unknown }) => React.ReactNode;
@@ -135,7 +134,7 @@ it('hands the app screen exactly the quest graph of the server document', async 
   expect(scripts).toHaveLength(1);
   const serverGraph = JSON.parse(scripts[0].textContent ?? '');
   expect(serverGraph['@graph'].map((node: { '@type': unknown }) => node['@type'])).toEqual([['TouristTrip', 'CreativeWork'], 'BreadcrumbList']);
-  expect(serverGraph['@graph'][0]).toMatchObject({ timeRequired: 'PT120M', potentialAction: { '@type': 'TravelAction', distance: '2303 m' }, isAccessibleForFree: true });
+  expect(serverGraph['@graph'][0]).toMatchObject({ timeRequired: 'PT90M', potentialAction: { '@type': 'TravelAction', distance: '1001 m' }, isAccessibleForFree: true });
   const root = createRoot(document.body.appendChild(document.createElement('div')));
   try {
     await act(async () => { root.render(tree); });

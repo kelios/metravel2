@@ -15,6 +15,7 @@ const { projectQuestDiscoveryRow } = require('../../utils/questDiscovery');
 const { selectPopularQuests } = require('../../utils/questPopularity');
 const { buildTravelLinkGraphs } = require('../../utils/travelLinkGraph');
 const { safePublicImageUrl } = require('../../utils/questPublicPage');
+const { hasBikeQuestTag } = require('../../utils/questTags');
 
 const ORIGIN = 'https://metravel.by';
 const LOCALES = ['ru', 'be', 'uk', 'pl', 'en'];
@@ -96,7 +97,8 @@ function buildDetail(quest, bundle, route, record, locale, city, snapshot, ssg) 
     sections.push(section('', [], [item(ssg.t('quests:app.tabs.quests.city.index.back'), '/quests', '', '', targetLang)]));
   }
   const page = { meta: { title: seo.title, description: seo.description, canonical: ORIGIN + path,
-    image: absoluteImage(quest.cover_url || quest.coverUrl), tourist_type: ssg.t('seoSsg:questDetail.touristType'), city_name: cityName || '' }, heading,
+    image: absoluteImage(quest.cover_url || quest.coverUrl), tourist_type: ssg.t(hasBikeQuestTag(quest.tags) ? 'seoSsg:questDetail.touristTypeBike' : 'seoSsg:questDetail.touristType'),
+    city_name: cityName || '' }, heading,
   kicker: ssg.t('seoSsg:questDetail.kicker'), lead: seo.description, ...intro, sections };
   // A second, independent check inspects final published prose against raw private gameplay.
   const leaks = findQuestSpoilerLeaks(publicPageText(page, true), bundle, digest);

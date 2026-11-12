@@ -3,7 +3,7 @@ import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { Platform } from 'react-native';
-import { questPrivateSnapshot, questPublicLocales } from '../../fixtures/questPublicProjection';
+import { questPrivateSnapshot, questPublicApiResponse, questPublicLocales } from '../../fixtures/questPublicProjection';
 import { expectQuestEntityInSchemaDomain } from '../../fixtures/questEntitySchemaDomain';
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
@@ -12,15 +12,10 @@ const path = require('node:path');
 jest.mock('@/components/quests/runtime/questRouteLoader', () => { throw new Error('Server loader imported by client presentation'); });
 jest.mock('@/utils/seoRoutes/routeMetadata', () => { throw new Error('Server metadata imported by client presentation'); });
 
-const source = buildQuestWebProjection(questPrivateSnapshot(), loadSsgCatalogs(path.resolve(__dirname, '../../..')).catalogs);
-const details = source.pages.filter((entry: { kind: string }) => entry.kind === 'detail');
-const detailFor = (locale: string): QuestPublicProjection => ({
-  ...details.find((entry: { locale: string }) => entry.locale === locale),
-  ru_source_path: '/quests/7/fixture-city-walk',
-  versions: details.map((entry: { locale: string; canonical_path: string; content_revision: string }) => ({
-    locale: entry.locale, path: entry.canonical_path, content_revision: entry.content_revision,
-  })),
-});
+const snapshot = questPrivateSnapshot();
+const source = buildQuestWebProjection(snapshot, loadSsgCatalogs(path.resolve(__dirname, '../../..')).catalogs);
+const detailFor = (locale: (typeof questPublicLocales)[number]): QuestPublicProjection =>
+  questPublicApiResponse(source.pages, snapshot, locale);
 
 describe('client quest structured data', () => {
   it('keeps reciprocal alternates and the Russian default without inventing a second version', () => {
@@ -120,13 +115,15 @@ describe('client quest structured data', () => {
   // #3321: the backend's trip_facts (#3317) become route facts of the one quest node.
   it('carries duration, distance, start and free access of the published route into the one quest node', () => {
     const detail = detailFor('ru');
-    const graph = buildQuestPublicStructuredData({ ...detail,
-      trip_facts: { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true } })['@graph'];
+    // The fixture answers the facts the backend derives from its snapshot: 90 minutes,
+    // ten points 0.001° of latitude apart (nine legs of ~111 m), the first point as start.
+    expect(detail.trip_facts).toEqual({ duration_min: 90, distance_m: 1001, start: { lat: 53.9, lng: 27.5 }, is_free: true });
+    const graph = buildQuestPublicStructuredData(detail)['@graph'];
     expect(graph.map((node) => node['@type'])).toEqual([['TouristTrip', 'CreativeWork'], 'BreadcrumbList']);
     expect(graph[0]).toMatchObject({
-      timeRequired: 'PT120M', isAccessibleForFree: true,
-      potentialAction: { '@type': 'TravelAction', distance: '2303 m' },
-      tripOrigin: { '@type': 'Place', geo: { '@type': 'GeoCoordinates', latitude: 50.0541, longitude: 19.9354 } },
+      timeRequired: 'PT90M', isAccessibleForFree: true,
+      potentialAction: { '@type': 'TravelAction', distance: '1001 m' },
+      tripOrigin: { '@type': 'Place', geo: { '@type': 'GeoCoordinates', latitude: 53.9, longitude: 27.5 } },
     });
     expect(graph[0]).not.toHaveProperty('distance');
     expect(graph[0]).not.toHaveProperty('location');
@@ -145,7 +142,7 @@ describe('client quest structured data', () => {
 
   it.each(questPublicLocales)('keeps every %s quest node property in the TouristTrip+CreativeWork domain', (locale) => {
     const detail = detailFor(locale);
-    for (const trip_facts of [null, { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true }]) {
+    for (const trip_facts of [null, detail.trip_facts]) {
       expectQuestEntityInSchemaDomain(buildQuestPublicStructuredData({ ...detail, trip_facts })['@graph'][0] as Record<string, unknown>);
     }
   });

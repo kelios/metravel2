@@ -203,6 +203,8 @@ describe('production SEO gate: sitemap and city alias redirect (#3235)', () => {
       urlCount: 4,
       hasRoot: true,
       withoutLastmod: [`${SITE}/`],
+      articleCount: 1,
+      articlesWithoutLastmod: [],
       alternateUrlCount: 2,
       missingAlternates: [],
     });
@@ -228,6 +230,19 @@ describe('production SEO gate: sitemap and city alias redirect (#3235)', () => {
       url(`${SITE}/travels/b`, '<lastmod> </lastmod>'),
     ), { site: SITE });
     expect(facts.withoutLastmod).toEqual([`${SITE}/travels/a`, `${SITE}/travels/b`]);
+  });
+
+  // #3344: общий порог терпит статические страницы; у статьи дата своя.
+  it('counts articles without lastmod apart from static pages', () => {
+    const facts = evaluateSitemap(sitemap(
+      url(`${SITE}/`, ''),
+      url(`${SITE}/travelsby`, ''),
+      url(`${SITE}/travels/a`, ''),
+      url(`${SITE}/travels/b`),
+      url(`${SITE}/quests/1/krakow-dragon`, ''),
+    ), { site: SITE });
+    expect(facts).toMatchObject({ articleCount: 2, articlesWithoutLastmod: [`${SITE}/travels/a`] });
+    expect(facts.withoutLastmod).toHaveLength(4);
   });
 
   it('reports an alternate that the sitemap itself does not list, once', () => {
@@ -266,5 +281,167 @@ describe('production SEO gate: sitemap and city alias redirect (#3235)', () => {
     expect(evaluateQuestCityAliasRedirect({ status: 301, location: '/quests/58/spb-walk' }).ok).toBe(false);
     expect(evaluateQuestCityAliasRedirect({ status: 301, location: '/' }).ok).toBe(false);
     expect(evaluateQuestCityAliasRedirect({ status: 301 }).ok).toBe(false);
+  });
+});
+
+// #3329: контракты бэк-поезда спринта 35 (#3233, #3282, #3240) и сверка
+// `trip_facts` (#3356, пункт «а»). Оценки — чистые функции, сеть не нужна.
+describe('production SEO gate: backend train of sprint 35 (#3329)', () => {
+  const {
+    MISSING_PROFILE_PATH, NUMERIC_QUEST_CITY_SLASH_PATH, evaluateConditionalGet, evaluateNumericTravelRedirect,
+    evaluateMissingProfile, readHreflangLinks, evaluateHreflang, pickQuestSample, parseSitemap,
+  } = require('../../scripts/test-seo-prod');
+  const SITE = 'https://metravel.by';
+  const etag = 'W/"/__internal/travel-ssr/minsk?v=1&b=abc"';
+
+  it('accepts a validator that the server honours with an empty 304', () => {
+    const first = { status: 200, headers: { etag }, html: '<html></html>' };
+    expect(evaluateConditionalGet({ first, second: { status: 304, headers: {}, html: '' } })).toEqual({ ok: true, etag, failures: [] });
+  });
+
+  it('fails a page that lost its ETag, ignores If-None-Match or sends a body with the 304', () => {
+    const first = { status: 200, headers: { etag }, html: '<html></html>' };
+    expect(evaluateConditionalGet({ first: { status: 200, headers: {}, html: 'x' }, second: null }).failures).toEqual(['no ETag header']);
+    expect(evaluateConditionalGet({ first, second: { status: 200, headers: { etag }, html: '<html></html>' } }).failures)
+      .toEqual(['If-None-Match answered HTTP 200, expected 304']);
+    expect(evaluateConditionalGet({ first, second: { status: 304, headers: {}, html: '<html></html>' } }).failures)
+      .toEqual(['the 304 answer carries a body']);
+    expect(evaluateConditionalGet({ first: { status: 500, headers: {}, html: '' }, second: null }).failures)
+      .toEqual(['first answer is HTTP 500', 'no ETag header']);
+  });
+
+  it('accepts only a permanent redirect of an article id to that article slug', () => {
+    expect(evaluateNumericTravelRedirect({ status: 301, location: '/travels/minsk-za-vykhodnye' }, 'minsk-za-vykhodnye').ok).toBe(true);
+    expect(evaluateNumericTravelRedirect({ status: 301, location: `${SITE}/travels/minsk-za-vykhodnye?utm=1` }, 'minsk-za-vykhodnye').ok).toBe(true);
+    // slug неизвестен (API лежал): достаточно, что это адрес статьи, а не число
+    expect(evaluateNumericTravelRedirect({ status: 301, location: '/travels/minsk-za-vykhodnye' }).ok).toBe(true);
+    // вернулся 404, временный редирект, чужая статья, id на id, хаб
+    expect(evaluateNumericTravelRedirect({ status: 404 }, 'minsk-za-vykhodnye').ok).toBe(false);
+    expect(evaluateNumericTravelRedirect({ status: 302, location: '/travels/minsk-za-vykhodnye' }, 'minsk-za-vykhodnye').ok).toBe(false);
+    expect(evaluateNumericTravelRedirect({ status: 301, location: '/travels/grodno' }, 'minsk-za-vykhodnye').ok).toBe(false);
+    expect(evaluateNumericTravelRedirect({ status: 301, location: '/travels/940' }).ok).toBe(false);
+    expect(evaluateNumericTravelRedirect({ status: 301, location: `${SITE}/travelsby` }).ok).toBe(false);
+  });
+
+  it('wants a missing profile to be a 404 that a header keeps out of the index', () => {
+    expect(MISSING_PROFILE_PATH).toMatch(/^\/user\/\d+$/);
+    expect(evaluateMissingProfile({ status: 404, headers: { 'x-robots-tag': 'noindex, follow' } }).ok).toBe(true);
+    expect(evaluateMissingProfile({ status: 404, headers: {} }).ok).toBe(false);
+    expect(evaluateMissingProfile({ status: 200, headers: { 'x-robots-tag': 'noindex' } }).ok).toBe(false);
+    expect(evaluateMissingProfile({ status: 404, headers: { 'x-robots-tag': 'max-image-preview:large' } }).ok).toBe(false);
+  });
+
+  it('probes the numeric city address with a trailing slash too', () => {
+    expect(NUMERIC_QUEST_CITY_SLASH_PATH).toMatch(/^\/quests\/\d+\/$/);
+  });
+
+  describe('hreflang of a quest page', () => {
+    const ru = `${SITE}/quests/1/krakow-dragon`;
+    const pl = `${SITE}/pl/quests/1/krakow-dragon`;
+    const en = `${SITE}/en/quests/1/krakow-dragon`;
+    const link = (lang: string, href: string) => `<link rel="alternate" href="${href}" hreflang="${lang}"/>`;
+    const html = [link('ru', ru), link('pl', pl), link('x-default', ru), '<link rel="canonical" href="x"/>'].join('');
+    const live = { [ru]: 200, [pl]: 200 };
+
+    it('reads alternates whatever the attribute order and skips other links', () => {
+      expect(readHreflangLinks(`<link hreflang="pl" rel="alternate" href="${pl}?a=1&amp;b=2">${html}`)).toEqual([
+        { hreflang: 'pl', href: `${pl}?a=1&b=2` },
+        { hreflang: 'ru', href: ru },
+        { hreflang: 'pl', href: pl },
+        { hreflang: 'x-default', href: ru },
+      ]);
+    });
+
+    it('accepts the set the sitemap lists when every address is alive', () => {
+      expect(evaluateHreflang({ html, sitemapAlternates: [ru, pl, ru], statuses: live }))
+        .toEqual({ ok: true, hrefs: [ru, pl], failures: [] });
+    });
+
+    it('fails a withdrawn locale left in the HTML, a locale missing from it, a dead or repeated one', () => {
+      const withEn = html + link('en', en);
+      expect(evaluateHreflang({ html: withEn, sitemapAlternates: [ru, pl], statuses: { ...live, [en]: 404 } }).failures).toEqual([
+        `in HTML but not in sitemap: ${en}`,
+        `not answering 200: ${en} (404)`,
+      ]);
+      expect(evaluateHreflang({ html, sitemapAlternates: [ru, pl, en], statuses: live }).failures)
+        .toEqual([`in sitemap but not in HTML: ${en}`]);
+      expect(evaluateHreflang({ html, sitemapAlternates: [ru, pl], statuses: { [ru]: 200, [pl]: 301 } }).failures)
+        .toEqual([`not answering 200: ${pl} (301)`]);
+      expect(evaluateHreflang({ html: html + link('pl', pl), sitemapAlternates: [ru, pl], statuses: live }).failures)
+        .toEqual(['hreflang repeated: pl']);
+      expect(evaluateHreflang({ html: '<head></head>', sitemapAlternates: [], statuses: {} }).failures)
+        .toEqual(['no hreflang links in the raw HTML']);
+    });
+
+    it('picks the first Russian quest page that has alternates as the sample', () => {
+      const alt = (lang: string, href: string) => `<xhtml:link rel="alternate" hreflang="${lang}" href="${href}"/>`;
+      const urls = parseSitemap([
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        `<url><loc>${SITE}/quests/krakow</loc></url>`,
+        `<url><loc>${SITE}/quests/2/solo-quest</loc></url>`,
+        `<url><loc>${pl}</loc>${alt('ru', ru)}${alt('pl', pl)}</url>`,
+        `<url><loc>${ru}</loc>${alt('ru', ru)}${alt('pl', pl)}</url>`,
+        '</urlset>',
+      ].join(''));
+      expect(pickQuestSample(urls, SITE)).toEqual({
+        path: '/quests/1/krakow-dragon',
+        apiPath: '/api/quests/web/detail/1/krakow-dragon/?lang=ru',
+        alternates: [ru, pl],
+      });
+      expect(pickQuestSample(null, SITE)).toBeNull();
+      expect(pickQuestSample(parseSitemap(`<urlset><url><loc>${SITE}/</loc></url></urlset>`), SITE)).toBeNull();
+    });
+  });
+});
+
+describe('production SEO gate: trip_facts against the TouristTrip node (#3356)', () => {
+  const { readQuestTouristTrip, evaluateTripFacts } = require('../../scripts/test-seo-prod');
+  const { buildQuestTouristTrip } = require('../../utils/questTouristTrip');
+  const full = { duration_min: 120, distance_m: 1293, start: { lat: 53.678429, lng: 23.81863 }, is_free: true };
+  const node = (tripFacts: unknown) => buildQuestTouristTrip({
+    name: 'Квест', description: 'Описание', url: 'https://metravel.by/quests/11/grodno-royal', inLanguage: 'ru',
+    image: null, cityName: 'Гродно', touristType: 'Городской квест, пеший маршрут', tripFacts,
+  });
+  const page = (entity: unknown) => [
+    '<script type="application/ld+json" data-seo-jsonld="travel-article">{"@graph":[{"@type":"TouristTrip","timeRequired":"PT1M"}]}</script>',
+    `<script id="quest-public-structured-data" data-seo-jsonld="quest-public" type="application/ld+json">${JSON.stringify({
+      '@context': 'https://schema.org', '@graph': [{ '@type': 'BreadcrumbList' }, entity],
+    })}</script>`,
+  ].join('');
+
+  // Проба повторяет соответствие «факт → свойство» из сборщика узла; этот тест
+  // держит их вместе: что построил сборщик, то проба принимает.
+  it.each([
+    ['all facts known', full],
+    ['paid quest without a start point', { ...full, start: null, is_free: false }],
+    ['no facts at all', null],
+  ])('accepts the node the page builder makes: %s', (_label, tripFacts) => {
+    const entity = readQuestTouristTrip(page(node(tripFacts)));
+    expect(entity).toMatchObject({ '@type': ['TouristTrip', 'CreativeWork'] });
+    expect(evaluateTripFacts({ tripFacts, entity })).toEqual({ ok: true, failures: [] });
+  });
+
+  it('names every fact where the HTML and the API disagree', () => {
+    const entity = node(full);
+    expect(evaluateTripFacts({ tripFacts: { ...full, duration_min: 90, is_free: false }, entity }).failures).toEqual([
+      'timeRequired: API says "PT90M", HTML has "PT120M"',
+      'isAccessibleForFree: API says false, HTML has true',
+    ]);
+    expect(evaluateTripFacts({ tripFacts: { ...full, distance_m: 2000, start: { lat: 1, lng: 2 } }, entity }).failures).toEqual([
+      'potentialAction.distance: API says "2000 m", HTML has "1293 m"',
+      'tripOrigin.geo: API says "1,2", HTML has "53.678429,23.81863"',
+    ]);
+  });
+
+  it('fails a node that keeps facts the API no longer has, and one that lost them', () => {
+    expect(evaluateTripFacts({ tripFacts: null, entity: node(full) }).failures).toHaveLength(4);
+    expect(evaluateTripFacts({ tripFacts: full, entity: node(null) }).failures).toHaveLength(4);
+  });
+
+  it('fails when the API has no trip_facts key or the page has no quest node', () => {
+    expect(evaluateTripFacts({ tripFacts: undefined, entity: node(full) }).failures).toEqual(['API detail has no trip_facts key']);
+    expect(evaluateTripFacts({ tripFacts: full, entity: readQuestTouristTrip('<html></html>') }).failures)
+      .toEqual(['no TouristTrip node in the quest-public JSON-LD graph']);
+    expect(readQuestTouristTrip('<script data-seo-jsonld="quest-public" type="application/ld+json">{broken</script>')).toBeNull();
   });
 });

@@ -1,19 +1,17 @@
 import type { ImmutableRequest } from 'expo-server';
 import { loadQuestPublicRoute } from '@/components/quests/runtime/questRouteLoader';
 import { fetchPublicRouteJson } from '@/utils/ssr/fetchPublicRouteJson';
-import { questPrivateSnapshot } from '../../fixtures/questPublicProjection';
+import { questPrivateSnapshot, questPublicApiResponse, questPublicLocales } from '../../fixtures/questPublicProjection';
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
 const path = require('node:path');
 
 jest.mock('@/utils/ssr/fetchPublicRouteJson', () => ({ fetchPublicRouteJson: jest.fn() }));
 const fetchMock = fetchPublicRouteJson as jest.Mock;
-const source = buildQuestWebProjection(questPrivateSnapshot(), loadSsgCatalogs(path.resolve(__dirname, '../../..')).catalogs);
+const snapshot = questPrivateSnapshot();
+const source = buildQuestWebProjection(snapshot, loadSsgCatalogs(path.resolve(__dirname, '../../..')).catalogs);
 const request = (signal = new AbortController().signal) => ({ signal } as ImmutableRequest);
-const raw = (locale: string) => ({ ...source.pages.find((entry: { kind: string; locale: string }) => entry.kind === 'detail' && entry.locale === locale),
-  schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64), ru_source_path: '/quests/7/fixture-city-walk',
-  versions: source.pages.filter((entry: { kind: string }) => entry.kind === 'detail').map((entry: { locale: string; canonical_path: string; content_revision: string }) =>
-    ({ locale: entry.locale, path: entry.canonical_path, content_revision: entry.content_revision })) });
+const raw = (locale: string) => questPublicApiResponse(source.pages, snapshot, locale as (typeof questPublicLocales)[number]);
 
 describe('quest public loader', () => {
   const original = process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR;

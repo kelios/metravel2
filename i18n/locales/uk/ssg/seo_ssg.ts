@@ -26,4 +26,5 @@ export const seoSsgResources = {
   "questDetail.travelsHeading": "Подорожі: {{value1}}",
   "questDetail.travelsLead": "Статті мандрівників про це місто допоможуть доповнити прогулянку.",
   "questDetail.touristType": "Міський квест, пішохідний маршрут",
+  "questDetail.touristTypeBike": "Міський квест, велосипедний маршрут",
 } as const

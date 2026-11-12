@@ -235,50 +235,12 @@ const patchQuestHead = (seo: QuestSeoModel, canonical: string, image: string, al
   syncQuestAlternates(alternates);
 };
 
-const removeUnownedBreadcrumbLists = () => {
-  document.head.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]:not([data-rh])').forEach((node) => {
-    try {
-      if (JSON.parse(node.textContent || 'null')?.['@type'] === 'BreadcrumbList') node.remove();
-    } catch {
-      // Not ours to judge: an unparsable foreign script stays.
-    }
-  });
-};
-
 const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical: string, image: string, alternates: ReturnType<typeof questServingAlternates>) => {
   useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
-    // SSG's unowned TouristTrip survives Helmet reconciliation and SPA navigation.
-    // Keep it until the managed graph exists, including mounts after the last timer.
-    const bootstrapSelector = 'script[data-seo-jsonld="quest"][type="application/ld+json"]';
-    let bootstrapObserver: MutationObserver | undefined;
-    if (document.head.querySelector(bootstrapSelector)) {
-      const handOverStructuredData = () => {
-        if (document.documentElement.getAttribute('data-metravel-print-document') === 'true') {
-          bootstrapObserver?.disconnect();
-          return;
-        }
-        const managedScript = document.head.querySelector<HTMLScriptElement>(
-          `script#${QUEST_STRUCTURED_DATA_ID}[type="application/ld+json"][data-rh="true"]`,
-        );
-        if (!managedScript?.textContent?.trim()) return;
-        document.head.querySelectorAll(bootstrapSelector).forEach((node) => node.remove());
-        // #2466: the managed graph carries the page's BreadcrumbList; the SSG
-        // copy would leave two lists (and a stale one after SPA navigation).
-        removeUnownedBreadcrumbLists();
-        bootstrapObserver?.disconnect();
-      };
-      bootstrapObserver = new MutationObserver(handOverStructuredData);
-      bootstrapObserver.observe(document.head, { childList: true, subtree: true });
-      handOverStructuredData();
-    }
-
     const timers = HEAD_PATCH_DELAYS_MS.map((delay) => setTimeout(() => patchQuestHead(seo, canonical, image, alternates), delay));
-    return () => {
-      timers.forEach(clearTimeout);
-      bootstrapObserver?.disconnect();
-    };
+    return () => timers.forEach(clearTimeout);
   }, [alternates, canonical, enabled, image, seo]);
 };
 
@@ -724,7 +686,7 @@ export default function QuestByIdScreen({ route, publicProjection, publicStructu
   useWebLayoutEffect(() => {
     if (!isFocused || Platform.OS !== 'web' || typeof document === 'undefined') return;
     if (prefixUnavailable || offlinePrefix) {
-      document.head.querySelectorAll('link[rel="canonical"], meta[property="og:url"], link[rel="alternate"][hreflang], script#quest-structured-data, script[data-seo-jsonld="quest"]').forEach((node) => node.remove());
+      document.head.querySelectorAll('link[rel="canonical"], meta[property="og:url"], link[rel="alternate"][hreflang], script#quest-structured-data').forEach((node) => node.remove());
       upsertMetaContent('meta[name="robots"]', 'noindex, nofollow');
     }
   }, [isFocused, offlinePrefix, prefixUnavailable]);

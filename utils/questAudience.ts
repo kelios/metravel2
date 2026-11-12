@@ -1,4 +1,5 @@
 import { translate as i18nT } from '@/i18n'
+import { BIKE_QUEST_TAG_SLUGS } from '@/utils/questTags'
 export type QuestAgeCategoryId = 'age-5-7' | 'age-8-10' | 'age-11-14' | 'kids' | 'teens';
 
 export type QuestAgeCategory = {
@@ -51,7 +52,7 @@ export function normalizeQuestTag(tag: unknown): string {
 // как синоним на случай ручной разметки. Тег включает бейдж «Вело» на
 // карточках и фильтр велоквестов в каталоге.
 export const BIKE_QUEST_TAG = 'bike';
-const BIKE_QUEST_TAGS = new Set<string>([BIKE_QUEST_TAG, 'velo']);
+const BIKE_QUEST_TAGS = new Set<string>(BIKE_QUEST_TAG_SLUGS);
 
 export function isBikeQuest(tags?: string[] | null): boolean {
   if (!tags?.length) return false;

@@ -1,17 +1,14 @@
 import { parseQuestPublicRoute, validateQuestPublicProjection } from '@/utils/questPublicPage';
-import { questPrivateSnapshot } from '../fixtures/questPublicProjection';
+import { questPrivateSnapshot, questPublicApiResponse, questPublicLocales } from '../fixtures/questPublicProjection';
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
 const path = require('node:path');
 
 const catalogues = loadSsgCatalogs(path.resolve(__dirname, '../..')).catalogs;
-const pages = buildQuestWebProjection(questPrivateSnapshot(), catalogues).pages;
-function projection(locale = 'ru') {
-  const page = pages.find((entry: { kind: string; locale: string }) => entry.kind === 'detail' && entry.locale === locale);
-  return { ...page, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
-    ru_source_path: '/quests/7/fixture-city-walk', versions: pages.filter((entry: { kind: string }) => entry.kind === 'detail')
-      .map((entry: { locale: string; canonical_path: string; content_revision: string }) => ({ locale: entry.locale, path: entry.canonical_path, content_revision: entry.content_revision })) };
-}
+const snapshot = questPrivateSnapshot();
+const pages = buildQuestWebProjection(snapshot, catalogues).pages;
+// A fresh copy per call: several cases mutate the response they reject.
+const projection = (locale: (typeof questPublicLocales)[number] = 'ru') => questPublicApiResponse(pages, snapshot, locale);
 
 describe('public quest route and selected projection', () => {
   it.each(['/quests/7/fixture-city-walk', '/be/quests/7/fixture-city-walk', '/uk/quests/7/fixture-city-walk',
@@ -55,12 +52,14 @@ describe('public quest route and selected projection', () => {
   it('keeps backend trip_facts of a detail and rejects their drift', () => {
     const raw = projection();
     const route = parseQuestPublicRoute(raw.canonical_path)!;
-    const facts = { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true };
-    expect(validateQuestPublicProjection({ ...raw, trip_facts: facts }, route)?.trip_facts).toEqual(facts);
+    const facts = raw.trip_facts;
+    expect(facts).toEqual({ duration_min: 90, distance_m: 1001, start: { lat: 53.9, lng: 27.5 }, is_free: true });
+    expect(validateQuestPublicProjection(raw, route)?.trip_facts).toEqual(facts);
     const unknown = { duration_min: null, distance_m: null, start: null, is_free: false };
     expect(validateQuestPublicProjection({ ...raw, trip_facts: unknown }, route)?.trip_facts).toEqual(unknown);
     expect(validateQuestPublicProjection({ ...raw, trip_facts: null }, route)?.trip_facts).toBeNull();
-    expect(validateQuestPublicProjection(raw, route)?.trip_facts).toBeNull();
+    const { trip_facts: _served, ...older } = raw;
+    expect(validateQuestPublicProjection(older, route)?.trip_facts).toBeNull();
     for (const drift of [
       { ...facts, distance_m: 0 }, { ...facts, duration_min: 1.5 }, { ...facts, is_free: 'yes' },
       { ...facts, start: { lat: 91, lng: 0 } }, { ...facts, start: { lat: 1, lng: 2, alt: 3 } },

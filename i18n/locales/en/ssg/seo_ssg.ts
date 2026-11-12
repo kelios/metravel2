@@ -26,4 +26,5 @@ export const seoSsgResources = {
   "questDetail.travelsHeading": "Travels: {{value1}}",
   "questDetail.travelsLead": "Traveller articles about this city will help round out the walk.",
   "questDetail.touristType": "City quest, walking route",
+  "questDetail.touristTypeBike": "City quest, cycling route",
 } as const

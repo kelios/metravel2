@@ -26,4 +26,5 @@ export const seoSsgResources = {
   "questDetail.travelsHeading": "Падарожжы: {{value1}}",
   "questDetail.travelsLead": "Артыкулы падарожнікаў пра гэты горад дапамогуць дапоўніць прагулку.",
   "questDetail.touristType": "Гарадскі квэст, пешы маршрут",
+  "questDetail.touristTypeBike": "Гарадскі квэст, веласіпедны маршрут",
 } as const
