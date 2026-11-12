@@ -22,7 +22,7 @@ The system SHALL present regular and compact contribution invitations with the s
 
 ### Requirement: First-frame stabilization preserves invitation behavior
 
-The system SHALL preserve invitation copy, destinations, accessibility, impression and click behavior while stabilizing its layout, and SHALL preserve the existing native layout without web-only metadata.
+The system SHALL preserve invitation copy, destinations, accessibility, impression and click behavior while stabilizing its layout, and SHALL preserve the existing native layout and actions without requiring web-only behavior.
 
 #### Scenario: Existing contribution action
 - **WHEN** a visitor activates an invitation action after hydration
@@ -30,4 +30,4 @@ The system SHALL preserve invitation copy, destinations, accessibility, impressi
 
 #### Scenario: Native invitation
 - **WHEN** an invitation is rendered on a native platform
-- **THEN** it keeps its current responsive layout and actions and receives no web layout markers
+- **THEN** it keeps its current responsive layout and actions without depending on web-only behavior

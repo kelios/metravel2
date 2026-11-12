@@ -790,9 +790,29 @@ guard, падающий в CI на попытке обойти этот конт
 - **Контроль:** actual-banner/container SSR→hydration 390/1280, две плотности и
   ветви действий, container tiers, native no-marker; исходный numeric FAIL
   сохранён. Source: 8 suites/124 tests, полный lint, main/e2e types, prompt audit и
-  strict OpenSpec PASS; новая публикация и runtime pending. Общий компонент
-  используется в travel footer: final primary10 и
-  Lighthouse5 проверяются на новой ревизии, старый PASS не переименовывается.
+  strict OpenSpec PASS. Финальная ревизия `292c85ba3`: independent/formal review
+  PASS, canonical deploy/budgets PASS; полные slider guards `2/2 + 37/37`.
+  Production Places desktop `1280×720`: пять cold visits, CLS
+  `0.001858657201` каждый; собственные размеры/padding/layout баннера стабильны.
+  Положительный footer проверен на разрешённой статье Витебска в RU390/RU1440/PL390;
+  у Harz баннера нет по allowlist. Финальные Harz primary10 и Lighthouse median66
+  подтверждены на той же новой ревизии с обновлённой critical CSS.
+
+### PLACES-MOBILE-CATALOG-TRANSITION-CLS-INVESTIGATION-001 — отдельное наблюдение мобильного каталога
+
+- **Наблюдение:** один production cold `390×844` визит на `292c85ba3` дал общий
+  CLS `0.3924044352233086`. Менялись filter/results-meta, сетка исчезала и
+  возвращалась; весь баннер сместился на 22px при неизменных собственных
+  размерах, padding, направлении и относительных отступах. Инициирующий
+  query-state event не записан, причина не установлена.
+- **Каноническая задача:** #3387, `todo`/без исполнителя, related #3386/#1334.
+  Первый следующий check — независимый cold390 повтор с query-state/DOM identity
+  ledger, затем исправление только подтверждённого механизма. Это не доказанный
+  recurrence старой mobile-шапки #1334 и не дефект собственной геометрии #3386.
+- **Границы evidence:** исходный общий mobile FAIL сохранён без изменения;
+  supplemental banner control получен из того же raw, не из нового визита.
+  Пять desktop PASS и полный local guard `37/37` — контроли других границ,
+  не отменяющие mobile-наблюдение. Evidence — `.codex-temp/task3382/acceptance-r5/`.
 
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
 
@@ -872,7 +892,7 @@ guard, падающий в CI на попытке обойти этот конт
   публикуются; later capture/reserve release прежние. Blanket правило для later
   epochs отвергнуто после 22 reserve/Comments regressions; scheduling-only microtask
   также не исправил RED. Initial manual/native/top0/empty и unknown-parent controls
-  дополняют прежний later-growth coverage; production PASS пока не заявлен.
+  дополняют прежний later-growth coverage; финальная production-проверка приведена ниже.
   Actual загрузка — MapIO200→module→BelkrajIO300, outer ExcursionsIO1000 нет.
   Primary требует runtime + реальную positive-height section; iframe facts
   записываются, activation проверяется отдельно при реально видимом widget-slot.
@@ -882,8 +902,14 @@ guard, падающий в CI на попытке обойти этот конт
   проходов `390×844` и `1440×900`, порог суммы `0.1`; прежний контроль статьи
   #2329 сохранён. Raw baseline/attribution — ignored
   `.codex-temp/task3382/`, новое causal/raw evidence — `diagnosis-r2/`.
-  Source-проверки и production recheck передаются
-  независимому ревью/приёмке; этот delta не заявляет production pass.
+  Финальная приёмка `292c85ba3` — PASS: пять mobile CLS
+  `0.00154157–0.00154266` и пять desktop `0.01156819–0.01159222`, каждый ≤0.1;
+  реальные owner hits, первый wheel +500, bottom, шесть runtime и footer
+  подтверждены во всех десяти визитах. Lighthouse mobile `58/67/64/67/66`,
+  median66≥60; slider `2/2`, полный slider-perf `37/37`, source coverage
+  `19 suites/280 tests`, lint/types/audits и оба review — PASS. #3382/#3386 done.
+  Итоговые raw, screenshots и классификация console/network сохранены в
+  `.codex-temp/task3382/acceptance-r5/final-result.md`; старые FAIL не переименованы.
 - **Последняя проверка:** 2026-08-27; implementation и повторный независимый
   code review завершены; первый production candidate выявил mobile recurrence и
   persistent-reserve риск, оба исправлены. Финальный Jest/ESLint — `3 suites /`
