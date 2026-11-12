@@ -25,6 +25,12 @@ const CURL_STUB = [
   '  [[ "$*" == *http_code* ]] && printf 000',
   '  exit 28',
   'fi',
+  // STUB_SCRIPT (#3314): ответ маркера по попыткам — `down`, `nosha` или `sha`, через запятую;
+  // после списка действует обычное поведение заглушки.
+  'IFS=, read -r -a script <<< "${STUB_SCRIPT:-}"',
+  'step="${script[$((attempt - 1))]:-}"',
+  'if [[ "$step" == down ]]; then [[ "$*" == *http_code* ]] && printf 000; exit 28; fi',
+  'if [[ "$step" == nosha && "$url" == */.build-source.json ]]; then printf "{}"; exit 0; fi',
   // STUB_MARKER_BODY: хост отвечает на маркер 200, но телом без полного sha (#3305).
   'if [[ "$url" == */.build-source.json && -n "${STUB_MARKER_BODY:-}" ]]; then printf "%s" "$STUB_MARKER_BODY"; exit 0; fi',
   'if [[ "$url" == */.build-source.json ]]; then printf \'{"sha":"%s"}\' "$STUB_SHA"; exit 0; fi',
@@ -104,6 +110,28 @@ describe('verify-live-release.sh', () => {
     expect(result.stdout).toContain('⚠️ Попытка 1 из 3: sha в маркере нет')
     expect(result.stdout).toContain(`❌ Релиз не опубликован: /.build-source.json прода отвечает без полного sha за 3 попыток, ожидался ${SHA}`)
     expect(result.stdout).not.toContain('Хост не ответил')
+  })
+
+  // #3314: итог считается по всем попыткам, а не по последней.
+  describe('a verdict over every attempt', () => {
+    it('keeps a sha read once as proof of the publication when the host goes silent afterwards', () => {
+      const result = verify({ STUB_SCRIPT: 'sha,down,down', STUB_HEALTH: '502' })
+      expect(result.status).toBe(1)
+      expect(result.attempts).toBe(3)
+      expect(result.stdout).toContain(`❌ Релиз ${SHA.slice(0, 9)} опубликован (sha прочитан в 1 из 3 попыток), но ни одна попытка не дала sha и смоук 200 вместе`)
+      expect(result.stdout).not.toContain('Хост не ответил')
+    })
+
+    it.each([
+      ['a silent last attempt', 'nosha,nosha,down', 2, 1],
+      ['a marker without sha only on the last attempt', 'down,down,nosha', 1, 2],
+    ])('does not claim «all attempts» for %s', (_label, script, noSha, silent) => {
+      const result = verify({ STUB_SCRIPT: script })
+      expect(result.status).toBe(1)
+      expect(result.attempts).toBe(3)
+      expect(result.stdout).toContain(`❌ Релиз ${SHA.slice(0, 9)} не подтверждён: /.build-source.json прода ответил без полного sha в ${noSha} из 3 попыток и не ответил в ${silent}, ожидался ${SHA}`)
+      expect(result.stdout).not.toContain('за 3 попыток')
+    })
   })
 
   it('reports a published release whose smoke keeps failing', () => {

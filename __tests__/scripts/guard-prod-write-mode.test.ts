@@ -90,6 +90,34 @@ describe('classifySource: кто пишет на прод и как выбира
   })
 })
 
+// #3314: запись «POST читает чужой API» доказывается адресатом, а не словом в файле.
+describe('classifySource: запись REGISTERED «только читает»', () => {
+  const registered = { 'scripts/report.js': { evidence: /runReport/, readOnlyHosts: /(?:^|\.)googleapis\.com$/, reason: 'читающий отчёт' } }
+  const READ = "const site = 'https://metravel.by/'\nfetch(`https://analyticsdata.googleapis.com/v1/properties/${id}:runReport`, { method: 'POST' })\n"
+  const verdict = (content: string) => classifySource({ filePath: 'scripts/report.js', content, registered })
+
+  it('пропускает скрипт, у которого каждый мутирующий метод уходит на разрешённый хост', () => {
+    expect(verdict(READ)).toEqual({ file: 'scripts/report.js', mode: 'registered', reason: 'читающий отчёт' })
+  })
+
+  it.each([
+    ['POST на сайт рядом с прежним шаблоном', `${READ}fetch('https://metravel.by/api/travels/1/', { method: 'PATCH' })\n`, /metravel\.by/],
+    ['хост-двойник', `${READ}fetch('https://googleapis.com.example.org/x', { method: 'POST' })\n`, /example\.org/],
+    ['сессия сайта', `${READ}const { createToolSession } = require('./lib/metravel-tool-session')\n`, /сессия или токен/],
+    ['multipart-форма', `${READ}const form = new FormData()\n`, /multipart/],
+    ['метод без адреса выше по коду', "const out = 'metravel.by'\nrequest(target, { method: 'DELETE' })\nconst report = 'runReport https://analyticsdata.googleapis.com'\n", /нет выше по коду/],
+  ])('краснеет, когда скрипт перестал быть только читающим: %s', (_label, content, detail) => {
+    expect(verdict(content)).toMatchObject({ kind: 'stale_registration', detail: expect.stringMatching(detail) })
+  })
+
+  it('в репозитории обе записи отчётов Google несут проверку адресата', () => {
+    for (const file of ['scripts/analytics-health-check.js', 'scripts/fetch-gsc-stats.js']) {
+      expect(REGISTERED[file].readOnlyHosts).toBeInstanceOf(RegExp)
+      expect(classifySource({ filePath: file, content: fs.readFileSync(path.join(repoRoot, file), 'utf8') })).toMatchObject({ mode: 'registered' })
+    }
+  })
+})
+
 describe('scanScripts', () => {
   it('обходит подкаталоги, но не библиотеки и не каталоги состояния', () => {
     withScripts({

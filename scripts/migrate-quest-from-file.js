@@ -114,6 +114,7 @@ function finaleText(finale) {
 // (#1802).
 const POINT_ROLES = ['required', 'optional', 'final'];
 const { isOptionalByTitle } = require('./lib/questPointRoles');
+const { questBundleHasIntro } = require('./lib/questBundles');
 function pointRoleFor(step, index, steps) {
     const explicit = step.point_role || step.pointRole;
     if (explicit) {
@@ -267,9 +268,7 @@ async function main() {
         );
 
         // 3. Intro step
-        const hasIntro = Array.isArray(existingBundle?.steps)
-            ? existingBundle.steps.some(s => s?.is_intro === true || s?.step_id === 'intro')
-            : false;
+        const hasIntro = questBundleHasIntro(existingBundle);
         if (q.intro && !hasIntro) {
             try {
                 await apiPost('/api/quest-steps/', {

@@ -90,8 +90,14 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   // (uploadingRef). Каждый снимает блокировку сохранения, только когда второй
   // свободен; иначе догрузка старого файла открывала сохранение посреди выбора.
   const foregroundBusyRef = useRef(false);
-  // Число явных отмен: отмена во время догрузки делает чужим и её ответ.
-  const cancelCountRef = useRef(0);
+  // Поколение очереди. Файл очереди перестаёт быть выбором автора в трёх случаях:
+  // явная отмена, новый файл, удаление фото (#3312, #3314). Тогда он не уходит на
+  // сервер, а ответ уже идущей догрузки чужой — одинаково до и после её старта.
+  const queueEpochRef = useRef(0);
+  const supersedeQueuedUpload = useCallback(() => {
+    queueEpochRef.current += 1;
+    pendingUploadRef.current = null;
+  }, []);
 
   const hasValidImage = Boolean(previewUrl || imageUri);
   const currentDisplayUrl = previewUrl ?? imageUri ?? '';
@@ -127,11 +133,11 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     setImageUri(null); setPreviewUrl(null); setFallbackImageUrl(null);
     setHasTriedFallback(false); setUploadMessage(null); setError(null);
     setIsManuallySelected(false); setRemoteRetryAttempt(0);
-    pendingUploadRef.current = null;
+    supersedeQueuedUpload();
     if (remoteRetryTimerRef.current) { clearTimeout(remoteRetryTimerRef.current); remoteRetryTimerRef.current = null; }
     onPreviewChange?.(null);
     onUpload?.('');
-  }, [onPreviewChange, onUpload]);
+  }, [onPreviewChange, onUpload, supersedeQueuedUpload]);
 
   const uploadPendingIfPossible = useCallback(async () => {
     const normalizedId = (idTravel ?? '').toString();
@@ -141,8 +147,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     const file = pendingUploadRef.current;
     pendingUploadRef.current = null;
     uploadingRef.current = true;
-    const cancelsAtStart = cancelCountRef.current;
-    const isCancelled = () => cancelsAtStart !== cancelCountRef.current;
+    const epochAtStart = queueEpochRef.current;
+    const isSuperseded = () => epochAtStart !== queueEpochRef.current;
 
     try {
       setLoading(true); setError(null); setUploadMessage(null);
@@ -160,7 +166,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
-      if (isCancelled()) return;
+      if (isSuperseded()) return;
       if (!mountedRef.current) {
         if (deliversAfterUnmount(collection) && uploadedUrl) onUpload?.(uploadedUrl);
         return;
@@ -173,7 +179,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         onUpload?.(uploadedUrl);
       }
     } catch {
-      if (isCancelled()) return;
+      if (isSuperseded()) return;
       pendingUploadRef.current = file;
       reportClientError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
     } finally {
@@ -262,13 +268,13 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   // доставляется, на экране снова прежнее фото, кнопки сохранения свободны.
   const cancelUpload = useCallback(() => {
     uploadSeqRef.current += 1;
-    cancelCountRef.current += 1;
+    supersedeQueuedUpload();
     foregroundBusyRef.current = false;
     if (!mountedRef.current) return;
     setLoading(false); setUploadProgress(0); setPreviewUrl(null); setUploadMessage(null); setError(null);
     setIsManuallySelected(false);
     setImageUri(oldImage ? normalizeImageUrl(oldImage) : null);
-  }, [oldImage]);
+  }, [oldImage, supersedeQueuedUpload]);
 
   // «Фото в работе» начинается с запуска выбора (пикер, камера), а не с сети:
   // пока система отдаёт файл, `loading` уже держит сохранение и закрытие (#3213).
@@ -309,6 +315,9 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         if (mountedRef.current) { reportClientError(validationError); setPreviewUrl(null); }
         return;
       }
+      // Принятый файл — новый выбор автора: прежний файл очереди и ответ его догрузки
+      // больше не должны подменить это превью.
+      supersedeQueuedUpload();
 
       let previewCandidate = '';
       if (mountedRef.current) {
@@ -387,7 +396,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         if (mountedRef.current) { if (!uploadingRef.current) setLoading(false); setUploadProgress(0); }
       }
     }
-  }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError]);
+  }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError, supersedeQueuedUpload]);
 
   // Image error/load handlers for web
   const handleImageLoadCheck = useCallback((imgEl: HTMLImageElement) => {

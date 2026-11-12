@@ -17,6 +17,8 @@ const originalOS = Platform.OS;
 beforeEach(() => {
   Object.defineProperty(Platform, 'OS', { value: 'web' });
   jest.clearAllMocks();
+  // Ответ, заготовленный тестом, где догрузка не стартовала, не должен достаться следующему.
+  jest.mocked(uploadImage).mockReset();
   jest.mocked(prepareWebImageFileForUpload).mockImplementation(async (file) => file);
   URL.createObjectURL = jest.fn(() => 'blob:cover-preview');
   URL.revokeObjectURL = jest.fn();
@@ -114,4 +116,66 @@ it('releases the lock and keeps the file queued when the deferred upload fails',
   expect(screen.result.current.loading).toBe(false);
   expect(onUpload).not.toHaveBeenCalled();
   expect(onError).toHaveBeenCalledWith('Произошла ошибка при загрузке');
+});
+
+// #3314 (д): файл очереди перестаёт быть выбором автора, когда выбран новый файл или
+// нажата отмена, — независимо от того, успела ли догрузка стартовать.
+describe('a queued file that is no longer the author\'s choice', () => {
+  const NEXT = 'https://example.com/next.png';
+  const nextFile = () => new File(['png'], 'next.png', { type: 'image/png' });
+
+  it('does not let the deferred answer of the old file replace the preview of a newly chosen one', async () => {
+    const { screen, onUpload, assignId, resolveUpload } = await withQueuedFile();
+    await assignId();
+    let resolveSecond!: (value: { url: string }) => void;
+    jest.mocked(uploadImage).mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
+    jest.mocked(URL.createObjectURL).mockReturnValueOnce('blob:next-preview');
+    let second!: Promise<void>;
+    await act(async () => { second = screen.result.current.handleUploadImage(nextFile()); });
+    expect(screen.result.current.currentDisplayUrl).toBe('blob:next-preview');
+
+    await act(async () => { resolveUpload(); });
+    expect(onUpload).not.toHaveBeenCalledWith(UPLOADED);
+    expect(screen.result.current.currentDisplayUrl).toBe('blob:next-preview');
+    expect(screen.result.current.uploadMessage).toBeNull();
+
+    await act(async () => { resolveSecond({ url: NEXT }); await second; });
+    expect(onUpload.mock.calls).toEqual([[NEXT]]);
+    expect(screen.result.current.currentDisplayUrl).toBe(NEXT);
+  });
+
+  it('neither reports nor re-queues a failed deferred upload of a replaced file', async () => {
+    const onError = jest.fn();
+    const { screen, onUpload, assignId, rejectUpload } = await withQueuedFile({ onError });
+    await assignId();
+    jest.mocked(uploadImage).mockResolvedValueOnce({ url: NEXT });
+    await act(async () => { await screen.result.current.handleUploadImage(nextFile()); });
+    await act(async () => { rejectUpload(); });
+    expect(onError).not.toHaveBeenCalled();
+    expect(onUpload.mock.calls).toEqual([[NEXT]]);
+    // Прежний файл не вернулся в очередь: повторной догрузки нет.
+    await act(async () => { await screen.rerender({ collection: 'travelMainImage', idTravel: '42', onUpload, onError, oldImage: NEXT }); });
+    expect(uploadImage).toHaveBeenCalledTimes(2);
+    expect(screen.result.current.currentDisplayUrl).toBe(NEXT);
+  });
+
+  it('drops the queued file on an explicit cancel before the upload has started', async () => {
+    const { screen, onUpload, assignId } = await withQueuedFile({ oldImage: 'https://example.com/old.jpg' });
+    await act(async () => { screen.result.current.cancelUpload(); });
+    await assignId();
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(screen.result.current.loading).toBe(false);
+    expect(screen.result.current.currentDisplayUrl).toBe('https://example.com/old.jpg');
+  });
+
+  it('does not bring a removed photo back with the deferred answer', async () => {
+    const { screen, onUpload, assignId, resolveUpload } = await withQueuedFile();
+    await assignId();
+    await act(async () => { screen.result.current.handleRemovePress(); });
+    onUpload.mockClear();
+    await act(async () => { resolveUpload(); });
+    expect(onUpload).not.toHaveBeenCalled();
+    expect(screen.result.current.hasValidImage).toBe(false);
+  });
 });

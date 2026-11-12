@@ -8,7 +8,7 @@
 jest.mock('@/scripts/lib/fetchJson', () => ({ fetchJson: jest.fn() }))
 
 const { fetchJson } = require('@/scripts/lib/fetchJson')
-const { fetchAllQuestIds, fetchQuestBundles, fetchQuestCatalog, loadLocalBundles, parseSteps } = require('@/scripts/lib/questBundles')
+const { fetchAllQuestIds, fetchQuestBundles, fetchQuestCatalog, loadLocalBundles, parseSteps, questBundleHasIntro } = require('@/scripts/lib/questBundles')
 
 beforeEach(() => {
   ;(fetchJson as jest.Mock).mockReset()
@@ -92,5 +92,38 @@ describe('loadLocalBundles', () => {
     expect(bundle.quest_id).toBe('sofia-serdica-underfoot')
     expect(Array.isArray(bundle.steps)).toBe(true)
     expect(bundle.steps.length).toBeGreaterThan(0)
+  })
+})
+
+// #3314: бандл `by-quest-id` отдаёт вступление полем `intro`, а `steps` — без него.
+// Миграции искали вступление только среди шагов и слали его повторно.
+describe('questBundleHasIntro — вступление существующего квеста', () => {
+  it('видит вступление в отдельном поле бандла, как его отдаёт API', () => {
+    expect(questBundleHasIntro({ intro: { step_id: 'intro', is_intro: true }, steps: [{ step_id: 'p1', is_intro: false }] })).toBe(true)
+  })
+
+  it('читает и список шагов, где вступление — строка с is_intro или step_id intro', () => {
+    expect(questBundleHasIntro({ steps: [{ step_id: 'start', is_intro: true }] })).toBe(true)
+    expect(questBundleHasIntro({ steps: [{ step_id: 'intro' }] })).toBe(true)
+  })
+
+  it('не находит вступление там, где его нет: новый квест, пробный прогон, пустое поле', () => {
+    for (const bundle of [null, undefined, {}, { data: [] }, { intro: null, steps: [{ step_id: 'p1', is_intro: false }] }]) {
+      expect(questBundleHasIntro(bundle)).toBe(false)
+    }
+  })
+
+  it('используется каждой миграцией квеста, которая решает, слать ли вступление', () => {
+    const fs = require('node:fs')
+    const path = require('node:path')
+    const dir = path.resolve(__dirname, '../../scripts')
+    const deciding = fs.readdirSync(dir)
+      .filter((name: string) => /^migrate-.*quests?(?:-from-file)?\.js$/.test(name))
+      .filter((name: string) => /\bhasIntro\b/.test(fs.readFileSync(path.join(dir, name), 'utf8')))
+    expect(deciding.length).toBeGreaterThan(50)
+    const ownReading = deciding.filter((name: string) =>
+      !/const hasIntro = (?:require\('\.\/lib\/questBundles'\)\.)?questBundleHasIntro\(existingBundle\);/.test(
+        fs.readFileSync(path.join(dir, name), 'utf8')))
+    expect(ownReading).toEqual([])
   })
 })

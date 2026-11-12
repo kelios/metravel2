@@ -58,10 +58,32 @@ const SITE_API = /metravel-tool-session|metravel-token|metravel\.by|METRAVEL_(?:
 const SHARED_MODE_CALL = /require\(\s*['"]\.\/lib\/one-off-write-mode['"]\s*\)\s*\.resolveOneOffWriteMode\(\s*args\s*,/
 const HAND_ROLLED_MODE = /\.(?:includes|indexOf)\(\s*['"`]--(?:dry-run|apply)['"`]\s*\)|[=!]==\s*['"`]--(?:dry-run|apply)['"`]|\bhas\(\s*['"`](?:--)?(?:dry-run|apply)['"`]\s*\)/
 
+// Запись «читающий запрос» (`readOnlyHosts`) доказывается адресатом, а не словом в
+// файле (#3314): шаблон `googleapis.com` находился бы и после того, как рядом
+// появился POST на сайт. Адресат мутирующего метода — ближайший абсолютный адрес
+// выше по коду; сессии сайта и multipart-формы в таком скрипте быть не может.
+const MUTATING_METHOD = /['"`](?:POST|PATCH|PUT|DELETE)['"`]/gi
+const ABSOLUTE_URL = /https?:\/\/([a-z0-9.-]+)/gi
+const SITE_SESSION = /metravel-tool-session|metravel-token|METRAVEL_TOKEN/
+const GOOGLE_API_HOST = /(?:^|\.)googleapis\.com$/
+
+/** Почему скрипт перестал быть «только читающим»; `null` — каждый мутирующий метод уходит на разрешённый хост. */
+function readOnlyViolation(code, hosts) {
+  if (/\bnew\s+FormData\b/.test(code)) return 'в скрипте появилась multipart-форма'
+  if (SITE_SESSION.test(code)) return 'в скрипте появилась сессия или токен API сайта'
+  const urls = [...code.matchAll(ABSOLUTE_URL)].map((match) => ({ index: match.index, host: match[1].toLowerCase() }))
+  for (const method of code.matchAll(MUTATING_METHOD)) {
+    const host = urls.filter((url) => url.index < method.index).at(-1)?.host
+    if (!host || !hosts.test(host)) return `метод ${method[0]} уходит на ${host || 'адрес, которого нет выше по коду'}, а не на ${hosts}`
+  }
+  return null
+}
+
 /**
  * Закрытый список скриптов со своим механизмом. `evidence` обязан найтись в коде
  * (комментарии не считаются): переписали скрипт — запись либо подтверждается
- * заново, либо краснеет как `stale_registration`.
+ * заново, либо краснеет как `stale_registration`. `readOnlyHosts` — для записи
+ * «POST здесь читает чужой API»: guard сверяет адресата каждого мутирующего метода.
  */
 const REGISTERED = {
   'scripts/recover-travel-from-ssg.js': {
@@ -85,11 +107,13 @@ const REGISTERED = {
     reason: 'хранилище книг в S3, не API сайта: пустой запуск — отказ, upload не перезаписывает объекты (If-None-Match) и проходит проверку прав, prune удаляет только с --apply',
   },
   'scripts/analytics-health-check.js': {
-    evidence: /googleapis\.com/,
+    evidence: /analyticsdata\.googleapis\.com\/v1beta\/properties\/\$\{propertyId\}:runReport/,
+    readOnlyHosts: GOOGLE_API_HOST,
     reason: 'POST — читающие запросы отчётов Google; на сайт ничего не пишется',
   },
   'scripts/fetch-gsc-stats.js': {
-    evidence: /googleapis\.com/,
+    evidence: /searchconsole\.googleapis\.com\/webmasters\/v3\/sites\//,
+    readOnlyHosts: GOOGLE_API_HOST,
     reason: 'POST — читающий запрос Search Console; на сайт ничего не пишется',
   },
 }
@@ -135,6 +159,10 @@ function classifySource({ filePath, content, registered = REGISTERED }) {
   if (registration) {
     if (!registration.evidence.test(code)) {
       return { file, kind: 'stale_registration', detail: `шаблон ${registration.evidence} из REGISTERED в коде не найден — механизм записи переписан, подтвердить заново` }
+    }
+    const violation = registration.readOnlyHosts ? readOnlyViolation(code, registration.readOnlyHosts) : null
+    if (violation) {
+      return { file, kind: 'stale_registration', detail: `запись REGISTERED объявляет скрипт только читающим, но ${violation} — выбрать режим записи заново` }
     }
     return { file, mode: 'registered', reason: registration.reason }
   }

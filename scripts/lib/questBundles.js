@@ -91,6 +91,21 @@ function loadLocalBundles(sourceFile, questId) {
   }))
 }
 
+/**
+ * Есть ли у квеста на сервере вступление. `GET /api/quests/by-quest-id/<id>/`
+ * отдаёт его отдельным полем `intro`, а `steps` приходят уже без него
+ * (`QuestBundleSerializer.get_intro` / `get_steps` бэкенда); строки
+ * `/api/quest-steps/` несут вступление шагом с `is_intro`. Миграции читали
+ * только шаги, не находили вступление существующего квеста и слали его POST
+ * повторно — бэкенд отвечал отказом по уникальности `(quest, step_id)`, а
+ * повторный запуск «идемпотентной» миграции краснел (#3314).
+ */
+function questBundleHasIntro(bundle) {
+  if (!bundle || typeof bundle !== 'object') return false
+  if (bundle.intro && typeof bundle.intro === 'object') return true
+  return Array.isArray(bundle.steps) && bundle.steps.some((step) => step?.is_intro === true || step?.step_id === 'intro')
+}
+
 module.exports = {
   DEFAULT_USER_AGENT,
   fetchAllQuestIds,
@@ -98,4 +113,5 @@ module.exports = {
   fetchQuestCatalog,
   loadLocalBundles,
   parseSteps,
+  questBundleHasIntro,
 }

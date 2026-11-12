@@ -149,9 +149,7 @@ async function main() {
         );
 
         // 3. Intro step
-        const hasIntro = Boolean(existingBundle?.intro) || (Array.isArray(existingBundle?.steps)
-            ? existingBundle.steps.some(s => s?.is_intro === true || s?.step_id === 'intro')
-            : false);
+        const hasIntro = require('./lib/questBundles').questBundleHasIntro(existingBundle);
         if (q.intro && !hasIntro) {
             try {
                 await apiPost('/api/quest-steps/', {

@@ -25,15 +25,28 @@ function acquireDeviceLock({ device, root = resolveLockRoot(), name = 'native-e2
   const lockPath = path.join(root, '.codex-temp', 'ops', `native-device-${key}.lock`)
   fs.mkdirSync(path.dirname(lockPath), { recursive: true })
   const token = randomUUID()
+  const claim = () => fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, token, name, startedAt: new Date().toISOString() }), { flag: 'wx' })
+  const reserved = (owner, advice) => Object.assign(
+    new Error(`Native device is reserved (pid=${owner?.pid || '?'}, name=${owner?.name || '?'}). ${advice}`), { code: 'NATIVE_DEVICE_BUSY' })
   try {
-    fs.writeFileSync(lockPath, JSON.stringify({ pid: process.pid, token, name, startedAt: new Date().toISOString() }), { flag: 'wx' })
+    claim()
   } catch (error) {
     if (error.code !== 'EEXIST') throw error
     let owner
     try { owner = JSON.parse(fs.readFileSync(lockPath, 'utf8')) } catch { /* Fail closed during owner creation. */ }
-    const busy = new Error(`Native device is reserved (pid=${owner?.pid || '?'}, name=${owner?.name || '?'}). ${owner?.pid && !isProcessAlive(owner.pid) ? `Dead owner: verify no device operation remains, then remove ${lockPath}.` : 'Do not wait or retry.'}`)
-    busy.code = 'NATIVE_DEVICE_BUSY'
-    throw busy
+    // A dead owner can never release (#3314: a lock outlived its session by weeks and
+    // refused every device run). Its lock is taken over like the build and quality-gate
+    // locks do; a device operation it left running is refused by the process check below.
+    if (!Number.isInteger(owner?.pid) || owner.pid <= 0 || isProcessAlive(owner.pid)) throw reserved(owner, 'Do not wait or retry.')
+    try {
+      // Only that owner's lock: a session that recovered it first holds a new token.
+      if (JSON.parse(fs.readFileSync(lockPath, 'utf8')).token === owner.token) fs.unlinkSync(lockPath)
+      claim()
+    } catch (retryError) {
+      if (!['EEXIST', 'ENOENT'].includes(retryError.code) && !(retryError instanceof SyntaxError)) throw retryError
+      throw reserved(null, 'Another session took over a dead owner\'s lock. Do not wait or retry.')
+    }
+    console.warn(`native-device-lock: took over the lock of a dead owner (pid=${owner.pid}, name=${owner.name || '?'})`)
   }
   const release = () => {
     try {

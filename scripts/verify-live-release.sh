@@ -10,7 +10,10 @@
 # бэкенд-выката: 10–15 с между попытками. Итог различает «релиз не опубликован»
 # (прод ответил чужим sha — повтор не поможет; либо маркер все попытки отвечал
 # без полного sha, #3305) и «хост не ответил» (ответа нет — релиз мог быть
-# опубликован, это недоступность, а не откат).
+# опубликован, это недоступность, а не откат). Итог считается по всем попыткам,
+# а не по последней (#3314): sha, прочитанный однажды, остаётся доказательством
+# публикации, а «все попытки» в сообщении значит именно все; смешанный ряд
+# (маркер то без sha, то молчит) называется своими числами.
 set -Euo pipefail
 
 SHA="${1:?usage: verify-live-release.sh <sha>}"
@@ -42,6 +45,10 @@ seen=''
 state=''
 smoke_output=''
 smoke_failed=0
+# Попытки по ответу маркера: ожидаемый sha, ответ без полного sha, без ответа.
+matched=0
+no_sha=0
+silent=0
 for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
   state="$(live_state)"
   seen=''
@@ -49,6 +56,13 @@ for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
   if [[ -n "$seen" && "$seen" != "$SHA" ]]; then
     echo "❌ Релиз не опубликован: прод отдаёт sha $seen, ожидался $SHA"
     exit 1
+  fi
+  if [[ "$state" == "no-sha" ]]; then
+    no_sha=$((no_sha + 1))
+  elif [[ -z "$seen" ]]; then
+    silent=$((silent + 1))
+  else
+    matched=$((matched + 1))
   fi
   smoke_failed=0
   smoke_output="$(smoke)" || smoke_failed=1
@@ -68,11 +82,15 @@ for ((attempt = 1; attempt <= ATTEMPTS; attempt++)); do
 done
 
 printf '%s\n' "$smoke_output"
-if [[ "$state" == "no-sha" ]]; then
-  echo "❌ Релиз не опубликован: /.build-source.json прода отвечает без полного sha за $ATTEMPTS попыток, ожидался $SHA"
-elif [[ -z "$seen" ]]; then
-  echo "❌ Хост не ответил на /.build-source.json за $ATTEMPTS попыток — релиз $SHORT мог быть опубликован, это недоступность прода"
-else
+if ((matched == ATTEMPTS)); then
   echo "❌ Релиз $SHORT опубликован, но смоук прода не прошёл за $ATTEMPTS попыток"
+elif ((matched > 0)); then
+  echo "❌ Релиз $SHORT опубликован (sha прочитан в $matched из $ATTEMPTS попыток), но ни одна попытка не дала sha и смоук 200 вместе"
+elif ((no_sha == ATTEMPTS)); then
+  echo "❌ Релиз не опубликован: /.build-source.json прода отвечает без полного sha за $ATTEMPTS попыток, ожидался $SHA"
+elif ((no_sha > 0)); then
+  echo "❌ Релиз $SHORT не подтверждён: /.build-source.json прода ответил без полного sha в $no_sha из $ATTEMPTS попыток и не ответил в $silent, ожидался $SHA"
+else
+  echo "❌ Хост не ответил на /.build-source.json за $ATTEMPTS попыток — релиз $SHORT мог быть опубликован, это недоступность прода"
 fi
 exit 1

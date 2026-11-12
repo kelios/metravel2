@@ -135,6 +135,38 @@ describe('native device exclusivity and bounded subprocesses', () => {
     expect(locks).toHaveLength(0);
   });
 
+  // #3314: a lock whose owner died refused every later device run until removed by hand.
+  it('takes over the lock of a dead owner; a live or unreadable owner still reserves the device', async () => {
+    const { spawn } = require('node:child_process');
+    const { createHash } = require('node:crypto');
+    // A pid that certainly belonged to a process and is gone (same pattern as metravelToken.test.ts).
+    const dead = spawn(process.execPath, ['-e', 'process.exit(0)'], { stdio: 'ignore' });
+    const deadPid = dead.pid;
+    await new Promise<void>((resolve, reject) => { dead.on('error', reject); dead.on('close', () => resolve()); });
+    const lock = path.join(root, '.codex-temp/ops',
+      `native-device-${createHash('sha256').update('target-dead').digest('hex').slice(0, 20)}.lock`);
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      fs.writeFileSync(lock, JSON.stringify({ pid: deadPid, token: 'gone', name: 'ended-session' }));
+      const release = acquireDeviceLock({ device: 'target-dead', root });
+      expect(JSON.parse(fs.readFileSync(lock, 'utf8'))).toMatchObject({ pid: process.pid, name: 'native-e2e' });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('ended-session'));
+      expect(() => acquireDeviceLock({ device: 'target-dead', root })).toThrow(/reserved.*Do not wait or retry/);
+      release();
+      expect(fs.existsSync(lock)).toBe(false);
+
+      for (const content of [JSON.stringify({ pid: process.pid, token: 'live' }), 'not json', JSON.stringify({ token: 'no pid' })]) {
+        fs.writeFileSync(lock, content);
+        expect(() => acquireDeviceLock({ device: 'target-dead', root })).toThrow(/reserved/);
+        expect(fs.readFileSync(lock, 'utf8')).toBe(content);
+      }
+      fs.unlinkSync(lock);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('does not delete a replaced owner or persist the private device identifier', () => {
     const release = acquireDeviceLock({ device: 'private-device-id', root });
     const dir = path.join(root, '.codex-temp/ops');
