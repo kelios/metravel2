@@ -808,7 +808,8 @@ guard, падающий в CI на попытке обойти этот конт
   `create-linked` к `#160`, а не ещё один общий «CLS страницы».
 - **Causal delta #3382 (2026-11-12):** на статье Hexenstieg пять свежих
   гостевых проходов `390×844` дали суммарный CLS
-  `0.325/0.972/0.090/1.168/0.205`, а `1440×900` — `0.0116–0.0139`.
+  `0.325/0.972/0.090/1.168/0.205`. Прежняя desktop-серия отозвана:
+  wheel 200/400 попадал в левый sidebar, article top оставался 0.
   Атрибуция resize и JavaScript scroll writes разделена: «Рядом» сжимается
   `402→185px` внутри уже видимого сайдбара; внешний слот карты растёт
   `692→1402px` и сжимается до `1203.3125px`, сдвигая видимый footer.
@@ -819,12 +820,27 @@ guard, падающий в CI на попытке обойти этот конт
   измерение leaf и absolute ancestors до одной компенсации. Постоянного
   `minHeight` нет, логика карты и данные не меняются.
   Типизированный `TravelDetailsMeasuredFlow` в том же shared-модуле закрепляет
-  controlled-ready/zero/no-reserve для карты, «Рядом» и related navigation;
-  generic-переход и его anchoring остаются прежними. Контроль —
+  controlled-ready/zero/no-reserve для карты, «Рядом» и related navigation.
+  Приёмка `4c829` дала mobile `0.95615/0.00111/0.00111/0.95636/0.00111`.
+  Независимая RO/reveal/scroll-write timeline доказала: реальный Excursions
+  fallback 160 заменяется section 1050+margin 32 (+922), затем растёт ещё 264;
+  Map/Points внутри агрегата смещаются ДО внешнего RO. Видимость/display
+  не меняются, JS scroll writes отсутствуют; native anchoring восстанавливает
+  положение уже после CLS. Тот же owner в `sections/TravelDetailsMapSection.tsx`
+  теперь охватывает ВСЮ замену Excursions. Его 160px fallback/loaded UI/eligibility/
+  refs/native/iframe/API сохранены; внешний map owner и generic anchoring прежние.
+  Actual MapSection+Excursions DOM regression краснеет до leaf owner (+922),
+  проверяет Map/Points до RO и после +922/+264/empty 0 без двойной компенсации.
+  Driver hit-тестирует фактический owner, сохраняет point/bounds и требует
+  продвижения первого wheel; cadence и bottom/runtime/CLS assertions прежние.
+  Исправленные пять desktop-проходов на `4c829` реально дошли до низа:
+  `0.01994/0.01157/0.01157/0.01157/0.01157` — baseline перед leaf fix.
+  Контроль —
   `e2e/cls-audit.spec.ts` / `travelFullScrollCls.ts`, по пять полных гостевых
   проходов `390×844` и `1440×900`, порог суммы `0.1`; прежний контроль статьи
   #2329 сохранён. Raw baseline/attribution — ignored
-  `.codex-temp/task3382/`. Source-проверки и production recheck передаются
+  `.codex-temp/task3382/`, новое causal/raw evidence — `diagnosis-r2/`.
+  Source-проверки и production recheck передаются
   независимому ревью/приёмке; этот delta не заявляет production pass.
 - **Последняя проверка:** 2026-08-27; implementation и повторный независимый
   code review завершены; первый production candidate выявил mobile recurrence и

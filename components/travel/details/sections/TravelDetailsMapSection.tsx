@@ -5,6 +5,8 @@ import type { Travel } from '@/types/types'
 
 import DataFreshnessNotice from '@/components/legal/DataFreshnessNotice'
 import { useThemedColors } from '@/hooks/useTheme'
+import { METRICS } from '@/constants/layout'
+import { TravelDetailsMeasuredFlow } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelDetailsMapSectionContentModel } from '../hooks/useTravelDetailsMapSectionContentModel'
@@ -77,12 +79,17 @@ export const TravelDetailsMapSection: React.FC<{
     <>
       <DataFreshnessNotice style={{ marginBottom: 12 }} />
 
-      <ExcursionsSection
-        travel={travel}
-        anchors={anchors}
-        styles={styles}
-        shouldForceRenderExcursions={shouldForceRenderExcursions}
-      />
+      <TravelDetailsMeasuredFlow
+        testID="travel-details-excursions-transition"
+        isMobile={width < METRICS.breakpoints.tablet}
+      >
+        <ExcursionsSection
+          travel={travel}
+          anchors={anchors}
+          styles={styles}
+          shouldForceRenderExcursions={shouldForceRenderExcursions}
+        />
+      </TravelDetailsMeasuredFlow>
 
       <View
         ref={setMapSectionRef}
