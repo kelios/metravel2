@@ -51,9 +51,18 @@ const GENERIC_NAME_WORDS = new Set([
 const PLACE_PREPOSITIONS = new Set([
   'в', 'во', 'у', 'ув', 'из', 'із', 'з', 'зі', 'по', 'па', 'под', 'пад', 'під', 'до', 'да', 'около', 'возле', 'каля', 'біля',
   'от', 'ад', 'від', 'вокруг', 'вакол', 'навколо', 'к', 'ко', 'на', 'про', 'пра',
-  'w', 'we', 'do', 'z', 'ze', 'po', 'pod', 'koło', 'obok', 'na', 'przez', 'wokoł',
+  'w', 'we', 'do', 'z', 'ze', 'od', 'po', 'pod', 'koło', 'obok', 'na', 'przez', 'wokoł',
   'in', 'to', 'from', 'near', 'around', 'at', 'of', 'about', 'through', 'via',
 ])
+
+/**
+ * Предлоги «откуда» (#3277): «из Минска в Заславль», «з Мінска да Нясвіжа», «z Krakowa do Zakopanego»,
+ * «from Minsk to Brest». Место вопроса — куда едут: город отправления назван, но спрашивают не о нём,
+ * а его карточек в каталоге обычно больше («из Минска в Заславль» отдавал восемь квестов Минска).
+ * «З», «z» — ещё и «с кем» («з дзецьмі», «z psem»): местом отправления слово становится, только когда
+ * оно называет известное место каталога. Записаны как после `normalize`.
+ */
+const ORIGIN_PREPOSITIONS = new Set(['из', 'із', 'з', 'зі', 'от', 'ад', 'від', 'z', 'ze', 'od', 'from'])
 
 /**
  * Вопрос исключает названное место («в Беларуси, кроме Минска»): карточки Минска оставлять нельзя,
@@ -62,7 +71,27 @@ const PLACE_PREPOSITIONS = new Set([
 const EXCLUSION_RE =
   /(?<![\p{L}])(?:кроме|помимо|не\s+считая|за\s+исключением|акрамя|апрача|крім|окрім|oprócz|poza|z\s+wyjątkiem|except|besides|other\s+than|apart\s+from|excluding)(?![\p{L}])/iu
 
-type Word = { text: string; capital: boolean; afterPreposition: boolean }
+/**
+ * Числительные местом не бывают (#3345, lv23): «километров на сорок-пятьдесят» и «квест на сорок минут»
+ * после предлога совпадали с городом Сороки, «на сто» — со Столбцами по первым буквам не совпадёт, но
+ * правило одно на все: слово-числительное в любом падеже место не называет. Записаны как после `normalize`
+ * (без диакритики, «й» → «и»), на RU/BE/UK/PL/EN.
+ */
+const NUMERAL_RE = new RegExp(
+  `^(?:${[
+    'од(?:ин|на|но|ни|ного|ну|нои|ному|ним)', 'дв(?:а|е|ух|ум|умя|ое|оих)', 'тр(?:и|ех|ем|емя|ое)', 'четыр(?:е|ех|ем|ьмя)', 'пят(?:ь|и|ью|еро)', 'шест(?:ь|и|ью|еро)', 'сем(?:ь|и|ью|еро)',
+    'восемь|восьми|восьмью', 'девят(?:ь|и|ью)', 'десят(?:ь|и|ью)', '(?:один|две|три|четыр|пят|шест|сем|восем|девят)надцат(?:ь|и|ью)', 'двадцат(?:ь|и|ью)', 'тридцат(?:ь|и|ью)',
+    'сорок|сорока', 'пят(?:ь|и)десят(?:и|ью)?', 'шест(?:ь|и)десят(?:и|ью)?', 'сем(?:ь|и)десят(?:и|ью)?', 'восем(?:ь|и)десят(?:и|ью)?', 'девяност(?:о|а)', 'сто|ста|сотн(?:я|и|ю)', 'двести|триста', 'тысяч(?:а|и|у|е)?', 'полтор(?:а|ы)|полутора',
+    'адзін|адна|адну|дзве|дзвюх|тры|трох|чатыр(?:ы|ох)|пяц(?:ь|і)|шэсць|шасці|сем|сямі|восем|васьмі|дзевяц(?:ь|і)|дзесяц(?:ь|і)|дваццац(?:ь|і)|трыццац(?:ь|і)|пяцьдзесят|паутар(?:ы|а)',
+    'одна|одну|дві|двох|трьох|чотир(?:и|ьох)|п.?ят(?:ь|и)|шіст(?:ь)?|шести|сім|семи|вісім|восьми|дев.?ят(?:ь|и)|двадцят(?:ь|и)|тридцят(?:ь|и)|п.?ятдесят|півтор(?:а|и)',
+    'jed(?:en|na|no|nego|nej|ną)', 'dw(?:a|ie|och|oma)', 'trzy|trzech', 'czter(?:y|ech)', 'piec|pieciu', 'szesc|szesciu', 'siedem|siedmiu', 'osiem|osmiu', 'dziewiec|dziewieciu', 'dziesiec|dziesieciu',
+    'dwadziescia|trzydziesci|czterdziesci|piecdziesiat|sto|tysiac(?:e|y)?|po[łl]tor(?:a|ej)',
+    'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|hundred|thousand',
+  ].join('|')})$`,
+  'u',
+)
+
+type Word = { text: string; capital: boolean; afterPreposition: boolean; origin: boolean }
 
 // NFD снимает диакритику («Kraków» → «krakow», «ё» → «е»): город в вопросе и в каталоге пишут по-разному.
 const normalize = (value: unknown): string =>
@@ -73,11 +102,13 @@ const normalize = (value: unknown): string =>
 const wordsOf = (value: unknown): Word[] => {
   const words: Word[] = []
   let afterPreposition = false
+  let origin = false
   for (const raw of normalize(value).split(/[^\p{L}\p{N}]+/u)) {
     if (!raw) continue
     const text = raw.toLowerCase()
-    if (raw.length >= MIN_WORD_LENGTH) words.push({ text, capital: /^\p{Lu}/u.test(raw), afterPreposition })
+    if (raw.length >= MIN_WORD_LENGTH && !NUMERAL_RE.test(text)) words.push({ text, capital: /^\p{Lu}/u.test(raw), afterPreposition, origin })
     afterPreposition = PLACE_PREPOSITIONS.has(text)
+    origin = ORIGIN_PREPOSITIONS.has(text)
   }
   return words
 }
@@ -129,7 +160,7 @@ const asksAbout = (word: Word, name: string): boolean =>
 const mentions = (word: Word, name: string): boolean =>
   startsWithName(word.text, name, MAX_ADJECTIVE_ENDING_LENGTH) && (word.capital || name.length > SHORT_NAME_LENGTH)
 
-type PlaceLevel = 'cities' | 'countries'
+export type PlaceLevel = 'cities' | 'countries'
 
 /**
  * Карточка относится к названному месту. Квест — по городу каталога: в его названии бывает другой
@@ -155,22 +186,74 @@ const withSpellings = (direct: readonly string[], sources: readonly AiSource[]):
   return [...names]
 }
 
+const PLACE_LEVELS = ['cities', 'countries'] as const
+
+type NamedPlaces = {
+  level: PlaceLevel
+  names: string[]
+  origins: string[]
+  /** `names` названы только после предлога «откуда»: места назначения среди этих названий нет. */
+  originOnly: boolean
+}
+
 /**
- * Карточки места, названного в запросе; `null` — место не названо, его карточек нет или названо
- * исключение («кроме Минска»). Порядок карточек сохраняется. Отдельно от `selectPlaceSources` нужна
- * тому, кто сам решает, что делать без места: сортировке по фактам каталога (#3287).
+ * Места запроса среди названий, известных карточкам, по уровням «город → страна». В маршруте «из X в
+ * Y» место вопроса — Y: названия, стоящие только после предлога «откуда», уходят в `origins`, если в
+ * запросе названо и другое место (на любом уровне: «из Минска в Польшу» — это Польша). Названо одно
+ * место отправления («Куда поехать из Минска на выходные?») — оно и есть место вопроса.
  */
-export const matchPlaceSources = <T extends AiSource>(query: string | null | undefined, sources: readonly T[]): T[] | null => {
-  const text = String(query ?? '')
-  if (!text.trim() || EXCLUSION_RE.test(text)) return null
-  const asked = wordsOf(text)
-  for (const level of ['cities', 'countries'] as const) {
+const namedPlacesOf = (query: string, sources: ReadonlyArray<Pick<AiSource, 'place'>>, levels: readonly PlaceLevel[], strict = false): NamedPlaces[] => {
+  const asked = wordsOf(query).filter((word) => !strict || word.capital)
+  const found = levels.map((level) => {
     const known = namesOf(sources.flatMap((source) => source.place?.[level] ?? []))
     const direct = known.filter((name) => asked.some((word) => asksAbout(word, name)))
-    if (!direct.length) continue
+    const destinations = direct.filter((name) => asked.some((word) => !word.origin && asksAbout(word, name)))
+    return { level, direct, destinations }
+  })
+  // Строгий поиск (каталог целиком) место отправления местом вопроса не считает никогда.
+  const route = strict || found.some((entry) => entry.destinations.length > 0)
+  return found.map(({ level, direct, destinations }) => ({
+    level,
+    names: route ? destinations : direct,
+    origins: route ? direct.filter((name) => !destinations.includes(name)) : [],
+    originOnly: !route && direct.length > 0,
+  }))
+}
+
+/**
+ * Среди мест `sources` запрос называет только место отправления (#3277): «из Минска в Заславль», а
+ * карточек Заславля в подборе нет. Отбор по месту тогда держится за город отправления — вызывающий
+ * сначала ищет место назначения в каталоге (`arrangeSources`).
+ */
+export const namesOnlyOrigin = (query: string | null | undefined, sources: ReadonlyArray<Pick<AiSource, 'place'>>): boolean => {
+  const text = String(query ?? '')
+  if (!text.trim() || EXCLUSION_RE.test(text)) return false
+  return namedPlacesOf(text, sources, PLACE_LEVELS).some((entry) => entry.originOnly)
+}
+
+/**
+ * Карточки места, названного в запросе; `null` — место не названо, его карточек нет или названо
+ * исключение («кроме Минска»). Порядок карточек сохраняется. Что делать без места, решает вызывающий —
+ * цепочка `arrangeSources` (`sourceSelection.ts`): подбор как есть, отбор по упоминанию, сортировка по фактам.
+ * `levels` — на каких уровнях искать место; по умолчанию город, затем страна. `strict` — поиск по
+ * всему каталогу, где названий сотни: место называет только слово с заглавной буквы (слово со строчной
+ * после предлога — «на берёзе», «в мире» — совпало бы с чьим-нибудь городом) и только место, куда едут
+ * или где находятся: город отправления («недалеко от Минска», «из Минска на выходные») квестов этого
+ * города не просит.
+ */
+export const matchPlaceSources = <T extends AiSource>(
+  query: string | null | undefined,
+  sources: readonly T[],
+  levels: readonly PlaceLevel[] = PLACE_LEVELS,
+  options: { strict?: boolean } = {},
+): T[] | null => {
+  const text = String(query ?? '')
+  if (!text.trim() || EXCLUSION_RE.test(text)) return null
+  for (const { level, names } of namedPlacesOf(text, sources, levels, options.strict === true)) {
+    if (!names.length) continue
     // Город назван одним написанием («w Grodnie»), а статья о нём — другим («Гродно за выходные»): написания
     // одного города берутся из карточки квеста. У страны так нельзя — у статьи их бывает несколько.
-    const named = level === 'cities' ? withSpellings(direct, sources) : direct
+    const named = level === 'cities' ? withSpellings(names, sources) : names
     const kept = sources.filter((source) => isOfPlace(source, named, level))
     if (kept.length) return kept
   }
@@ -178,11 +261,19 @@ export const matchPlaceSources = <T extends AiSource>(query: string | null | und
 }
 
 /**
- * Карточки места из вопроса; без названного места, без его карточек и при исключении («кроме
- * Минска») — список как есть. Порядок подбора сохраняется.
+ * Слово называет место отправления маршрута «из X в Y» (#3277) — по названиям мест из `sources`
+ * (каталог квестов экрана). Подбор экрана такие слова в балл квеста не считает: иначе восемь квестов
+ * города отправления вытесняли квест места назначения. Нет маршрута — ни одно слово не подходит.
  */
-export const selectPlaceSources = (query: string | null | undefined, sources: readonly AiSource[]): readonly AiSource[] =>
-  sources.length < 2 ? sources : (matchPlaceSources(query, sources) ?? sources)
+export const routeOriginMatcher = (query: string | null | undefined, sources: ReadonlyArray<Pick<AiSource, 'place'>>): ((word: string) => boolean) => {
+  const text = String(query ?? '')
+  const origins = text.trim() ? namedPlacesOf(text, sources, PLACE_LEVELS).flatMap((entry) => entry.origins) : []
+  if (!origins.length) return () => false
+  return (word) => {
+    const folded = normalize(word).toLowerCase()
+    return origins.some((name) => startsWithName(folded, name, MAX_ENDING_LENGTH))
+  }
+}
 
 /**
  * Карточка без служебных полей — для списка источников, который уходит посетителю: место (#3315),

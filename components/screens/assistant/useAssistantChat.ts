@@ -30,8 +30,8 @@ import {
 } from '@/api/aiAssist/limits'
 import { guardAnswer } from '@/api/aiAssist/answerGuard'
 import { countKeptSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
-import { AI_MAX_RECOMMENDATIONS, secondsToDayEnd } from '@/api/aiAssist/policy'
-import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
+import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON, secondsToDayEnd } from '@/api/aiAssist/policy'
+import { MAX_QUESTION_LENGTH, buildAssistantMessages, selectPromptSources } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
 import { arrangeSources } from '@/api/aiAssist/sourceSelection'
@@ -68,6 +68,11 @@ export type AssistantTurn = {
    * `answer` пуст, карточка хода показывает запасную фразу и источники. В историю такой ход не идёт.
    */
   fallback?: boolean
+  /**
+   * Пустая подсказка (#3345): подбор нашёл карточки, но ни одна не прошла отбор — модель не вызывалась.
+   * Ход тоже `fallback`, но карточка показывает «на сайте пока нет материалов» и найденное рядом.
+   */
+  noMaterial?: boolean
 }
 
 export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
@@ -306,7 +311,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         applyServerRemaining(done.remaining)
         switch (done.status) {
           case 'done':
-            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage, fallback: done.fallback })
+            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage, fallback: done.fallback, noMaterial: done.fallback && done.reason === ASK_NO_MATERIAL_REASON })
             if (__DEV__) {
               console.info('[ai-assist] usage', { ...done.usage, removedLinks: done.removedLinks, sources: result.sources.length })
             }
@@ -405,6 +410,17 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           await finishQuota()
           return
         }
+        // Пустая подсказка (#3345): подбор что-то нашёл, но отбор по месту и условиям вопроса не оставил ни
+        // одной карточки — модели отвечать не по чему, на «ничего не найдено» она выдумывала материал. Ход
+        // закрывается честным «материала нет», как у службы `/ai/ask`: найденное остаётся под ним «Ещё по теме».
+        // Карточки подсказки — тем же отбором, что в `buildAssistantMessages` ниже (`arranged: true`).
+        const promptSources = selectPromptSources(sources, undefined, null, true)
+        if (!promptSources.length) {
+          patchTurn(id, { sources, answer: '', removedLinks: 0, status: 'done', fallback: true, noMaterial: true })
+          void logDemand({ q: question, locale, reason: 'no_sources' })
+          await finishQuota()
+          return
+        }
         patchTurn(id, { sources, status: 'streaming' })
         if (!generator) {
           patchTurn(id, { status: 'unavailable' })
@@ -438,7 +454,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           },
         })
         clearFlush()
-        const guarded = guardAnswer(result.text, sources, { question, retrievalQuery: searchQuery })
+        // Числа ответа сверяются с карточками, которые видела модель; ссылки — со всем списком источников.
+        const guarded = guardAnswer(result.text, sources, { question, retrievalQuery: searchQuery, promptSources })
         const verdict = judgeModelReply(searchQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
         if (verdict === 'no_material') {
           // #3216: модель отказала вопросу с признаком поездки — это «материала нет», а не чужая тема.
@@ -458,7 +475,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           return
         }
         // Пустой ответ (#3291): текста нет, карточка хода покажет запасную фразу и источники.
-        patchTurn(id, { answer: guarded.fallback ? '' : guarded.text, removedLinks: guarded.removed, status: 'done', usage: result.usage, fallback: guarded.fallback })
+        patchTurn(id, { answer: guarded.fallback ? '' : guarded.text, removedLinks: guarded.removed, status: 'done', usage: result.usage, fallback: guarded.fallback, noMaterial: false })
         if (__DEV__) {
           console.info('[ai-assist] usage', { ...result.usage, removedLinks: guarded.removed, sources: sources.length })
         }

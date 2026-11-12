@@ -156,6 +156,76 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
   return { text: tidyText(text), removed, relabeled }
 }
 
+const BARE_LINK_RE = new RegExp(`${ABSOLUTE_URL_RE.source}|${BARE_SITE_URL_RE.source}|${SITE_PATH_RE.source}`, 'gi')
+/** Подводка к адресу: двоеточие или тире перед ним («городской квест: https://…», «Начать — https://…»). */
+const LINK_LEAD_SEPARATOR_RE = /(?:\s*[:—–]|\s+-)\s*$/
+/** Подводка без своего содержания: короткая подпись без ссылки, вся фраза — «подпись: адрес». */
+const MAX_LINK_LEAD_CHARS = 80
+
+export type BareLinkResult = {
+  text: string
+  /** Голых адресов карточек заменено ссылкой с названием карточки. */
+  named: number
+  /** Голых адресов убрано: карточка уже названа ссылкой в этом ответе. */
+  dropped: number
+}
+
+/**
+ * Голый адрес карточки — не текст ответа (#3345). Экран показывает его самим адресом, и модель ставила
+ * адрес на место пояснения: «[Квест](адрес) — городской квест: https://…», «Горад: https://…», «Почати:
+ * https://…». Карточка в ответе называется одним способом — ссылкой с названием из каталога:
+ *   - карточка ещё не названа — адрес становится ссылкой с её названием;
+ *   - карточка уже названа ссылкой — адрес убирается вместе с разделителем перед ним; если вся фраза
+ *     была подводкой к адресу («Начать: адрес»), уходит и она.
+ * Вызывается после `enforceSourceLinks`: чужих адресов в тексте уже нет.
+ */
+export function nameBareSourceLinks(text: string, sources: readonly AiSource[]): BareLinkResult {
+  const sourceByKey = buildSourceByLinkKey(sources)
+  const spans: Array<[number, number]> = []
+  const linked = new Set<AiSource>()
+  for (const match of text.matchAll(MARKDOWN_LINK_RE)) {
+    const start = match.index ?? 0
+    spans.push([start, start + match[0].length])
+    const card = sourceByKey.get(normalizeLinkKey(match[3]))
+    if (card) linked.add(card)
+  }
+  let out = ''
+  let last = 0
+  let named = 0
+  let dropped = 0
+  for (const match of text.matchAll(BARE_LINK_RE)) {
+    const start = match.index ?? 0
+    if (start < last || spans.some(([from, to]) => start >= from && start < to)) continue
+    const url = match[0].replace(TRAILING_PUNCTUATION_RE, '')
+    const card = sourceByKey.get(normalizeLinkKey(url))
+    if (!card) continue
+    const tail = match[0].slice(url.length)
+    out += text.slice(last, start)
+    last = start + match[0].length
+    if (!linked.has(card)) {
+      linked.add(card)
+      named += 1
+      // Адрес ссылки — полный адрес карточки: экран (`AssistantAnswerText`) узнаёт ссылкой только `[…](https://…)`,
+      // а голый адрес бывает без протокола («metravel.by/quests/4») или путём («/quests/4») — такая ссылка
+      // показалась бы посетителю разметкой.
+      out += `[${toLinkLabel(card.title) || url}](${card.url})${tail}`
+      continue
+    }
+    dropped += 1
+    // Фраза перед адресом: от начала строки или конца прошлого предложения.
+    const lineStart = out.lastIndexOf('\n') + 1
+    const line = out.slice(lineStart)
+    const sentenceStart = Math.max(0, ...Array.from(line.matchAll(/[.!?…]\s+/g), (end) => (end.index ?? 0) + end[0].length))
+    const lead = line.slice(sentenceStart)
+    if (LINK_LEAD_SEPARATOR_RE.test(lead) && !lead.includes('](') && lead.length <= MAX_LINK_LEAD_CHARS) {
+      out = out.slice(0, lineStart + sentenceStart).replace(/[ \t]+$/, '')
+    } else {
+      out = `${out.replace(LINK_LEAD_SEPARATOR_RE, '')}${tail}`
+    }
+  }
+  return named + dropped ? { text: tidyText(out + text.slice(last)), named, dropped } : { text, named, dropped }
+}
+
 /** Сколько адресов карточек осталось в ответе после стража: отказ модели «не по теме» ссылок не даёт. */
 export const countKeptSourceLinks = (text: string, sources: readonly AiSource[]): number => {
   const allowed = buildAllowedLinkKeys(sources)

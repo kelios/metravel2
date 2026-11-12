@@ -11,11 +11,12 @@
  * Слой стража содержания (#3291) считает показанный ответ тем же кодом, что и продукт
  * (`api/aiAssist/answerGuard.ts`), поэтому модуль грузит TypeScript. Команды `ai:assistant:*` и
  * дочерние прогоны `accept.mjs` подключают загрузчик `scripts/lib/ts-runtime.mjs` — он работает на
- * Node 20 и 22 без ручных флагов; прямой вызов `node …/run.mjs` требует того же `--import` либо Node
- * со встроенным снятием типов (22.18+). jest собирает модуль своим преобразованием.
+ * Node 20 и 22 без ручных флагов; прямой вызов `node …/run.mjs` подключает его сам (#3345), остальным
+ * точкам входа нужен тот же `--import` либо Node со встроенным снятием типов (22.18+). jest собирает
+ * модуль своим преобразованием.
  */
 
-import { guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
+import { findUngroundedNumbers, guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
 import { isSameTitle } from '../../api/aiAssist/linkGuard.ts'
 
 export const LAYERS = ['infra', 'retrieval', 'gate', 'prompt', 'guard', 'model']
@@ -29,8 +30,11 @@ export const LAYER_RU = {
   model: 'модель',
 }
 
-/** Что ждём от хода. `any_on_topic` — вопрос по теме, «материала нет» тоже годится, отказ «не по теме» — нет. */
-export const EXPECTS = ['answer', 'no_material', 'any_on_topic', 'refuse', 'refuse_block', 'blocked']
+/**
+ * Что ждём от хода. `any_on_topic` — вопрос по теме, «материала нет» тоже годится, отказ «не по теме» — нет.
+ * `help` (#3293) — вопрос о самом сайте: первой карточкой стоит справка, статей и квестов среди источников нет.
+ */
+export const EXPECTS = ['answer', 'no_material', 'any_on_topic', 'help', 'refuse', 'refuse_block', 'blocked']
 
 /** Предел длины ответа и число рекомендаций — те же, что в `buildSystemPrompt` (`api/aiAssist/prompt.ts`; тест сверяет со слепком). */
 export const MAX_ANSWER_CHARS = 1200
@@ -78,7 +82,7 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
 )
 /** «На сайте такого нет» — честный отказ по теме. */
 const NO_MATERIAL_RE =
-  /(?:пока\s+)?нет\s+(?:(?:отдельн|подходящ|так)\p{L}+\s+)?(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
+  /(?:пока\s+)?нет\s+(?:(?:отдельн|подходящ|так)\p{L}+\s+)?(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:jeszcze\s+)?(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
 /**
  * Обратный порядок слов: «материала про Гданьск пока нет» — сам материал отсутствует, в пределах одной
  * фразы. Так же строятся учебные ответы на других языках (`rag_answers.py`: «Асобнага матэрыялу … няма»,
@@ -199,6 +203,43 @@ export const isNoMaterial = (text) => {
 }
 
 /**
+ * «В карточках этого не сказано» (#3277) — честный ответ на вопрос, которого материалы сайта не
+ * касаются: «нужно ли ставить приложение» (lv42), «нужна ли регистрация». Материал по теме есть, поэтому
+ * фразы «на сайте такого нет» в ответе не будет, а ссылку дать не на что — раньше такой ответ получал
+ * `no_links`. Признание узнаётся по словам «карточки / материалы … не говорят» на пяти языках.
+ */
+const NOT_IN_CARDS_RE = new RegExp(
+  [
+    '(?:карточк\\p{L}+|материал\\p{L}+)[^.!?\\n]{0,60}?(?<![\\p{L}])(?:не\\s+(?:сказано|указан\\p{L}*|говорит\\p{L}*|упомина\\p{L}*|называ\\p{L}*|сообща\\p{L}*|видно)|нет\\s+(?:ответа|сведений|информации|данных|цен\\p{L}*))',
+    '(?<![\\p{L}])не\\s+(?:сказано|указан\\p{L}*|говорится)[^.!?\\n]{0,40}?(?:карточк\\p{L}+|материал\\p{L}+)',
+    '(?:картк\\p{L}+|матэрыял\\p{L}+|матеріал\\p{L}+)[^.!?\\n]{0,60}?(?<![\\p{L}])(?:не\\s+(?:сказана|пазначан\\p{L}*|згадва\\p{L}*|называ\\p{L}*|сказано|вказан\\p{L}*|згаду\\p{L}*|назива\\p{L}*))',
+    '(?<![\\p{L}])не\\s+(?:сказана|пазначана|вказано)[^.!?\\n]{0,40}?(?:картк\\p{L}+|матэрыял\\p{L}+|матеріал\\p{L}+)',
+    '(?<![\\p{L}])kart\\p{L}*\\s+(?:tego\\s+)?nie\\s+(?:poda\\p{L}*|wspomina\\p{L}*|m[óo]wi\\p{L}*|zawiera\\p{L}*)',
+    '(?<![\\p{L}])w\\s+kartach\\s+(?:tego\\s+)?nie\\s+ma',
+    '(?<![\\p{L}])cards?(?:\\s+data)?(?:\\s+provided)?\\s+(?:do(?:es)?\\s+not|don[\'’]t|doesn[\'’]t)\\s+(?:state|say|mention|specify|tell|cover)',
+    '(?<![\\p{L}])(?:not|isn[\'’]t|aren[\'’]t)\\s+(?:stated|mentioned|specified|covered)\\s+in\\s+(?:the|these)\\s+(?:cards?|materials?)',
+    '(?<![\\p{L}])no\\s+(?:separate\\s+|exact\\s+|precise\\s+|direct\\s+)?answer\\s+in\\s+(?:the|these)\\s+(?:materials?|articles?|cards?|sources?)',
+  ].join('|'),
+  'iu',
+)
+export const admitsNotInCards = (text) => NOT_IN_CARDS_RE.test(String(text ?? ''))
+
+/**
+ * Слой модели (#3277): число с единицей в СЫРОМ ответе — цена, часы, минуты, время суток, точки,
+ * километры и годы — должно стоять в карточках подсказки или в вопросе. Правило опоры — общее со стражем
+ * (`findUngroundedNumbers`, `api/aiAssist/answerGuard.ts`). Страж вырезает такое число из показанного
+ * ответа, и ход проходил автопроверку, хотя модель число выдумала: «Сколько длится квест по Гродно?» —
+ * «120» и «150 минут» при карточках без длительности засчитывались 3 из 3 (замер #3268). Возвращает
+ * числа без опоры как в ответе.
+ */
+export const findInventedNumbers = ({ question, earlier = '' }, raw, cards) => {
+  const text = String(raw ?? '')
+  if (!text.trim() || !cards?.length) return []
+  const sources = cards.map((card) => ({ type: card.type, source_id: '', title: card.title ?? '', url: card.url ?? '', path: '', snippet: [card.snippet, card.why].filter(Boolean).join('. '), score: 0 }))
+  return findUngroundedNumbers(text, sources, { question, retrievalQuery: [earlier, question].filter(Boolean).join(' ') })
+}
+
+/**
  * Рекомендации в сыром ответе: сколько разных карточек названо адресом, сколько
  * пунктов списка и сколько пунктов без ссылки на карточку («названия без ссылок»).
  */
@@ -246,9 +287,31 @@ const CYRILLIC_NEVER = { ru: 'іўїєґ', be: 'ищъїєґ', uk: 'ыэёъў' 
 const PL_RE = /sz|cz|rz|dz|ie|ow|ych|\b(?:i|w|z|na|nie|jest|się|do)\b/g
 const EN_RE = /th|wh|sh|ea|ou|ing\b|\b(?:a|an|the|and|of|to|is|in|for)\b/g
 
-/** Язык по буквам — та же логика, что `detect_lang` в `scripts/ai-train/eval.py`. */
+/**
+ * Признаки языка для равного счёта по буквам (#3345): буквы, которые есть только в одном языке, и
+ * служебные слова. Белорусская фраза с опечаткой («…ўзровень гадин; каля 120 хв» — одна «и») и украинская
+ * без «і», «ї», «є» («Ось головне в горах взимку… не вказано про катання на лижах») по буквам от русской
+ * не отличались, а равный счёт отдавался русскому.
+ */
+const CYRILLIC_ONLY = { ru: '', be: 'ў', uk: 'їєґ' }
+const CYRILLIC_WORDS = {
+  ru: ['и', 'что', 'как', 'это', 'или', 'если', 'есть', 'нет', 'вот', 'но', 'также', 'только', 'уже', 'ещё', 'еще', 'чтобы', 'из', 'от', 'можно', 'указано', 'указаны'],
+  be: ['што', 'як', 'гэта', 'або', 'калі', 'ёсць', 'няма', 'вось', 'але', 'таксама', 'толькі', 'ужо', 'яшчэ', 'каб', 'ад', 'каля', 'можна', 'пазначана', 'пазначаны'],
+  uk: ['що', 'як', 'це', 'або', 'якщо', 'є', 'немає', 'ось', 'але', 'також', 'тільки', 'вже', 'ще', 'щоб', 'від', 'та', 'й', 'можна', 'вказано', 'вказані', 'взимку', 'влітку'],
+}
+
+/**
+ * Язык по буквам — как `detect_lang` в `scripts/ai-train/eval.py`: кириллический язык — тот, чьих «чужих»
+ * букв в тексте меньше всего. При равном счёте (в `eval.py` — русский, затем белорусский) здесь решают
+ * признаки `CYRILLIC_ONLY` и `CYRILLIC_WORDS`; без них порядок прежний. Латинские имена в кириллическом
+ * тексте в счёт не идут.
+ */
 export const detectLang = (text) => {
-  const value = String(text ?? '').replace(URL_RE, ' ').toLowerCase()
+  const raw = String(text ?? '').replace(URL_RE, ' ')
+  // Латинское слово с заглавной буквой в кириллическом тексте — имя, а не язык ответа: «Да, приложение
+  // MeTravel есть для iPhone, iPad и Android — в App Store и Google Play» (запись справки, lv89) по буквам
+  // выходила английской. Английская фраза в таком ответе по-прежнему видна: её слова — со строчной.
+  const value = (/[а-яёіўїєґ]/i.test(raw) ? raw.replace(/[A-Za-z]*[A-Z][A-Za-z]*/g, ' ') : raw).toLowerCase()
   const letters = value.match(/\p{L}/gu) ?? []
   const cyr = letters.filter((ch) => (ch >= 'а' && ch <= 'я') || 'ёіўїєґ'.includes(ch)).join('')
   const lat = letters.filter((ch) => (ch >= 'a' && ch <= 'z') || POLISH.includes(ch)).join('')
@@ -259,12 +322,33 @@ export const detectLang = (text) => {
     const en = (words.match(EN_RE) ?? []).length
     return pl > en ? 'pl' : 'en'
   }
-  let best = null
-  for (const [lang, never] of Object.entries(CYRILLIC_NEVER)) {
-    const bad = [...never].reduce((sum, ch) => sum + cyr.split(ch).length - 1, 0)
-    if (best === null || bad < best.bad) best = { lang, bad }
-  }
-  return best.lang
+  const count = (chars) => [...chars].reduce((sum, ch) => sum + cyr.split(ch).length - 1, 0)
+  const scored = Object.entries(CYRILLIC_NEVER).map(([lang, never]) => ({ lang, bad: count(never) }))
+  const least = Math.min(...scored.map((item) => item.bad))
+  const tied = scored.filter((item) => item.bad === least)
+  if (tied.length === 1) return tied[0].lang
+  const words = value.match(/[\p{L}’'ʼ]+/gu) ?? []
+  const evidence = (lang) => count(CYRILLIC_ONLY[lang]) + words.filter((word) => CYRILLIC_WORDS[lang].includes(word)).length
+  // При равных признаках — прежний порядок: русский, белорусский, украинский.
+  return tied.reduce((best, item) => (evidence(item.lang) > evidence(best.lang) ? item : best)).lang
+}
+
+const CARD_WORD_MIN = 3
+/** Меньше стольких знаков — язык не судится: по трём словам его не отличить. */
+const WRONG_LANG_MIN_CHARS = 40
+
+/**
+ * Собственные слова ответа — то, по чему судится язык (#3277). Подпись ссылки — название из каталога, и
+ * слово, которое стоит в карточке подсказки, модель не написала, а переписала: белорусская подпись точки
+ * «Сядзібны дом Трамбіцкіх у Лінаве» в русском ответе (lv02) делала его «украинским», «Kraków…
+ * Twardowski, Tyniec» в английском — «польским» (f23). Такие слова в счёт языка не идут. Ответ не на том
+ * языке по-прежнему виден: слова, которых в карточках нет, остаются.
+ */
+export const ownProse = (answer, linkLabels, cards) => {
+  const withoutLabels = (linkLabels ?? []).reduce((text, label) => (label ? text.split(label).join(' ') : text), String(answer ?? ''))
+  const wordsOf = (text) => String(text ?? '').toLowerCase().match(/[\p{L}’'ʼ]+/gu) ?? []
+  const quoted = new Set((cards ?? []).flatMap((card) => wordsOf(`${card.title ?? ''} ${card.snippet ?? ''}`)).filter((word) => word.length >= CARD_WORD_MIN))
+  return withoutLabels.replace(/[\p{L}’'ʼ]+/gu, (word) => (quoted.has(word.toLowerCase()) ? ' ' : word)).replace(/[ \t]+/g, ' ')
 }
 
 /** Нужные карточки: `{pattern, min, type}` — сколько источников хода подходят по названию. */
@@ -289,6 +373,7 @@ export const checkSources = (sources, expectSources) => {
  * Карточка мимо темы — выбор модели, его оценивает судья; здесь это предупреждение `off_topic_card`.
  * Признание «отдельного материала нет» провал не снимает: проверка срабатывает, только когда карточки
  * места в подсказке были, а значит такое признание ложное и чужой город назван вместо своего.
+ * `expect_sources.also` — материалы, которые набор поимённо относит к месту вопроса (см. `splitPlaceCards`).
  */
 export const findOffPlaceCards = (raw, cards, expectSources) => {
   const split = splitPlaceCards(cards, expectSources)
@@ -305,21 +390,30 @@ export const findOffPlaceCards = (raw, cards, expectSources) => {
 export function splitPlaceCards(cards, expectSources) {
   if (!expectSources?.pattern || !cards?.length) return null
   const place = new RegExp(expectSources.pattern, 'iu')
-  const fits = (card) => place.test(`${card.title ?? ''} ${card.snippet ?? ''} ${card.url ?? ''}`)
+  // `also` (#3345, lv21) — названия материалов, которые относятся к месту, хотя в карточке его не называют:
+  // подборка «Замки и усадьбы Беларуси» рассказывает о Несвиже в тексте, а фрагмент карточки — 120 знаков.
+  // Разрешение стоит в ожидании самого вопроса и названо поимённо; проверка места для остальных карточек прежняя.
+  const also = expectSources.also ? new RegExp(expectSources.also, 'iu') : null
+  const fits = (card) => place.test(`${card.title ?? ''} ${card.snippet ?? ''} ${card.url ?? ''}`) || (also?.test(card.title ?? '') ?? false)
   return { own: cards.filter(fits), foreign: cards.filter((card) => !fits(card)) }
 }
 
 const fail = (failures, check, layer, detail) => failures.push({ check, layer, detail })
 
 /** Проверки стража содержания (#3291): то, что он обязан был исправить до показа. */
-export const GUARD_CHECKS = ['label_mismatch', 'foreign_description', 'ungrounded_number', 'echo']
+export const GUARD_CHECKS = ['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'echo']
 
 /**
  * Слой стража содержания (#3291) по ПОКАЗАННОМУ ответу — тем же `guardAnswer`, что у экрана и службы:
  *   - `label_mismatch` — нажимаемая ссылка подписана не названием карточки;
  *   - `foreign_description` — пояснение пункта от соседней карточки или с числом не из своей;
  *   - `ungrounded_number` — число с единицей, которого нет ни в одной карточке и в вопросе;
- *   - `echo` — ответ без содержания: повтор вопроса или фраза без ссылки и признания.
+ *   - `bare_url` — голый адрес карточки вместо ссылки с названием (#3345);
+ *   - `card_fragment` — оборванная фраза карточки пояснением или предложением (#3345);
+ *   - `counter_question` — вопросительное предложение, которое не уточняет возраст ребёнка: повтор
+ *     вопроса посетителя, встречный вопрос без смысла (#3345);
+ *   - `orphan_lead_in` — подводка к списку («…:»), под которой нет ни ссылки, ни пункта, ни фразы (#3345);
+ *   - `echo` — ответ без содержания: повтор вопроса, фраза без ссылки и признания, остаток после вырезаний.
  * Показанный текст ссылок не несёт, поэтому подпись, равная названию карточки, снова становится
  * ссылкой на неё: так страж видит, чьё пояснение стоит рядом. `earlier` — прошлые вопросы диалога:
  * уточнение повторяет их условия («не дольше 90 минут»).
@@ -364,7 +458,7 @@ export const findGuardDefects = ({ question, earlier = '' }, observed) => {
  * `earlier` — прошлые вопросы диалога) включает слой стража содержания (#3291); без вопроса он не
  * считается: числа из вопроса нельзя было бы отличить от выдуманных.
  */
-export function evaluateTurn({ expect, lang, expectSources, question, earlier }, observed) {
+export function evaluateTurn({ expect, lang, expectSources, question, earlier, noHelp = false }, observed) {
   const failures = []
   const warnings = []
   const call = observed.modelCall ?? null
@@ -399,7 +493,29 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier },
     fail(failures, 'not_finished', 'infra', `ход не завершён: статус ${status}`)
     return { pass: false, failures, warnings, metrics }
   }
-  if (status === 'done' && !call) {
+  // Пустая подсказка (#3345): служба нашла карточки, но ни одна не прошла отбор по месту и условиям — модель
+  // не вызывается, посетитель видит запасную фразу и найденное рядом. Это решение подбора, а не сбой стенда.
+  const promptEmpty = status === 'done' && !call && observed.promptEmpty === true && observed.fallback === true
+  if (promptEmpty) metrics.promptEmpty = true
+  // Справка о сайте (#3293): ответ — запись корпуса и ссылка без модели. Тоже не сбой стенда.
+  const helpDirect = status === 'done' && !call && observed.helpDirect === true
+  if (helpDirect) metrics.helpDirect = true
+  const sourceTypes = (observed.sources ?? []).map((source) => source.type)
+  if (expect === 'help') {
+    // Вопрос о сайте: справка первой, материалы к ней не добавляются; текст — на языке вопроса.
+    // Отказ «не по теме» ловит общая проверка ниже (`false_offtopic`, слой фильтра тем).
+    if (status !== 'off_topic' && sourceTypes[0] !== 'help') fail(failures, 'no_help_card', 'retrieval', 'на вопрос о сайте справка не стоит первой карточкой')
+    else if (sourceTypes.some((type) => type !== 'help')) fail(failures, 'material_in_help', 'retrieval', 'к справке добавлены статьи или квесты')
+    if (status === 'done' && !answer.trim()) fail(failures, 'empty_help', helpDirect ? 'retrieval' : 'model', 'на вопрос о сайте показан пустой ответ')
+    const helpProse = links.reduce((text, label) => (label ? text.split(label).join(' ') : text), answer)
+    const helpLang = detectLang(helpProse)
+    if (lang && helpLang && helpLang !== lang && helpProse.trim().length >= 40) fail(failures, 'wrong_lang', helpDirect ? 'retrieval' : 'model', `язык ответа ${helpLang}, нужен ${lang}`)
+    if (helpDirect) return { pass: failures.length === 0, failures, warnings, metrics }
+  } else if (noHelp && sourceTypes.includes('help')) {
+    // Обычный вопрос о поездке справку не получает.
+    fail(failures, 'help_card_leak', 'retrieval', 'вопрос о поездке получил справочную карточку')
+  }
+  if (status === 'done' && !call && !promptEmpty && !helpDirect) {
     fail(failures, 'no_model_call', 'infra', 'ответ показан, но запрос к модели не перехвачен')
     return { pass: false, failures, warnings, metrics }
   }
@@ -422,11 +538,13 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier },
   if (sourcesCheck) metrics.relevantSources = sourcesCheck.matched
   if (expect === 'answer') {
     if (status === 'no_sources') fail(failures, 'no_sources', 'retrieval', 'подбор не нашёл карточек')
+    else if (promptEmpty) fail(failures, 'empty_prompt', 'retrieval', 'ни одна найденная карточка не прошла отбор в подсказку')
     else if (sourcesCheck && !sourcesCheck.ok) fail(failures, 'irrelevant_sources', 'retrieval', `подходящих карточек ${sourcesCheck.matched} из ${sourcesCheck.min} нужных`)
   }
   // Запасной ответ стража (#3291) — честное «точного ответа в материалах нет»: экран показывает его
   // фразой, путь службы — флагом `fallback` при пустом тексте.
-  const admitted = observed.fallback === true || isNoMaterial(answer)
+  // «В карточках этого не сказано» (#3277) — тоже честное признание: ссылку такой ответ дать не обязан.
+  const admitted = observed.fallback === true || isNoMaterial(answer) || admitsNotInCards(answer)
   if (expect === 'no_material' && status !== 'no_sources' && !admitted) {
     fail(failures, 'no_admission', answeredByModel ? 'model' : 'retrieval', 'нет признания «на сайте такого нет»')
   }
@@ -441,7 +559,7 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier },
     if (answer.length > MAX_ANSWER_CHARS) fail(failures, 'too_long', 'model', `${answer.length} знаков > ${MAX_ANSWER_CHARS}`)
     const recs = countRecommendations(raw, cards)
     Object.assign(metrics, { cardLinks: recs.cardLinks, bullets: recs.bullets, unknownUrls: recs.unknownUrls.length })
-    const onTopicAnswer = expect === 'answer' || ((expect === 'any_on_topic' || expect === 'no_material') && !admitted)
+    const onTopicAnswer = expect === 'answer' || expect === 'help' || ((expect === 'any_on_topic' || expect === 'no_material') && !admitted)
     if (onTopicAnswer && !refusedOfftopic) {
       // Рекомендация — карточка: пункты-советы к одной статье без своих ссылок списком рекомендаций не считаются.
       const recommended = Math.max(recs.cardLinks, recs.bullets - recs.bulletsWithoutLink)
@@ -466,15 +584,23 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier },
     if (recs.unknownUrls.length) warnings.push({ check: 'invented_urls', layer: 'model', detail: `${recs.unknownUrls.length} адресов не из карточек вырезано стражем` })
     // Язык — по собственным словам ответа: название карточки стоит как в каталоге, а детские квесты и
     // часть статей не переведены, поэтому короткий верный ответ с русским названием читался как русский.
-    const prose = links.reduce((text, label) => (label ? text.split(label).join(' ') : text), answer)
+    // Ответ, собранный из слов карточек, своих слов почти не несёт — раньше такой ход язык не проверял вовсе:
+    // русский пересказ русской карточки на белорусский вопрос проходил. Когда своих слов меньше порога, а
+    // текста хватает, язык судится по тексту целиком (без подписей ссылок). На четырёх замерах (final, r1–r3:
+    // 733 ответа модели) таких ходов 37, и у всех язык целого текста совпал с нужным — ложных провалов нет.
+    const prose = [ownProse(answer, links, cards), ownProse(answer, links, [])].find((text) => text.trim().length >= WRONG_LANG_MIN_CHARS) ?? ''
     const answerLang = detectLang(prose)
-    if (lang && answerLang && answerLang !== lang && prose.trim().length >= 40) fail(failures, 'wrong_lang', 'model', `язык ответа ${answerLang}, нужен ${lang}`)
+    if (lang && answerLang && answerLang !== lang && prose) fail(failures, 'wrong_lang', 'model', `язык ответа ${answerLang}, нужен ${lang}`)
     const leaked = findUrls(answer).filter((url) => !makeCardUrlMatcher(cards)(url))
     if (leaked.length) fail(failures, 'url_leak', 'guard', `в показанном тексте адрес не из карточек: ${leaked[0]}`)
     if (/\(\s*\)|(^|\n)\s*•\s*(\n|$)/.test(answer)) warnings.push({ check: 'guard_residue', layer: 'guard', detail: 'пустые скобки или пункт после вырезания ссылки' })
     // Страж содержания (#3291): в показанном ответе не должно остаться того, что он обязан убрать.
     if (typeof question === 'string' && question.trim()) {
       for (const defect of findGuardDefects({ question, earlier }, observed)) fail(failures, defect.check, 'guard', defect.detail)
+      // Слой модели (#3277): число с единицей в сыром ответе, которого нет в карточках подсказки и в вопросе.
+      const invented = findInventedNumbers({ question, earlier }, raw, cards)
+      metrics.inventedNumbers = invented.length
+      if (invented.length) fail(failures, 'invented_number', 'model', `числа «${invented[0]}» нет в карточках подсказки${invented.length > 1 ? ` (и ещё ${invented.length - 1})` : ''}`)
     }
   }
 

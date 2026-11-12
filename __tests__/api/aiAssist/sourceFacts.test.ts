@@ -114,16 +114,33 @@ describe('факты источника в карточке ассистента
     expect(questFactsLine(null, { city: ' ', country: null })).toBe('Городской квест')
   })
 
-  it('строка фактов статьи: страна и город, число дней, месяцы', () => {
-    const place = { city: 'Краков', country: 'Польша' }
-    expect(travelFactsLine({ number_days: 3, months: [11, 12] }, place)).toBe('Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь')
-    expect(travelFactsLine({ number_days: 1, months: [5] }, place)).toBe('Польша, Краков. Дней: 1. Месяц: май')
-    expect(travelFactsLine({ months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }, place)).toBe('Польша, Краков. Месяцы: круглый год')
-    // Без фактов — то же место, с которого начиналась карточка статьи в обучении.
-    expect(travelFactsLine(null, place)).toBe('Польша, Краков')
+  it('строка фактов статьи: страна, число дней, месяцы', () => {
+    const place = { country: 'Польша' }
+    expect(travelFactsLine({ number_days: 3, months: [11, 12] }, place)).toBe('Польша. Дней: 3. Месяцы: ноябрь, декабрь')
+    expect(travelFactsLine({ number_days: 1, months: [5] }, place)).toBe('Польша. Дней: 1. Месяц: май')
+    expect(travelFactsLine({ months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }, place)).toBe('Польша. Месяцы: круглый год')
+    expect(travelFactsLine(null, place)).toBe('Польша')
     // Транспорт и категории в строку не идут: список статей экрана их не отдаёт.
     expect(travelFactsLine({ number_days: 2, transports: ['Машина'], categories: ['Замки'] }, { country: 'Беларусь' })).toBe('Беларусь. Дней: 2')
     expect(travelFactsLine(null)).toBe('')
+  })
+
+  // #3347: `cityName` статьи в каталоге — подпись первой точки маршрута (бэкенд `get_city_name`), а не город.
+  // Четыре статьи приёмки 12.11.2026 — значения из слепка индекса `.codex-temp/ai-index/raw/travels`.
+  it.each([
+    [168, 'Испания. Барселона - Мадрид - Рондо - Толедо - Браселона', 'Испания', 'Madrid', 'Испания'],
+    [362, 'Морское око в мае: озеро в Татрах, Польша', 'Польша', 'Palenica Białczańska', 'Польша. Дней: 1. Месяц: май'],
+    [null, 'Зелёное озеро в Высоких Татрах', 'Словакия', 'Chata pri Zelenom plese', 'Словакия. Дней: 1. Месяц: май'],
+    [672, 'Маршруты выходного дня из Минска: 13 поездок', 'Беларусь', 'Лысая гора (342 м)', 'Беларусь'],
+  ])('место статьи в строке фактов — страна, точка маршрута в неё не идёт: статья %s «%s»', (id, name, countryName, cityName, expected) => {
+    const withFacts = expected.includes('Дней')
+    const item = travel({ id: id ?? 1, name, countryName, cityName, number_days: withFacts ? 1 : null, month: withFacts ? [5] : [] })
+    const card = travelToSource(item as never, [])
+    const line = String(card?.snippet).split('. Каждый год')[0]
+    expect(line).toBe(expected)
+    expect(card?.snippet).not.toContain(cityName)
+    // Место карточки для отбора подсказки (#3315) — тоже только страна.
+    expect(card?.place).toEqual({ countries: [countryName] })
   })
 
   it('карточка экрана строится тем же построителем: квест — строка фактов, статья — строка фактов и начало описания', () => {
@@ -131,7 +148,7 @@ describe('факты источника в карточке ассистента
       'Детский городской квест по городу Несвиж (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 3. Длительность: 90 мин. Сложность: лёгкий. Можно с собакой',
     )
     expect(travelToSource(TRAVELS[0] as never, [])?.snippet).toBe(
-      'Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь. Каждый год в конце ноября в польских городах открываются ярмарки.',
+      'Польша. Дней: 3. Месяцы: ноябрь, декабрь. Каждый год в конце ноября в польских городах открываются ярмарки.',
     )
     // Балл статьи считается по месту и описанию: слова фактов её под вопрос не выбирают.
     expect(travelToSource(TRAVELS[0] as never, ['ноябрь', 'декабрь'])?.score).toBe(travelToSource(travel({ month: [] }) as never, ['ноябрь', 'декабрь'])?.score)
@@ -161,7 +178,7 @@ describe('факты источника в карточке ассистента
     const questLines = QUESTS.map((item) => questToSource(item as never, [], 'quest')?.snippet)
     expect(snapshot.quests).toEqual(questLines)
     const travelFacts = TRAVELS.map((item) => travelFactsOf(Number(item.id), { number_days: item.number_days, month: item.month }))
-    const travelLines = TRAVELS.map((item, index) => travelFactsLine(travelFacts[index], { city: item.cityName as string, country: item.countryName as string }))
+    const travelLines = TRAVELS.map((item, index) => travelFactsLine(travelFacts[index], { country: item.countryName as string }))
     expect(snapshot.travels).toEqual(travelLines)
     expect(snapshot.travel_cards).toEqual(TRAVELS.map((item) => travelToSource(item as never, [])?.snippet))
 
@@ -169,13 +186,15 @@ describe('факты источника в карточке ассистента
     expect(questLines.filter((line) => line?.endsWith('Можно с собакой'))).toHaveLength(3)
     expect(questLines.filter((line) => line && !line.includes('собакой'))).toHaveLength(2)
     expect(travelLines).toEqual([
-      'Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь',
-      'Польша, Краков. Дней: 1. Месяц: май',
-      'Польша, Краков',
-      'Польша, Краков. Дней: 2. Месяцы: июнь, июль',
+      'Польша. Дней: 3. Месяцы: ноябрь, декабрь',
+      'Польша. Дней: 1. Месяц: май',
+      'Польша',
+      'Польша. Дней: 2. Месяцы: июнь, июль',
       'Польша. Дней: 3. Месяцы: круглый год',
       '',
     ])
+    // Подпись первой точки маршрута (`cityName`) в строку фактов не идёт ни в построителе, ни в слепке (#3347).
+    expect(snapshot.travels.some((line: string) => line.includes('Краков'))).toBe(false)
     // Прежняя строка — начало новой: существующие поля не сдвинулись, новое только добавлено.
     QUESTS.forEach((item, index) => {
       const withoutPet = questFactsLine({ ...questFactsOf(item.id, { ...item, tags: enabledQuestTags(item.tags) }), pet_friendly: undefined }, { city: item.city_name as string, country: item.country_name as string })

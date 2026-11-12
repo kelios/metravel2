@@ -237,6 +237,84 @@ describe('цепочка порядка карточек (#3289): место →
   })
 })
 
+describe('цепочка порядка карточек: город, которого подбор не нашёл (#3277)', () => {
+  // lv21 прогона живых вопросов 12.11.2026: «да Нясвіжа» при русских текстах о Несвиже — в подборе маршруты из
+  // Минска и квест Заславля, ни одной карточки Несвижа; модель назвала «Маршруты выходного дня из Минска».
+  const found = [
+    travel({ id: 672, title: 'Маршруты выходного дня из Минска: 13 поездок', country: 'Беларусь', facts: { categories: WEEKEND } }),
+    quest({ id: 232, title: 'Квэст па Заслаўі: Рагнеда, Ізяслаў і горад, пабудаваны для выгнанніцы', city: 'Заслаўе', country: 'Беларусь', facts: { points: 9, duration_min: 120 } }),
+    travel({ id: 635, title: 'Замки и усадьбы Беларуси: 19 маршрутов из Минска', country: 'Беларусь', snippet: 'Беларусь. Несвижский замок Радзивиллов и Мирский замок за один день', facts: { categories: WEEKEND } }),
+    travel({ id: 646, title: 'Минск за выходные: путеводитель по столице Беларуси', country: 'Беларусь', facts: { number_days: 2 } }),
+  ]
+  const nesvizh = { ...quest({ id: 90, title: 'Квэст па Нясвіжы: скарб Радзівілаў', city: 'Нясвіж', country: 'Беларусь', facts: { points: 9, duration_min: 90 } }), place: { cities: ['Нясвіж', 'Несвиж', 'Nieśwież', 'Nesvizh'], countries: ['Беларусь'] } }
+  const minsk = { ...quest({ id: 4, title: 'Квэст па цэнтры Мінска', city: 'Мінск', country: 'Беларусь', facts: { points: 10, duration_min: 45 } }), place: { cities: ['Мінск', 'Минск', 'Mińsk', 'Minsk'], countries: ['Беларусь'] } }
+  const pool = () => [minsk, nesvizh]
+  const question = 'Як даехаць з Мінска да Нясвіжа без машыны і што там паглядзець за дзень?'
+
+  it('lv21: квест Несвижа из каталога встаёт первым, из найденного остаётся карточка, которая город упоминает', () => {
+    const arranged = arrangeSources(question, found, { pool })
+    expect(groupOf(arranged.sources, 'match')).toEqual(['q90', 't635'])
+    expect(groupOf(arranged.sources, 'nearby').sort()).toEqual(['q232', 't646', 't672'])
+    expect(arranged.noPlace).toBe(false)
+    expect(ids(selectPromptSources(arranged.sources, 8, null, true))).toEqual(['q90', 't635'])
+    // Служба смотрит весь текст источника: карточка, упоминающая город дальше фрагмента, тоже остаётся.
+    const mentions = (source: AiSource, places: readonly string[]) => source.source_id === '672' && places.includes('Несвиж')
+    expect(groupOf(arrangeSources(question, found, { pool, mentions }).sources, 'match')).toEqual(['q90', 't672', 't635'])
+    // Без каталога (экран) подбор прежний: место не узнано, квест Несвижа взять неоткуда.
+    const screen = arrangeSources(question, found).sources
+    expect(ids(screen)).not.toContain('q90')
+    expect(ids(screen).sort()).toEqual(ids(found).sort())
+  })
+
+  it('lv23 (регресс замера r1): «километров на сорок-пятьдесят» — квест Сорок из каталога в подсказку не идёт, подбор остаётся целым', () => {
+    const question = 'Посоветуй веломаршрут на день недалеко от Минска, километров на сорок-пятьдесят.'
+    const bikes = [1, 2, 3, 4, 5, 6, 7].map((id) => travel({ id, title: `Веломаршрут из Минска №${id}`, country: 'Беларусь', facts: { number_days: 1 } }))
+    const soroki = { ...quest({ id: 148, title: 'Квест по Сорокам: круглая крепость и цыганская гора', city: 'Сороки', country: 'Молдова', facts: { points: 10, duration_min: 180 } }), place: { cities: ['Сороки', 'Soroki', 'Soroca'], countries: ['Молдова'] } }
+    const arranged = arrangeSources(question, bikes, { pool: () => [soroki, minsk] })
+    expect(ids(arranged.sources)).not.toContain('q148')
+    expect(ids(withoutNearby(arranged.sources))).toEqual(ids(bikes))
+    expect(ids(selectPromptSources(arranged.sources, 8, null, true))).toHaveLength(7)
+    // «Недалеко от Минска» — место отправления: квесты Минска из каталога в подсказку не добавляются.
+    expect(ids(arranged.sources)).not.toContain('q4')
+    // То же семейство: «Квест на сорок минут».
+    expect(ids(arrangeSources('Квест на сорок минут', bikes, { pool: () => [soroki, minsk] }).sources)).not.toContain('q148')
+    // Город каталога со строчной буквы после предлога из каталога не добирается (названий сотни) — только с заглавной.
+    expect(ids(arrangeSources('что есть в сороках?', bikes, { pool: () => [soroki] }).sources)).not.toContain('q148')
+    expect(ids(arrangeSources('Что есть в Сороках?', bikes, { pool: () => [soroki] }).sources)[0]).toBe('q148')
+  })
+
+  it('город найден подбором — каталог не нужен; город отправления без назначения в каталоге — тоже', () => {
+    let calls = 0
+    const counted = () => {
+      calls += 1
+      return pool()
+    }
+    // Квест Несвижа уже среди найденного: место берётся из подбора.
+    const arranged = arrangeSources(question, [...found, nesvizh], { pool: counted })
+    expect(groupOf(arranged.sources, 'match')).toEqual(['t635', 'q90'])
+    expect(calls).toBe(0)
+    // Места в вопросе нет — из каталога ничего не добавляется.
+    const plain = arrangeSources('Куды паехаць на выхадныя без машыны?', found, { pool: counted })
+    expect(ids(plain.sources).sort()).toEqual(ids(found).sort())
+    // Назван только город каталога — его квесты; не больше трёх.
+    const many = () => [minsk, ...[5, 6, 7, 8].map((id) => ({ ...minsk, source_id: String(id), url: `https://metravel.by/quests/${id}` })), nesvizh]
+    const onlyTravels = found.filter((source) => source.type === 'travel').map((source) => ({ ...source, title: source.title.replace(/Минск\p{L}*/gu, 'столицы'), snippet: '' }))
+    const fromMinsk = arrangeSources('Якія квэсты ёсць у Мінску?', onlyTravels, { pool: many })
+    expect(groupOf(fromMinsk.sources, 'match')).toEqual(['q4', 'q5', 'q6'])
+  })
+
+  it('подбор нашёл только город отправления: «з Мінска да Нясвіжа» с квестом Минска среди найденного — место назначения из каталога', () => {
+    // Смысловой подбор на «з Мінска …» почти всегда приносит квесты Минска: без этого правила отбор по месту
+    // держался за них, и в подсказку уходил город отправления (#3277).
+    const arranged = arrangeSources(question, [...found, minsk], { pool })
+    expect(groupOf(arranged.sources, 'match')).toEqual(['q90', 't635'])
+    expect(groupOf(arranged.sources, 'nearby')).toContain('q4')
+    // Места назначения в каталоге нет — город отправления остаётся местом вопроса, как раньше.
+    const weekend = (options = {}) => arrangeSources('Якія квэсты ёсць, калі ехаць з Мінска?', [...found, minsk], options).sources
+    expect(weekend({ pool })).toEqual(weekend())
+  })
+})
+
 describe('цепочка порядка карточек (#3289): случаи пробы 11.11.2026', () => {
   it('p05 «с собакой недалеко от Варшавы»: детский квест на вопрос без детей в подсказку не идёт; с детьми — первым', () => {
     for (const question of ['Где погулять с собакой недалеко от Варшавы?', 'Куда сходить с собакой в Варшаве?', 'Gdzie na spacer z psem w Warszawie?']) {

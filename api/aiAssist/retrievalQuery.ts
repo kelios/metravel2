@@ -9,9 +9,9 @@
 
 // Явное расширение: модуль грузит и `node --experimental-strip-types` (служба), которому без него не найти файл.
 import { mentionsPlace } from './topicGate.ts'
-import type { AiHistoryItem, AiSource } from './types'
+import type { AiHistoryItem, AiSourceType } from './types'
 
-export type AiSourceIntent = AiSource['type'] | null
+export type AiSourceIntent = AiSourceType | null
 // `\b` не знает кириллицы — граница слова через lookbehind по букве.
 // Кириллица — по началу слова (квест/квесты/квестов), латиница — целым словом:
 // иначе «question»/«kwestia» читались как намерение про квесты.
@@ -31,8 +31,11 @@ export const detectIntent = (query: string): AiSourceIntent => {
 // Уточнение начинается с «А/И/Ещё…» или ссылается на прошлый вопрос («из них», «там»,
 // «туда», «этот»…) — на RU/BE/UK/PL/EN. Польское «I …» — уточнение, английское
 // местоимение «I want/I'm …» — нет; «there» в «is there / there are» — оборот, а не «там».
+// Польское «A …» (#3277) — уточнение, когда за ним идёт польское служебное слово («A coś dla dziecka?»,
+// «A z psem?», «A który krótszy?»): английский артикль «A quest for kids» уточнением не становится.
+// Раньше узнавалось только «A co …», и «A coś dla dziecka?» после вопроса о Вроцлаве искалось без города.
 const FOLLOW_UP_START_RE =
-  /^\s*(?:а|и|ещё|еще|і|ще|a(?=\s+co(?![\p{L}]))|i(?!['’]|\s+(?:am|was|want|need|would|will|wonder|have|had|plan|like|love|think|know|do|did|can|could|should|go|travel|visit)(?![\p{L}]))|and|also|what\s+about|how\s+about|a\s+co)(?![\p{L}])/iu
+  /^\s*(?:а|и|ещё|еще|і|ще|a(?=\s+(?:co|coś|cos|czy|dla|z|ze|w|we|na|po|do|od|bez|jak|jaki|jaka|jakie|jakiś|jakaś|jakieś|który|która|które|gdzie|kiedy|ile|może|jeśli|gdy|tam|to|ten|ta|te)(?![\p{L}]))|i(?!['’]|\s+(?:am|was|want|need|would|will|wonder|have|had|plan|like|love|think|know|do|did|can|could|should|go|travel|visit)(?![\p{L}]))|and|also|what\s+about|how\s+about)(?![\p{L}])/iu
 const FOLLOW_UP_REFERENCE_RE =
   /(?<![\p{L}])(?:из\s+(?:них|этих)|там|туда|оттуда|эт(?:от|а|о|и|ого|их|ой(?!\s+(?:зимой|весной|летом|осенью|ночью)))|него|неё|нее|них|з\s+(?:іх|них)|туды|туди|z\s+nich|tam|tego|tej|of\s+them|(?<!(?:is|are|was|were)\s+)there(?!\s+(?:is|are|was|were)(?![\p{L}])|['’]s)|those|these)(?![\p{L}])/iu
 

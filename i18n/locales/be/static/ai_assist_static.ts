@@ -22,6 +22,7 @@ export const aiAssistStaticResources = {
   "ask.nearbyTitle": "Яшчэ па тэме",
   "ask.sourceTravel": "Артыкул",
   "ask.sourceQuest": "Квэст",
+  "ask.sourceHelp": "Даведка",
   "ask.noSources": "На сайце пакуль няма матэрыялаў па гэтым пытанні. Паспрабуйце іншы кірунак або зазірніце ў каталог маршрутаў.",
   "ask.emptyAnswer": "Мадэль не дала адказу. Паспрабуйце перафармуляваць пытанне.",
   "ask.fallbackAnswer": "Дакладнага адказу ў знойдзеных матэрыялах няма — паглядзіце крыніцы ніжэй.",

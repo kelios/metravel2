@@ -9,7 +9,7 @@ import path from 'node:path'
 import { factsKey, type SourceFacts } from '../../api/aiAssist/sourceFacts.ts'
 import { CHUNKS_FILE, type ChunkRecord, type IndexArtifact, readIndex } from '../ai-index/format.ts'
 import { sourceKey } from '../ai-index/query.ts'
-import { snippet } from './search.ts'
+import { ROW_TYPE, snippet } from './search.ts'
 
 export interface LoadedIndex {
   artifact: IndexArtifact
@@ -58,7 +58,7 @@ export function indexMaps(artifact: IndexArtifact): Omit<LoadedIndex, 'artifact'
     }
     rows.push(row)
     localesBySource.get(key)!.add(chunk.locale)
-    typeOfRow[row] = chunk.type === 'quest' ? 1 : 0
+    typeOfRow[row] = ROW_TYPE[chunk.type] ?? 0
     // Buffer-круг даёт плоскую строку: `slice` в snippet() вернул бы SlicedString, которая держит
     // в куче весь исходный фрагмент (замер: куча 182 МБ вместо ~60 на полном индексе).
     snippets[row] = Buffer.from(snippet(chunk.text), 'utf8').toString('utf8')

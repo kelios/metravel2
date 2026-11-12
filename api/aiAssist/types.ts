@@ -9,6 +9,13 @@ import type { SourceFacts } from './sourceFacts.ts'
 export type AiSourceType = 'travel' | 'quest'
 
 /**
+ * Вид карточки ассистента: материал сайта либо справка о самом сайте (#3293). Справочная карточка —
+ * запись корпуса `scripts/ai-index/sources/help/`: заголовок — вопрос, фрагмент — утверждённый ответ,
+ * адрес — страница сайта, к которой ответ относится. Приходит только от службы `/ai/ask`.
+ */
+export type AiCardType = AiSourceType | 'help'
+
+/**
  * Группа карточки в событии `sources` потока `/ai/ask` и на экране — одно поле для режима страницы
  * (#3290) и отбора по условиям вопроса (#3289):
  *   - `page` — страница, с которой открыт ассистент: вопрос отвечается только по ней;
@@ -22,7 +29,7 @@ export type AiSourceGroup = (typeof AI_SOURCE_GROUPS)[number]
 
 /** Карточка материала сайта, найденная подбором; единственный источник ссылок в ответе. */
 export type AiSource = {
-  type: AiSourceType
+  type: AiCardType
   source_id: string
   title: string
   /** Абсолютный URL страницы на сайте — ровно так он попадает в промпт. */

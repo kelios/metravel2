@@ -32,7 +32,8 @@ export class HttpError extends Error {
   }
 }
 
-const TYPES: ReadonlySet<string> = new Set<ChunkType>(['travel', 'quest'])
+// `help` (#3293) — только явным запросом: без `type` справка в выдачу не попадает (`vectorSources`).
+const TYPES: ReadonlySet<string> = new Set<ChunkType>(['travel', 'quest', 'help'])
 
 export function parseLocale(value: unknown): Locale {
   if (value === undefined || value === null || value === '') return 'ru'
@@ -43,7 +44,7 @@ export function parseLocale(value: unknown): Locale {
 export function parseType(value: unknown, field = 'type'): ChunkType | undefined {
   if (value === undefined || value === null || value === '') return undefined
   if (typeof value === 'string' && TYPES.has(value)) return value as ChunkType
-  throw new HttpError(400, 'bad_request', `${field}: ожидалось travel или quest`)
+  throw new HttpError(400, 'bad_request', `${field}: ожидалось travel, quest или help`)
 }
 
 export function parseLimit(value: unknown, fallback: number): number {

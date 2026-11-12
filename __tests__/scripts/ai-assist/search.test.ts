@@ -1,9 +1,10 @@
 import { indexMaps } from '@/scripts/ai-assist/index'
-import { normalizeQuery, rrfMerge, snippet, sourceVector, vectorSources } from '@/scripts/ai-assist/search'
-import { chunkId, type ChunkRecord, type IndexArtifact, sourceSha256 } from '@/scripts/ai-index/format'
+import { helpHits, normalizeQuery, rrfMerge, snippet, sourceVector, vectorSources } from '@/scripts/ai-assist/search'
+import { chunkId, type ChunkRecord, type IndexArtifact, sourceSha256, writeIndex } from '@/scripts/ai-index/format'
 import { topK } from '@/scripts/ai-index/query'
 
-import { DIM, fakeVector, loadFixtureIndex } from './fixture'
+import { makeTempDir } from '../cli-test-utils'
+import { DIM, fakeVector, loadFixtureIndex, MODEL } from './fixture'
 
 describe('metravel-assist: search', () => {
   const index = loadFixtureIndex()
@@ -100,5 +101,56 @@ describe('metravel-assist: search', () => {
     expect(merged[0].score).not.toBeNull()
     expect(rrfMerge(vector, lexical, index, 3)).toEqual(merged)
     expect(rrfMerge([], [], index, 5)).toEqual([])
+  })
+})
+
+describe('metravel-assist: helpHits — порядок записей справки (#3293, замер r2)', () => {
+  /** Вектор с заданной близостью к вопросу: вопрос — первая ось, остаток уходит в ось `axis`. */
+  const toward = (cosine: number, axis: number): Float32Array => {
+    const vector = new Float32Array(DIM)
+    vector[0] = cosine
+    vector[axis] = Math.sqrt(1 - cosine * cosine)
+    return vector
+  }
+  const question = toward(1, 1)
+  const rows: Array<{ chunk: ChunkRecord; vector: Float32Array }> = []
+  const add = (type: ChunkRecord['type'], sourceId: number, locale: string, tags: string[], text: string, cosine: number) =>
+    rows.push({
+      chunk: { id: chunkId(type, sourceId, locale, text), type, source_id: sourceId, url: 'https://metravel.by/quests', title: text, city: null, country: null, lat: null, lng: null, month: [], tags, locale, text, cover: null, ...(type === 'help' ? { answer: `ответ записи ${sourceId}` } : {}) },
+      vector: toward(cosine, 1 + (rows.length % (DIM - 1))),
+    })
+  // «Ці ёсць у квэсце падказкі?» (lv91): у записи об ошибке в квесте одна формулировка чуть ближе (0,64),
+  // у записи о подсказках близки и формулировки, и ответ.
+  add('help', 31, 'ru', ['help-quest-report', 'обратная связь'], 'В квесте неправильный ответ, куда писать?', 0.64)
+  add('help', 31, 'ru', ['help-quest-report', 'обратная связь', 'answer'], 'Напишите через форму на странице контактов.', 0.2)
+  add('help', 30, 'ru', ['help-quest-hints', 'квесты'], 'Есть ли в квесте подсказки?', 0.61)
+  add('help', 30, 'ru', ['help-quest-hints', 'квесты'], 'Что делать, если не могу ответить на вопрос?', 0.63)
+  add('help', 30, 'ru', ['help-quest-hints', 'квесты'], 'Можно ли пропустить задание?', 0.3)
+  add('help', 30, 'ru', ['help-quest-hints', 'квесты', 'answer'], 'Откройте подсказку на карточке точки.', 0.55)
+  add('help', 30, 'pl', ['help-quest-hints', 'квесты'], 'Czy w queście są podpowiedzi?', 0.9)
+  add('help', 30, 'pl', ['help-quest-hints', 'квесты', 'answer'], 'Otwórz podpowiedź na karcie punktu.', 0.8)
+  // Запись без фрагмента ответа (индекс, собранный до доранжирования) — балл по одной формулировке.
+  add('help', 5, 'ru', ['help-how-to-register', 'цена и регистрация'], 'Как зарегистрироваться?', 0.5)
+  // Материал справке не мешает, как бы близок ни был.
+  add('quest', 9, 'ru', [], 'Квест по Гродно', 1)
+  const dist = makeTempDir('ai-assist-help-')
+  writeIndex(dist, { model: MODEL, dim: DIM, chunks: rows.map((row) => row.chunk), vectors: rows.map((row) => row.vector), builtAt: '2026-11-12T00:00:00.000Z' })
+  const index = loadFixtureIndex(dist)
+  const brief = (locale: 'ru' | 'pl') => helpHits(index, question, locale).map((hit) => ({ id: index.artifact.chunks[hit.row].source_id, title: index.artifact.chunks[hit.row].title, cosine: Number(hit.cosine.toFixed(2)), score: Number(hit.score.toFixed(2)), topic: hit.topic }))
+
+  it('первой встаёт запись, близкая целиком (две формулировки и ответ), а не та, у которой ближе одна формулировка', () => {
+    expect(brief('ru')).toEqual([
+      { id: 30, title: 'Что делать, если не могу ответить на вопрос?', cosine: 0.63, score: 1.17, topic: 'квесты' },
+      { id: 31, title: 'В квесте неправильный ответ, куда писать?', cosine: 0.64, score: 0.84, topic: 'обратная связь' },
+      { id: 5, title: 'Как зарегистрироваться?', cosine: 0.5, score: 0.5, topic: 'цена и регистрация' },
+    ])
+  })
+
+  it('запись берётся на языке вопроса, если переведена; непереведённая — на русском', () => {
+    expect(brief('pl')).toEqual([
+      { id: 30, title: 'Czy w queście są podpowiedzi?', cosine: 0.9, score: 1.7, topic: 'квесты' },
+      { id: 31, title: 'В квесте неправильный ответ, куда писать?', cosine: 0.64, score: 0.84, topic: 'обратная связь' },
+      { id: 5, title: 'Как зарегистрироваться?', cosine: 0.5, score: 0.5, topic: 'цена и регистрация' },
+    ])
   })
 })

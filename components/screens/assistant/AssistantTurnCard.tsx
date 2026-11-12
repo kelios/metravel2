@@ -24,7 +24,9 @@ const SourceRow = memo(function SourceRow({ source, styles, colors }: SourceRowP
   const onPress = useCallback(() => {
     router.push(source.path as never)
   }, [router, source.path])
-  const typeLabel = source.type === 'quest' ? i18nT('aiAssistStatic:ask.sourceQuest') : i18nT('aiAssistStatic:ask.sourceTravel')
+  // Справка о сайте (#3293) — третий вид источника: запись корпуса, ведёт на страницу сайта, а не на материал.
+  const typeLabel =
+    source.type === 'quest' ? i18nT('aiAssistStatic:ask.sourceQuest') : source.type === 'help' ? i18nT('aiAssistStatic:ask.sourceHelp') : i18nT('aiAssistStatic:ask.sourceTravel')
   return (
     <Pressable
       accessibilityRole="link"
@@ -34,7 +36,7 @@ const SourceRow = memo(function SourceRow({ source, styles, colors }: SourceRowP
       testID={`assistant-source-${source.type}-${source.source_id}`}
     >
       <View style={styles.sourceIcon}>
-        <Feather name={source.type === 'quest' ? 'flag' : 'file-text'} size={16} color={colors.primaryDark} />
+        <Feather name={source.type === 'quest' ? 'flag' : source.type === 'help' ? 'help-circle' : 'file-text'} size={16} color={colors.primaryDark} />
       </View>
       <View style={styles.sourceTextCol}>
         <Text style={styles.sourceType}>{typeLabel}</Text>
@@ -65,7 +67,10 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
   const mainSources = turn.sources.filter((source) => source.group !== 'nearby')
   const nearbySources = turn.sources.filter((source) => source.group === 'nearby')
   // Пустой ответ модели (#3291): вместо повтора вопроса — честная фраза; источники остаются ниже.
-  const answerText = turn.status === 'done' && turn.fallback ? i18nT('aiAssistStatic:ask.fallbackAnswer') : turn.answer
+  // Пустая подсказка (#3345): модель не вызывалась — «на сайте пока нет материалов», найденное рядом ниже.
+  const noMaterial = turn.status === 'done' && turn.fallback === true && turn.noMaterial === true
+  const answerText =
+    turn.status === 'done' && turn.fallback ? (noMaterial ? i18nT('aiAssistStatic:ask.noSources') : i18nT('aiAssistStatic:ask.fallbackAnswer')) : turn.answer
 
   let notice: string | null = null
   let noticeAction: 'retry' | 'catalog' | null = null
@@ -103,6 +108,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
         notice = i18nT('aiAssistStatic:ask.emptyAnswer')
         noticeAction = 'retry'
       }
+      // «Материала нет» зовёт в каталог — кнопка та же, что у хода без источников.
+      if (noMaterial) noticeAction = 'catalog'
       break
     default:
       break
@@ -143,9 +150,9 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
           </View>
         ) : null}
 
-        {notice ? (
+        {notice || noticeAction ? (
           <>
-            <Text style={styles.noticeText}>{notice}</Text>
+            {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
             <View style={styles.noticeActions}>
               {noticeAction === 'retry' ? (
                 <UIButton

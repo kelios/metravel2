@@ -10,7 +10,7 @@ import { GENERATION_TIMEOUT_MS, LlamaCppGenerator } from '../../api/aiAssist/gen
 import { enforceSourceLinks } from '../../api/aiAssist/linkGuard.ts'
 import { evaluateTurn, findUrls, normalizeUrl, parseCards, parseSse, primaryLayer } from './checks.mjs'
 import { evaluateAnswerExpectations, validateAnswerExpectations } from './answer-expectations.mjs'
-import { loadCases } from './run.mjs'
+import { loadCases } from './run-core.mjs'
 import { parseJudgeLines, renderJudgeTask, renderReport, summarize, validateQualityJudges } from './report.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))

@@ -12,6 +12,14 @@ describe('aiAssist retrievalQuery: опора уточнений (#2719 → #288
     expect(isFollowUpQuestion('Што там паглядзець?')).toBe(true)
     expect(isFollowUpQuestion('And which of them is for kids?')).toBe(true)
     expect(isFollowUpQuestion('Какие квесты есть в Минске?')).toBe(false)
+    // #3277: польское «A …» — уточнение, когда за ним польское служебное слово; английский артикль — нет.
+    for (const followUp of ['A coś dla dziecka?', 'A z dzieckiem?', 'A dla ośmiolatka?', 'A który jest krótszy?', 'A co z psem?', 'A może coś na godzinę?']) {
+      expect({ followUp, is: isFollowUpQuestion(followUp) }).toEqual({ followUp, is: true })
+    }
+    for (const standalone of ['A quest for kids in Minsk', 'A good route for a weekend?', 'Atrakcje dla dzieci']) {
+      expect({ standalone, is: isFollowUpQuestion(standalone) }).toEqual({ standalone, is: false })
+    }
+    expect(buildRetrievalQuery('A coś dla dziecka?', 'Co zobaczyć we Wrocławiu?')).toBe('Co zobaczyć we Wrocławiu? A coś dla dziecka?')
     // Английский артикль «A …» и «этой зимой» — не уточнение.
     expect(isFollowUpQuestion('A good castle for kids?')).toBe(false)
     expect(isFollowUpQuestion('A weekend with kids — where to go?')).toBe(false)

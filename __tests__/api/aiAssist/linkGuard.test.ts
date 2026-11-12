@@ -133,7 +133,7 @@ const card = (type: AiSource['type'], id: string, title: string, slug: string, s
 // Карточки собираются тем же построителем строки фактов, что в продукте (#3287): страж читает из неё числа.
 const cmok = card('quest', '4', 'Квест по центру Минска: в поисках цмока', '4/minsk-cmok', `${questFactsLine({ points: 10, duration_min: 45, difficulty: 'easy' }, { city: 'Минск', country: 'Беларусь' })}. В нашей игре это самый тяжёлый, но и самый необходимый…`)
 const dvoriki = card('quest', '28', 'Квест по дворикам Минска: муралы и скульптуры', '4/minsk-dvoriki', questFactsLine({ points: 9, duration_min: 120, difficulty: 'easy', pet_friendly: true }, { city: 'Минск', country: 'Беларусь' }))
-const smolevud = card('travel', '186', 'Смолевуд: натурная площадка Беларусьфильма под Минском', 'smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom', `${travelFactsLine({ number_days: 1, months: [6] }, { city: 'Смолевичи', country: 'Беларусь' })}. Декорации городов и деревень, где снимают кино…`)
+const smolevud = card('travel', '186', 'Смолевуд: натурная площадка Беларусьфильма под Минском', 'smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom', `${travelFactsLine({ number_days: 1, months: [6] }, { country: 'Беларусь' })}. Декорации городов и деревень, где снимают кино…`)
 
 describe('страж содержания ответа (#3291)', () => {
   it('p14: выдуманное название и числа у настоящего адреса — подпись заменена, пояснение убрано, ссылка осталась', () => {
@@ -170,7 +170,7 @@ describe('страж содержания ответа (#3291)', () => {
   it('p18: пояснение называет место соседней карточки («вдоль Припяти и Ипы» у квеста по Каменцу) — убирается', () => {
     const kamenets = card('quest', '89', 'Квест по Каменцу: Белая вежа и великаны', '83/kamenets-white-tower', questFactsLine({ points: 9, duration_min: 100, difficulty: 'easy' }, { city: 'Каменец', country: 'Беларусь' }))
     const river = card('travel', '229', 'Маршрут вдоль рек Припять и Ипа к озеру Березица', 'marshrut-vdol-rek', 'Беларусь, Березица. Дней: 2. Месяц: июль. Сплав и стоянки на берегу…')
-    const doroshevichi = card('travel', '132', 'Припять в Дорошевичах: Царь-дуб и палатки', 'pripiat-v-doroshevichakh', 'Беларусь, Дорошевичи. Дней: 2. Что взять с собой и где поесть на маршруте…')
+    const doroshevichi = card('travel', '132', 'Припять в Дорошевичах: Царь-дуб и палатки', 'pripiat-v-doroshevichakh', 'Беларусь, Дорошевичи. Дней: 2. Что взять с собой и где поесть на маршруте, если стоять с палатками у самой…')
     const raw = [
       'Про это в Беловежской пуще отдельной статьи у нас пока нет, но вот что есть в карточках:',
       `- [${kamenets.title}](${kamenets.url}) — квест с маршрутом вдоль Припяти и Ипы.`,
@@ -200,7 +200,10 @@ describe('страж содержания ответа (#3291)', () => {
     expect(guardAnswer('', [cmok], context).fallback).toBe(true)
     // Всё содержание — фраза с выдуманным числом: после стража текста нет.
     expect(guardAnswer('Квест длится 200 минут.', [cmok], context)).toMatchObject({ text: '', ungroundedNumbers: 1, fallback: true })
-    expect(guardAnswer('В карточках цена не указана.', [cmok], context).fallback).toBe(false)
+    // Признание — ответ, когда оно о том, что спросили (#3345): о цене на вопрос о цене, без предмета — на любой.
+    expect(guardAnswer('В карточках цена не указана.', [cmok], { question: 'Сколько стоит квест про цмока?' }).fallback).toBe(false)
+    expect(guardAnswer('В карточках этого не сказано.', [cmok], context).fallback).toBe(false)
+    expect(guardAnswer('В карточках цена не указана.', [cmok], context)).toMatchObject({ fallback: true, findings: [{ check: 'echo', detail: 'признание не о том, что спросили, без ссылки и подтверждённого числа' }] })
     expect(guardAnswer('В квесте 10 точек, около 45 минут.', [cmok], context)).toMatchObject({ fallback: false, ungroundedNumbers: 0 })
     expect(guardAnswer(`[${cmok.title}](${cmok.url})`, [cmok], context).fallback).toBe(false)
     // Длинный ответ без ссылок — дефект модели, а не пустой ответ: текст остаётся.
@@ -224,8 +227,10 @@ describe('страж содержания ответа (#3291)', () => {
     const question = 'О котрій годині можна починати квест?'
     const raw = 'Матеріали сайту не називають точний час початку квесту. Зазначено лише близько 18:00 — обійдете місто вночі. Скільки вас буде?'
     expect(guardAnswer(raw, [cmok], { question })).toMatchObject({
-      text: 'Матеріали сайту не називають точний час початку квесту. Скільки вас буде?',
+      // Встречный вопрос без смысла уходит вместе с числом без опоры (#3345); признание остаётся ответом.
+      text: 'Матеріали сайту не називають точний час початку квесту.',
       ungroundedNumbers: 1,
+      counterQuestions: 1,
       fallback: false,
     })
     const priced = guardAnswer(`Билет стоит 15 рублей. Подойдёт [${cmok.title}](${cmok.url}).`, [cmok], { question: 'Какой квест выбрать?' })
@@ -242,11 +247,14 @@ describe('страж содержания ответа (#3291)', () => {
     expect(result.findings.at(-1)).toEqual({ check: 'echo', detail: 'после вырезаний не осталось ни ссылки, ни признания, ни утверждения' })
     // Два встречных вопроса — то же самое.
     expect(guardAnswer('Билет стоит 15 рублей. Сколько вас будет? А детям сколько лет исполнилось?', [cmok], context).fallback).toBe(true)
-    // Ничего не вырезано — встречный вопрос модели остаётся ответом.
+    // Уточнение возраста на вопрос о детях — ответ; тот же вопрос, когда о детях не спрашивали, вырезается (#3345).
     const ask = 'Сколько лет ребёнку и сколько у вас времени на прогулку?'
-    expect(guardAnswer(ask, [cmok], context)).toMatchObject({ text: ask, fallback: false })
-    // После вырезания осталось утверждение или ссылка — ответ остаётся.
-    expect(guardAnswer('Билет стоит 15 рублей. Цена зависит от состава группы и выбранного маршрута. Сколько вас будет?', [cmok], context).fallback).toBe(false)
+    expect(guardAnswer(ask, [cmok], { question: 'Какой квест выбрать с детьми?' })).toMatchObject({ text: ask, fallback: false })
+    expect(guardAnswer(ask, [cmok], context)).toMatchObject({ text: '', counterQuestions: 1, fallback: true })
+    // После вырезания числа осталось утверждение без ссылки и признания — отвечать нечем (#3345, lv40);
+    // со ссылкой или с признанием остаток — ответ.
+    expect(guardAnswer('Билет стоит 15 рублей. Цена зависит от состава группы и выбранного маршрута. Сколько вас будет?', [cmok], context).fallback).toBe(true)
+    expect(guardAnswer('Билет стоит 15 рублей. Цена в карточках не указана и зависит от маршрута.', [cmok], context)).toMatchObject({ text: 'Цена в карточках не указана и зависит от маршрута.', fallback: false })
     expect(guardAnswer(`Билет стоит 15 рублей. Подойдёт ли вам [${cmok.title}](${cmok.url})?`, [cmok], context).fallback).toBe(false)
   })
 
@@ -329,8 +337,8 @@ describe('страж содержания ответа (#3291)', () => {
     expect(guardAnswer(shortest, [cmok], { question: 'Самый короткий квест в Минске' }).text).toBe(shortest)
     const quoted = `На вопрос «${question}» отвечает ${link}.`
     expect(guardAnswer(quoted, [smolevud], { question }).text).toBe(quoted)
-    // Короткий вопрос может честно начать ответ; ответ из одного повтора по-прежнему пустой.
-    expect(guardAnswer(`А в Минске? Есть ${link}.`, [smolevud], { question: 'А в Минске?' }).text).toBe(`А в Минске? Есть ${link}.`)
+    // Короткий повтор вопроса в начале — тоже вопросительное предложение без ссылки: остаётся ответ (#3345).
+    expect(guardAnswer(`А в Минске? Есть ${link}.`, [smolevud], { question: 'А в Минске?' }).text).toBe(`Есть ${link}.`)
     expect(guardAnswer(question, [page], { question })).toMatchObject({ text: '', fallback: true })
     expect(guardAnswer(`${question} Решайте сами.`, [smolevud], { question }).fallback).toBe(true)
   })
@@ -411,11 +419,13 @@ describe('страж содержания ответа (#3291)', () => {
 
   it('строка фактов карточки (#3287) читается стражем: точки и длительность; адрес и год числом с единицей не считаются', () => {
     const numbers = (text: string) => extractNumberFacts(text).map((fact) => `${fact.kind}:${fact.value}`)
-    expect(numbers(questFactsLine({ points: 9, duration_min: 90, difficulty: 'easy', audience: 'kids', age: [8, 10], adult: true, pet_friendly: true }, { city: 'Несвиж', country: 'Беларусь' }))).toEqual(['points:9', 'minutes:90'])
-    expect(numbers(travelFactsLine({ number_days: 3, months: [11, 12] }, { city: 'Краков', country: 'Польша' }))).toEqual([])
+    expect(numbers(questFactsLine({ points: 9, duration_min: 90, difficulty: 'easy', audience: 'kids', age: [8, 10], adult: true, pet_friendly: true }, { city: 'Несвиж', country: 'Беларусь' }))).toEqual(['years:8', 'years:10', 'points:9', 'minutes:90'])
+    expect(numbers(travelFactsLine({ number_days: 3, months: [11, 12] }, { country: 'Польша' }))).toEqual([])
     expect(numbers('пунктаў маршруту — 11, а там 85–130 мин., 1,5 часа, 2 часа 30 минут, с 10:00 до 18:00, вход 20 zł и €5')).toEqual([
       'points:11', 'minutes:85', 'minutes:130', 'minutes:90', 'minutes:150', 'clock:600', 'clock:1080', 'price:20', 'price:5',
     ])
-    expect(numbers('Замок 1590 года, 13 поездок, 2,5 км, https://metravel.by/travels/krakow-za-90-minut и 11 > 9')).toEqual([])
+    // Год постройки, число без единицы и адрес числом с единицей не считаются; километры и годы — считаются (#3345).
+    expect(numbers('Замок 1590 года, 13 поездок, https://metravel.by/travels/krakow-za-90-minut и 11 > 9')).toEqual([])
+    expect(numbers('Идти 2,5 км, детям 8–10 лет, 9-летнему — в самый раз; маршрут 30–50 km')).toEqual(['km:2.5', 'years:8', 'years:10', 'years:9', 'km:30', 'km:50'])
   })
 })

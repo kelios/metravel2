@@ -18,7 +18,7 @@
 {"id": "lv18", "group": "dog", "lang": "uk", "q": "Хочемо поїхати Європою на машині разом із собакою. Чи є у вас такий маршрут?", "expect": "answer", "expect_sources": {"pattern": "собак|dog", "min": 1}}
 {"id": "lv19", "group": "dog", "lang": "en", "q": "Is there a dog-friendly hike within an hour of Krakow?", "expect": "answer", "expect_sources": {"pattern": "собач|собак|dog|жабник|[zż]abnik", "min": 1, "topic": true}}
 {"id": "lv20", "group": "no_car", "lang": "ru", "q": "Мы без машины. Куда можно съездить из Кракова на один день поездом или автобусом?", "expect": "answer", "expect_sources": {"pattern": "краков|krak", "min": 1}}
-{"id": "lv21", "group": "no_car", "lang": "be", "q": "Як даехаць з Мінска да Нясвіжа без машыны і што там паглядзець за дзень?", "expect": "answer", "expect_sources": {"pattern": "несвиж|нясвіж|nesvizh|niasvizh|nie[sś]wie[zż]", "min": 1}}
+{"id": "lv21", "group": "no_car", "lang": "be", "q": "Як даехаць з Мінска да Нясвіжа без машыны і што там паглядзець за дзень?", "expect": "answer", "expect_sources": {"pattern": "несвиж|нясвіж|nesvizh|niasvizh|nie[sś]wie[zż]", "min": 1, "also": "^Замки и усадьбы Беларуси: 19 маршрутов из Минска$"}}
 {"id": "lv22", "group": "no_car", "lang": "pl", "q": "Nie mamy samochodu. Czy do Malborka da się dojechać pociągiem i co tam zwiedzić?", "expect": "answer", "expect_sources": {"pattern": "malbork|мальборк|marienburg", "min": 1}}
 {"id": "lv23", "group": "bike", "lang": "ru", "q": "Посоветуй веломаршрут на день недалеко от Минска, километров на сорок-пятьдесят.", "expect": "answer", "expect_sources": {"pattern": "вело|bike", "min": 1}}
 {"id": "lv24", "group": "bike", "lang": "uk", "q": "Чи є у вас велоквести? У яких містах?", "expect": "answer", "expect_sources": {"pattern": "вело|вела|bike|rower", "min": 1, "type": "quest", "topic": true}}
@@ -84,3 +84,18 @@
 {"id": "lv84", "group": "conditions", "lang": "pl", "q": "Dokąd pojechać z dziećmi na weekend w Polsce?", "expect": "answer", "expect_sources": {"pattern": "польш|польск|польщ|polsk|poland|energylandia|краков|krak|орлин", "min": 1}}
 {"id": "lv85", "group": "conditions", "lang": "ru", "q": "Какие замки Беларуси можно объехать за выходные?", "expect": "answer", "expect_sources": {"pattern": "замк|замак|castle|zamk|усадьб|сядзіб|беларус", "min": 1}}
 {"id": "lv86", "group": "conditions", "lang": "en", "q": "Which castles in Belarus can we see over a weekend?", "expect": "answer", "expect_sources": {"pattern": "замк|замак|castle|zamk|усадьб|сядзіб|беларус", "min": 1}}
+{"id": "lv87", "group": "site_help", "lang": "ru", "q": "Сколько стоит пройти квест?", "expect": "help"}
+{"id": "lv88", "group": "site_help", "lang": "ru", "q": "Как добавить на сайт свою статью о поездке?", "expect": "help"}
+{"id": "lv89", "group": "site_help", "lang": "ru", "q": "Есть ли у вас приложение для телефона?", "expect": "help"}
+{"id": "lv90", "group": "site_help", "lang": "be", "q": "Ці трэба рэгістравацца, каб карыстацца сайтам?", "expect": "help"}
+{"id": "lv91", "group": "site_help", "lang": "be", "q": "Ці ёсць у квэсце падказкі, калі не магу адказаць?", "expect": "help"}
+{"id": "lv92", "group": "site_help", "lang": "uk", "q": "Чи зберігається прогрес квесту, якщо закрити сторінку?", "expect": "help"}
+{"id": "lv93", "group": "site_help", "lang": "uk", "q": "Як зв’язатися з вами, якщо знайшов помилку?", "expect": "help"}
+{"id": "lv94", "group": "site_help", "lang": "pl", "q": "Czy potrzebuję internetu podczas questu?", "expect": "help"}
+{"id": "lv95", "group": "site_help", "lang": "pl", "q": "Czy quest można wydrukować?", "expect": "help"}
+{"id": "lv96", "group": "site_help", "lang": "pl", "q": "W jakich językach działa strona?", "expect": "help"}
+{"id": "lv97", "group": "site_help", "lang": "en", "q": "Is the site free to use?", "expect": "help"}
+{"id": "lv98", "group": "site_help", "lang": "en", "q": "How long does moderation of my article take?", "expect": "help"}
+{"id": "lv99", "group": "site_help_control", "lang": "ru", "q": "Что посмотреть в Кракове за один вечер?", "expect": "answer", "no_help": true, "expect_sources": {"pattern": "краков|krak", "min": 1}}
+{"id": "lv100", "group": "site_help_control", "lang": "uk", "q": "Чи є квести для дітей у Мінську?", "expect": "answer", "no_help": true, "expect_sources": {"pattern": "минск|мінськ|мінск|minsk|mińsk", "min": 1}}
+{"id": "lv101", "group": "site_help_control", "lang": "en", "q": "Is there a quest in Grodno?", "expect": "answer", "no_help": true, "expect_sources": {"pattern": "grodn|гродн", "min": 1}}

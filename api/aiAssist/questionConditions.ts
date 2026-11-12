@@ -24,9 +24,10 @@
  */
 
 import { asksAboutChildren } from './questAudience.ts'
+import { asksAboutService } from './serviceIntent.ts'
 import { detectIntent } from './retrievalQuery.ts'
 import { MONTHS_RU, type SourceFacts } from './sourceFacts.ts'
-import type { AiSourceType } from './types'
+import type { AiCardType, AiSourceType } from './types'
 
 export type QuestionConditions = {
   /** Вопрос о детях; `ages` — названный возраст («ребёнку 9 лет», «6 и 10 лет»), может быть пустым. */
@@ -43,6 +44,8 @@ export type QuestionConditions = {
   kind?: AiSourceType
   /** Лёгкий маршрут: «для новичков», «несложная тропа», «dla początkujących», «easy hike». */
   easy?: true
+  /** Вопрос о самом сайте, а не о поездке (#3293, `serviceIntent.ts`): отвечает справка, а не материалы. */
+  service?: true
 }
 
 // `\b` не знает кириллицы: граница слова — по букве и цифре с обеих сторон.
@@ -286,6 +289,7 @@ export const parseConditions = (query: string | null | undefined): QuestionCondi
     ...(maxDays !== undefined ? { maxDays } : {}),
     ...(kind ? { kind } : {}),
     ...(EASY_RE.test(text) ? { easy: true as const } : {}),
+    ...(asksAboutService(text) ? { service: true as const } : {}),
   }
 }
 
@@ -326,7 +330,7 @@ const lower = (values: readonly string[] | undefined): string[] => (values ?? []
  */
 export const judgeCard = (
   conditions: QuestionConditions,
-  card: { type: AiSourceType; facts?: SourceFacts | null; title?: string | null; snippet?: string | null },
+  card: { type: AiCardType; facts?: SourceFacts | null; title?: string | null; snippet?: string | null },
 ): CardVerdict => {
   const reasons: string[] = []
   let score = 0

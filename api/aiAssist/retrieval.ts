@@ -22,6 +22,7 @@ import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
 import { AI_SOURCES_LIMIT } from './policy'
+import { routeOriginMatcher } from './promptPlace'
 import { asksAboutChildren, childrenRank } from './questAudience'
 import { detectIntent, type AiSourceIntent } from './retrievalQuery'
 import { questFactsLine, questFactsOf, travelFactsLine, travelFactsOf } from './sourceFacts'
@@ -169,10 +170,25 @@ export const scoreText = (haystack: string, tokens: readonly string[]): number =
   let score = 0
   for (const token of tokens) {
     const stem = stemToken(token)
-    if (words.some((word) => word.startsWith(stem))) score += 1
+    const short = shortCaseStem(token)
+    if (words.some((word) => word.startsWith(stem) || (short !== null && word.length <= token.length && word.startsWith(short)))) score += 1
   }
   return score
 }
+
+/** Гласные падежных окончаний — кириллица и латиница («в Лиду», «do Rygi», «w Pragę»). */
+const CASE_VOWEL_RE = /[аяеиыуюоіaeiouyąę]$/
+const SHORT_TOKEN_MIN = 4
+const SHORT_TOKEN_MAX = 5
+
+/**
+ * Основа короткого слова (#3277): `stemToken` слова до пяти букв не режет, и «в Лиду», «в Ригу», «в
+ * Прагу» не находили «Лида», «Рига», «Прага» — название в другом падеже той же длины. У слова из
+ * четырёх-пяти букв с гласной на конце основа — без неё; совпадает слово карточки не длиннее самого
+ * слова вопроса («лиду» — «лида», «лиде», но не «лидер» и не «лидский»).
+ */
+const shortCaseStem = (token: string): string | null =>
+  token.length >= SHORT_TOKEN_MIN && token.length <= SHORT_TOKEN_MAX && CASE_VOWEL_RE.test(token) ? token.slice(0, -1) : null
 
 /** Падежные окончания, длинные раньше коротких: срезается одно, основа — не короче четырёх букв. */
 const CASE_ENDINGS = [
@@ -189,6 +205,9 @@ const MIN_SEARCH_STEM_LENGTH = 4
  */
 export const searchStem = (token: string): string => {
   if (!/^[а-я]+$/.test(token)) return token
+  // Винительный падеж короткого названия (#3277): «лиду», «ригу» — основа из трёх букв для подстрочного
+  // поиска слишком коротка («лид» — и «лидер»), поэтому слово возвращается в именительный: «лида», «рига».
+  if (token.length === MIN_SEARCH_STEM_LENGTH && /[ую]$/.test(token)) return `${token.slice(0, -1)}${token.endsWith('у') ? 'а' : 'я'}`
   for (const ending of CASE_ENDINGS) {
     if (token.endsWith(ending) && token.length - ending.length >= MIN_SEARCH_STEM_LENGTH) {
       return token.slice(0, -ending.length)
@@ -265,10 +284,11 @@ export const travelToSource = (travel: Travel, tokens: readonly string[], intent
   if (!path || !title) return null
   const place = [travel.countryName, travel.cityName].map((v) => String(v ?? '').trim()).filter(Boolean).join(', ')
   const body = htmlToSnippet(travel.description)
-  // Строка фактов (#3287) — тем же построителем, что у службы и слепка обучения: страна и город, число дней, месяцы.
+  // Строка фактов (#3287) — тем же построителем, что у службы и слепка обучения: страна, число дней, месяцы.
+  // `cityName` статьи — подпись первой точки маршрута, в строку фактов она не идёт (#3347).
   // Список статей отдаёт `month` номерами (`[6, 7, 8]`), в типе `Travel` его нет.
   const facts = travelFactsOf(Number(travel.id), { number_days: travel.number_days, month: (travel as { month?: unknown }).month })
-  const snippet = joinParts([travelFactsLine(facts, { city: travel.cityName, country: travel.countryName }), body])
+  const snippet = joinParts([travelFactsLine(facts, { country: travel.countryName }), body])
   // Бэкенд уже отобрал статью по вопросу — базовый балл 1, совпадения слов сверху. Балл считается по
   // месту и описанию: слова фактов («дней», название месяца) статью под вопрос не выбирают.
   const score = 1 + scoreText(`${title} ${place} ${joinParts([place, body])}`, tokens) + (intent === 'travel' ? INTENT_BONUS : 0)
@@ -459,20 +479,28 @@ export async function searchSiteMaterials({
   }
   if (questsResult.status === 'fulfilled') {
     const questSources: AiSource[] = []
-    for (const quest of questsResult.value ?? []) {
-      const source = questToSource(quest, tokens, intent)
+    const catalog = questsResult.value ?? []
+    // Маршрут «из Минска в Заславль» (#3277): слово города отправления квест не выбирает — иначе восемь
+    // квестов Минска занимали все места и квест Заславля в подбор не попадал.
+    const isOrigin = routeOriginMatcher(
+      query,
+      catalog.map((quest) => ({ place: { cities: [quest.city_name_localized, quest.city_name, quest.city_name_canonical], countries: [quest.country_name] } })),
+    )
+    const questTokens = tokens.filter((token) => !isOrigin(token))
+    for (const quest of catalog) {
+      const source = questToSource(quest, questTokens, intent)
       if (!source) continue
       if (forChildren) {
         const rank = childrenRank(query, enabledQuestTags(quest.tags), [quest.city_name_localized, quest.city_name, quest.city_name_canonical])
-        if (rank) source.score += childrenLift(tokens, rank)
+        if (rank) source.score += childrenLift(questTokens, rank)
       }
       questSources.push(source)
       // Место в резерве — только квесту про город или объект вопроса: совпадение по одной
       // стране («Замки Беларуси») отдавало бы три места квестам случайных городов.
       const local = [quest.title, quest.city_name_localized, quest.city_name, quest.city_name_canonical].filter(Boolean).join(' ')
-      if (scoreText(local, tokens) > 0) localQuestUrls.add(source.url)
+      if (scoreText(local, questTokens) > 0) localQuestUrls.add(source.url)
     }
-    candidates.push(...dropRescuedQuestsWhenMatched(questSources, intent, tokens.length > 0))
+    candidates.push(...dropRescuedQuestsWhenMatched(questSources, intent, questTokens.length > 0))
   }
   return mergeSources(
     candidates,

@@ -13,9 +13,10 @@ import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { createDemandLog } from '@/scripts/ai-assist/demandLog'
 import { AskLimits, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 
-import { createAskSession, inspectAskService, parseTrace, sameServer } from '../../scripts/ai-assistant-eval/ask-path.mjs'
+import { createAskSession, inspectAskService, loadShownTexts, parseTrace, sameServer, SHOWN_TEXT_KEYS } from '../../scripts/ai-assistant-eval/ask-path.mjs'
+import { evaluateTurn } from '../../scripts/ai-assistant-eval/checks.mjs'
 import { parseJudgeLines, renderJudgeTask, renderReport } from '../../scripts/ai-assistant-eval/report.mjs'
-import { collectResults, loadCases, parseRunArgs, rebuildReport } from '../../scripts/ai-assistant-eval/run.mjs'
+import { collectResults, loadCases, parseRunArgs, rebuildReport } from '../../scripts/ai-assistant-eval/run-core.mjs'
 import { fakeEmbedQuery, FIXTURE_CHUNKS, loadFixtureIndex, MODEL, type Spec, writeFixtureIndex } from './ai-assist/fixture'
 import { makeTempDir, removeDir } from './cli-test-utils'
 
@@ -213,9 +214,122 @@ describe('путь службы /ai/ask в контуре оценки (#3286)',
     expect(await failing(429, { error: 'limit', detail: 'дневной лимит 20 вопросов исчерпан' })('вопрос')).toMatchObject({ turnCreated: true, status: 'error', notice: 'дневной лимит 20 вопросов исчерпан' })
   })
 
+  describe('ход без текста модели контур видит той же строкой, что посетитель (#3345, четвёртый заход)', () => {
+    const NEARBY = '{"type":"quest","source_id":"129","title":"Детский квест по Варшаве","url":"https://metravel.by/quests/10/warsaw-kids","path":"/quests/10/warsaw-kids","snippet":"Детский городской квест","score":0.5,"group":"nearby"}'
+    const emptyPrompt = (done: string) => [
+      `event: sources\ndata: {"sources":[${NEARBY}],"degraded":false,"remaining":19}`,
+      'event: trace\ndata: {"prompt_sources":[],"raw_text":"","model_called":false}',
+      'event: text\ndata: {"text":""}',
+      `event: done\ndata: ${done}`,
+      '',
+    ].join('\n\n')
+    const CARD = '{"type":"quest","source_id":"64","title":"Квест по Софии: Сердика под ногами","url":"https://metravel.by/quests/sofia/serdica","path":"/quests/sofia/serdica","snippet":"Городской квест по городу София (Болгария). Точек: 9","score":0.6}'
+    const guardFallback = [
+      `event: sources\ndata: {"sources":[${CARD}],"degraded":false,"remaining":19}`,
+      `event: trace\ndata: {"prompt_sources":[${CARD}],"raw_text":"Сколько стоит пройти квест?"}`,
+      'event: text\ndata: {"text":""}',
+      'event: done\ndata: {"status":"done","removed_links":0,"fallback":true,"remaining":19}',
+      '',
+    ].join('\n\n')
+    const sessionOf = async (body: string, locale = 'ru', withTexts = true) => {
+      const requests: string[] = []
+      const ask = createAskSession({
+        createAskClient, askUrl: 'http://service.test', visitor: '2001:db8::e', locale, shownTexts: withTexts ? await loadShownTexts(locale) : null,
+        fetchImpl: async (_url: string, init: { body?: string }) => {
+          requests.push(String(init.body))
+          return { ok: true, status: 200, headers: { get: () => 'text/event-stream' }, text: async () => body }
+        },
+      })
+      return { ask, requests }
+    }
+    const question = 'Где погулять с собакой недалеко от Варшавы?'
+    const failuresOf = (expect: string, lang: string, observed: unknown) => evaluateTurn({ expect, lang, question }, observed).failures.map((item: { check: string; layer: string }) => `${item.check}/${item.layer}`)
+
+    it('строки берутся из ресурсов интерфейса на локали хода — по ключам экрана', async () => {
+      expect(SHOWN_TEXT_KEYS).toEqual({ fallback: 'ask.fallbackAnswer', noMaterial: 'ask.noSources' })
+      expect(await loadShownTexts('ru')).toEqual({
+        fallback: 'Точного ответа в найденных материалах нет — посмотрите источники ниже.',
+        noMaterial: 'На сайте пока нет материалов по этому вопросу. Попробуйте другое направление или загляните в каталог маршрутов.',
+      })
+      expect((await loadShownTexts('be')).noMaterial).toMatch(/^На сайце пакуль няма матэрыялаў/)
+      expect((await loadShownTexts('en')).fallback).toBe('There is no exact answer in the materials found — see the sources below.')
+    })
+
+    it('пустая подсказка: показанный текст — «материала нет», признаки promptEmpty и noMaterial, история диалога без хода', async () => {
+      const { ask, requests } = await sessionOf(emptyPrompt('{"status":"done","removed_links":0,"fallback":true,"reason":"no_material","remaining":19}'))
+      const observed = await ask(question)
+      expect(observed).toMatchObject({
+        status: 'done', fallback: true, noMaterial: true, promptEmpty: true, modelCall: null, linkLabels: [],
+        answerText: 'На сайте пока нет материалов по этому вопросу. Попробуйте другое направление или загляните в каталог маршрутов.',
+        sources: [{ type: 'quest', id: '129', title: 'Детский квест по Варшаве' }],
+      })
+      // Строка экрана в историю диалога не идёт, как на экране.
+      await ask('А в Кракове?')
+      expect(JSON.parse(requests[1]).history).toEqual([])
+      // Ход решён подбором, модель не вызывалась: `no_links` (слой модели) ему не ставится. Ожидание `answer`
+      // получает провал подбора `empty_prompt`; «по теме» и «материала нет» честное признание проходят.
+      expect(failuresOf('answer', 'ru', observed)).toEqual(['empty_prompt/retrieval'])
+      expect(failuresOf('any_on_topic', 'ru', observed)).toEqual([])
+      expect(failuresOf('no_material', 'ru', observed)).toEqual([])
+      // На другой локали — её строка, язык ответа верный.
+      const pl = await (await sessionOf(emptyPrompt('{"status":"done","removed_links":0,"fallback":true,"reason":"no_material","remaining":19}'), 'pl')).ask('Gdzie pójść z psem pod Warszawą?')
+      expect(pl.answerText).toBe('W serwisie nie ma jeszcze materiałów na ten temat. Spróbuj innego kierunku albo zajrzyj do katalogu tras.')
+      expect(failuresOf('no_material', 'pl', pl)).toEqual([])
+    })
+
+    it('служба без причины в done (старый образ) — прежняя запасная фраза стража, ход по-прежнему promptEmpty', async () => {
+      const observed = await (await sessionOf(emptyPrompt('{"status":"done","removed_links":0,"fallback":true,"remaining":19}'))).ask(question)
+      expect(observed).toMatchObject({ status: 'done', fallback: true, promptEmpty: true, answerText: 'Точного ответа в найденных материалах нет — посмотрите источники ниже.' })
+      expect(observed.noMaterial).toBeUndefined()
+    })
+
+    it('запасной ответ стража: показанный текст — запасная фраза; проверки не ослабли — у ожидания answer это `no_links` слоя модели', async () => {
+      const observed = await (await sessionOf(guardFallback)).ask('Сколько стоит пройти квест?')
+      expect(observed).toMatchObject({ status: 'done', fallback: true, answerText: 'Точного ответа в найденных материалах нет — посмотрите источники ниже.', linkLabels: [] })
+      expect(observed.noMaterial).toBeUndefined()
+      expect(observed.promptEmpty).toBeUndefined()
+      expect(observed.modelCall).toMatchObject({ text: 'Сколько стоит пройти квест?' })
+      expect(failuresOf('answer', 'ru', observed)).toEqual(['no_links/model'])
+      expect(failuresOf('any_on_topic', 'ru', observed)).toEqual([])
+    })
+
+    it('строки экрана не переданы — ход без текста модели роняет прогон, а не пишет пустой ответ', async () => {
+      const { ask } = await sessionOf(guardFallback, 'ru', false)
+      await expect(ask('Сколько стоит пройти квест?')).rejects.toThrow(/loadShownTexts/)
+    })
+  })
+
+  it('#3293: справка о сайте — ход без модели: ответ записи, вид источника help, признак helpDirect; набор несёт 12 вопросов о сайте и три контрольных', async () => {
+    const body = [
+      'event: sources\ndata: {"sources":[{"type":"help","source_id":"1","title":"Сколько стоит пройти квест?","url":"https://metravel.by/quests","path":"/quests","snippet":"Бесплатно.","score":0.66,"group":"match"}],"degraded":false,"remaining":19}',
+      'event: trace\ndata: {"prompt_sources":[{"type":"help","source_id":"1","title":"Сколько стоит пройти квест?","url":"https://metravel.by/quests","snippet":"Бесплатно."}],"raw_text":"","model_called":false,"help":true}',
+      'event: text\ndata: {"text":"Бесплатно.\\n\\n[metravel.by/quests](https://metravel.by/quests)"}',
+      'event: done\ndata: {"status":"done","removed_links":0,"remaining":19}',
+      '',
+    ].join('\n\n')
+    const ask = createAskSession({
+      createAskClient, askUrl: 'http://service.test', visitor: '2001:db8::f', locale: 'ru',
+      fetchImpl: async () => ({ ok: true, status: 200, headers: { get: () => 'text/event-stream' }, text: async () => body }),
+    })
+    const observed = await ask('Сколько стоит пройти квест?')
+    expect(observed).toMatchObject({ status: 'done', answerText: 'Бесплатно.\n\nmetravel.by/quests', linkLabels: ['metravel.by/quests'], modelCall: null, helpDirect: true, sources: [{ type: 'help', id: '1', title: 'Сколько стоит пройти квест?', group: 'match' }] })
+    expect(observed.promptEmpty).toBeUndefined()
+    expect(observed.helpCards).toEqual([{ n: 1, type: 'help', title: 'Сколько стоит пройти квест?', url: 'https://metravel.by/quests', snippet: 'Бесплатно.' }])
+    const live = loadCases(path.join(ROOT, 'scripts/ai-assistant-eval/cases.live.jsonl')) as { id: string; group: string; lang: string; expects: string[]; no_help?: boolean }[]
+    // В группе `site_help` — и прежние пять вопросов о сайте (lv38–lv42, ожидание any_on_topic).
+    const help = live.filter((item) => item.group === 'site_help' && item.expects[0] === 'help')
+    expect(help).toHaveLength(12)
+    expect(live.filter((item) => item.group === 'site_help')).toHaveLength(17)
+    expect([...new Set(help.map((item) => item.lang))].sort()).toEqual(['be', 'en', 'pl', 'ru', 'uk'])
+    const control = live.filter((item) => item.group === 'site_help_control')
+    expect(control.map((item) => [item.expects[0], item.no_help])).toEqual([['answer', true], ['answer', true], ['answer', true]])
+  })
+
   it('событие trace читается из тела потока; без него и на битых данных — null', () => {
     const body = 'event: sources\ndata: {"sources":[]}\n\nevent: trace\ndata: {"prompt_sources":[{"type":"quest","title":"Т"}],"raw_text":"сырой"}\n\nevent: done\ndata: {"status":"done"}\n\n'
-    expect(parseTrace(body)).toEqual({ promptSources: [{ type: 'quest', title: 'Т' }], rawText: 'сырой' })
+    expect(parseTrace(body)).toEqual({ promptSources: [{ type: 'quest', title: 'Т' }], rawText: 'сырой', modelCalled: true, help: false })
+    // Пустая подсказка (#3345): служба ответила без вызова модели.
+    expect(parseTrace('event: trace\ndata: {"prompt_sources":[],"raw_text":"","model_called":false}\n\n')).toEqual({ promptSources: [], rawText: '', modelCalled: false, help: false })
     expect(parseTrace('event: done\ndata: {"status":"done"}\n\n')).toBeNull()
     expect(parseTrace('event: trace\ndata: {битый\n\n')).toBeNull()
   })

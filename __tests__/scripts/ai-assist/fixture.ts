@@ -39,6 +39,9 @@ export interface Spec {
   /** Координаты источника (#2911, /ai/near-route); без них — Краков, как у всех. */
   lat?: number | null
   lng?: number | null
+  /** Справка о сайте (#3293): утверждённый ответ записи и страница сайта, к которой он относится. */
+  answer?: string
+  page?: string
 }
 
 export const FIXTURE_CHUNKS: Spec[] = [
@@ -58,7 +61,7 @@ export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
       id: chunkId(spec.type, spec.sourceId, locale, spec.text),
       type: spec.type,
       source_id: spec.sourceId,
-      url: `https://metravel.by/${spec.type === 'travel' ? 'travels' : 'quests'}/${spec.sourceId}${locale === 'ru' ? '' : `-${locale}`}`,
+      url: spec.type === 'help' ? `https://metravel.by${spec.page ?? '/about'}` : `https://metravel.by/${spec.type === 'travel' ? 'travels' : 'quests'}/${spec.sourceId}${locale === 'ru' ? '' : `-${locale}`}`,
       title: spec.title,
       city: spec.city ?? null,
       country: spec.country ?? 'Польша',
@@ -68,6 +71,7 @@ export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
       tags: spec.tags ?? [],
       locale,
       text: spec.text,
+      ...(spec.answer ? { answer: spec.answer } : {}),
     }
   })
 }

@@ -11,7 +11,9 @@
  *                    число и sha256 записей фактов.
  *
  * Формат читают сервис metravel-assist (#2456) и MCP metravel-knowledge (#2455);
- * менять поля только с версией в manifest.format_version и правкой этого файла. Артефакт версии 1
+ * менять поля только с версией в manifest.format_version и правкой этого файла. Справка (#3293) — новые
+ * записи `chunks.jsonl` с `type: "help"` и необязательным полем `answer`; у прежних записей ничего не
+ * изменилось, поэтому версия формата та же: артефакт без справки читается и пишется как раньше. Артефакт версии 1
  * (без `format_version` и `facts.jsonl`) читается как прежде, фактов в нём нет.
  */
 import { createHash } from 'node:crypto'
@@ -22,7 +24,8 @@ import { factsKey, type SourceFacts } from '../../api/aiAssist/sourceFacts.ts'
 
 export type { SourceFacts }
 
-export type ChunkType = 'travel' | 'quest'
+/** `help` — справка о сайте (#3293, `help.ts`): в индексе рядом со статьями и квестами, в выдачу идёт только по явному запросу. */
+export type ChunkType = 'travel' | 'quest' | 'help'
 
 export interface ChunkRecord {
   /** Стабильный id: `${t|q}${source_id}-${locale}-${sha256(text)[0:16]}`. */
@@ -44,11 +47,15 @@ export interface ChunkRecord {
   text: string
   /** Обложка источника (thumb статьи или cover квеста) для карточек подбора (#2459); null — нет. */
   cover: string | null
+  /** Только у справки (#3293): утверждённый ответ записи дословно — его служба отдаёт посетителю. */
+  answer?: string
 }
 
 export interface IndexSourceCounts {
   travel: number
   quest: number
+  /** Записей справки (#3293); поля нет — справки в индексе нет. */
+  help?: number
 }
 
 export interface IndexManifest {
@@ -86,7 +93,7 @@ export function sha256Hex(input: string | Buffer): string {
 }
 
 export function chunkId(type: ChunkType, sourceId: number, locale: string, text: string): string {
-  return `${type === 'travel' ? 't' : 'q'}${sourceId}-${locale}-${sha256Hex(text).slice(0, 16)}`
+  return `${type === 'travel' ? 't' : type === 'quest' ? 'q' : 'h'}${sourceId}-${locale}-${sha256Hex(text).slice(0, 16)}`
 }
 
 /** Детерминированный отпечаток источника: зависит только от содержимого и порядка записей. */
@@ -132,8 +139,10 @@ export function factsForChunks(facts: SourceFacts[], chunks: Array<Pick<ChunkRec
 export function countSources(chunks: Array<Pick<ChunkRecord, 'type' | 'source_id'>>): IndexSourceCounts {
   const travel = new Set<number>()
   const quest = new Set<number>()
-  for (const chunk of chunks) (chunk.type === 'quest' ? quest : travel).add(chunk.source_id)
-  return { travel: travel.size, quest: quest.size }
+  const help = new Set<number>()
+  for (const chunk of chunks) (chunk.type === 'quest' ? quest : chunk.type === 'help' ? help : travel).add(chunk.source_id)
+  // Поле справки появляется только вместе с ней: манифест индекса без справки остаётся прежним.
+  return { travel: travel.size, quest: quest.size, ...(help.size ? { help: help.size } : {}) }
 }
 
 /** Возраст сборки в целых днях; кривая дата — `null`, чтобы проверка свежести не приняла её за «сегодня». */

@@ -5,7 +5,7 @@ import { buildInventory, loadArtifacts, parseAcceptArgs, planRuns, writeJudgePac
 import { buildAcceptance, evaluateRule, renderAcceptance, tallySlices, tallyTurns, validateThresholds } from '../../scripts/ai-assistant-eval/acceptance.mjs'
 import { MAX_REFUSAL_CHARS, evaluateTurn, findOffPlaceCards, primaryLayer } from '../../scripts/ai-assistant-eval/checks.mjs'
 import { judgeAgreement, parseJudgeLines, promptPlaceMix, renderJudgeAgreement, renderJudgeTask, renderReport } from '../../scripts/ai-assistant-eval/report.mjs'
-import { loadCases, rebuildReport } from '../../scripts/ai-assistant-eval/run.mjs'
+import { loadCases, rebuildReport } from '../../scripts/ai-assistant-eval/run-core.mjs'
 import { makeTempDir, removeDir } from './cli-test-utils'
 
 // #3267: срезы достаточного размера, одна команда приёмки с таблицей порогов, автопроверка
@@ -502,7 +502,17 @@ describe('команда приёмки и опись оценочных вхо�
       const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
       try {
         rebuildReport(dir, null)
-        expect(readLines(path.join(dir, 'results.jsonl'))[0].turns[0].eval.failures.map((failure: { check: string }) => failure.check)).toEqual(['off_place_card'])
+        const checksOfRun = (folder: string) => readLines(path.join(folder, 'results.jsonl'))[0].turns[0].eval.failures.map((failure: { check: string }) => failure.check)
+        // Слой стража считается и при пересчёте — по вопросу хода (#3277): подпись «квест» не равна названию карточки.
+        expect(checksOfRun(dir)).toEqual(['off_place_card', 'label_mismatch'])
+        // Пересчёт копией (#3277): исходный прогон не меняется, копия несёт пометку, откуда пересчитана.
+        fs.writeFileSync(path.join(dir, 'results.jsonl'), `${JSON.stringify(result)}\n`)
+        const copy = path.join(dir, 'rescored')
+        expect(rebuildReport(dir, null, copy)).toMatchObject({ turns: 1, passed: 0 })
+        expect(readLines(path.join(dir, 'results.jsonl'))[0].turns[0].eval.failures).toEqual([])
+        expect(checksOfRun(copy)).toEqual(['off_place_card', 'label_mismatch'])
+        expect(JSON.parse(fs.readFileSync(path.join(copy, 'meta.json'), 'utf8'))).toMatchObject({ cases: path.relative(ROOT, cases), rescoredFrom: path.relative(ROOT, dir) })
+        expect(fs.existsSync(path.join(copy, 'report.md'))).toBe(true)
         fs.unlinkSync(cases)
         expect(() => rebuildReport(dir, null)).toThrow('не найден')
       } finally {

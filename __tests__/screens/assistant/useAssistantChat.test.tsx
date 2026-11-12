@@ -79,7 +79,8 @@ describe('useAssistantChat (#2460)', () => {
     expect(turn.question).toBe('Куда поехать под Гродно?')
     expect(turn.status).toBe('done')
     expect(turn.sources).toEqual([source])
-    expect(turn.answer).toBe('Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno и не ходите на')
+    // Голый адрес карточки в готовом ответе становится ссылкой с её названием (#3345).
+    expect(turn.answer).toBe('Поезжайте под Гродно: [Выходные под Гродно](https://metravel.by/travels/vyhodnye-pod-grodno) и не ходите на')
     expect(turn.removedLinks).toBe(1)
     expect(turn.usage?.completion_tokens).toBe(5)
     expect(mockedSearch).toHaveBeenCalledWith(expect.objectContaining({ query: 'Куда поехать под Гродно?', locale: 'ru' }))
@@ -119,6 +120,37 @@ describe('useAssistantChat (#2460)', () => {
     expect(result.current.turns[0].sources.map((item) => [item.source_id, item.group])).toEqual([['short', 'match'], ['long', 'nearby'], ['brest', 'nearby']])
     expect(prompts[0].match(/^\[\d+\] /gm)).toEqual(['[1] '])
     expect(prompts[0]).toContain('\nПочему подходит: можно с собакой, 45 мин\n')
+  })
+
+  it('#3345: пустая подсказка на пути llamacpp — модель не вызывается: ход done с запасным ответом, найденное рядом, запись в журнал спроса', async () => {
+    // «С собакой недалеко от Варшавы»: о Варшаве нашёлся только детский квест — на вопрос без детей он в подсказку не идёт.
+    const kids: AiSource = {
+      type: 'quest',
+      source_id: 'warsaw-kids',
+      title: 'Детский квест по Варшаве: знаки для базилишка',
+      url: 'https://metravel.by/quests/10/warsaw-kids-bazyliszek',
+      path: '/quests/10/warsaw-kids-bazyliszek',
+      snippet: 'Детский городской квест по городу Варшава (Польша). Возраст: 8–10 лет. Можно с собакой',
+      score: 2,
+      place: { cities: ['Варшава'], countries: ['Польша'] },
+      facts: { type: 'quest', source_id: 129, duration_min: 75, pet_friendly: true, audience: 'kids', age: [8, 10] },
+    }
+    mockedSearch.mockResolvedValue([kids])
+    const generate = jest.fn(async () => ({ text: 'Посмотрите [Варшава](https://metravel.by/travels/varshava).', usage: { prompt_tokens: 1, completion_tokens: 1, ttft_ms: 1, tokens_per_s: 1 } }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    await act(async () => {
+      await result.current.ask('Где погулять с собакой недалеко от Варшавы?')
+    })
+    expect(generate).not.toHaveBeenCalled()
+    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, noMaterial: true, removedLinks: 0 })
+    expect(result.current.turns[0].sources.map((item) => [item.source_id, item.group])).toEqual([['warsaw-kids', 'nearby']])
+    expect(mockedLogDemand).toHaveBeenCalledWith({ q: 'Где погулять с собакой недалеко от Варшавы?', locale: 'ru', reason: 'no_sources' })
+    expect(mockedConsume).toHaveBeenCalledTimes(1)
+    // С детьми в вопросе квест подходит — модель вызывается.
+    await act(async () => {
+      await result.current.ask('Где погулять с собакой и детьми в Варшаве?')
+    })
+    expect(generate).toHaveBeenCalledTimes(1)
   })
 
   it('#3291: страж содержания на пути llamacpp — подпись ссылки равна названию карточки, чужое число у пункта убрано', async () => {
@@ -519,8 +551,26 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
     await act(async () => {
       await result.current.ask('Сколько стоит пройти квест?')
     })
-    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, sources: [source] })
+    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, noMaterial: false, sources: [source] })
     expect(buildHistoryFromTurns(result.current.turns)).toEqual([])
+  })
+
+  it('#3345: служба прислала done с fallback и причиной no_material — ход «материала нет» с найденным рядом; без причины он остаётся запасным ответом стража', async () => {
+    const nearby = { ...source, group: 'nearby' as const }
+    const { client } = scriptedClient(() => ({ sources: [nearby], remaining: 18, texts: [''], done: doneEvent({ fallback: true, reason: 'no_material', remaining: 18 }) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client }))
+    await act(async () => {
+      await result.current.ask('Где погулять с собакой недалеко от Варшавы?')
+    })
+    expect(result.current.turns[0]).toMatchObject({ status: 'done', answer: '', fallback: true, noMaterial: true, sources: [nearby] })
+    expect(buildHistoryFromTurns(result.current.turns)).toEqual([])
+    // Причина без `fallback` (чужой поток) ход «материала нет» не включает.
+    const odd = scriptedClient(() => ({ sources: [source], remaining: 18, texts: ['Ответ.'], done: doneEvent({ reason: 'no_material', remaining: 18 }) }))
+    const second = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: odd.client }))
+    await act(async () => {
+      await second.result.current.ask('Что посмотреть в Гродно?')
+    })
+    expect(second.result.current.turns[0]).toMatchObject({ status: 'done', answer: 'Ответ.', fallback: false, noMaterial: false })
   })
 
   it('вопрос не по теме: предупреждение с номером от сервера; отказ модели — без номера; нет карточек — no_sources', async () => {

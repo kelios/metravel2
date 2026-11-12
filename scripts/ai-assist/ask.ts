@@ -46,13 +46,28 @@
  * Контур оценки (#3286): при `AI_ASSIST_EVAL_TRACE=1` поток несёт перед `done` событие
  * `trace {prompt_sources, raw_text}` — карточки, ушедшие в подсказку модели, и её ответ до
  * стража ссылок. Клиент экрана чужие события пропускает; в образе прода переменной нет.
+ *
+ * Пустая подсказка (#3345): подбор нашёл карточки, но ни одна не прошла отбор по месту и условиям
+ * вопроса. Модель не вызывается: поток `sources → text('') → done {status: done, fallback: true,
+ * reason: no_material}`; вопрос пишется в журнал спроса (`no_sources`), дневной лимит списан. Причина
+ * `no_material` отличает этот ход от запасного ответа стража (там модель ответила, страж ответ
+ * отбраковал): экран показывает «на сайте пока нет материалов по этому вопросу» и найденное рядом.
+ * Клиент, который причины не знает, видит прежний `fallback` и показывает запасную фразу стража.
+ * Событие `trace` несёт пустые `prompt_sources` и `model_called: false`.
+ *
+ * Справка о сайте (#3293): вопрос о самом MeTravel («сколько стоит квест», «нужен ли интернет», «как
+ * добавить статью») подбор отдаёт записями справки — карточками вида `help`, без статей и квестов.
+ * По умолчанию ответ — текст первой записи дословно и ссылка на её страницу, модель не вызывается:
+ * `sources → text → done {status: done}`; `trace` несёт карточку записи, `model_called: false` и
+ * `help: true`. `AI_ASSIST_HELP_MODE=model` отдаёт запись модели карточкой подсказки с правилом справки
+ * (`HELP_MODE_RULE_RU`) — для сравнения на стенде.
  */
 import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { guardAnswer } from '../../api/aiAssist/answerGuard.ts'
 import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
-import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
+import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources } from '../../api/aiAssist/prompt.ts'
 import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
@@ -82,6 +97,8 @@ export interface RetrievalResult {
   page?: AiSource | null
   /** Вопрос называет место, которого нет ни в одном найденном источнике (#3289). */
   noPlace?: boolean
+  /** Вопрос о самом сайте (#3293): `sources` — записи справки, первая — ответ; материалов среди них нет. */
+  help?: boolean
 }
 
 /** Режим контура оценки (#3286); адрес модели показывает `/ai/health` — приёмка сверяет, на какую модель смотрит служба. */
@@ -111,9 +128,24 @@ export interface AskDeps {
   evalTrace?: EvalTrace | null
   /** Новые строки подсказки (#3289); не задано — обе включены. */
   promptHints?: PromptHints
+  /** Справка о сайте (#3293): `direct` (по умолчанию) — запись и ссылка без модели; `model` — через модель. */
+  helpMode?: 'direct' | 'model'
   log: (line: string) => void
   now?: () => Date
 }
+
+/**
+ * Текст ответа справки (#3293): записи дословно и ссылка на страницу сайта, к которой запись относится.
+ * Две записи об одной странице дают одну ссылку — после второй. Подпись ссылки — адрес страницы без
+ * протокола: своего названия у страницы в записи нет.
+ */
+export const helpAnswerText = (cards: ReadonlyArray<Pick<AiSource, 'snippet' | 'url'>>): string =>
+  cards
+    .map((card, index) => {
+      const last = !cards.slice(index + 1).some((next) => next.url === card.url)
+      return `${card.snippet.trim()}${last ? `\n\n[${card.url.replace(/^https?:\/\//, '')}](${card.url})` : ''}`
+    })
+    .join('\n\n')
 
 export type AskHandler = (request: http.IncomingMessage, response: http.ServerResponse, body: unknown) => Promise<void>
 
@@ -264,6 +296,35 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       return
     }
 
+    // Карточки подсказки — тем же отбором, что в сообщениях модели ниже.
+    const promptSources = selectPromptSources(sources, undefined, null, true)
+    // Справка о сайте (#3293): ответ — утверждённый текст записи и ссылка на её страницу, без модели. Текст
+    // читает посетитель и утверждает владелец; модель его пересказывала с искажениями (замер 12.11.2026).
+    // Подпись ссылки — адрес страницы без протокола: своего названия у страницы в записи нет.
+    if (retrieved.help === true && deps.helpMode !== 'model' && promptSources.length) {
+      const stream = openStream(response)
+      stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
+      if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true })
+      stream.event('text', { text: helpAnswerText(promptSources) })
+      stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining })
+      return
+    }
+    // Подсказка пуста (#3345): подбор что-то нашёл, но отбор по месту и условиям вопроса не оставил ни одной
+    // карточки («с собакой недалеко от Варшавы» — у места только детский квест). Отвечать модели не по чему:
+    // на «Материалы сайта: ничего не найдено» она называла выдуманную статью (3 из 3 в приёмке 12.11.2026).
+    // Модель не вызывается; ход закрывается пустым `text`, `fallback` и причиной `no_material` — экран
+    // показывает «на сайте пока нет материалов по этому вопросу» и найденное рядом (клиент без знания
+    // причины — запасную фразу стража). Вопрос идёт в журнал спроса.
+    if (!promptSources.length) {
+      await demandLog.append({ q: question, locale, reason: 'no_sources' })
+      const stream = openStream(response)
+      stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
+      if (deps.evalTrace) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false })
+      stream.event('text', { text: '' })
+      stream.done({ status: 'done', removed_links: 0, fallback: true, reason: ASK_NO_MATERIAL_REASON, remaining: quota.remaining })
+      return
+    }
+
     const generator = deps.generator
     if (!generator) {
       await refund()
@@ -282,8 +343,6 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       noPlace: (!pinned || left) && retrieved.noPlace === true,
       hints: deps.promptHints,
     })
-    // Карточки подсказки — тем же отбором, что в `messages`.
-    const promptSources = selectPromptSources(sources, undefined, null, true)
     // Контур оценки (#3286) видит их в событии `trace` — вместе со строкой «почему подходит».
     const tracedSources = deps.evalTrace
       ? promptSources.map((source) => ({ ...withoutPlace(source), ...(source.why && deps.promptHints?.whyFits !== false ? { why: source.why } : {}) }))
@@ -333,7 +392,8 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         }),
       )
       clearFlush()
-      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery })
+      // Числа сверяются с карточками подсказки, ссылки — со всем списком источников (#3345, lv35).
+      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery, promptSources })
       const open = ensureStream()
       // Сырой ответ — до стража ссылок; остановку генератора на цикле и четвёртой рекомендации он уже прошёл.
       if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text })

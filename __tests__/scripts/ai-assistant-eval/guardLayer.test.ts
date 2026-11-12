@@ -39,7 +39,7 @@ const guardFailures = (question: string, shownMarkdown: string, expect = 'answer
 
 describe('контур оценки: слой стража содержания (#3291)', () => {
   it('четыре проверки стража объявлены и считаются слоем guard', () => {
-    expect(GUARD_CHECKS).toEqual(['label_mismatch', 'foreign_description', 'ungrounded_number', 'echo'])
+    expect(GUARD_CHECKS).toEqual(['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'echo'])
   })
 
   it('label_mismatch: нажимаемая ссылка подписана не названием карточки (p14)', () => {
@@ -73,8 +73,8 @@ describe('контур оценки: слой стража содержания 
     const question = 'Что посмотреть в Минске?'
     expect(guardFailures(question, clean)).toEqual([])
     expect(evaluateTurn({ expect: 'answer', lang: 'ru', question }, observe(clean)).pass).toBe(true)
-    // Голый адрес карточки — ссылка без подписи, а не чужая подпись.
-    expect(guardFailures(question, `Квест про цмока: 10 точек, около 45 мин. Подробности: ${cmok.url}`)).toEqual([])
+    // Голый адрес карточки — не чужая подпись, но и не текст ответа (#3345): страж обязан был назвать карточку ссылкой.
+    expect(guardFailures(question, `Квест про цмока: 10 точек, около 45 мин. Подробности: ${cmok.url}`)).toEqual([{ check: 'bare_url', layer: 'guard', detail: 'голых адресов карточек в ответе: 1' }])
     const broken = evaluateTurn({ expect: 'answer', lang: 'ru', question }, observe(`- [Минск в кадре](${smolevud.url}) — 9 точек`))
     expect(broken.pass).toBe(false)
     expect(primaryLayer(broken.failures)).toBe('guard')
@@ -99,6 +99,8 @@ describe('контур оценки: слой стража содержания 
       const phrase = resources['ask.fallbackAnswer']
       expect({ lang, admitted: isNoMaterial(phrase) }).toEqual({ lang, admitted: true })
       expect(evaluateTurn({ expect: 'no_material', lang, question: 'Сколько стоит квест?' }, observe(phrase)).failures).toEqual([])
+      // «Материала нет» при пустой подсказке (#3345) — та же строка, что у хода без источников: тоже признание.
+      expect({ lang, noSources: isNoMaterial(resources['ask.noSources']) }).toEqual({ lang, noSources: true })
     }
   })
 })

@@ -77,7 +77,21 @@ const ANSWER_LANGUAGE_RU: Record<string, string> = {
 const SOURCE_TYPE_RU: Record<AiSource['type'], string> = {
   travel: 'Статья',
   quest: 'Квест',
+  help: 'Справка',
 }
+
+/**
+ * Правило справки (#3293): в подсказке — запись справки о сайте, её фрагмент — утверждённый ответ.
+ * Дописывается к системному сообщению, как правило режима страницы; в обучении кругов 1–9 его не было.
+ * Служба по умолчанию отдаёт справку без модели (`scripts/ai-assist/ask.ts`): правило работает только
+ * при `AI_ASSIST_HELP_MODE=model`.
+ */
+export const HELP_MODE_RULE_RU =
+  'Посетитель спрашивает о самом сайте. Карточка «Справка» — готовый ответ: перескажи его близко к тексту, ничего не добавляй ' +
+  'и дай одну ссылку — на страницу из этой карточки.'
+
+/** В подсказке есть справочная карточка (#3293). */
+export const isHelpMode = (sources: readonly AiSource[]): boolean => sources.some((source) => source.type === 'help')
 
 /**
  * Фрагмент как данные: без управляющих символов и переводов строк, обрезан по
@@ -98,8 +112,8 @@ export const resolveAnswerLanguage = (locale: string): string =>
 /** Режим страницы (#3290): среди карточек есть страница, с которой открыт ассистент. */
 export const isPageMode = (sources: readonly AiSource[]): boolean => sources.some((source) => source.group === 'page')
 
-export const buildSystemPrompt = (locale: string, options: { page?: boolean } = {}): string =>
-  `${buildBaseSystemPrompt(locale)}${options.page ? `\n\n${PAGE_MODE_RULE_RU}` : ''}`
+export const buildSystemPrompt = (locale: string, options: { page?: boolean; help?: boolean } = {}): string =>
+  `${buildBaseSystemPrompt(locale)}${options.page ? `\n\n${PAGE_MODE_RULE_RU}` : ''}${options.help ? `\n\n${HELP_MODE_RULE_RU}` : ''}`
 
 const buildBaseSystemPrompt = (locale: string): string =>
   `${ASSISTANT_SYSTEM_PROMPT}\n\n` +
@@ -207,7 +221,7 @@ export function buildAssistantMessages({
   const promptSources = selectPromptSources(arrangement.sources, AI_PROMPT_SOURCES_LIMIT, null, true)
 
   return [
-    { role: 'system', content: buildSystemPrompt(locale, { page }) },
+    { role: 'system', content: buildSystemPrompt(locale, { page, help: isHelpMode(promptSources) }) },
     ...trimmedHistory,
     { role: 'user', content: buildUserMessage(question, promptSources, { noPlace: !page && arrangement.noPlace, hints }) },
   ]

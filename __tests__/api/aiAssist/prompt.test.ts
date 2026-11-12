@@ -1,5 +1,6 @@
 import {
   ASSISTANT_SYSTEM_PROMPT,
+  HELP_MODE_RULE_RU,
   MAX_HISTORY_ITEMS,
   MAX_QUESTION_LENGTH,
   NO_PLACE_NOTE_RU,
@@ -10,6 +11,7 @@ import {
   buildUserMessage,
   formatSourcesBlock,
   resolveAnswerLanguage,
+  isHelpMode,
   isPageMode,
   sanitizeFragment,
   selectPromptSources,
@@ -262,5 +264,17 @@ describe('aiAssist prompt (#2460)', () => {
       expect(pinned.match(/^\[\d+\] /gm)).toEqual(['[1] ', '[2] '])
       expect(pinned).not.toContain('Почему подходит')
     })
+  })
+
+  it('#3293: справочная карточка — вид «Справка», её фрагмент — ответ записи; правило справки дописано к системному сообщению только при ней', () => {
+    const help = source({ type: 'help', source_id: '1', title: 'Сколько стоит пройти квест?', url: 'https://metravel.by/quests', path: '/quests', snippet: 'Бесплатно. Покупать или бронировать ничего не нужно.' })
+    expect(isHelpMode([help])).toBe(true)
+    expect(isHelpMode([source()])).toBe(false)
+    const messages = buildAssistantMessages({ question: 'Сколько стоит пройти квест?', locale: 'ru', sources: [help], arranged: true })
+    expect(messages[0].content).toBe(`${buildSystemPrompt('ru')}\n\n${HELP_MODE_RULE_RU}`)
+    expect(messages.at(-1)?.content).toBe('Материалы сайта:\n[1] Справка «Сколько стоит пройти квест?» — https://metravel.by/quests\nБесплатно. Покупать или бронировать ничего не нужно.\n\nВопрос посетителя: Сколько стоит пройти квест?')
+    // Обычная подсказка от правила справки не меняется ни на знак.
+    expect(buildAssistantMessages({ question: 'Куда поехать?', locale: 'ru', sources: [source()] })[0].content).toBe(buildSystemPrompt('ru'))
+    expect(buildSystemPrompt('ru', { help: true })).toContain(HELP_MODE_RULE_RU)
   })
 })

@@ -7,6 +7,7 @@ import {
   countShownRecommendations,
   detectLang,
   detectLoop,
+  findOffPlaceCards,
   evaluateTurn,
   leaksPrompt,
   hasTemplate,
@@ -17,7 +18,7 @@ import {
   primaryLayer,
 } from '../../scripts/ai-assistant-eval/checks.mjs'
 import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from '../../scripts/ai-assistant-eval/report.mjs'
-import { loadCases } from '../../scripts/ai-assistant-eval/run.mjs'
+import { loadCases } from '../../scripts/ai-assistant-eval/run-core.mjs'
 import { formatSourcesBlock } from '@/api/aiAssist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 
@@ -139,6 +140,23 @@ describe('off_place_card: чужое место, а не тема', () => {
 
   it('карточка другого города названа ответом — провал', () => {
     expect(checks({ pattern: 'краков|krak', min: 1 }, BREST)).toEqual({ failures: ['off_place_card'], warnings: [] })
+  })
+
+  it('#3345 lv21: материал, который набор поимённо относит к месту (`also`), чужим не считается; остальные — по-прежнему', () => {
+    const nesvizh = { pattern: 'несвиж|нясвіж', min: 1, also: '^Замки и усадьбы Беларуси: 19 маршрутов из Минска$' }
+    const cards = [
+      { n: 1, type: 'quest', title: 'Квэст па Нясвіжы: палац Радзівілаў', url: 'https://metravel.by/be/quests/17/nesvizh-radziwill', snippet: 'Городской квест по городу Несвиж (Беларусь)' },
+      { n: 2, type: 'travel', title: 'Замки и усадьбы Беларуси: 19 маршрутов из Минска', url: 'https://metravel.by/travels/zamki-i-usadby', snippet: 'Беларусь. Экотропа Ельня и усадьбы' },
+      { n: 3, type: 'travel', title: 'Маршруты выходного дня из Минска: 13 поездок', url: 'https://metravel.by/travels/marshruty', snippet: 'Беларусь. Вода прозрачная' },
+    ]
+    const raw = (card: { title: string; url: string }) => `Посмотрите [${card.title}](${card.url}).`
+    expect(findOffPlaceCards(raw(cards[1]), cards, nesvizh)).toEqual([])
+    expect(findOffPlaceCards(raw(cards[2]), cards, nesvizh).map((card: { n: number }) => card.n)).toEqual([3])
+    // Без разрешения та же подборка — карточка не того места.
+    expect(findOffPlaceCards(raw(cards[1]), cards, { pattern: 'несвиж|нясвіж', min: 1 }).map((card: { n: number }) => card.n)).toEqual([2])
+    // Разрешение в наборе живых вопросов — одно, названо поимённо.
+    const live = loadCases(path.join(process.cwd(), 'scripts/ai-assistant-eval/cases.live.jsonl')) as { id: string; expect_sources?: { also?: string } }[]
+    expect(live.filter((item) => item.expect_sources?.also).map((item) => item.id)).toEqual(['lv21'])
   })
 
   it('шаблон набора задаёт тему, а не место — предупреждение off_topic_card, не провал', () => {

@@ -16,6 +16,8 @@
  * функцию.
  */
 
+import { asksAboutService } from './serviceIntent.ts'
+
 export type OffTopicReason = 'injection' | 'coding' | 'cooking' | 'politics' | 'medicine' | 'finance' | 'study' | 'chitchat'
 
 export type TopicVerdict = { offTopic: false } | { offTopic: true; reason: OffTopicReason }
@@ -129,7 +131,8 @@ const TRAVEL_SIGNAL_RE = re(
   'отдых', 'отпуск', 'санатор', 'курорт', 'привал', 'пикник', 'кост[её]?р', 'адпачын', 'відпочин', 'выходн', 'туризм', 'турист', 'достопримеч', 'посмотреть', 'погулять', 'прогулк', 'съездить', 'поехать', 'ночев', 'отел', 'гостиниц', 'кемпинг',
   'виз[аыу](?![\\p{L}])', 'границ', 'аэропорт', 'с\\s+детьми', 'с\\s+ребенк', 'с\\s+ребёнк', 'в\\s+дорог', 'город', 'страна', 'стран[еуы]',
   'падарож', 'паездк', 'вандроўк', 'падарожж', 'подорож', 'поїздк', 'мандр',
-  'podróż', 'wycieczk', 'zwiedz', 'szlak', 'wakacj', 'urlop', 'muzeum', 'zamek', 'zamk', 'sanatori',
+  // «wyjazd», «wyjechać», «wyjeżdżamy» (#3277, f05): выезд — тоже поездка.
+  'podróż', 'wycieczk', 'wyjazd', 'wyjech', 'wyjeżdż', 'zwiedz', 'szlak', 'wakacj', 'urlop', 'muzeum', 'zamek', 'zamk', 'sanatori',
   'travel', 'trip(?![\\p{L}])', 'hiking', 'hike', 'sightseeing', 'vacation', 'holiday', 'visit', 'museum', 'castle', 'route', 'hotel', 'resort',
   // #3270: снаряжение, сборы и ночёвка — вопрос о поездке без слова «поездка».
   'рюкзак', 'палатк', 'спальник', 'спальн\\p{L}*\\s+мешк', 'чемодан', 'багаж', 'налегке', 'снаряжен', 'ночёвк',
@@ -194,12 +197,18 @@ export const namedDestinations = (question: string): string[] => placesAfter(que
 export const hasTravelSignal = (question: string): boolean =>
   TRAVEL_SIGNAL_RE.test(question) || PLACE_AFTER_PREPOSITION_RE.test(question)
 
+/**
+ * Вопрос по теме сайта: о поездке либо о самом сайте (#3293). «Есть ли приложение для iPhone?» и «Как
+ * добавить свою статью?» слов о поездке не несут, но отвечает на них справка — это не чужая тема.
+ */
+export const isOnSiteTopic = (question: string): boolean => hasTravelSignal(question) || asksAboutService(question)
+
 export function classifyQuestion(rawQuestion: string): TopicVerdict {
   const question = String(rawQuestion ?? '').replace(/\s+/g, ' ').trim()
   if (!question) return { offTopic: false }
   for (const [reason, pattern] of HARD_TOPICS) if (pattern.test(question)) return { offTopic: true, reason }
   const soft = SOFT_TOPICS.find(([, pattern]) => pattern.test(question))
-  if (!soft || hasTravelSignal(question)) return { offTopic: false }
+  if (!soft || isOnSiteTopic(question)) return { offTopic: false }
   return { offTopic: true, reason: soft[0] }
 }
 
@@ -230,5 +239,5 @@ export type ModelReplyVerdict = 'answer' | 'off_topic' | 'no_material'
  */
 export const judgeModelReply = (question: string, text: string, keptLinks: number): ModelReplyVerdict => {
   if (!isModelOffTopicReply(text, keptLinks)) return 'answer'
-  return hasTravelSignal(question) ? 'no_material' : 'off_topic'
+  return isOnSiteTopic(question) ? 'no_material' : 'off_topic'
 }

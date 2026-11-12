@@ -54,7 +54,7 @@ export type TravelFacts = {
 export type SourceFacts = QuestFacts | TravelFacts
 
 /** Ключ источника в индексе: `quest:13`, `travel:816`. */
-export const factsKey = (facts: Pick<SourceFacts, 'type' | 'source_id'>): string => `${facts.type}:${facts.source_id}`
+export const factsKey = (facts: { type: string; source_id: number }): string => `${facts.type}:${facts.source_id}`
 
 const positiveInt = (value: unknown): number | undefined => {
   const parsed = Number.parseInt(String(value ?? ''), 10)
@@ -147,11 +147,21 @@ export const questFactsLine = (facts: Omit<QuestFacts, 'type' | 'source_id'> | n
   ])
 }
 
-/** Строка фактов карточки статьи: «Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь». */
-export const travelFactsLine = (facts: Omit<TravelFacts, 'type' | 'source_id'> | null | undefined, place: FactsPlace = {}): string => {
+/**
+ * Строка фактов карточки статьи: «Польша. Дней: 3. Месяцы: ноябрь, декабрь».
+ *
+ * Место статьи — только страна (#3347). Города у статьи в каталоге нет: поле `cityName` API — подпись
+ * первой точки маршрута (бэкенд, `travels/serializers.py` → `get_city_name` → `_first_travel_address`),
+ * в слепке индекса от 12.11.2026 оно равно ей у 434 статей из 434. Строка «Испания, Madrid» у тура
+ * Барселона — Мадрид — Ронда — Толедо, «Польша, Palenica Białczańska» у «Морского ока», «Беларусь,
+ * Лысая гора (342 м)» у подборки тринадцати поездок выдавала точку маршрута за место статьи, и модель
+ * переносила её в ответ. Страна — список стран каталога, он надёжен; город статьи стоит в её названии.
+ * Поэтому построитель города не принимает вовсе: передать подпись точки сюда нельзя.
+ */
+export const travelFactsLine = (facts: Omit<TravelFacts, 'type' | 'source_id'> | null | undefined, place: Pick<FactsPlace, 'country'> = {}): string => {
   const months = (facts?.months ?? []).map((month) => MONTHS_RU[month - 1]).filter(Boolean)
   return joinParts([
-    [place.country, place.city].map((value) => String(value ?? '').trim()).filter(Boolean).join(', '),
+    String(place.country ?? '').trim(),
     facts?.number_days ? `Дней: ${facts.number_days}` : '',
     months.length === MONTHS_RU.length ? 'Месяцы: круглый год' : months.length ? `${months.length > 1 ? 'Месяцы' : 'Месяц'}: ${months.join(', ')}` : '',
   ])

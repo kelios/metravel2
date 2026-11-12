@@ -76,6 +76,10 @@ describe('aiAssist провайдер ask (#2884)', () => {
       data: { status: 'done', relabeled: 2, droppedDescriptions: 1, ungroundedNumbers: 1, fallback: true },
     })
     expect(parseAskSseEvent('event: done\ndata: {"status":"done","relabeled":"много","fallback":"да"}')).toMatchObject({ data: { relabeled: 0, fallback: false } })
+    // #3345: пустая подсказка — `fallback` с причиной `no_material`; запасной ответ стража причины не несёт, чужая причина не читается.
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":0,"fallback":true,"reason":"no_material"}')).toMatchObject({ data: { status: 'done', fallback: true, reason: 'no_material' } })
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":0,"fallback":true}')).toMatchObject({ data: { fallback: true, reason: null } })
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","fallback":true,"reason":"что-то новое"}')).toMatchObject({ data: { fallback: true, reason: null } })
     expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":1,"remaining":18,"usage":{"prompt_tokens":100,"completion_tokens":20,"ttft_ms":50,"tokens_per_s":40}}')).toMatchObject({
       name: 'done',
       data: { status: 'done', removedLinks: 1, remaining: 18, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 } },

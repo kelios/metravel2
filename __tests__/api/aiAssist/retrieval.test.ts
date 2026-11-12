@@ -276,6 +276,51 @@ describe('aiAssist retrieval (#2460)', () => {
     })
   })
 
+  describe('хвосты подбора (#3277): короткое название в винительном падеже и маршрут «из X в Y»', () => {
+    it('«в Лиду», «в Ригу», «в Прагу», «do Rygi» находят город в другом падеже; длинное слово той же основы — нет', () => {
+      expect(scoreText('Квест по Лиде: гости замка Гедимина Лида', ['лиду'])).toBe(1)
+      expect(scoreText('Латвия. Рига и Юрмала в октябре', ['ригу'])).toBe(1)
+      expect(scoreText('Квест по Праге: Вышеград', ['прагу'])).toBe(1)
+      expect(scoreText('Quest po Rydze Ryga', ['rygi'])).toBe(1)
+      expect(scoreText('Квест по Миру: Мирский замок Мир', ['мире'])).toBe(1)
+      // Слово карточки длиннее слова вопроса — другое слово: «лидер», «Лидский район», «Мирный».
+      expect(scoreText('Лидер проката и Лидский район', ['лиду'])).toBe(0)
+      expect(scoreText('Город Мирный', ['мире'])).toBe(0)
+      // Бэкенд ищет подстрокой: трёхбуквенная основа слишком коротка, слово возвращается в именительный падеж.
+      expect(searchStem('лиду')).toBe('лида')
+      expect(searchStem('ригу')).toBe('рига')
+      expect(searchStem('прагу')).toBe('праг')
+      expect(buildTravelsSearchQuery('Что посмотреть, если поеду в Лиду?', tokenizeQuery('Что посмотреть, если поеду в Лиду?'))).toBe('поед лида')
+    })
+
+    it('«Что посмотреть, если поеду в Лиду?» даёт квесты Лиды, а не пустой подбор', async () => {
+      mockedFetchTravels.mockResolvedValue({ data: [], total: 0 } as never)
+      mockedQuests.mockResolvedValue([
+        quest('lida-castle', 'Квест по Лиде: гости замка Гедимина', '21', 'Лида'),
+        quest('minsk-cmok', 'Квест по центру Минска', '4', 'Минск'),
+      ])
+      const sources = await searchSiteMaterials({ query: 'Что посмотреть, если поеду в Лиду?', locale: 'ru' })
+      expect(sources.map((s) => s.source_id)).toEqual(['lida-castle'])
+    })
+
+    it('«Квест из Минска в Заславль»: город отправления квест не выбирает — восемь квестов Минска не вытесняют Заславль', async () => {
+      mockedFetchTravels.mockResolvedValue({ data: [], total: 0 } as never)
+      const minsk = Array.from({ length: 9 }, (_, index) => quest(`minsk-${index}`, `Квест по Минску №${index}`, '4', 'Минск'))
+      mockedQuests.mockResolvedValue([...minsk, quest('zaslavl-rogneda', 'Квест по Заславлю: Рогнеда и Изяслав', '81', 'Заславль')])
+      for (const query of ['Квест из Минска в Заславль', 'Есть квест, если ехать из Минска в Заславль?', 'Quest from Minsk to Заславль']) {
+        const sources = await searchSiteMaterials({ query, locale: 'ru' })
+        expect({ query, ids: sources.map((s) => s.source_id) }).toEqual({ query, ids: ['zaslavl-rogneda'] })
+      }
+      // Названо одно место — откуда едут: это и есть место вопроса.
+      const fromMinsk = await searchSiteMaterials({ query: 'Квесты: куда поехать из Минска?', locale: 'ru' })
+      expect(fromMinsk).toHaveLength(8)
+      expect(fromMinsk.every((s) => s.source_id.startsWith('minsk-'))).toBe(true)
+      // «з дзецьмі» — не место отправления: слово после «з» не называет место каталога, подбор прежний.
+      const withKids = await searchSiteMaterials({ query: 'Квэсты ў Заслаўі з дзецьмі', locale: 'be' })
+      expect(withKids.map((s) => s.source_id)).toEqual(['zaslavl-rogneda'])
+    })
+  })
+
   it('mergeSources убирает дубли URL и режет по лимиту', () => {
     const make = (id: string, score: number, type: AiSource['type'] = 'travel'): AiSource => ({
       type,

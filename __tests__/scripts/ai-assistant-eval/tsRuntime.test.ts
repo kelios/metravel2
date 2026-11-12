@@ -53,6 +53,31 @@ describe('контур оценки: общий код приложения гр
   })
 
   const hooksOnly = canDisableNative ? it : it.skip
+
+  // #3345: прямой `node scripts/ai-assistant-eval/run.mjs` без `--import` на Node без встроенного снятия
+  // типов падал с ERR_UNKNOWN_FILE_EXTENSION на первом импорте — раньше, чем скрипт успевал что-то сказать.
+  // Точка входа подключает загрузчик сама; до разбора аргументов дело доходит только после загрузки
+  // всего графа модулей (`run-core.mjs` → `checks.mjs` → `api/aiAssist/*.ts`).
+  const directRun = (nodeFlags: string[]) => runCli(process.execPath, [...nodeFlags, 'scripts/ai-assistant-eval/run.mjs', '--нет-такого-флага'], { cwd: ROOT })
+
+  it('прямой запуск run.mjs без --import грузит общий код приложения и доходит до разбора аргументов', () => {
+    const run = directRun([])
+    expect(run.stderr).toContain('неизвестный флаг --нет-такого-флага')
+    expect(run.stderr).not.toContain('ERR_UNKNOWN_FILE_EXTENSION')
+    expect(run.status).toBe(1)
+    // Точка входа не тянет TypeScript статически: иначе загрузчик не успел бы встать.
+    const entry = fs.readFileSync(path.join(ROOT, 'scripts/ai-assistant-eval/run.mjs'), 'utf8')
+    expect(entry.match(/^import .*$/gm)).toBeNull()
+    expect(entry.indexOf("await import('../lib/ts-runtime.mjs')")).toBeGreaterThan(-1)
+    expect(entry.indexOf("await import('../lib/ts-runtime.mjs')")).toBeLessThan(entry.indexOf("await import('./run-core.mjs')"))
+  })
+
+  hooksOnly('прямой запуск run.mjs без встроенного снятия типов (как Node 20 и 22.13) — то же самое', () => {
+    const run = directRun(['--no-experimental-strip-types'])
+    expect(run.stderr).toContain('неизвестный флаг --нет-такого-флага')
+    expect(run.stderr).not.toContain('ERR_UNKNOWN_FILE_EXTENSION')
+    expect(run.status).toBe(1)
+  })
   hooksOnly('без встроенного снятия типов (как Node 20 и 22.13) тот же код грузит загрузчик проекта', () => {
     const result = probe(['--no-experimental-strip-types'])
     expect(result.stderr).toBe('')

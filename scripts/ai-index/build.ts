@@ -8,6 +8,10 @@
  *   embed    — work/chunks.jsonl → <dist>/{chunks.jsonl,vectors.f16,facts.jsonl,manifest.json}, инкремент по id
  *   facts    — raw → <dist>/facts.jsonl и версия формата в manifest БЕЗ пересчёта векторов:
  *              перевод уже собранного артефакта на формат с фактами
+ *   help     — справка о сайте (#3293) в уже собранный артефакт: --from <dist> (по умолчанию сам
+ *              <dist>) → <dist>; фрагменты статей и квестов и их векторы переносятся как есть,
+ *              считаются только фрагменты справки. `chunk` и `build` добавляют справку сами.
+ *              В индекс идут записи корпуса с `approved: true`; AI_INDEX_HELP_DRAFTS=1 — и черновики
  *   manifest — проверить артефакт (count, размер vectors.f16, source_sha256) и напечатать manifest
  *   query    — "<вопрос>": top-k фрагментов из артефакта
  *   eval     — --queries <jsonl>: recall@5 и латентность запроса на наборе вопросов
@@ -28,6 +32,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ChunkOptions } from './chunk.ts'
 import { createEmbedder, runEmbed } from './embed.ts'
+import { buildHelpChunks, helpDraftsEnabled, readHelpCorpus } from './help.ts'
 import { chunkRawCorpus, countCatalogSources, rawFactsProblem, runExport } from './export.ts'
 import { type ChunkRecord, readIndex, readJsonl, type SourceFacts, verifyIndex, writeFacts, writeJsonl } from './format.ts'
 import { checkFreshness, readFreshnessSubject } from './freshness.ts'
@@ -115,7 +120,11 @@ async function commandExport(flags: CliArgs['flags'], paths: Paths) {
 function commandChunk(flags: CliArgs['flags'], paths: Paths) {
   const options: ChunkOptions = { size: flagNumber(flags, 'size'), overlap: flagNumber(flags, 'overlap') }
   const localesFlag = flagString(flags, 'locales')
-  const { chunks, facts, travels, quests } = chunkRawCorpus(paths.rawDir, options, localesFlag ? localesFlag.split(',') : undefined)
+  const corpus = chunkRawCorpus(paths.rawDir, options, localesFlag ? localesFlag.split(',') : undefined)
+  const { facts, travels, quests } = corpus
+  // Справка о сайте (#3293) — третий тип источника: утверждённые записи корпуса (черновики — только на стенде).
+  const help = helpChunks()
+  const chunks = [...corpus.chunks, ...help]
   // Фрагменты по старому слепку собираются, но факты выйдут без чисел — об этом сказано в журнале.
   const problem = rawFactsProblem(paths.rawDir)
   if (problem) log(`⚠️ chunk: ${problem} — факты карточек будут без чисел; перечитайте raw командой \`export\``)
@@ -128,10 +137,11 @@ function commandChunk(flags: CliArgs['flags'], paths: Paths) {
     chunks: chunks.length,
     travelChunks: chunks.filter((c) => c.type === 'travel').length,
     questChunks: chunks.filter((c) => c.type === 'quest').length,
+    helpChunks: help.length,
     avgChars: chunks.length ? Math.round(chunks.reduce((sum, c) => sum + c.text.length, 0) / chunks.length) : 0,
     file: paths.workChunks,
   }
-  log(`chunk: статей ${travels}, квестов ${quests}, фрагментов ${chunks.length}`)
+  log(`chunk: статей ${travels}, квестов ${quests}, фрагментов ${chunks.length}, из них справки ${help.length}`)
   console.log(JSON.stringify(summary))
 }
 
@@ -174,6 +184,43 @@ function commandFacts(paths: Paths) {
   const manifest = writeFacts(paths.distDir, facts)
   log(`facts: записей ${manifest.facts?.count ?? 0} из ${facts.length} источников raw, формат версии ${manifest.format_version}`)
   console.log(JSON.stringify({ facts: manifest.facts, format_version: manifest.format_version, dist: paths.distDir }))
+}
+
+/** Фрагменты справки из корпуса репозитория; черновики — только с `AI_INDEX_HELP_DRAFTS=1`. */
+function helpChunks(): ChunkRecord[] {
+  const drafts = helpDraftsEnabled()
+  const chunks = buildHelpChunks(readHelpCorpus(), { drafts })
+  if (drafts) log(`⚠️ help: ${'AI_INDEX_HELP_DRAFTS=1'} — в индекс идут и неутверждённые записи справки; только для стенда`)
+  return chunks
+}
+
+/**
+ * Справка в уже собранный артефакт (#3293): статьи и квесты берутся из `--from` вместе с векторами
+ * (совпали id — вектор переиспользуется), прежние фрагменты справки заменяются текущим корпусом.
+ * Рабочий артефакт при `--from` не меняется: результат пишется в `--dist`.
+ */
+async function commandHelp(flags: CliArgs['flags'], paths: Paths) {
+  const fromDir = path.resolve(flagString(flags, 'from') ?? paths.distDir)
+  const source = readIndex(fromDir)
+  if (!source) throw new Error(`help: нет артефакта в ${fromDir}`)
+  if (fromDir !== paths.distDir && !readIndexOrNull(paths.distDir)) {
+    // Копия — основа для инкремента: векторы статей и квестов считать заново не нужно.
+    fs.mkdirSync(paths.distDir, { recursive: true })
+    for (const name of fs.readdirSync(fromDir)) fs.copyFileSync(path.join(fromDir, name), path.join(paths.distDir, name))
+  }
+  const help = helpChunks()
+  const chunks = [...source.chunks.filter((chunk) => chunk.type !== 'help'), ...help]
+  const summary = await withEmbedder({ ...flags, model: source.manifest.model }, (embedder) => runEmbed({ chunks, facts: source.facts, distDir: paths.distDir, embedder, log }))
+  log(`help: записей справки ${new Set(help.map((chunk) => chunk.source_id)).size}, фрагментов ${help.length}`)
+  console.log(JSON.stringify({ ...summary, help: help.length, from: fromDir, dist: paths.distDir }))
+}
+
+const readIndexOrNull = (dir: string) => {
+  try {
+    return readIndex(dir)
+  } catch {
+    return null
+  }
 }
 
 async function commandFreshness(flags: CliArgs['flags'], paths: Paths) {
@@ -260,6 +307,10 @@ export async function main(argv: string[]): Promise<void> {
       return
     case 'facts':
       commandFacts(paths)
+      commandManifest(paths)
+      return
+    case 'help':
+      await commandHelp(flags, paths)
       commandManifest(paths)
       return
     case 'query':

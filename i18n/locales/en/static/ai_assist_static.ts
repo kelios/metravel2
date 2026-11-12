@@ -22,6 +22,7 @@ export const aiAssistStaticResources = {
   "ask.nearbyTitle": "More on the topic",
   "ask.sourceTravel": "Article",
   "ask.sourceQuest": "Quest",
+  "ask.sourceHelp": "Help",
   "ask.noSources": "The site has no materials on this question yet. Try another destination or browse the route catalog.",
   "ask.emptyAnswer": "The model gave no answer. Try rephrasing the question.",
   "ask.fallbackAnswer": "There is no exact answer in the materials found — see the sources below.",

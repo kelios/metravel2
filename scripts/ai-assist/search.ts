@@ -3,6 +3,7 @@
  * Ни HTTP, ни модели: всё тестируется на фикстурном индексе.
  */
 import type { ChunkRecord, ChunkType } from '../ai-index/format.ts'
+import { HELP_ANSWER_TAG } from '../ai-index/help.ts'
 import { type Hit, sourceKey, topK } from '../ai-index/query.ts'
 import type { LoadedIndex } from './index.ts'
 import type { LexicalHit } from './lexical.ts'
@@ -24,7 +25,12 @@ export interface ResultItem {
   lng: number | null
   /** Обложка для карточки подбора; null — показывать плейсхолдер. */
   cover: string | null
+  /** Только у справки (#3293): утверждённый ответ записи дословно. */
+  answer?: string
 }
+
+/** Код типа строки индекса (`LoadedIndex.typeOfRow`): статья, квест, справка (#3293). */
+export const ROW_TYPE: Readonly<Record<ChunkType, number>> = { travel: 0, quest: 1, help: 2 }
 
 export const SNIPPET_CHARS = 200
 /**
@@ -39,7 +45,7 @@ export const SNIPPET_CHARS = 200
  * (`AI_ASSIST_ASK_FRAGMENT_TRAVEL_CHARS`, `AI_ASSIST_ASK_FRAGMENT_QUEST_CHARS`), 0 — карточка без
  * текстового фрагмента.
  */
-export const ASK_FRAGMENT_CHARS: Readonly<Record<ChunkType, number>> = { travel: 120, quest: 60 }
+export const ASK_FRAGMENT_CHARS: Readonly<Record<Exclude<ChunkType, 'help'>, number>> = { travel: 120, quest: 60 }
 /** Сколько источников берёт векторная половина гибрида до слияния. */
 export const VECTOR_SOURCES = 50
 /** Константа RRF из статьи Cormack et al.: сглаживает разрыв между первыми местами. */
@@ -67,6 +73,7 @@ export function itemForRow(index: LoadedIndex, row: number, score: number | null
     lat: chunk.lat,
     lng: chunk.lng,
     cover: chunk.cover ?? null,
+    ...(chunk.answer ? { answer: chunk.answer } : {}),
   }
 }
 
@@ -88,8 +95,9 @@ export interface VectorQuery {
  */
 export function vectorSources(index: LoadedIndex, query: VectorQuery): Hit[] {
   const { artifact, typeOfRow, localesBySource } = index
-  const wantType = query.type === undefined ? null : query.type === 'quest' ? 1 : 0
-  const accept = wantType === null ? undefined : (row: number) => typeOfRow[row] === wantType
+  // Без типа — статьи и квесты: справка (#3293) идёт в выдачу только по явному `type: 'help'`.
+  const wantType = query.type === undefined ? null : ROW_TYPE[query.type]
+  const accept = wantType === null ? (row: number) => typeOfRow[row] !== ROW_TYPE.help : (row: number) => typeOfRow[row] === wantType
   let scanK = query.limit * (query.type === 'travel' ? 4 : 4 * LOCALES.length)
   for (;;) {
     const hits = topK(query.vector, artifact, scanK, accept)
@@ -98,7 +106,8 @@ export function vectorSources(index: LoadedIndex, query: VectorQuery): Hit[] {
     for (const hit of hits) {
       const key = sourceKey(hit.chunk)
       if (key === query.excludeSource || seen.has(key)) continue
-      if (hit.chunk.type === 'quest' && hit.chunk.locale !== query.locale && localesBySource.get(key)?.has(query.locale)) {
+      // Квест и запись справки лежат на нескольких локалях: остаётся фрагмент локали запроса, если он есть.
+      if (hit.chunk.type !== 'travel' && hit.chunk.locale !== query.locale && localesBySource.get(key)?.has(query.locale)) {
         continue
       }
       seen.add(key)
@@ -108,6 +117,49 @@ export function vectorSources(index: LoadedIndex, query: VectorQuery): Hit[] {
     if (out.length >= query.limit || hits.length < scanK || scanK >= artifact.manifest.count) return out
     scanK = Math.min(scanK * 4, artifact.manifest.count)
   }
+}
+
+export interface HelpHit {
+  /** Строка лучшей формулировки записи: её заголовок — заголовок карточки. */
+  row: number
+  /** Близость лучшей формулировки записи к вопросу (косинус). */
+  cosine: number
+  /** Балл порядка: среднее двух лучших формулировок плюс близость ответа. */
+  score: number
+  /** Тема записи корпуса: вторая запись ответа берётся только из той же темы. */
+  topic: string
+}
+
+/**
+ * Записи справки по близости к вопросу (#3293). Порядок — не по одной лучшей формулировке, а по записи
+ * целиком: среднее двух лучших формулировок плюс близость ответа. По одной формулировке первой вставала
+ * соседняя запись: на «Ці ёсць у квэсце падказкі?» — «сообщить о неточности», на «Ці трэба рэгістравацца?» —
+ * «как зарегистрироваться». Замер 12.11.2026 (`.codex-temp/train2/help-rank.mts`): верная первая запись на
+ * 17 вопросах о сайте набора — 13 → 17; на 650 формулировках корпуса без самой формулировки — 440 → 496.
+ * Запись берётся на локали вопроса, если переведена, иначе на любой (RU). Возвращаются все записи: вызывающий
+ * сам берёт первые и по самой близкой формулировке среди всех решает, отвечает ли справка.
+ */
+export function helpHits(index: LoadedIndex, vector: ArrayLike<number>, locale: Locale): HelpHit[] {
+  const { artifact, typeOfRow, rowsBySource, localesBySource } = index
+  const { dim } = artifact.manifest
+  const cosine = (row: number): number => {
+    let sum = 0
+    const offset = row * dim
+    for (let i = 0; i < dim; i += 1) sum += artifact.vectors[offset + i] * vector[i]
+    return sum
+  }
+  const hits: HelpHit[] = []
+  for (const [key, rows] of rowsBySource) {
+    if (typeOfRow[rows[0]] !== ROW_TYPE.help) continue
+    const localized = localesBySource.get(key)?.has(locale) ? rows.filter((row) => artifact.chunks[row].locale === locale) : rows
+    const variants = localized.filter((row) => !artifact.chunks[row].tags.includes(HELP_ANSWER_TAG)).map((row) => ({ row, value: cosine(row) })).sort((a, b) => b.value - a.value)
+    if (!variants.length) continue
+    const answerRow = localized.find((row) => artifact.chunks[row].tags.includes(HELP_ANSWER_TAG))
+    const top = variants.slice(0, 2)
+    const score = top.reduce((sum, item) => sum + item.value, 0) / top.length + (answerRow === undefined ? 0 : cosine(answerRow))
+    hits.push({ row: variants[0].row, cosine: variants[0].value, score, topic: artifact.chunks[variants[0].row].tags[1] ?? '' })
+  }
+  return hits.sort((a, b) => b.score - a.score || a.row - b.row)
 }
 
 /** Вектор источника для /ai/similar: нормализованное среднее его фрагментов (на нужной локали, если есть). */

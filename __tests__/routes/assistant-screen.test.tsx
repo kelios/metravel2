@@ -1,10 +1,13 @@
 import { StyleSheet } from 'react-native'
-import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native'
 
 import Route from '@/app/(tabs)/assistant'
 // Прогрев: экран грузится React.lazy, а первая трансформация дерева в Jest
 // длиннее таймаута findBy; статический импорт кладёт модуль в реестр заранее.
 import '@/components/screens/assistant/AssistantScreen'
+import { aiAssistStaticResources } from '@/i18n/locales/ru/static/ai_assist_static'
+
+import { SHOWN_TEXT_KEYS } from '../../scripts/ai-assistant-eval/ask-path.mjs'
 
 const mockChatState = {
   turns: [] as Array<Record<string, unknown>>,
@@ -75,6 +78,8 @@ describe('/assistant route under feature flag (#2460)', () => {
     process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
     await render(<Route />)
     expect(await screen.findByTestId('assistant-screen', {}, { timeout: 5000 })).toBeTruthy()
+    // #3346: `data-live` после монтирования — признак живого экрана для e2e (в статике его нет).
+    expect(screen.getByTestId('assistant-screen').props.dataSet).toEqual({ live: 'true' })
     expect(screen.getByTestId('assistant-empty')).toBeTruthy()
     expect(screen.getByTestId('assistant-input')).toBeTruthy()
     expect(screen.getByTestId('assistant-composer-meta').props.children).toContain('20')
@@ -169,6 +174,37 @@ describe('/assistant route under feature flag (#2460)', () => {
     expect(screen.getByTestId('assistant-source-quest-64')).toBeTruthy()
     expect(screen.queryByTestId('assistant-retry')).toBeNull()
     expect(screen.queryByText('Модель не дала ответа. Попробуйте переформулировать вопрос.')).toBeNull()
+  })
+
+  it('#3345: пустая подсказка — «на сайте пока нет материалов» вместо запасной фразы стража, найденное рядом и кнопка каталога на месте', async () => {
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    mockChatState.turns = [
+      {
+        id: 't6',
+        question: 'Где погулять с собакой недалеко от Варшавы?',
+        answer: '',
+        fallback: true,
+        noMaterial: true,
+        sources: [{ type: 'quest', source_id: '129', title: 'Детский квест по Варшаве', url: 'https://metravel.by/quests/10/warsaw-kids', path: '/quests/10/warsaw-kids', snippet: '', score: 1, group: 'nearby' }],
+        status: 'done',
+        removedLinks: 0,
+        retryAfterSec: null,
+        usage: null,
+      },
+    ]
+    await render(<Route />)
+    await screen.findByTestId('assistant-screen')
+
+    // Строка — та же, что контур оценки подставляет в наблюдение хода (`SHOWN_TEXT_KEYS`, `ask-path.mjs`).
+    const shown = aiAssistStaticResources[SHOWN_TEXT_KEYS.noMaterial as 'ask.noSources']
+    expect(shown).toBe('На сайте пока нет материалов по этому вопросу. Попробуйте другое направление или загляните в каталог маршрутов.')
+    expect(within(screen.getByTestId('assistant-turn-done')).getByTestId('assistant-answer-text')).toBeTruthy()
+    expect(screen.getByText(shown)).toBeTruthy()
+    expect(screen.queryByText(aiAssistStaticResources[SHOWN_TEXT_KEYS.fallback as 'ask.fallbackAnswer'])).toBeNull()
+    expect(screen.getByTestId('assistant-sources-nearby')).toBeTruthy()
+    expect(screen.getByTestId('assistant-source-quest-129')).toBeTruthy()
+    expect(screen.getByTestId('assistant-open-catalog')).toBeTruthy()
+    expect(screen.queryByTestId('assistant-retry')).toBeNull()
   })
 
   it('#3290: режим страницы — страница под «Источники», соседние материалы отдельной группой «Ещё по теме»', async () => {

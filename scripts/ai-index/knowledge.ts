@@ -248,6 +248,8 @@ export function createKnowledge(index: KnowledgeIndex, embedQuery: EmbedQuery): 
     if (!stems.length) return { index_built_at: builtAt, place, stems, travels, quests }
     for (const key of rowsBySource.keys()) {
       const head = headChunk(key)
+      // Справка о сайте (#3293) — не материал о месте: в покрытие не входит.
+      if (head.type === 'help') continue
       const inTitle = mentionsAll(normalizeText(head.title), stems)
       const inCity = head.city ? mentionsAll(normalizeText(head.city), stems) : false
       const mentions = mentionRows(key, stems)

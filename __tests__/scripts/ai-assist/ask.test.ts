@@ -8,10 +8,10 @@ import { join } from 'path'
 
 import { ASK_HISTORY_TEXT_LIMIT } from '@/api/aiAssist/askProvider'
 import { AiGeneratorError, type GenerateRequest, type Generator } from '@/api/aiAssist/generator'
-import { NO_PLACE_NOTE_RU, OFFTOPIC_REPLY_RU, PAGE_MODE_RULE_RU, type PromptHints } from '@/api/aiAssist/prompt'
+import { HELP_MODE_RULE_RU, NO_PLACE_NOTE_RU, OFFTOPIC_REPLY_RU, PAGE_MODE_RULE_RU, type PromptHints } from '@/api/aiAssist/prompt'
 import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_NEARBY_LIMIT } from '@/api/aiAssist/policy'
 import type { DemandEntry as ClientDemandEntry, DemandReason as ClientDemandReason } from '@/api/aiAssist/demandLog'
-import { createApp } from '@/scripts/ai-assist/app'
+import { createApp, opensWithYesNo } from '@/scripts/ai-assist/app'
 import { clientIp, GENERATOR_RETRY_AFTER_SEC } from '@/scripts/ai-assist/ask'
 import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { loadConfig } from '@/scripts/ai-assist/config'
@@ -175,7 +175,7 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
   }
 }
 
-function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[]; facts?: SourceFacts[]; askFragmentChars?: { travel?: number; quest?: number }; evalTrace?: boolean; promptHints?: PromptHints } = {}) {
+function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[]; facts?: SourceFacts[]; askFragmentChars?: { travel?: number; quest?: number }; evalTrace?: boolean; promptHints?: PromptHints; helpMode?: 'direct' | 'model' } = {}) {
   const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
@@ -202,6 +202,7 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
       now: overrides.now,
       evalTrace: overrides.evalTrace ? { llmUrl: 'http://127.0.0.1:8090' } : null,
       promptHints: overrides.promptHints,
+      helpMode: overrides.helpMode,
     },
     authorDraft: { limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock('Europe/Minsk'), dailyLimit: 5, strikesToBlock: 3 }) },
     suggestTags: { catalog: { dictionary: async () => null, travelTags: async () => null } },
@@ -428,7 +429,7 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(sources.length).toBeLessThanOrEqual(1 + AI_PAGE_NEARBY_LIMIT)
 
       // Карточка страницы: строка фактов (#3287), затем три лучших под вопрос фрагмента — только её текст, в порядке страницы.
-      const FACTS_LINE = 'Польша, Краков. Дней: 2. Месяцы: ноябрь, декабрь. '
+      const FACTS_LINE = 'Польша. Дней: 2. Месяцы: ноябрь, декабрь. '
       expect(sources[0].snippet.startsWith(FACTS_LINE)).toBe(true)
       const fragments = sources[0].snippet.slice(FACTS_LINE.length).split(' … ')
       expect(fragments).toHaveLength(3)
@@ -585,15 +586,16 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(snippetOf('quest', '2')).toBe(
         'Детский городской квест по городу Брест (Польша). Возраст: 8–10 лет. Со взрослым. Точек: 12. Длительность: 150 мин. Сложность: средний. квест брест крепость задание дети',
       )
-      expect(snippetOf('travel', '816')).toMatch(/^Польша, Краков\. Дней: 3\. Месяцы: ноябрь, декабрь\. \S/)
-      // У статьи без записи фактов строка — место из индекса, как на экране.
-      expect(snippetOf('travel', '761')).toBe('Польша, Ойцув. замки скалы пещеры ойцув краков однодневная вылазка')
+      // Место статьи — только страна (#3347): город статьи в индексе — подпись первой точки маршрута.
+      expect(snippetOf('travel', '816')).toMatch(/^Польша\. Дней: 3\. Месяцы: ноябрь, декабрь\. \S/)
+      // У статьи без записи фактов строка — страна из индекса, как на экране.
+      expect(snippetOf('travel', '761')).toBe('Польша. замки скалы пещеры ойцув краков однодневная вылазка')
       // Числа доходят до модели: карточка квеста Гродно — в подсказке, строка фактов сразу под заголовком.
       expect(prompts[0]).toContain('Квест «Квест по Гродно» — https://metravel.by/quests/1\nГородской квест по городу Гродно (Польша). Точек: 9. Длительность: 90 мин. Сложность: лёгкий. Можно с собакой.')
 
       // Страница-источник (#2897) строится тем же построителем.
       const pinned = await post(server, '/ai/ask', { q: 'Сколько дней занимает поездка?', locale: 'ru', source: { type: 'travel', id: 816 } })
-      expect(pinned.events[0].data.sources[0].snippet).toMatch(/^Польша, Краков\. Дней: 3\. Месяцы: ноябрь, декабрь\. /)
+      expect(pinned.events[0].data.sources[0].snippet).toMatch(/^Польша\. Дней: 3\. Месяцы: ноябрь, декабрь\. /)
     } finally {
       await close(server)
     }
@@ -617,7 +619,7 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
     await Promise.all([listen(byDefault.server), listen(bare.server)])
     try {
       const cards = await snippets(byDefault.server)
-      const travelText = cards.travel.replace('Польша, Мир. ', '')
+      const travelText = cards.travel.replace('Польша. ', '')
       const questText = cards.quest.replace('Городской квест по городу Мир (Польша). Точек: 9. Длительность: 90 мин. ', '')
       expect(travelText).toMatch(/^замок0 замок1 .*…$/)
       expect(travelText.length).toBeLessThanOrEqual(ASK_FRAGMENT_CHARS.travel + 1)
@@ -631,7 +633,7 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(searchSnippet.length).toBeLessThanOrEqual(SNIPPET_CHARS + 1)
 
       // Длина 0 — карточка из одной строки фактов.
-      expect(await snippets(bare.server)).toEqual({ travel: 'Польша, Мир', quest: 'Городской квест по городу Мир (Польша). Точек: 9. Длительность: 90 мин' })
+      expect(await snippets(bare.server)).toEqual({ travel: 'Польша', quest: 'Городской квест по городу Мир (Польша). Точек: 9. Длительность: 90 мин' })
       const env = (values: Record<string, string>) => values as NodeJS.ProcessEnv
       expect(loadConfig(env({})).askFragmentChars).toEqual(ASK_FRAGMENT_CHARS)
       expect(loadConfig(env({ AI_ASSIST_ASK_FRAGMENT_TRAVEL_CHARS: '160', AI_ASSIST_ASK_FRAGMENT_QUEST_CHARS: '0' })).askFragmentChars).toEqual({ travel: 160, quest: 0 })
@@ -812,6 +814,7 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(reply.events.filter((event) => event.event === 'text').at(-1)!.data.text).toBe('')
       expect(reply.events.at(-1)).toEqual({
         event: 'done',
+        // Страж отбраковал ответ модели: причины `no_material` нет — экран показывает запасную фразу стража.
         data: { status: 'done', removed_links: 0, fallback: true, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: AI_ASK_DAILY_LIMIT - 1 },
       })
       expect(readLog()).toEqual([])
@@ -1247,11 +1250,83 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
     const withKids = await ask('Где погулять с собакой и детьми в Варшаве?', chunks, facts)
     expect(keyOf(withKids.sources[0])).toBe('quest:129')
     expect(withKids.prompt[0].why).toBe('детский, можно с собакой')
-    // Кроме детского квеста о Варшаве ничего нет: подсказка пуста, все карточки — «рядом».
+    // Кроме детского квеста о Варшаве ничего нет: подсказка пуста, все карточки — «рядом»; модель не вызывается (#3345).
     const only = await ask('Где погулять с собакой недалеко от Варшавы?', chunks.filter((chunk) => ![502, 130].includes(chunk.sourceId)), facts)
     expect(only.prompt).toEqual([])
-    expect(only.user).toContain('Материалы сайта: ничего не найдено.')
+    expect(only.user).toBeUndefined()
     expect(only.sources.map((source) => source.group)).toEqual(['nearby', 'nearby', 'nearby'])
+  })
+
+  it('#3277 lv21: «з Мінска да Нясвіжа» — подбор не нашёл Несвиж, его квест берётся из каталога индекса; город отправления место не задаёт', async () => {
+    // Девять источников о Минске ближе к вопросу, чем квест Несвижа: в восемь найденных он не попадает.
+    const minskTravels: Spec[] = Array.from({ length: 9 }, (_, index) => ({ type: 'travel' as const, sourceId: 900 + index, title: `Маршрут выходного дня из Минска №${index}`, text: 'як даехаць з мінска без машыны і што там паглядзець за дзень', city: 'Лысая гора', country: 'Беларусь' }))
+    const chunks: Spec[] = [
+      ...minskTravels,
+      { type: 'quest', sourceId: 4, locale: 'be', title: 'Квэст па цэнтры Мінска', text: 'цмок ратуша', city: 'Мінск', country: 'Беларусь' },
+      { type: 'quest', sourceId: 90, locale: 'ru', title: 'Квест по Несвижу: клад Радзивиллов', text: 'замок радзивиллов ратуша костёл', city: 'Несвиж', country: 'Беларусь' },
+      { type: 'quest', sourceId: 90, locale: 'be', title: 'Квэст па Нясвіжы: скарб Радзівілаў', text: 'замак радзівілаў ратуша касцёл', city: 'Нясвіж', country: 'Беларусь' },
+    ]
+    const facts: SourceFacts[] = [
+      { type: 'quest', source_id: 4, points: 10, duration_min: 45, difficulty: 'easy' },
+      { type: 'quest', source_id: 90, points: 9, duration_min: 90, difficulty: 'easy' },
+    ]
+    const { sources, prompt, user, foundKeys } = await ask('Як даехаць з Мінска да Нясвіжа без машыны і што там паглядзець за дзень?', chunks, facts, { locale: 'be' })
+    // Смысловой подбор квест Несвижа не нашёл — он пришёл из каталога и встал первым, на локали вопроса.
+    expect(foundKeys).not.toContain('quest:90')
+    expect(keyOf(sources[0])).toBe('quest:90')
+    expect(sources[0].title).toBe('Квэст па Нясвіжы: скарб Радзівілаў')
+    expect(prompt.map(keyOf)).toEqual(['quest:90'])
+    expect(sources.slice(1).every((source) => source.group === 'nearby')).toBe(true)
+    expect(sources).toHaveLength(8)
+    expect(user).toContain('Квэст па Нясвіжы')
+    expect(user).not.toContain(NO_PLACE_NOTE_RU)
+    expect(user).not.toContain('Маршрут выходного дня из Минска')
+  })
+
+  it('#3345: нуль карточек в подсказке — модель не вызывается: пустой text, done с fallback, источники «рядом», журнал спроса; генератор для такого хода не нужен', async () => {
+    const chunks: Spec[] = [
+      { type: 'travel', sourceId: 459, title: 'Хельская коса: три маяка и неделя на Балтике', text: 'где погулять с собакой у моря: хельская коса', city: 'Hel' },
+      { type: 'quest', sourceId: 129, title: 'Детский квест по Варшаве: знаки для базилишка', text: 'квест варшава старый город базилиск', city: 'Варшава', tags: ['kids', 'age-8-10'] },
+    ]
+    const facts: SourceFacts[] = [
+      { type: 'travel', source_id: 459, months: [4] },
+      { type: 'quest', source_id: 129, points: 8, duration_min: 75, difficulty: 'easy', pet_friendly: true, audience: 'kids', age: [8, 10] },
+    ]
+    const question = 'Где погулять с собакой недалеко от Варшавы?'
+    let calls = 0
+    const generator = fakeGenerator(() => {
+      calls += 1
+      return 'Посмотрите [Варшава](https://metravel.by/travels/varshava).'
+    })
+    for (const [name, used] of [['с моделью', generator], ['без модели', null]] as const) {
+      const { server, limits, readLog } = makeServer({ generator: used, chunks, facts, evalTrace: true })
+      await listen(server)
+      try {
+        const reply = await post(server, '/ai/ask', { q: question, locale: 'ru' }, { 'x-real-ip': '10.0.0.7' })
+        expect({ name, status: reply.status }).toEqual({ name, status: 200 })
+        expect(reply.events.map((event) => event.event)).toEqual(['sources', 'trace', 'text', 'done'])
+        expect((reply.events[0].data.sources as { group?: string }[]).map((source) => source.group)).toEqual(['nearby', 'nearby'])
+        expect(reply.events[1].data).toEqual({ prompt_sources: [], raw_text: '', model_called: false })
+        expect(reply.events[2].data).toEqual({ text: '' })
+        // Причина отличает ход от запасного ответа стража; `fallback` остаётся для клиента, который причины не знает.
+        expect(reply.events[3].data).toEqual({ status: 'done', removed_links: 0, fallback: true, reason: 'no_material', remaining: AI_ASK_DAILY_LIMIT - 1 })
+        expect(readLog()).toEqual([expect.objectContaining({ q: question, reason: 'no_sources' })])
+        expect((await limits.quotaState('10.0.0.7', new Date())).remaining).toBe(AI_ASK_DAILY_LIMIT - 1)
+      } finally {
+        await close(server)
+      }
+    }
+    expect(calls).toBe(0)
+    // С детьми в вопросе квест подходит — модель вызывается как обычно.
+    const { server } = makeServer({ generator, chunks, facts })
+    await listen(server)
+    try {
+      const reply = await post(server, '/ai/ask', { q: 'Где погулять с собакой и детьми в Варшаве?', locale: 'ru' })
+      expect(reply.events.at(-1)!.data).toMatchObject({ status: 'done' })
+      expect(calls).toBe(1)
+    } finally {
+      await close(server)
+    }
   })
 
   it('p13 «з дітьми на вихідні у Польщі»: поездки на 4 и 7 дней — nearby, Energylandia в подсказке со строкой «1 день»', async () => {
@@ -1366,5 +1441,176 @@ describe('metravel-assist: POST /ai/ask — условия вопроса (#3289
     expect(prompt.map((source) => source.why)).toEqual(['45 мин', undefined])
     // Длинный квест города и короткий квест чужого города — оба «рядом».
     expect(inGroup('nearby').sort()).toEqual(['quest:2', 'quest:3'])
+  })
+})
+
+describe('metravel-assist: POST /ai/ask — справка о сайте (#3293)', () => {
+  const PRICE = 'Бесплатно. Покупать или бронировать ничего не нужно: выберите квест в каталоге и идите гулять.'
+  const OFFLINE_PL = 'W aplikacji możesz wcześniej pobrać quest — trasa, zadania i mapa będą działać bez sieci.'
+  const chunks: Spec[] = [
+    ...FIXTURE_CHUNKS,
+    { type: 'travel', sourceId: 568, title: 'Краков: путеводитель по местам', text: 'Что посмотреть в Кракове?', city: 'Краков' },
+    { type: 'help', sourceId: 1, title: 'Сколько стоит пройти квест?', text: 'Сколько стоит пройти квест?', answer: PRICE, page: '/quests', city: null, lat: null, lng: null },
+    { type: 'help', sourceId: 1, locale: 'pl', title: 'Ile kosztuje przejście questu?', text: 'Ile kosztuje przejście questu?', answer: 'Za darmo.', page: '/quests', city: null, lat: null, lng: null },
+    { type: 'help', sourceId: 13, locale: 'pl', title: 'Czy podczas questu potrzebny jest internet?', text: 'Czy potrzebuję internetu podczas questu?', answer: OFFLINE_PL, page: '/quests', city: null, lat: null, lng: null },
+    { type: 'help', sourceId: 24, title: 'Как добавить свою статью?', text: 'Как добавить свою статью?', answer: 'Войдите в аккаунт и выберите «Добавить путешествие».', page: '/travel/new', city: null, lat: null, lng: null },
+  ]
+
+  async function ask(question: string, options: { locale?: string; helpMode?: 'direct' | 'model'; body?: Record<string, unknown>; chunks?: Spec[] } = {}) {
+    const seen: string[][] = []
+    const generator = fakeGenerator((request) => {
+      seen.push(request.messages.map((message) => String(message.content)))
+      return 'Проходить квесты бесплатно: [Сколько стоит пройти квест?](https://metravel.by/quests).'
+    })
+    const { server, readLog, limits } = makeServer({ generator, chunks: options.chunks ?? chunks, evalTrace: true, helpMode: options.helpMode })
+    await listen(server)
+    try {
+      const reply = await post(server, '/ai/ask', { q: question, locale: options.locale ?? 'ru', ...options.body }, { 'x-real-ip': '10.0.0.9' })
+      const event = (name: string) => reply.events.filter((item) => item.event === name).at(-1)?.data
+      return { reply, seen, sources: (event('sources')?.sources ?? []) as { type: string; source_id: string; title: string; url: string; path: string; snippet: string; group?: string }[], trace: event('trace'), text: event('text')?.text as string, done: event('done'), log: readLog(), remaining: (await limits.quotaState('10.0.0.9', new Date())).remaining }
+    } finally {
+      await close(server)
+    }
+  }
+
+  it('«Сколько стоит пройти квест?» — справка первой и единственным видом источника, ответ — запись дословно и ссылка на страницу, модель не вызывается', async () => {
+    const { reply, seen, sources, trace, text, done, log, remaining } = await ask('Сколько стоит пройти квест?')
+    expect(reply.status).toBe(200)
+    expect(reply.events.map((item) => item.event)).toEqual(['sources', 'trace', 'text', 'done'])
+    expect(seen).toEqual([])
+    expect(sources[0]).toMatchObject({ type: 'help', source_id: '1', title: 'Сколько стоит пройти квест?', url: 'https://metravel.by/quests', path: '/quests', snippet: PRICE, group: 'match' })
+    // Статей и квестов среди источников нет.
+    expect(new Set(sources.map((source) => source.type))).toEqual(new Set(['help']))
+    expect(sources.slice(1).every((source) => source.group === 'nearby')).toBe(true)
+    expect(text).toBe(`${PRICE}\n\n[metravel.by/quests](https://metravel.by/quests)`)
+    expect(trace).toMatchObject({ raw_text: '', model_called: false, help: true })
+    expect(trace.prompt_sources.map((source: { source_id: string }) => source.source_id)).toEqual(['1'])
+    expect(done).toEqual({ status: 'done', removed_links: 0, remaining: AI_ASK_DAILY_LIMIT - 1 })
+    // Вопрос получил ответ: в журнал спроса не идёт, лимит списан как у обычного вопроса.
+    expect(log).toEqual([])
+    expect(remaining).toBe(AI_ASK_DAILY_LIMIT - 1)
+  })
+
+  it('язык вопроса: «Czy potrzebuję internetu podczas questu?» отвечает польской записью; запись без перевода отдаётся на русском', async () => {
+    const pl = await ask('Czy potrzebuję internetu podczas questu?', { locale: 'pl' })
+    expect(pl.sources[0]).toMatchObject({ type: 'help', source_id: '13', title: 'Czy podczas questu potrzebny jest internet?' })
+    expect(pl.text).toBe(`${OFFLINE_PL}\n\n[metravel.by/quests](https://metravel.by/quests)`)
+    expect(pl.seen).toEqual([])
+    // У записи о статье польского перевода нет — на польской локали она находится русским фрагментом.
+    const fallback = await ask('Как добавить свою статью?', { locale: 'pl' })
+    expect(fallback.sources[0]).toMatchObject({ type: 'help', source_id: '24', path: '/travel/new' })
+    expect(fallback.text).toContain('Войдите в аккаунт')
+  })
+
+  describe('одна запись в ответе; вторая — только почти столь же близкая, из той же темы и не «Да/Нет» (замер r2)', () => {
+    const ASKED = 'нужна ли регистрация'
+    const NEEDED = 'Читать статьи и смотреть карту можно без регистрации.'
+    const HOW = 'Создать аккаунт можно по email и паролю.'
+    const LINK = '[metravel.by/registration](https://metravel.by/registration)'
+    /** Запись справки как в индексе: фрагмент-формулировка и фрагмент ответа; `question` с теми же словами, что вопрос, — близость 1. */
+    const entry = (sourceId: number, topic: string, answer: string, question = ASKED): Spec[] => [
+      { type: 'help', sourceId, title: question, text: question, answer, page: '/registration', tags: [`help-${sourceId}`, topic], city: null, lat: null, lng: null },
+      { type: 'help', sourceId, title: question, text: question.split(' ').reverse().join(' '), answer, page: '/registration', tags: [`help-${sourceId}`, topic, 'answer'], city: null, lat: null, lng: null },
+    ]
+    const run = async (...entries: Spec[][]) => {
+      const { text, sources, trace, seen } = await ask(ASKED, { chunks: [...FIXTURE_CHUNKS, ...entries.flat()] })
+      expect(seen).toEqual([])
+      return { text, groups: sources.map((source) => `${source.source_id}:${source.group}`), prompt: trace.prompt_sources.map((source: { source_id: string }) => source.source_id) as string[] }
+    }
+
+    it('две записи одной темы одинаково близки — в ответе обе, ссылка на общую страницу одна; третьего абзаца не бывает', async () => {
+      const reply = await run(entry(3, 'цена и регистрация', NEEDED), entry(5, 'цена и регистрация', HOW), entry(7, 'цена и регистрация', 'Третья запись той же темы.'))
+      expect(reply.text).toBe(`${NEEDED}\n\n${HOW}\n\n${LINK}`)
+      expect(reply.groups).toEqual(['3:match', '5:match', '7:nearby'])
+      expect(reply.prompt).toEqual(['3', '5'])
+    })
+
+    it('вторая запись из другой темы в ответ не встаёт, хотя так же близка', async () => {
+      const reply = await run(entry(3, 'цена и регистрация', NEEDED), entry(5, 'квесты', HOW))
+      expect(reply.text).toBe(`${NEEDED}\n\n${LINK}`)
+      expect(reply.groups).toEqual(['3:match', '5:nearby'])
+      expect(reply.prompt).toEqual(['3'])
+    })
+
+    it.each([
+      'Да, приложение MeTravel есть для iPhone и Android.',
+      'Нет. Квест открывается в браузере телефона.',
+      'Так. З акаўнтам прагрэс захоўваецца на любой прыладзе.',
+      'Ні. Квест відкривається у браузері телефона.',
+      'Nie. Quest otwiera się w przeglądarce telefonu.',
+      'Yes. With an account your progress is saved.',
+      'No. A quest opens in your phone\'s browser.',
+    ])('ответ второй записи открывается «Да/Нет» — вторым абзацем к чужому вопросу не встаёт: %s', async (answer) => {
+      expect(opensWithYesNo(answer)).toBe(true)
+      const reply = await run(entry(3, 'квесты', NEEDED), entry(5, 'квесты', answer))
+      expect(reply.text).toBe(`${NEEDED}\n\n${LINK}`)
+      expect(reply.groups).toEqual(['3:match', '5:nearby'])
+    })
+
+    it('вторая запись той же темы, но заметно дальше от вопроса — в ответе одна запись', async () => {
+      const reply = await run(entry(3, 'цена и регистрация', NEEDED), entry(5, 'цена и регистрация', HOW, 'печать квеста'))
+      expect(reply.text).toBe(`${NEEDED}\n\n${LINK}`)
+      expect(reply.groups).toEqual(['3:match', '5:nearby'])
+    })
+
+    it('«Да/Нет» — только отдельным словом: частица перед словом и обычное начало ответа сюда не относятся', () => {
+      for (const answer of ['Не обязательно: короткая заметка тоже подойдёт.', 'Nie musisz się zapisywać.', 'Нетрудно: откройте квест.', 'Так как квест бесплатный, платить не нужно.', 'Notes are welcome.', 'Данные сохраняются.', 'Бесплатно. Покупать ничего не нужно.']) {
+        expect({ answer, yesNo: opensWithYesNo(answer) }).toEqual({ answer, yesNo: false })
+      }
+    })
+  })
+
+  it('обычный вопрос о поездке справку не получает; вопрос со страницы материала — тоже', async () => {
+    const trip = await ask('Что посмотреть в Кракове?')
+    expect(trip.sources.length).toBeGreaterThan(0)
+    expect(trip.sources.every((source) => source.type !== 'help')).toBe(true)
+    expect(trip.seen).toHaveLength(1)
+    expect(trip.seen[0].join('\n')).not.toContain('Справка')
+    expect(trip.trace.help).toBeUndefined()
+    // Со страницы статьи вопрос читается как вопрос об этой странице: справка не вмешивается.
+    const page = await ask('Сколько стоит пройти квест?', { body: { source: { type: 'travel', id: 816 } } })
+    expect(page.sources.every((source) => source.type !== 'help')).toBe(true)
+    expect(page.seen).toHaveLength(1)
+  })
+
+  it('AI_ASSIST_HELP_MODE=model: запись уходит модели карточкой «Справка» с правилом справки; ссылки ответа — только на её страницу', async () => {
+    const { seen, sources, trace, text, done } = await ask('Сколько стоит пройти квест?', { helpMode: 'model' })
+    expect(seen).toHaveLength(1)
+    const [system, user] = [seen[0][0], seen[0].at(-1)!]
+    expect(system).toContain(HELP_MODE_RULE_RU)
+    expect(user).toContain(`[1] Справка «Сколько стоит пройти квест?» — https://metravel.by/quests\n${PRICE}`)
+    expect(user).not.toContain('Статья «')
+    expect(sources[0]).toMatchObject({ type: 'help', source_id: '1' })
+    expect(trace.model_called).toBeUndefined()
+    expect(text).toBe('Проходить квесты бесплатно: [Сколько стоит пройти квест?](https://metravel.by/quests).')
+    expect(done).toMatchObject({ status: 'done', removed_links: 0 })
+  })
+
+  it('индекс без справки отвечает как раньше; /ai/search и /ai/similar справку по умолчанию не возвращают, по явному type — возвращают', async () => {
+    const plain = makeServer({ generator: fakeGenerator(() => 'Посмотрите материалы сайта.'), evalTrace: true })
+    await listen(plain.server)
+    try {
+      const reply = await post(plain.server, '/ai/ask', { q: 'Сколько стоит пройти квест?', locale: 'ru' })
+      expect((reply.events[0].data.sources as { type: string }[]).every((source) => source.type !== 'help')).toBe(true)
+      const health = await new Promise<Record<string, unknown>>((resolve, reject) => http.get({ host: '127.0.0.1', port: (plain.server.address() as AddressInfo).port, path: '/ai/health' }, (response) => { const parts: Buffer[] = []; response.on('data', (part) => parts.push(part)); response.on('end', () => resolve(JSON.parse(Buffer.concat(parts).toString('utf8')))) }).on('error', reject))
+      expect(health.sources).toEqual({ travel: 3, quest: 2 })
+    } finally {
+      await close(plain.server)
+    }
+    const { server } = makeServer({ chunks })
+    await listen(server)
+    try {
+      const search = await post(server, '/ai/search', { q: 'Сколько стоит пройти квест?', locale: 'ru', limit: 20 })
+      expect(search.json.items.length).toBeGreaterThan(0)
+      expect((search.json.items as { type: string }[]).every((item) => item.type !== 'help')).toBe(true)
+      const explicit = await post(server, '/ai/search', { q: 'Сколько стоит пройти квест?', locale: 'ru', type: 'help', limit: 5 })
+      expect(explicit.json.items[0]).toMatchObject({ type: 'help', source_id: 1, url: 'https://metravel.by/quests', answer: PRICE })
+      const get = (path: string) => new Promise<{ status: number; json: { items?: { type: string }[] } }>((resolve, reject) => http.get({ host: '127.0.0.1', port: (server.address() as AddressInfo).port, path }, (response) => { const parts: Buffer[] = []; response.on('data', (part) => parts.push(part)); response.on('end', () => resolve({ status: response.statusCode ?? 0, json: JSON.parse(Buffer.concat(parts).toString('utf8')) })) }).on('error', reject))
+      const similar = await get('/ai/similar?type=travel&id=816&limit=20')
+      expect(similar.status).toBe(200)
+      expect(similar.json.items!.every((item) => item.type !== 'help')).toBe(true)
+    } finally {
+      await close(server)
+    }
   })
 })

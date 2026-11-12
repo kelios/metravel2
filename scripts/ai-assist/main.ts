@@ -89,6 +89,7 @@ async function main(): Promise<void> {
     log(`/ai/ask: строки подсказки #3289 — «Почему подходит» ${config.promptHints.whyFits ? 'вкл' : 'ВЫКЛ'}, «материала о месте нет» ${config.promptHints.noPlace ? 'вкл' : 'ВЫКЛ'}`)
   }
   if (!config.promptFocus) log('/ai/ask: сокращение подсказки до карточек, выделенных условиями вопроса (#3289), ВЫКЛ')
+  if (config.helpMode === 'model') log('/ai/ask: справка о сайте (#3293) идёт через модель — AI_ASSIST_HELP_MODE=model; по умолчанию запись отдаётся без модели')
   if (config.evalTrace) log('⚠️ AI_ASSIST_EVAL_TRACE=1: /ai/ask отдаёт карточки подсказки и сырой ответ модели, /ai/health — адрес модели. Только для контура оценки')
 
   const server = createApp({
@@ -106,6 +107,7 @@ async function main(): Promise<void> {
       trustProxy: config.trustProxy,
       evalTrace: config.evalTrace ? { llmUrl: config.llmUrl } : null,
       promptHints: config.promptHints,
+      helpMode: config.helpMode,
     },
     askFragmentChars: config.askFragmentChars,
     promptFocus: config.promptFocus,

@@ -61,6 +61,11 @@ export interface AssistConfig {
    * добором по порядку. Включено; `0` выключает — для живого сравнения.
    */
   promptFocus: boolean
+  /**
+   * Как отвечает справка о сайте (#3293): `direct` — текст записи и ссылка без модели (по умолчанию: текст
+   * утверждает владелец, модель его искажала), `model` — запись уходит модели карточкой подсказки.
+   */
+  helpMode: 'direct' | 'model'
 }
 
 function envNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -105,5 +110,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
       noPlace: env.AI_ASSIST_PROMPT_NO_PLACE !== '0',
     },
     promptFocus: env.AI_ASSIST_PROMPT_FOCUS !== '0',
+    helpMode: env.AI_ASSIST_HELP_MODE === 'model' ? 'model' : 'direct',
   }
 }

@@ -669,9 +669,12 @@ def positive_int(value) -> int:
 
 def travel_facts_line(t: dict, facts: bool = False) -> str:
     """Facts line of an article card — the string travelFactsLine builds in api/aiAssist/sourceFacts.ts
-    (#3287; a test compares the two): «Польша, Краков. Дней: 3. Месяцы: ноябрь, декабрь». Without `facts`
-    it is the place alone — the card editions 1–9 were built with."""
-    parts = [", ".join(str(v).strip() for v in (t.get("countryName"), t.get("cityName")) if v and str(v).strip())]
+    (#3287; a test compares the two): «Польша. Дней: 3. Месяцы: ноябрь, декабрь». The place is the country
+    alone (#3347): `cityName` of the catalog is the label of the first route point, not a city.
+    Without `facts` it is «Страна, город» — the place the card editions 1–9 were built with; those sets
+    do not change."""
+    place = (t.get("countryName"),) if facts else (t.get("countryName"), t.get("cityName"))
+    parts = [", ".join(str(v).strip() for v in place if v and str(v).strip())]
     if facts:
         days = positive_int(t.get("number_days"))
         if days:

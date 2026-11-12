@@ -112,6 +112,9 @@ const ROAD_AND_STAY = [
   'Чи варто брати квитки на нічний потяг?',
   'Jedziemy nocnym pociągiem z dwójką małych dzieci. Jak się przygotować, żeby wszyscy się wyspali?',
   'How early should we be at the airport with a toddler?',
+  // #3277 (f05 свежего среза): «wyjazd» — выезд, поездка; раньше вопрос о бюджете поездки получал отказ «не по теме».
+  'Ile pieniędzy warto odłożyć na weekendowy wyjazd we dwoje, żeby nie liczyć każdej złotówki?',
+  'Ile pieniędzy zabrać, kiedy wyjeżdżamy na tydzień?',
   'Which pills help with motion sickness on a night train?',
   // «overnight» и «trains» считаются только в сочетании со словом поездки.
   'What medicine helps with motion sickness on sleeper trains?',

@@ -16,6 +16,7 @@
  */
 
 import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
+import { ASK_NO_MATERIAL_REASON } from './policy'
 import type { AiSourceRef } from './sourceRef'
 import { AI_SOURCE_GROUPS, type AiHistoryItem, type AiSource, type AiSourceGroup, type AiUsage } from './types'
 
@@ -58,8 +59,12 @@ export type AskDoneStatus = 'done' | 'off_topic' | 'no_sources' | 'unavailable' 
 
 export type AskDoneEvent = {
   status: AskDoneStatus
-  /** `offtopic_warning` — 1-й/2-й вопрос не по теме (со `strikes`); `model_refusal` — отказ модели, без счётчика. */
-  reason: 'offtopic_warning' | 'model_refusal' | null
+  /**
+   * `offtopic_warning` — 1-й/2-й вопрос не по теме (со `strikes`); `model_refusal` — отказ модели, без счётчика;
+   * `no_material` (#3345) — у хода `done` с `fallback`: подсказка пуста, модель не вызывалась — экран показывает
+   * «материала нет», а не запасную фразу стража.
+   */
+  reason: 'offtopic_warning' | 'model_refusal' | typeof ASK_NO_MATERIAL_REASON | null
   strikes: number | null
   strikesToBlock: number | null
   removedLinks: number
@@ -129,7 +134,8 @@ const toUsage = (value: unknown): AiUsage | null => {
 const toSource = (value: unknown): AiSource | null => {
   if (!value || typeof value !== 'object') return null
   const raw = value as Record<string, unknown>
-  const type = raw.type === 'quest' ? 'quest' : raw.type === 'travel' ? 'travel' : null
+  // `help` (#3293) — справка о сайте: карточка службы наравне со статьёй и квестом.
+  const type = raw.type === 'quest' ? 'quest' : raw.type === 'travel' ? 'travel' : raw.type === 'help' ? 'help' : null
   const url = typeof raw.url === 'string' ? raw.url.trim() : ''
   if (!type || !url) return null
   let path = typeof raw.path === 'string' ? raw.path : ''
@@ -189,7 +195,7 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
   if (name === 'done') {
     const status = payload.status
     const known: AskDoneStatus[] = ['done', 'off_topic', 'no_sources', 'unavailable', 'error']
-    const reason = payload.reason === 'offtopic_warning' || payload.reason === 'model_refusal' ? payload.reason : null
+    const reason = payload.reason === 'offtopic_warning' || payload.reason === 'model_refusal' || payload.reason === ASK_NO_MATERIAL_REASON ? payload.reason : null
     return {
       name,
       data: {

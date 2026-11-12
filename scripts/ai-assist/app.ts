@@ -19,6 +19,7 @@ import { type ChunkType, countSources, indexAgeDays } from '../ai-index/format.t
 import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
 import { mentionsAnyPlace } from '../../api/aiAssist/promptPlace.ts'
 import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLine } from '../../api/aiAssist/sourceFacts.ts'
+import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
 import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
@@ -33,10 +34,40 @@ import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nea
 import { bestPageRows, focusFragment, joinPageFragments, pageRows } from './page.ts'
 import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
-import { ASK_FRAGMENT_CHARS, type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, snippet, vectorSources } from './search.ts'
+import { ASK_FRAGMENT_CHARS, helpHits, type Locale, type ResultItem, ROW_TYPE, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, snippet, vectorSources } from './search.ts'
 import { createSuggestTagsHandler, SUGGEST_TAGS_MAX_BODY_BYTES, type TagCatalog } from './suggestTags.ts'
 
 export { MAX_LIMIT, MAX_QUERY_CHARS }
+
+/** Сколько записей справки (#3293) отдаёт подбор: ближайшие — ответ, остальные — «Ещё по теме». */
+export const HELP_SOURCES_LIMIT = 3
+/**
+ * Когда вопрос отвечает справка (#3293) — пороги близости записи к вопросу (косинус, `embeddinggemma-300m`).
+ * Замер 12.11.2026 на копии рабочего индекса с корпусом 40 записей × 5 языков (`.codex-temp/train2/help-scores.mts`):
+ *   - в вопросе есть признак сервиса (`asksAboutService`): 16 вопросов о сайте на пяти языках дают лучшую
+ *     запись от 0,50 до 0,81, вопросы с тем же словом о другом — «Какое приложение взять для навигации в
+ *     горах?» 0,47, «Есть ли интернет в горных приютах Татр?» 0,32, «регистрация на рейс» 0,32. Порог —
+ *     `HELP_MIN_SCORE`; запись при этом не должна быть заметно дальше лучшего материала (`HELP_BEHIND`):
+ *     «Сколько стоит квест в Кракове?» — 0,54 против 0,62 — остаётся вопросом о сайте;
+ *   - признака нет: справка отвечает, только если запись близка (`HELP_MIN_SCORE_UNPROMPTED`) и ближе лучшего
+ *     материала на `HELP_LEAD`: «Как добавить на сайт свою статью?» 0,77 против 0,37, «Чи можна проходити
+ *     квест удвох з одного телефона?» 0,61 против 0,38, «Есть ли квесты для детей?» 0,70 против 0,53. Вопросы
+ *     о поездке сюда не проходят: «Есть ли квесты для детей в Минске?» 0,66 против 0,68, «Что посмотреть в
+ *     Кракове?» 0,28 против 0,65, «Самый короткий квест в Минске» 0,56 против 0,61.
+ * Пороги считаются по самой близкой формулировке среди всех записей; сам порядок записей — `helpHits`.
+ */
+export const HELP_MIN_SCORE = 0.48
+export const HELP_BEHIND = 0.1
+export const HELP_MIN_SCORE_UNPROMPTED = 0.6
+export const HELP_LEAD = 0.1
+/** Вторая запись «почти так же близка»: её балл порядка (`HelpHit.score`) уступает первой не больше чем на столько. */
+export const HELP_TIE = 0.05
+/**
+ * Ответ записи открывается отдельным «Да» или «Нет» (RU/BE/UK/PL/EN): он отвечает только на свой вопрос.
+ * Частица перед словом («Не обязательно: …», «Nie musisz …») сюда не относится.
+ */
+const YES_NO_RE = /^\s*(?:да|нет|так|не|ні|tak|nie|yes|no)\s*[.,!:;—–-]/iu
+export const opensWithYesNo = (answer: string): boolean => YES_NO_RE.test(answer)
 
 /** Зависимости `/ai/ask`; подбор и очередь к эмбеддингу — общие с `/ai/search`. */
 export type AskAppDeps = Omit<AskDeps, 'retrieve' | 'lookupSource' | 'llmQueue' | 'log'>
@@ -182,7 +213,7 @@ export function createApp(deps: AppDeps): http.Server {
     let vector: ArrayLike<number>
     try {
       vector = await queue.run(deps.queueTimeoutMs, () => {
-        if (type !== 'quest') lexicalPromise = deps.lexical(q, LEXICAL_LIMIT).catch(() => null)
+        if (type === undefined || type === 'travel') lexicalPromise = deps.lexical(q, LEXICAL_LIMIT).catch(() => null)
         return deps.embedQuery(q)
       })
     } catch (error) {
@@ -243,7 +274,7 @@ export function createApp(deps: AppDeps): http.Server {
    * карточке идёт строка фактов (#3287) — тем же построителем, что на экране (`questToSource`,
    * `travelToSource`) и в слепке обучения: у квеста — вид квеста с городом и страной, возраст,
    * «Со взрослым» (#3276), число точек, длительность, сложность, «Можно с собакой»; у статьи —
-   * страна и город, число дней, месяцы. Затем — фрагмент текста под вопрос, не длиннее
+   * страна, число дней, месяцы (город статьи в индексе — подпись первой точки маршрута, #3347). Затем — фрагмент текста под вопрос, не длиннее
    * `ASK_FRAGMENT_CHARS` своего типа.
    */
   const toSource = (item: ResultItem, pageFragments?: string): AiSource => {
@@ -252,9 +283,11 @@ export function createApp(deps: AppDeps): http.Server {
     const indexed = item.type === 'travel' ? index.factsBySource.get(`travel:${item.source_id}`) : undefined
     const travelFacts = indexed?.type === 'travel' ? indexed : null
     const ownQuestFacts = item.type === 'quest' ? questFacts(item) : null
-    const facts = item.type === 'quest' ? questFactsLine(ownQuestFacts, place) : travelFactsLine(travelFacts, place)
+    const facts = item.type === 'quest' ? questFactsLine(ownQuestFacts, place) : travelFactsLine(travelFacts, { country: item.country })
     // Карточка страницы (#3290) несёт свои фрагменты — несколько окон текста под вопрос.
-    const fragment = pageFragments ?? (fragmentChars[item.type] > 0 ? snippet(item.snippet, fragmentChars[item.type]) : '')
+    // У справки (#3293) своей карточки материала нет: её собирает `helpSources`.
+    const chars = item.type === 'help' ? 0 : fragmentChars[item.type]
+    const fragment = pageFragments ?? (chars > 0 ? snippet(item.snippet, chars) : '')
     return {
       type: item.type,
       source_id: String(item.source_id),
@@ -283,13 +316,22 @@ export function createApp(deps: AppDeps): http.Server {
   /**
    * Все квесты индекса карточками — кандидаты превосходной степени (#3287): «самый короткий квест в
    * Минске» решается по фактам каталога до модели, а самый короткий квест города мог и не попасть в
-   * восемь найденных. Место и условия среди них выбирает общая цепочка (`arrangeSources`).
+   * восемь найденных. Они же — квесты города, который подбор не нашёл (#3277: «да Нясвіжа»). Место и
+   * условия среди них выбирает общая цепочка (`arrangeSources`). Индекс за жизнь процесса не меняется,
+   * поэтому карточки локали собираются один раз.
    */
-  const questPool = (locale: Locale) => (): AiSource[] =>
-    questKeys.flatMap((key) => {
-      const item = sourceItem(key, locale)
-      return item ? [toSource(item)] : []
-    })
+  const poolByLocale = new Map<Locale, AiSource[]>()
+  const questPool = (locale: Locale) => (): AiSource[] => {
+    let pool = poolByLocale.get(locale)
+    if (!pool) {
+      pool = questKeys.flatMap((key) => {
+        const item = sourceItem(key, locale)
+        return item ? [toSource(item)] : []
+      })
+      poolByLocale.set(locale, pool)
+    }
+    return pool
+  }
 
   /**
    * Источник упоминает названное в вопросе место (#3289) — в карточке, в названиях на всех локалях
@@ -339,8 +381,54 @@ export function createApp(deps: AppDeps): http.Server {
     return toSource(itemForRow(index, best[0], null), joinPageFragments(fragments))
   }
 
+  const hasHelp = index.typeOfRow.includes(ROW_TYPE.help)
+  /**
+   * Справка о сайте (#3293): записи корпуса, ближайшие к вопросу, — карточками вида `help`. Заголовок —
+   * формулировка вопроса из записи, фрагмент — утверждённый ответ дословно, адрес — страница сайта.
+   * Отвечает первая запись (группа `match`); вторая присоединяется к ней редко — см. ниже; остальные — «Ещё
+   * по теме». Пусто — вопрос не о сайте либо подходящей записи нет: ход идёт обычным подбором.
+   * `material` — близость лучшего найденного материала (статьи или квеста) к тому же вопросу.
+   */
+  function helpSources(vector: ArrayLike<number>, locale: Locale, asked: boolean, material: number): AiSource[] {
+    // Индекс без справки (собран до #3293 либо без утверждённых записей) — вопрос идёт обычным подбором.
+    if (!hasHelp) return []
+    const ranked = helpHits(index, vector, locale)
+    // Отвечает ли справка, решает самая близкая формулировка среди всех записей — как до доранжирования, пороги
+    // мерились по ней; какая запись первая — решает балл порядка. Первая по баллу бывает не самой близкой по
+    // одной формулировке: «Чи можна проходити квест удвох з одного телефона?» — у верной записи чуть меньше
+    // 0,6 при 0,61 у соседней; по первой записи вопрос не дотягивал до порога и уходил модели.
+    const best = ranked.reduce((max, hit) => Math.max(max, hit.cosine), 0)
+    const hits = ranked.slice(0, HELP_SOURCES_LIMIT)
+    const answers = asked ? best >= HELP_MIN_SCORE && best >= material - HELP_BEHIND : best >= HELP_MIN_SCORE_UNPROMPTED && best >= material + HELP_LEAD
+    if (!answers) return []
+    const [first, second] = hits
+    return hits.map((hit, position): AiSource => {
+      const item = itemForRow(index, hit.row, hit.cosine)
+      // Вторая запись встаёт в ответ, только когда она почти так же близка, из той же темы и её ответ не
+      // начинается с «Да» или «Нет»: такой ответ отвечает на свой вопрос, вторым абзацем к чужому он обманывает.
+      const joins = position === 1 && second.score >= first.score - HELP_TIE && first.topic !== '' && second.topic === first.topic && !opensWithYesNo(item.answer ?? '')
+      return {
+        type: 'help',
+        source_id: String(item.source_id),
+        title: item.title,
+        url: item.url,
+        path: new URL(item.url).pathname,
+        snippet: item.answer ?? item.snippet,
+        score: hit.cosine,
+        group: position === 0 || joins ? 'match' : 'nearby',
+      }
+    })
+  }
+
   async function retrieve(q: string, locale: Locale, page: AiSourceRef | null = null): Promise<RetrievalResult> {
     const { items, degraded, vector } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
+    // Вопрос о самом сайте (#3293): отвечает справка, статьи и квесты к ней не добавляются. Со страницы
+    // статьи или квеста вопрос читается как вопрос об этой странице — справка туда не вмешивается.
+    if (!page) {
+      const material = Math.max(0, ...items.map((item) => item.score ?? 0))
+      const help = helpSources(vector, locale, parseConditions(q).service === true, material)
+      if (help.length) return { sources: help, degraded: false, page: null, help: true }
+    }
     const card = page ? pageCard(page, q, locale, vector) : null
     // Одна цепочка порядка (#3289): место вопроса → условия по фактам → превосходная степень. В режиме
     // страницы (#3290) найденное — только «ещё по теме»: порядок без групп и без строки о месте. Вопрос,
