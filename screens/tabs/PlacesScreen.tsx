@@ -607,6 +607,7 @@ export default function PlacesScreen() {
                 {renderSortMenu(sortMode !== 'default')}
                 {!mobileCompact && selectedCategories.length > 0 ? (
                   <Button
+                    testID="places-desktop-clear-categories"
                     label={i18nT('map:screens.tabs.PlacesScreen.vse_mesta_e8f3c355')}
                     variant="outline"
                     onPress={handleClearCategories}

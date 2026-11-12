@@ -16,3 +16,9 @@
 - [ ] 3.2 Run permanent browser regression after review; five fresh real production mobile390 visits with each full CLS≤0.1, grid continuity, screenshots and console/network evidence.
 - [ ] 3.3 Check desktop1280 and real filters/list for the changed boundary.
 - [ ] 3.4 Reconcile evidence and Problem Memory, validate all OpenSpec artifacts, and archive only after acceptance.
+
+## 4. Measured remaining header geometry
+
+- [x] 4.1 Preserve the first matching local FAIL: grid identity passes, full CLS0.13480869519260286, no page errors; record source/geometry attribution without retries or budget changes.
+- [ ] 4.2 Reserve the compact two-line title in runtime/critical CSS and apply compact visibility to the desktop clear control before viewport measurement; keep defaults, URL semantics and text unchanged.
+- [ ] 4.3 Run focused CSS/hydration checks, independent review and gate, then explicit-path commit/push before the same permanent browser regression and production acceptance.

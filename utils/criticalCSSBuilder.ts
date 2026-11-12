@@ -183,6 +183,9 @@ export function buildCriticalCSS(): string {
     // иначе правило проигрывает атомарным классам RNW (та же грабля, что #1298).
     `@media (width < ${CATALOG_FILTER_PANEL.embeddedMinWidth}px){`,
     '  [data-testid="places-topbar"]{display:none !important}',
+    // URL intent can commit before React measures the viewport. The same media
+    // owner must keep its desktop action out of the compact first frame.
+    '  [data-testid="places-desktop-clear-categories"]{display:none !important}',
     // The width-0 static snapshot still owns desktop RNW classes. Bring every
     // above-fold box to the compact geometry before first paint. Scope these
     // overrides to that snapshot: after hydration the compact sidebar is an
@@ -190,7 +193,7 @@ export function buildCriticalCSS(): string {
     '  [data-testid="places-layout"][data-places-prehydration="true"]{flex-direction:column !important;margin-top:0 !important;min-height:calc(100vh - 179px) !important}',
     '  [data-places-prehydration="true"] [data-testid="places-sidebar"]{display:none !important}',
     '  [data-places-prehydration="true"] [data-testid="places-main"]{flex:0 1 auto !important;width:100% !important;gap:16px !important;padding:12px 24px 32px !important}',
-    '  [data-places-prehydration="true"] [data-testid="places-results-title"]{font-size:17px !important;line-height:22px !important;letter-spacing:-0.2px !important;font-weight:700 !important}',
+    '  [data-places-prehydration="true"] [data-testid="places-results-title"]{font-size:17px !important;line-height:22px !important;min-height:44px !important;letter-spacing:-0.2px !important;font-weight:700 !important}',
     '  [data-places-prehydration="true"] [data-testid="places-sort-select"]{min-height:44px !important;padding-left:12px !important;padding-right:12px !important}',
     '}',
     '@media (width < 760px){',

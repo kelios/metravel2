@@ -31,6 +31,12 @@ The catalog SHALL retain its loading grid while the current result has neither d
 - **WHEN** a filter or search update refreshes the result
 - **THEN** existing places remain visible according to the existing refresh contract
 
+#### Scenario: Compact URL intent commits before viewport measurement
+- **GIVEN** the neutral exported title and default starter title occupy one and two lines respectively
+- **WHEN** URL intent commits on a compact viewport before React measures its width
+- **THEN** both frames reserve the existing two-line title height
+- **AND** the desktop-only clear control remains outside the compact layout throughout that transition
+
 ### Requirement: Cold mobile catalog stays within the layout stability budget
 
 The initial places page SHALL produce full, unfiltered layout-shift CLS at most 0.1 for each of five fresh guest visits at 390×844. No input or source filtering SHALL suppress the measurement.

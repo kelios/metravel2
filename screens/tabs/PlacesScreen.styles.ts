@@ -682,6 +682,9 @@ export const createStyles = (
   },
   resultsTitle: {
     color: colors.text,
+    // The neutral URL frame and applied starter collection can use one/two
+    // lines. Reserve the existing two-line compact title before either commits.
+    minHeight: mobileCompact ? DESIGN_TOKENS.typography.scale.h3.lineHeight * 2 : undefined,
     ...(mobileCompact
       ? DESIGN_TOKENS.typography.scale.h3
       : DESIGN_TOKENS.typography.scale.h1),

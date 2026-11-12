@@ -281,6 +281,10 @@ describe('buildCriticalCSS: до-гидрационная раскладка /pl
       '[data-places-prehydration="true"] [data-testid="places-sidebar"]{display:none !important}',
     )
   })
+
+  it('keeps the desktop clear action out of compact URL-application frames', () => {
+    expect(mobileBlock).toContain('[data-testid="places-desktop-clear-categories"]{display:none !important}')
+  })
 })
 
 // #1334 (регресс-контроль). Правила выше — это ручная копия мобильной ветки
@@ -359,6 +363,8 @@ describe('buildCriticalCSS: до-гидрационные размеры /places
     expect(declared['line-height']).toBe(`${title.lineHeight}px`)
     expect(declared['letter-spacing']).toBe(`${title.letterSpacing}px`)
     expect(declared['font-weight']).toBe(String(title.fontWeight))
+    expect(declared['min-height']).toBe(`${title.minHeight}px`)
+    expect(title.minHeight).toBe(Number(title.lineHeight) * 2)
   })
 
   it('повторяет размер контрола сортировки', () => {

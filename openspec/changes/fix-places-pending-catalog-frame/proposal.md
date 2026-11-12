@@ -6,6 +6,7 @@ Task #3387 independently reproduced mobile `/places` CLS 0.3924044352233086 on p
 
 - Preserve the catalog loading frame until the current request has either data or a terminal error, including cache restoration before fetching starts.
 - Add deterministic restoration/URL-transition regression coverage and a cold browser check for grid continuity and full CLS.
+- Preserve compact results-header geometry while the neutral URL frame applies the starter selection: reserve the existing two-line title height and keep the desktop clear control out of the mobile media layout before viewport measurement.
 - Preserve default starter categories, explicit empty-category intent, URL hydration parity, request budgets and settled empty/error behavior.
 
 ## Capabilities
@@ -23,7 +24,7 @@ None.
 - User-visible result: the initial catalog no longer flashes an empty state or collapses before its first request.
 - Platform impact: shared status derivation; mobile web390 is the measured boundary and desktop1280 the required control. No distinct native behavior or device gate changes.
 - Localization impact: none; no text, keys or formatting changes.
-- Owned paths: `screens/tabs/usePlacesCatalogController.ts`, focused tests in `__tests__/screens/PlacesScreen.hydration.test.tsx`, `e2e/places.spec.ts`, and this change.
+- Owned paths: `screens/tabs/usePlacesCatalogController.ts`, `screens/tabs/PlacesScreen.tsx`, `screens/tabs/PlacesScreen.styles.ts`, `utils/criticalCSSBuilder.ts`, focused hydration/CSS/browser tests, and this change.
 - API/data: existing read-only catalog GET and query keys remain unchanged. No backend dependency.
 - SEO/accessibility/security/analytics: existing markup semantics, navigation, secrets, events and SEO policy remain unchanged.
 - Performance: target full unfiltered initial CLS≤0.1 in five fresh production mobile390 visits; retain all shift sources. No request or bundle growth is intended.
