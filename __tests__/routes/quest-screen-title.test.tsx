@@ -178,7 +178,7 @@ const expectSingleQuestGraph = (image: string) => {
   )
   expect(scripts).toHaveLength(1)
   expect(JSON.parse(scripts[0].textContent ?? '')['@graph']).toContainEqual(expect.objectContaining({
-    '@type': 'CreativeWork',
+    '@type': ['TouristTrip', 'CreativeWork'],
     image: [image],
   }))
 }
@@ -207,7 +207,7 @@ const expectRenderedImage = async (screen: Awaited<ReturnType<typeof render>>, i
   }
   const { jsonLd } = await readHelmetStructuredData(screen)
   expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
-    '@type': 'CreativeWork',
+    '@type': ['TouristTrip', 'CreativeWork'],
     image: [image],
   }))
 }
@@ -337,11 +337,32 @@ describe('Quest screen title sync', () => {
       ['ru', 'https://metravel.by/quests/4/minsk-cmok'], ['pl', `https://metravel.by${plRoute.path}`], ['x-default', 'https://metravel.by/quests/4/minsk-cmok'],
     ])
     const { jsonLd } = await readHelmetStructuredData(screen)
-    expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({ '@type': 'CreativeWork', inLanguage: 'pl' }))
+    expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({ '@type': ['TouristTrip', 'CreativeWork'], inLanguage: 'pl' }))
     expect(mockQuestWizard).toHaveBeenCalledWith(expect.objectContaining({ questId: 'minsk-cmok', cityId: '4' }))
     await screen.rerender(<QuestScreen route={plRoute} />)
     expect(mockTrackQuestView).toHaveBeenCalledTimes(1)
     expect(mockTrackQuestView).toHaveBeenCalledWith({ questId: 'minsk-cmok', cityId: '4', source: 'quest_detail' })
+  })
+
+  // #3321: after hydration the screen keeps the published document's graph, so a
+  // rendering crawler sees the same single quest node with route facts, not a rebuilt one.
+  it('keeps the published quest graph verbatim as its only JSON-LD', async () => {
+    const published = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': ['TouristTrip', 'CreativeWork'], name: 'Published title', url: `https://metravel.by${plRoute.path}`, inLanguage: 'pl',
+          timeRequired: 'PT120M', potentialAction: { '@type': 'TravelAction', distance: '2303 m' }, isAccessibleForFree: true,
+          tripOrigin: { '@type': 'Place', geo: { '@type': 'GeoCoordinates', latitude: 50.05, longitude: 19.93 } } },
+        { '@type': 'BreadcrumbList', itemListElement: [] },
+      ],
+    } as const
+    const original = mockUseQuestBundle()
+    mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', city: { ...original.bundle.city, id: 4 } } } as any)
+    const screen = await render(<QuestScreen route={plRoute} publicProjection={projection as any} publicStructuredData={published as any} />)
+    await act(async () => { jest.advanceTimersByTime(0); await Promise.resolve() })
+    const { jsonLd } = await readHelmetStructuredData(screen)
+    expect(jsonLd).toEqual(published)
+    expect(jsonLd['@graph'].filter((node: { '@type': unknown }) => [node['@type']].flat().includes('TouristTrip'))).toHaveLength(1)
   })
 
   it('keeps the authenticated quest consent gate on an available prefixed version', async () => {
@@ -520,7 +541,7 @@ describe('Quest screen title sync', () => {
       expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1)
       const { jsonLd } = await readHelmetStructuredData(screen)
       expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
-        '@type': 'CreativeWork',
+        '@type': ['TouristTrip', 'CreativeWork'],
         url: 'https://metravel.by/quests/4/minsk-cmok',
       }))
     },
@@ -710,7 +731,7 @@ describe('Quest screen title sync', () => {
     expect(html).toContain('\\u003c/script\\u003e')
     expect(html).toContain('\\u0026caption=\\u2028\\u2029')
     expect(jsonLd['@graph']).toContainEqual(expect.objectContaining({
-      '@type': 'CreativeWork',
+      '@type': ['TouristTrip', 'CreativeWork'],
       image: [coverUrl],
     }))
   })

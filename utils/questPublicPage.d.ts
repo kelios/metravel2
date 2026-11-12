@@ -10,11 +10,16 @@ export type QuestPublicPage = {
   heading: string; kicker: string; lead: string; paragraphs: string[]; facts: string[];
   sections: { heading: string; paragraphs: string[]; items: QuestPublicItem[] }[];
 };
+/** Backend route facts of a published detail (#3317); `null` on landings and unknown details. */
+export type QuestTripFacts = {
+  duration_min: number | null; distance_m: number | null;
+  start: { lat: number; lng: number } | null; is_free: boolean;
+};
 export type QuestPublicProjection = {
   schema_version: 2; state: 'available'; kind: QuestPublicRoute['kind']; locale: SupportedLocale;
   publication_id: string; corpus_revision: string; source_revision: string; content_revision: string;
   city_id: number | null; quest_slug: string | null; country_code: string | null;
-  canonical_path: string; ru_source_path: string | null;
+  canonical_path: string; ru_source_path: string | null; trip_facts: QuestTripFacts | null;
   versions: { locale: SupportedLocale; path: string; content_revision: string }[];
   quality: { indexable: boolean; word_count: number; own_fivegram_ratio: number | null };
   page: QuestPublicPage;

@@ -51,6 +51,32 @@ describe('public quest route and selected projection', () => {
     expect(validateQuestPublicProjection(unsafe, route)).toBeNull();
   });
 
+  // #3321: route facts of #3317 — the backend's exact shape passes, absent is unknown, drift is a 503.
+  it('keeps backend trip_facts of a detail and rejects their drift', () => {
+    const raw = projection();
+    const route = parseQuestPublicRoute(raw.canonical_path)!;
+    const facts = { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true };
+    expect(validateQuestPublicProjection({ ...raw, trip_facts: facts }, route)?.trip_facts).toEqual(facts);
+    const unknown = { duration_min: null, distance_m: null, start: null, is_free: false };
+    expect(validateQuestPublicProjection({ ...raw, trip_facts: unknown }, route)?.trip_facts).toEqual(unknown);
+    expect(validateQuestPublicProjection({ ...raw, trip_facts: null }, route)?.trip_facts).toBeNull();
+    expect(validateQuestPublicProjection(raw, route)?.trip_facts).toBeNull();
+    for (const drift of [
+      { ...facts, distance_m: 0 }, { ...facts, duration_min: 1.5 }, { ...facts, is_free: 'yes' },
+      { ...facts, start: { lat: 91, lng: 0 } }, { ...facts, start: { lat: 1, lng: 2, alt: 3 } },
+      { ...facts, extra: 1 }, { duration_min: 1, distance_m: 1, is_free: true }, [facts],
+    ]) expect(validateQuestPublicProjection({ ...raw, trip_facts: drift }, route)).toBeNull();
+  });
+
+  it('accepts trip_facts only on a detail', () => {
+    const page = pages.find((entry: { kind: string }) => entry.kind === 'city');
+    const raw = { ...page, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
+      versions: [], requested_path: '/quests/7' };
+    const route = parseQuestPublicRoute('/quests/7')!;
+    expect(validateQuestPublicProjection({ ...raw, trip_facts: null }, route)?.trip_facts).toBeNull();
+    expect(validateQuestPublicProjection({ ...raw, trip_facts: { duration_min: 60, distance_m: 900, start: null, is_free: true } }, route)).toBeNull();
+  });
+
   it('requires the live backend to explicitly establish a noncanonical city alias', () => {
     const page = pages.find((entry: { kind: string }) => entry.kind === 'city');
     const raw = { ...page, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64), versions: [] };

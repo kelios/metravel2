@@ -794,6 +794,15 @@ describe('questAdapters', () => {
       expect(adaptMeta(makeQuestMeta({ tags: ['kids', 5] as any })).tags).toEqual([]);
     });
 
+    it('keeps a switched-off map tag out of meta.tags, so a {loop: false} quest is not a loop (#3341)', () => {
+      const { isLoopQuest } = require('@/utils/questAudience');
+      const meta = adaptMeta(makeQuestMeta({ tags: { walking: true, loop: false } }));
+
+      expect(meta.tags).toEqual(['walking']);
+      expect(isLoopQuest(meta.tags)).toBe(false);
+      expect(isLoopQuest(adaptMeta(makeQuestMeta({ tags: { loop: true } })).tags)).toBe(true);
+    });
+
     it('carries the API city alias, so landings built from adapted meta skip the heuristic (#2212)', () => {
       const { buildQuestCityAliasMap, resolveQuestCitySegment } = require('@/utils/questCityAlias');
       // Эвристика по одному квесту читала бы `veliky`; бэкенд публикует полный alias.

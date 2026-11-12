@@ -40,6 +40,7 @@ import { useActionConsent } from '@/hooks/useActionConsent';
 import { useGuestQuestFlow } from '@/components/quests/useGuestQuestFlow';
 import { CONSENT_TYPES } from '@/utils/actionConsent';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
+import type { QuestPublicStructuredData } from '@/components/quests/runtime/questPublicStructuredData';
 import { normalizeQuestProgressSnapshot, snapshotFromServerProgress } from '@/utils/questProgressMerge';
 import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage';
 import { stringifyJsonLd } from '@/utils/jsonLd';
@@ -382,7 +383,14 @@ const ErrorState = ({
   );
 };
 
-export default function QuestByIdScreen({ route, publicProjection }: { route?: QuestLocaleRoute; publicProjection?: QuestServingProjection } = {}) {
+type QuestByIdScreenProps = {
+  route?: QuestLocaleRoute;
+  publicProjection?: QuestServingProjection;
+  /** Graph of the published SSR document (#3321): the screen keeps it, so one TouristTrip spans hydration. */
+  publicStructuredData?: QuestPublicStructuredData;
+};
+
+export default function QuestByIdScreen({ route, publicProjection, publicStructuredData }: QuestByIdScreenProps = {}) {
   const params = useLocalSearchParams<{
     city?: string | string[];
     questId?: string | string[];
@@ -649,19 +657,13 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
   const structuredDataTags = useMemo(() => {
     if (!usableBundle || offlinePrefix || !questId) return null;
 
-    const structuredData = createQuestDetailStructuredData({
+    const structuredData = publicStructuredData ?? createQuestDetailStructuredData({
       canonical,
       title: seo.title,
       crumbName: usableBundle.title,
       description: seo.description,
-      questId,
-      cityId: canonicalCityId || undefined,
       cityName: usableBundle.city?.name,
-      countryCode: usableBundle.city?.countryCode,
       coverUrl: seoImage,
-      stepsCount: countModel?.total,
-      lat: usableBundle.city?.lat,
-      lng: usableBundle.city?.lng,
       inLanguage: route?.locale ?? usableBundle.contentLocale ?? 'ru',
     });
 
@@ -672,7 +674,7 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
       </script>,
       ...alternates.map(({ locale, href }) => <link key={`quest-alternate-${locale}`} rel="alternate" hrefLang={locale} href={href} />),
     ];
-  }, [alternates, usableBundle, canonical, canonicalCityId, countModel?.total, offlinePrefix, questId, route?.locale, seo.description, seo.title, seoImage]);
+  }, [alternates, usableBundle, canonical, offlinePrefix, publicStructuredData, questId, route?.locale, seo.description, seo.title, seoImage]);
 
   const relatedTravelsSlot = useMemo(() => {
     if (!bundle) return null;

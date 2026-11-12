@@ -4,6 +4,7 @@ import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 import { Platform } from 'react-native';
 import { questPrivateSnapshot, questPublicLocales } from '../../fixtures/questPublicProjection';
+import { expectQuestEntityInSchemaDomain } from '../../fixtures/questEntitySchemaDomain';
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
 const path = require('node:path');
@@ -37,11 +38,11 @@ describe('client quest structured data', () => {
     const data = buildQuestPublicStructuredData(detail);
     expect(data['@context']).toBe('https://schema.org');
     expect(data['@graph'][0]).toMatchObject({
-      '@type': 'TouristTrip', inLanguage: locale, name: detail.page.heading,
+      '@type': ['TouristTrip', 'CreativeWork'], inLanguage: locale, name: detail.page.heading,
       description: detail.page.meta.description, url: detail.page.meta.canonical,
       mainEntityOfPage: detail.page.meta.canonical,
       touristType: detail.page.meta.tourist_type,
-      location: { '@type': 'City', name: detail.page.meta.city_name },
+      contentLocation: { '@type': 'City', name: detail.page.meta.city_name },
       provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },
     });
     // #3238: the quest name, never the branded `<title>`.
@@ -69,7 +70,7 @@ describe('client quest structured data', () => {
       const ssr = buildQuestPublicStructuredData(detailFor(locale))['@graph'][1].itemListElement[1].item;
       const runtime = createQuestDetailStructuredData({
         canonical: `https://metravel.by/${locale}/quests/7/fixture-city-walk`, title: 'T | Metravel',
-        description: 'D', questId: 'fixture-city-walk', inLanguage: locale,
+        description: 'D', inLanguage: locale,
       })['@graph'].find((node: { '@type'?: string }) => node['@type'] === 'BreadcrumbList') as { itemListElement: Array<{ item: string }> };
       return [ssr, runtime.itemListElement[1].item];
     };
@@ -113,7 +114,40 @@ describe('client quest structured data', () => {
       page: { ...detail.page, meta: { ...meta, image: null, city_name: null } },
     })['@graph'][0];
     expect(withoutMediaOrCity).toHaveProperty('image', []);
-    expect(withoutMediaOrCity).not.toHaveProperty('location');
+    expect(withoutMediaOrCity).not.toHaveProperty('contentLocation');
+  });
+
+  // #3321: the backend's trip_facts (#3317) become route facts of the one quest node.
+  it('carries duration, distance, start and free access of the published route into the one quest node', () => {
+    const detail = detailFor('ru');
+    const graph = buildQuestPublicStructuredData({ ...detail,
+      trip_facts: { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true } })['@graph'];
+    expect(graph.map((node) => node['@type'])).toEqual([['TouristTrip', 'CreativeWork'], 'BreadcrumbList']);
+    expect(graph[0]).toMatchObject({
+      timeRequired: 'PT120M', isAccessibleForFree: true,
+      potentialAction: { '@type': 'TravelAction', distance: '2303 m' },
+      tripOrigin: { '@type': 'Place', geo: { '@type': 'GeoCoordinates', latitude: 50.0541, longitude: 19.9354 } },
+    });
+    expect(graph[0]).not.toHaveProperty('distance');
+    expect(graph[0]).not.toHaveProperty('location');
+    expect(buildQuestPublicStructuredData({ ...detail,
+      trip_facts: { duration_min: null, distance_m: null, start: null, is_free: false } })['@graph'][0]).toMatchObject({ isAccessibleForFree: false });
+  });
+
+  it('omits every route fact the backend does not know instead of inventing one', () => {
+    const detail = detailFor('ru');
+    const partial = buildQuestPublicStructuredData({ ...detail,
+      trip_facts: { duration_min: null, distance_m: null, start: null, is_free: false } })['@graph'][0];
+    for (const key of ['timeRequired', 'potentialAction', 'tripOrigin']) expect(partial).not.toHaveProperty(key);
+    const unknown = buildQuestPublicStructuredData({ ...detail, trip_facts: null })['@graph'][0];
+    for (const key of ['timeRequired', 'potentialAction', 'tripOrigin', 'isAccessibleForFree']) expect(unknown).not.toHaveProperty(key);
+  });
+
+  it.each(questPublicLocales)('keeps every %s quest node property in the TouristTrip+CreativeWork domain', (locale) => {
+    const detail = detailFor(locale);
+    for (const trip_facts of [null, { duration_min: 120, distance_m: 2303, start: { lat: 50.0541, lng: 19.9354 }, is_free: true }]) {
+      expectQuestEntityInSchemaDomain(buildQuestPublicStructuredData({ ...detail, trip_facts })['@graph'][0] as Record<string, unknown>);
+    }
   });
 
   it('roundtrips hostile title text through the real JSON-LD script boundary', () => {

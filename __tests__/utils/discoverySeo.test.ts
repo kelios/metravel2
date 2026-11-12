@@ -3,6 +3,7 @@ import {
   createQuestCatalogStructuredData,
   createQuestDetailStructuredData,
 } from '@/utils/discoverySeo';
+import { expectQuestEntityInSchemaDomain } from '../fixtures/questEntitySchemaDomain';
 
 const WEBSITE_ID = 'https://metravel.by/#website';
 
@@ -10,7 +11,7 @@ type GraphNode = Record<string, unknown>;
 
 function expectPageScopedGraph(
   jsonLd: { '@graph': GraphNode[] },
-  expectedTypes: string[],
+  expectedTypes: Array<string | string[]>,
 ) {
   const graph = jsonLd['@graph'];
 
@@ -133,20 +134,15 @@ describe('discoverySeo', () => {
     expectPageScopedGraph(jsonLd, ['CollectionPage', 'ItemList', 'BreadcrumbList']);
   });
 
-  it('creates structured data for a quest detail page', () => {
+  it('creates the quest detail graph around the shared TouristTrip entity, without route facts it cannot know', () => {
     const jsonLd = createQuestDetailStructuredData({
       canonical: 'https://metravel.by/quests/minsk/minsk-cmok',
       title: 'Минский цмок | MeTravel',
       crumbName: 'Минский цмок',
       description: 'Маршрут и задания городского квеста.',
-      questId: 'minsk-cmok',
-      cityId: 'minsk',
       cityName: 'Минск',
-      countryCode: 'BY',
       coverUrl: 'https://cdn.metravel.by/quests/minsk.jpg',
-      stepsCount: 7,
-      lat: 53.9,
-      lng: 27.56,
+      inLanguage: 'ru',
     });
 
     expect(jsonLd['@graph']).toEqual(
@@ -154,12 +150,7 @@ describe('discoverySeo', () => {
         expect.objectContaining({
           '@type': 'WebPage',
           '@id': 'https://metravel.by/quests/minsk/minsk-cmok#webpage',
-        }),
-        expect.objectContaining({
-          '@type': 'CreativeWork',
-          '@id': 'https://metravel.by/quests/minsk/minsk-cmok#quest',
-          identifier: 'minsk:minsk-cmok',
-          name: 'Минский цмок',
+          mainEntity: { '@id': 'https://metravel.by/quests/minsk/minsk-cmok#quest' },
         }),
         expect.objectContaining({
           '@type': 'BreadcrumbList',
@@ -167,6 +158,19 @@ describe('discoverySeo', () => {
         }),
       ])
     );
-    expectPageScopedGraph(jsonLd, ['WebPage', 'CreativeWork', 'BreadcrumbList']);
+    expect(jsonLd['@graph'][1]).toEqual({
+      '@type': ['TouristTrip', 'CreativeWork'],
+      '@id': 'https://metravel.by/quests/minsk/minsk-cmok#quest',
+      name: 'Минский цмок',
+      description: 'Маршрут и задания городского квеста.',
+      url: 'https://metravel.by/quests/minsk/minsk-cmok',
+      mainEntityOfPage: 'https://metravel.by/quests/minsk/minsk-cmok',
+      inLanguage: 'ru',
+      provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },
+      image: ['https://cdn.metravel.by/quests/minsk.jpg'],
+      contentLocation: { '@type': 'City', name: 'Минск' },
+    });
+    expectQuestEntityInSchemaDomain(jsonLd['@graph'][1] as Record<string, unknown>);
+    expectPageScopedGraph(jsonLd, ['WebPage', ['TouristTrip', 'CreativeWork'], 'BreadcrumbList']);
   });
 });

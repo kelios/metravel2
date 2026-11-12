@@ -8,7 +8,7 @@ import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage';
-import { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicStructuredData';
+import { buildQuestPublicStructuredData, questPublicAlternates, type QuestPublicStructuredData } from './questPublicStructuredData';
 // Только тип из серверного loader'а: значение — из лёгкого модуля, граница #2738.
 import type { QuestRouteLoaderPayload } from './questRouteLoader';
 import { isQuestRouteNotFound } from './questRouteNotFound';
@@ -85,6 +85,11 @@ export type QuestPublicLoaderState = {
    * публикации: head другого языка интерфейса экран строит сам.
    */
   meta: { title: string; description: string; locale: string } | null;
+  /**
+   * JSON-LD опубликованной детали (#3321): экран после гидрации ставит ровно этот
+   * граф, чтобы краулер с JS видел тот же `TouristTrip`, что и в серверном HTML.
+   */
+  structuredData: QuestPublicStructuredData | null;
 };
 
 /**
@@ -110,10 +115,12 @@ export default function QuestPublicLoaderScreen({ children }: {
   const metaTitle = data?.page.meta.title ?? '';
   const metaDescription = data?.page.meta.description ?? '';
   const metaLocale = data?.locale ?? '';
+  const structuredData = useMemo(() => (data?.kind === 'detail' ? buildQuestPublicStructuredData(data) : null), [data]);
   const state = useMemo<QuestPublicLoaderState>(() => ({
     notFound,
     meta: metaTitle && metaDescription && metaLocale
       ? { title: metaTitle, description: metaDescription, locale: metaLocale } : null,
-  }), [metaDescription, metaLocale, metaTitle, notFound]);
+    structuredData,
+  }), [metaDescription, metaLocale, metaTitle, notFound, structuredData]);
   return data && serverMarkup ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{children(projection, state)}</>;
 }

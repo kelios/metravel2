@@ -1,5 +1,6 @@
 import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import { normalizeOgImageUrl } from '@/utils/seo';
+import { buildQuestTouristTrip } from '@/utils/questTouristTrip';
 import { translate } from '@/i18n';
 import { questCatalogPathForLocale } from '@/utils/questLocaleHubs';
 
@@ -9,6 +10,8 @@ export function questPublicAlternates(data: QuestPublicProjection): Record<strin
     ['x-default', 'https://metravel.by' + data.ru_source_path]]);
 }
 
+export type QuestPublicStructuredData = ReturnType<typeof buildQuestPublicStructuredData>;
+
 export function buildQuestPublicStructuredData(data: QuestPublicProjection) {
   const { page } = data;
   const breadcrumb = { '@type': 'BreadcrumbList', itemListElement: [
@@ -17,14 +20,11 @@ export function buildQuestPublicStructuredData(data: QuestPublicProjection) {
     { '@type': 'ListItem', position: 3, name: page.heading, item: page.meta.canonical },
   ] };
   // #3238: the trip is named by the quest itself (the H1), not by the branded `<title>`.
-  const entity = data.kind === 'detail' ? {
-    '@type': 'TouristTrip', name: page.heading, description: page.meta.description,
-    url: page.meta.canonical, mainEntityOfPage: page.meta.canonical, inLanguage: data.locale,
-    touristType: page.meta.tourist_type,
-    provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },
-    image: [normalizeOgImageUrl(page.meta.image)].filter(Boolean),
-    ...(page.meta.city_name ? { location: { '@type': 'City', name: page.meta.city_name } } : {}),
-  } : {
+  const entity = data.kind === 'detail' ? buildQuestTouristTrip({
+    name: page.heading, description: page.meta.description, url: page.meta.canonical, inLanguage: data.locale,
+    touristType: page.meta.tourist_type, image: normalizeOgImageUrl(page.meta.image),
+    cityName: page.meta.city_name, tripFacts: data.trip_facts,
+  }) : {
     '@type': 'ItemList', name: page.heading, url: page.meta.canonical,
     itemListElement: page.sections.flatMap((section) => section.items)
       .filter((item) => item.path && /^\/quests\/[^/]+\/[^/]+$/.test(item.path) && !item.path.startsWith('/quests/country/'))

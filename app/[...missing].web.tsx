@@ -16,6 +16,7 @@ import NotFoundScreen from './[...missing].tsx'
 import { notFoundRouteMetadata, staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 import type { ImmutableRequest } from 'expo-server'
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web'
+import type { QuestPublicStructuredData } from '@/components/quests/runtime/questPublicStructuredData'
 
 // Lazy on purpose (#2389): a static import made the whole quest screen part of
 // this catch-all's module graph, and the shared-chunk split then shipped it as
@@ -83,8 +84,8 @@ export default function QuestLocaleRouteScreen() {
     )
   }
   if (!route) return <NotFoundScreen />
-  const gameplay = (publicProjection?: QuestServingProjection) => <Suspense fallback={<QuestScreenFallback />}>
-    <QuestByIdScreen key={route.path} route={route} publicProjection={publicProjection} />
+  const gameplay = (publicProjection?: QuestServingProjection, publicStructuredData?: QuestPublicStructuredData) => <Suspense fallback={<QuestScreenFallback />}>
+    <QuestByIdScreen key={route.path} route={route} publicProjection={publicProjection} publicStructuredData={publicStructuredData} />
   </Suspense>
 
   // CustomHeader owns the top inset for this root Stack route, as on contact.
@@ -93,7 +94,7 @@ export default function QuestLocaleRouteScreen() {
       <View style={styles.root}>
         <CustomHeader />
         {process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-          ? <QuestPublicLoaderScreen>{(projection) => gameplay(projection ?? undefined)}</QuestPublicLoaderScreen>
+          ? <QuestPublicLoaderScreen>{(projection, state) => gameplay(projection ?? undefined, state.structuredData ?? undefined)}</QuestPublicLoaderScreen>
           : gameplay()}
       </View>
     </FreezeWhenBlurred>

@@ -109,13 +109,38 @@ it('hands the published landing head to the app screen and none on a not-found a
     payload = { ...city, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
       ru_source_path: city.canonical_path, versions: [] };
     await act(async () => { root.render(createElement(LoaderScreen, null, (_projection, state) => { seen.push(state); return null; })); });
-    expect(seen.at(-1)).toEqual({ notFound: false, meta: { title: meta.title, description: meta.description, locale: 'ru' } });
+    expect(seen.at(-1)).toEqual({ notFound: false, meta: { title: meta.title, description: meta.description, locale: 'ru' }, structuredData: null });
 
     payload = { kind: 'not_found', path: '/quests/missing', httpStatus: 404 };
     await act(async () => { root.render(createElement(LoaderScreen, null, (_projection, state) => { seen.push(state); return null; })); });
-    expect(seen.at(-1)).toEqual({ notFound: true, meta: null });
+    expect(seen.at(-1)).toEqual({ notFound: true, meta: null, structuredData: null });
   } finally {
     await act(async () => root.unmount());
     container.remove();
+  }
+});
+
+// #3321: the server document and the hydrated app screen carry one and the same graph.
+it('hands the app screen exactly the quest graph of the server document', async () => {
+  detailPayload();
+  payload = { ...payload, trip_facts: { duration_min: 120, distance_m: 2303, start: { lat: 50.05, lng: 19.93 }, is_free: true } };
+  const seen: Array<{ structuredData: unknown }> = [];
+  const LoaderScreen = Screen as unknown as React.ComponentType<{
+    children: (projection: unknown, state: { structuredData: unknown }) => React.ReactNode;
+  }>;
+  const tree = createElement(LoaderScreen, null, (_projection, state) => { seen.push(state); return null; });
+  const container = document.createElement('div');
+  container.innerHTML = renderToString(tree);
+  const scripts = container.querySelectorAll('script[type="application/ld+json"]');
+  expect(scripts).toHaveLength(1);
+  const serverGraph = JSON.parse(scripts[0].textContent ?? '');
+  expect(serverGraph['@graph'].map((node: { '@type': unknown }) => node['@type'])).toEqual([['TouristTrip', 'CreativeWork'], 'BreadcrumbList']);
+  expect(serverGraph['@graph'][0]).toMatchObject({ timeRequired: 'PT120M', potentialAction: { '@type': 'TravelAction', distance: '2303 m' }, isAccessibleForFree: true });
+  const root = createRoot(document.body.appendChild(document.createElement('div')));
+  try {
+    await act(async () => { root.render(tree); });
+    expect(JSON.parse(JSON.stringify(seen.at(-1)?.structuredData))).toEqual(serverGraph);
+  } finally {
+    await act(async () => root.unmount());
   }
 });

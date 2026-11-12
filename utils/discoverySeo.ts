@@ -1,6 +1,7 @@
 import { translate as i18nT } from '@/i18n'
 import { getActiveLocaleDefinition } from '@/i18n/format'
 import { questCatalogPathForLocale } from '@/utils/questLocaleHubs'
+import { buildQuestTouristTrip } from '@/utils/questTouristTrip'
 const SITE_URL = 'https://metravel.by';
 // The static HTML shell owns the WebSite/Organization declarations. Discovery
 // payloads only link to that shared identity and must not re-declare it.
@@ -37,15 +38,9 @@ type QuestDetailInput = {
   /** Plain quest name for the last crumb and the quest entity; `title` carries the « | Metravel» suffix. */
   crumbName?: string;
   description: string;
-  questId: string;
   inLanguage?: string;
-  cityId?: string;
   cityName?: string | null;
-  countryCode?: string | null;
   coverUrl?: string | null;
-  stepsCount?: number;
-  lat?: number | null;
-  lng?: number | null;
 };
 
 function toAbsoluteUrl(pathOrUrl?: string | null): string | null {
@@ -236,9 +231,10 @@ export function createQuestCatalogStructuredData({
   };
 }
 
+/** Gameplay-screen graph when no published projection is at hand (dev, offline): the same entity, no route facts. */
 export function createQuestDetailStructuredData(input: QuestDetailInput) {
   const breadcrumbId = `${input.canonical}#breadcrumb`;
-  const creativeWorkId = `${input.canonical}#quest`;
+  const questEntityId = `${input.canonical}#quest`;
   const breadcrumb = buildBreadcrumbList(
     [
       { name: i18nT('seoStatic:structuredData.home'), item: `${SITE_URL}/` },
@@ -247,9 +243,7 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
     ],
     breadcrumbId
   );
-
-  const lat = toFiniteNumber(input.lat);
-  const lng = toFiniteNumber(input.lng);
+  const inLanguage = input.inLanguage ?? getActiveLocaleDefinition().htmlLang;
 
   return {
     '@context': 'https://schema.org',
@@ -260,51 +254,22 @@ export function createQuestDetailStructuredData(input: QuestDetailInput) {
         url: input.canonical,
         name: input.title,
         description: input.description,
-        inLanguage: input.inLanguage ?? getActiveLocaleDefinition().htmlLang,
+        inLanguage,
         isPartOf: { '@id': WEBSITE_ID },
         breadcrumb: { '@id': breadcrumbId },
-        mainEntity: { '@id': creativeWorkId },
+        mainEntity: { '@id': questEntityId },
       },
       {
-        '@type': 'CreativeWork',
-        '@id': creativeWorkId,
-        // #3238: the quest is named by itself; the branded `<title>` names the page.
-        name: input.crumbName || input.title,
-        description: input.description,
-        url: input.canonical,
-        inLanguage: input.inLanguage ?? getActiveLocaleDefinition().htmlLang,
-        ...(input.coverUrl ? { image: [toAbsoluteUrl(input.coverUrl)] } : null),
-        ...(input.stepsCount ? { numberOfItems: input.stepsCount } : null),
-        ...(input.cityName || input.countryCode || lat != null || lng != null
-          ? {
-              contentLocation: {
-                '@type': 'Place',
-                ...(input.cityName ? { name: input.cityName } : null),
-                ...(input.countryCode
-                  ? {
-                      address: {
-                        '@type': 'PostalAddress',
-                        addressCountry: input.countryCode,
-                      },
-                    }
-                  : null),
-                ...(lat != null && lng != null
-                  ? {
-                      geo: {
-                        '@type': 'GeoCoordinates',
-                        latitude: lat,
-                        longitude: lng,
-                      },
-                    }
-                  : null),
-              },
-            }
-          : null),
-        ...(input.cityId || input.questId
-          ? {
-              identifier: `${input.cityId || 'quest'}:${input.questId}`,
-            }
-          : null),
+        ...buildQuestTouristTrip({
+          // #3238: the quest is named by itself; the branded `<title>` names the page.
+          name: input.crumbName || input.title,
+          description: input.description,
+          url: input.canonical,
+          inLanguage,
+          image: toAbsoluteUrl(input.coverUrl),
+          cityName: input.cityName,
+        }),
+        '@id': questEntityId,
       },
       breadcrumb,
     ],

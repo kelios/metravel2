@@ -1,3 +1,4 @@
+import { isBikeQuest, isLoopQuest } from '@/utils/questAudience';
 import { enabledQuestTags, normalizeQuestTags, questTagNames } from '@/utils/questTags';
 
 // Quest.tags is JSONField(default=list) on the backend: untouched rows keep a slug
@@ -33,6 +34,16 @@ describe('questTagNames', () => {
     expect(questTagNames(null)).toBeUndefined();
     expect(questTagNames(undefined)).toBeUndefined();
     expect(questTagNames(['kids', 5])).toEqual([]);
+  });
+
+  // #3341: a switched-off `{loop: false}` must not close the player route — the
+  // backend's trip_facts.distance_m reads the same tag as an open route (#3317).
+  it('drops switched-off map entries, so a rule over tags never sees them', () => {
+    expect(questTagNames({ kids: true, loop: false, bike: false })).toEqual(['kids']);
+    expect(isLoopQuest(questTagNames({ loop: false }))).toBe(false);
+    expect(isBikeQuest(questTagNames({ bike: false }))).toBe(false);
+    expect(isLoopQuest(questTagNames({ loop: true }))).toBe(true);
+    expect(isLoopQuest(questTagNames(['loop']))).toBe(true);
   });
 });
 

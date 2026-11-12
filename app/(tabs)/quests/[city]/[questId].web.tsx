@@ -1,12 +1,16 @@
 import type { ImmutableRequest } from 'expo-server';
 import LegacyQuestScreen from './[questId].tsx';
 import QuestPublicLoaderScreen from '@/components/quests/runtime/QuestPublicLoaderScreen.web';
+import type { QuestPublicStructuredData } from '@/components/quests/runtime/questPublicStructuredData';
 import type { QuestLocaleRoute, QuestServingProjection } from '@/utils/questLocaleRouting';
 
-export default function QuestDetailRoute({ route, publicProjection }: { route?: QuestLocaleRoute; publicProjection?: QuestServingProjection } = {}) {
-  if (route || publicProjection) return <LegacyQuestScreen route={route} publicProjection={publicProjection} />;
+type QuestDetailRouteProps = { route?: QuestLocaleRoute; publicProjection?: QuestServingProjection; publicStructuredData?: QuestPublicStructuredData };
+
+export default function QuestDetailRoute({ route, publicProjection, publicStructuredData }: QuestDetailRouteProps = {}) {
+  if (route || publicProjection) return <LegacyQuestScreen route={route} publicProjection={publicProjection} publicStructuredData={publicStructuredData} />;
   return process.env.EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR === 'true'
-    ? <QuestPublicLoaderScreen>{(projection) => <LegacyQuestScreen publicProjection={projection ?? undefined} />}</QuestPublicLoaderScreen>
+    ? <QuestPublicLoaderScreen>{(projection, state) => <LegacyQuestScreen publicProjection={projection ?? undefined}
+      publicStructuredData={state.structuredData ?? undefined} />}</QuestPublicLoaderScreen>
     : <LegacyQuestScreen />;
 }
 

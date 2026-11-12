@@ -15,15 +15,15 @@ function normalizeQuestTags(value) {
   return Object.fromEntries(Object.entries(value).map(([tag, enabled]) => [tag, Boolean(enabled)]));
 }
 
-/** Tag names as the app reads `meta.tags`: absent → undefined, unknown shape → []. */
-function questTagNames(value) {
-  if (value == null) return undefined;
-  return Object.keys(normalizeQuestTags(value) ?? {});
-}
-
 /** Enabled tag slugs — what a rule over tags reads: a `{tag: false}` entry, absent tags and unknown shapes give none. */
 function enabledQuestTags(value) {
   return Object.entries(normalizeQuestTags(value) ?? {}).filter(([, enabled]) => enabled).map(([tag]) => tag);
+}
+
+/** Tags as the app reads `meta.tags`: the enabled slugs, with absent kept distinct as undefined. */
+function questTagNames(value) {
+  if (value == null) return undefined;
+  return enabledQuestTags(value);
 }
 
 module.exports = { normalizeQuestTags, questTagNames, enabledQuestTags };

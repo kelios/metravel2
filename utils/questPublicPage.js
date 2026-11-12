@@ -45,6 +45,24 @@ function safePublicImageUrl(value) {
   } catch { return false; }
 }
 
+const positiveInteger = (value) => value === null || (Number.isSafeInteger(value) && value > 0);
+const coordinate = (value, bound) => typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= bound;
+
+/**
+ * Route facts of a published detail (backend `web_snapshot.trip_facts`, #3317): absent
+ * is unknown (`null`), a present value must keep the backend's exact shape — `undefined` on drift.
+ */
+function readTripFacts(value) {
+  if (value == null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)
+      || Object.keys(value).sort().join() !== 'distance_m,duration_min,is_free,start') return undefined;
+  const { duration_min: durationMin, distance_m: distanceM, start, is_free: isFree } = value;
+  if (!positiveInteger(durationMin) || !positiveInteger(distanceM) || typeof isFree !== 'boolean'
+      || (start !== null && (!start || typeof start !== 'object' || Object.keys(start).sort().join() !== 'lat,lng'
+        || !coordinate(start.lat, 90) || !coordinate(start.lng, 180)))) return undefined;
+  return { duration_min: durationMin, distance_m: distanceM, start: start && { lat: start.lat, lng: start.lng }, is_free: isFree };
+}
+
 /** Reject schema drift and private gameplay fields before serializing loader data. */
 function validateQuestPublicProjection(raw, route) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !route
@@ -65,6 +83,8 @@ function validateQuestPublicProjection(raw, route) {
   } else if (!parseQuestPublicRoute(raw.canonical_path) || parseQuestPublicRoute(raw.canonical_path).kind !== route.kind || raw.locale !== 'ru'
       || raw.quest_slug != null || (route.kind === 'country' && raw.city_id != null)
       || (raw.ru_source_path != null && raw.ru_source_path !== raw.canonical_path)) return null;
+  const tripFacts = readTripFacts(raw.trip_facts);
+  if (tripFacts === undefined || (route.kind !== 'detail' && tripFacts !== null)) return null;
   if (!Array.isArray(raw.versions) || raw.versions.length > QUEST_LOCALES.length) return null;
   const versions = [];
   for (const version of raw.versions) {
@@ -112,7 +132,7 @@ function validateQuestPublicProjection(raw, route) {
     publication_id: raw.publication_id, corpus_revision: raw.corpus_revision,
     source_revision: raw.source_revision, content_revision: raw.content_revision,
     canonical_path: raw.canonical_path, ru_source_path: raw.ru_source_path ?? null,
-    versions, quality: { indexable: quality.indexable, word_count: quality.word_count, own_fivegram_ratio: quality.own_fivegram_ratio },
+    trip_facts: tripFacts, versions, quality: { indexable: quality.indexable, word_count: quality.word_count, own_fivegram_ratio: quality.own_fivegram_ratio },
     page: { meta: { title: page.meta.title, description: page.meta.description, canonical: page.meta.canonical,
       image: page.meta.image ?? null,
       tourist_type: route.kind === 'detail' ? page.meta.tourist_type : null, city_name: route.kind === 'detail' ? page.meta.city_name : null },
