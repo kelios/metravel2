@@ -20,6 +20,56 @@ const getErrorStatus = (error: unknown): number | undefined => {
   return undefined;
 };
 
+type CommentPage = { results: TravelComment[]; next: string | null };
+
+const isComment = (value: unknown): value is TravelComment => {
+  if (!value || typeof value !== 'object') return false;
+  const comment = value as Record<string, unknown>;
+  return typeof comment.id === 'number' && typeof comment.thread === 'number'
+    && (comment.sub_thread === null || typeof comment.sub_thread === 'number')
+    && typeof comment.user === 'number' && typeof comment.text === 'string'
+    && (comment.created_at === null || typeof comment.created_at === 'string')
+    && (comment.updated_at === null || typeof comment.updated_at === 'string')
+    && typeof comment.likes_count === 'number';
+};
+
+const readCommentPage = (data: unknown): CommentPage => {
+  if (!data || typeof data !== 'object' || !('results' in data) || !('next' in data)
+    || !Array.isArray(data.results) || !data.results.every(isComment)
+    || (data.next !== null && (typeof data.next !== 'string' || !data.next.trim()))) {
+    throw new Error('Invalid comments page');
+  }
+  return { results: data.results, next: data.next as string | null };
+};
+
+const readCommentList = async (lookup: string, expandSubThreads = false): Promise<TravelComment[]> => {
+  const path = `/travel-comments/?${lookup}${expandSubThreads ? '&expand=sub_threads' : '&pagination=cursor'}`;
+  let initial: unknown;
+  try {
+    initial = await apiClient.get<unknown>(path);
+  } catch (error) {
+    const status = getErrorStatus(error);
+    // Only an initial missing/inaccessible discussion is an empty state.
+    if (status === 400 || status === 404 || status === 401 || status === 403) return [];
+    throw error;
+  }
+  if (Array.isArray(initial)) {
+    if (!initial.every(isComment)) throw new Error('Invalid comments response');
+    return initial;
+  }
+  if (expandSubThreads) throw new Error('Invalid expanded comments response');
+  let page = readCommentPage(initial);
+  const comments = [...page.results];
+  const requestedCursors = new Set<string>();
+  while (page.next !== null) {
+    if (requestedCursors.has(page.next)) throw new Error('Repeated comments cursor');
+    requestedCursors.add(page.next);
+    page = readCommentPage(await apiClient.get<unknown>(`${path}&cursor=${encodeURIComponent(page.next)}`));
+    comments.push(...page.results);
+  }
+  return comments;
+};
+
 export const commentsApi = {
   getMainThread: async (travelId: number): Promise<TravelCommentThread | null> => {
     try {
@@ -54,53 +104,14 @@ export const commentsApi = {
     threadId: number,
     options?: { expandSubThreads?: boolean }
   ): Promise<TravelComment[]> => {
-    try {
-      const expand = options?.expandSubThreads ? '&expand=sub_threads' : '';
-      return await apiClient.get<TravelComment[]>(
-        `/travel-comments/?thread_id=${threadId}${expand}`
-      );
-    } catch (error) {
-      const status = getErrorStatus(error);
-      // Some backends return 400/404 for an empty or missing thread instead of [].
-      if (status === 400 || status === 404) {
-        return [];
-      }
-      // Some deployments protect comments behind auth; the read UI should degrade
-      // to an empty discussion instead of showing a hard unavailable state.
-      if (status === 401 || status === 403) {
-        return [];
-      }
-      throw error;
-    }
+    return readCommentList(`thread_id=${threadId}`, options?.expandSubThreads);
   },
 
   getCommentsByTravel: async (
     travelId: number,
     options?: { expandSubThreads?: boolean }
   ): Promise<TravelComment[]> => {
-    try {
-      const expand = options?.expandSubThreads ? '&expand=sub_threads' : '';
-      return await apiClient.get<TravelComment[]>(
-        `/travel-comments/?travel_id=${travelId}${expand}`
-      );
-    } catch (error) {
-      const status = getErrorStatus(error);
-      // Some backends return 404 for an empty travel thread instead of [].
-      if (status === 404) {
-        return [];
-      }
-      // After E2E runs / DB resets the "main thread" can be missing, and some backends
-      // respond with 400 for travel_id lookups instead of returning an empty list.
-      // Treat this as an empty state so comments remain publicly readable.
-      if (status === 400) {
-        return [];
-      }
-      // Some deployments protect comments behind auth; treat as empty.
-      if (status === 401 || status === 403) {
-        return [];
-      }
-      throw error;
-    }
+    return readCommentList(`travel_id=${travelId}`, options?.expandSubThreads);
   },
 
   getTravelComments: async (params: {
@@ -154,7 +165,7 @@ export const commentsApi = {
     while (queue.length > 0) {
       const batch = queue.splice(0, 5); // fetch up to 5 sub-threads in parallel
       const results = await Promise.all(
-        batch.map((stId) => commentsApi.getComments(stId).catch(() => [] as TravelComment[]))
+        batch.map((stId) => commentsApi.getComments(stId))
       );
       for (const subComments of results) {
         for (const c of subComments) {

@@ -85,7 +85,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getComments(1);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?thread_id=1'
+        '/travel-comments/?thread_id=1&pagination=cursor'
       );
       expect(result).toEqual(mockComments);
     });
@@ -96,7 +96,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getComments(1);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?thread_id=1'
+        '/travel-comments/?thread_id=1&pagination=cursor'
       );
       expect(result).toEqual([]);
     });
@@ -107,7 +107,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getComments(1);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?thread_id=1'
+        '/travel-comments/?thread_id=1&pagination=cursor'
       );
       expect(result).toEqual([]);
     });
@@ -118,7 +118,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getComments(1);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?thread_id=1'
+        '/travel-comments/?thread_id=1&pagination=cursor'
       );
       expect(result).toEqual([]);
     });
@@ -144,7 +144,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getCommentsByTravel(123);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?travel_id=123'
+        '/travel-comments/?travel_id=123&pagination=cursor'
       );
       expect(result).toEqual(mockComments);
     });
@@ -155,7 +155,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getCommentsByTravel(123);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?travel_id=123'
+        '/travel-comments/?travel_id=123&pagination=cursor'
       );
       expect(result).toEqual([]);
     });
@@ -166,9 +166,109 @@ describe('Comments API', () => {
       const result = await commentsApi.getCommentsByTravel(123);
 
       expect(mockedApiClient.get).toHaveBeenCalledWith(
-        '/travel-comments/?travel_id=123'
+        '/travel-comments/?travel_id=123&pagination=cursor'
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('cursor comment lists', () => {
+    const comments: TravelComment[] = Array.from({ length: 53 }, (_, index) => ({
+      id: index + 1, thread: 9, sub_thread: null, user: 1,
+      text: `Comment ${index + 1}`, created_at: '2024-01-01T00:00:00Z',
+      updated_at: null, likes_count: 0,
+    }));
+
+    it.each([
+      ['thread_id=9', () => commentsApi.getComments(9)],
+      ['travel_id=123', () => commentsApi.getCommentsByTravel(123)],
+    ] as const)('reads every page with the original %s lookup', async (lookup, read) => {
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: comments.slice(0, 50), next: 'signed/+?=A' })
+        .mockResolvedValueOnce({ results: comments.slice(50), next: null });
+
+      expect(await read()).toEqual(comments);
+      expect(mockedApiClient.get.mock.calls).toEqual([
+        [`/travel-comments/?${lookup}&pagination=cursor`],
+        [`/travel-comments/?${lookup}&pagination=cursor&cursor=signed%2F%2B%3F%3DA`],
+      ]);
+    });
+
+    it('returns an empty terminal page without extra requests', async () => {
+      mockedApiClient.get.mockResolvedValueOnce({ results: [], next: null });
+      expect(await commentsApi.getComments(9)).toEqual([]);
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([400, 401, 403, 404, 422, 500])('propagates continuation HTTP %s instead of returning partial comments', async (status) => {
+      const error = { response: { status } };
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: comments.slice(0, 50), next: 'second' })
+        .mockRejectedValueOnce(error);
+      await expect(commentsApi.getComments(9)).rejects.toEqual(error);
+    });
+
+    it.each([
+      null, {}, { results: [] }, { results: [], next: '' },
+      { results: [], next: 7 }, { results: null, next: null },
+      { results: [null], next: null }, { results: [{ id: 1 }], next: null },
+    ])('rejects a malformed first page: %j', async (response) => {
+      mockedApiClient.get.mockResolvedValueOnce(response);
+      await expect(commentsApi.getComments(9)).rejects.toThrow('Invalid comments page');
+    });
+
+    it('rejects a legacy array in a continuation instead of accepting partial data', async () => {
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: comments.slice(0, 50), next: 'second' })
+        .mockResolvedValueOnce(comments.slice(50));
+      await expect(commentsApi.getComments(9)).rejects.toThrow('Invalid comments page');
+    });
+
+    it('rejects malformed rows in a continuation instead of caching them', async () => {
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: comments.slice(0, 50), next: 'second' })
+        .mockResolvedValueOnce({ results: [null], next: null });
+      await expect(commentsApi.getComments(9)).rejects.toThrow('Invalid comments page');
+    });
+
+    it('rejects malformed rows in a legacy array', async () => {
+      mockedApiClient.get.mockResolvedValueOnce([null]);
+      await expect(commentsApi.getComments(9)).rejects.toThrow('Invalid comments response');
+    });
+
+    it('preserves the explicit legacy list limit error', async () => {
+      const error = { status: 422, data: { code: 'COMMENT_LIST_LIMIT_EXCEEDED', max_items: 200 } };
+      mockedApiClient.get.mockRejectedValueOnce(error);
+      await expect(commentsApi.getComments(9)).rejects.toEqual(error);
+    });
+
+    it('rejects cursor cycles before repeating any request', async () => {
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: [], next: 'a' })
+        .mockResolvedValueOnce({ results: [], next: 'b' })
+        .mockResolvedValueOnce({ results: [], next: 'a' });
+      await expect(commentsApi.getComments(9)).rejects.toThrow('Repeated comments cursor');
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps continuation strings on the original endpoint', async () => {
+      const token = 'https://other.example/comments?thread_id=99';
+      mockedApiClient.get
+        .mockResolvedValueOnce({ results: [], next: token })
+        .mockResolvedValueOnce({ results: [], next: null });
+      await commentsApi.getComments(9);
+      expect(mockedApiClient.get).toHaveBeenLastCalledWith(
+        `/travel-comments/?thread_id=9&pagination=cursor&cursor=${encodeURIComponent(token)}`,
+      );
+    });
+
+    it('does not hide a child-thread continuation failure in the legacy conversation fallback', async () => {
+      const error = { response: { status: 404 } };
+      mockedApiClient.get
+        .mockResolvedValueOnce([{ ...comments[0], sub_thread: 50 }])
+        .mockResolvedValueOnce({ results: [comments[1]], next: 'child-next' })
+        .mockRejectedValueOnce(error);
+      await expect(commentsApi.getTravelComments({ travelId: 123, threadId: 9 })).rejects.toEqual(error);
     });
   });
 
@@ -229,7 +329,7 @@ describe('Comments API', () => {
       const result = await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
 
       expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9&expand=sub_threads');
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=50');
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=50&pagination=cursor');
       expect(result).toHaveLength(2);
       expect(result[0].text).toBe('Root');
       expect(result[1].text).toBe('Reply');
