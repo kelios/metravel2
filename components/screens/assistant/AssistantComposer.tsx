@@ -10,7 +10,9 @@ import { translate as i18nT } from '@/i18n'
 import { ASSISTANT_INPUT_TEST_ID } from '@/utils/aiAssistantConfig'
 
 import type { AssistantStyles } from './assistantStyles'
+import { AssistantVoiceButton, AssistantVoiceStatus } from './AssistantVoiceButton'
 import type { AssistantInputError } from './useAssistantChat'
+import { useAssistantVoiceInput } from './useAssistantVoiceInput'
 
 type AssistantComposerProps = {
   styles: AssistantStyles
@@ -44,6 +46,9 @@ function AssistantComposerComponent({
   usePrehydrationInputValue(ASSISTANT_INPUT_TEST_ID, draft, onChangeDraft)
   const limitReached = remaining !== null && remaining <= 0
   const canSend = !busy && !limitReached && !offTopicBlocked && draft.trim().length > 0
+  // Голосовой ввод (#3351): диктовка дописывает фразу в черновик, отправляет вопрос человек.
+  const voiceDisabled = busy || offTopicBlocked || limitReached
+  const voice = useAssistantVoiceInput({ draft, onChangeDraft, disabled: voiceDisabled })
 
   const send = useCallback(() => {
     if (!canSend) return
@@ -101,6 +106,9 @@ function AssistantComposerComponent({
           style={[styles.input, inputError ? styles.inputError : null, focused ? { borderColor: colors.primary } : null]}
           testID={ASSISTANT_INPUT_TEST_ID}
         />
+        {voice.available ? (
+          <AssistantVoiceButton colors={colors} listening={voice.listening} disabled={voiceDisabled} onPress={voice.toggle} />
+        ) : null}
         {busy ? (
           <UIButton
             iconOnly
@@ -124,6 +132,11 @@ function AssistantComposerComponent({
           />
         )}
       </View>
+      {voice.listening || voice.notice ? (
+        <View style={styles.composerMeta}>
+          <AssistantVoiceStatus styles={styles} listening={voice.listening} interimText={voice.interimText} notice={voice.notice} />
+        </View>
+      ) : null}
       <View style={styles.composerMeta}>
         {metaText ? (
           <Text style={metaIsError ? styles.composerErrorText : styles.composerMetaText} testID="assistant-composer-meta">

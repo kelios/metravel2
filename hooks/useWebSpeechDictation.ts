@@ -44,6 +44,30 @@ type SpeechRecognitionWindow = Window & {
   webkitSpeechRecognition?: SpeechRecognitionCtor;
 };
 
+/** Машинный код ошибки распознавания (`SpeechRecognitionErrorEvent.error`); прочее — `'unknown'`. */
+export type WebSpeechErrorCode =
+  | 'not-allowed'
+  | 'service-not-allowed'
+  | 'language-not-supported'
+  | 'network'
+  | 'no-speech'
+  | 'aborted'
+  | 'audio-capture'
+  | 'unknown';
+
+const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set<WebSpeechErrorCode>([
+  'not-allowed',
+  'service-not-allowed',
+  'language-not-supported',
+  'network',
+  'no-speech',
+  'aborted',
+  'audio-capture',
+]);
+
+const toErrorCode = (value: unknown): WebSpeechErrorCode =>
+  typeof value === 'string' && KNOWN_ERROR_CODES.has(value) ? (value as WebSpeechErrorCode) : 'unknown';
+
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
@@ -61,6 +85,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<WebSpeechErrorCode | null>(null);
 
   const lang = options?.lang ?? getFormatLocale();
   const continuous = options?.continuous ?? true;
@@ -116,6 +141,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       const message = typeof event.error === 'string' ? event.error : i18nT('shared:hooks.useWebSpeechDictation.oshibka_raspoznavaniya_rechi_caa0cc14');
       runningRef.current = false;
       setError(message);
+      setErrorCode(toErrorCode(event.error));
       setIsListening(false);
     };
 
@@ -150,6 +176,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       );
     }
     setError(null);
+    setErrorCode(null);
     setInterimText('');
     try {
       recognitionRef.current.start();
@@ -180,8 +207,9 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     isListening,
     interimText,
     error,
+    errorCode,
     start,
     stop,
     bindFinalTextHandler,
-  }), [isSupported, isListening, interimText, error, start, stop, bindFinalTextHandler]);
+  }), [isSupported, isListening, interimText, error, errorCode, start, stop, bindFinalTextHandler]);
 }
