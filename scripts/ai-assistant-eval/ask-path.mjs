@@ -66,10 +66,25 @@ const NO_MATERIAL_REASON = 'no_material'
 
 const shownTextsCache = new Map()
 
+/**
+ * Словари экрана по локалям. Пути перечислены явно: страж `guard:unimported-modules` не видит модуль за
+ * собранной строкой (`locales/${locale}/…`), а новая локаль без строки здесь должна ронять прогон, а не
+ * молча терять показанный текст.
+ */
+const SHOWN_TEXT_RESOURCES = {
+  ru: () => import('../../i18n/locales/ru/static/ai_assist_static.ts'),
+  be: () => import('../../i18n/locales/be/static/ai_assist_static.ts'),
+  uk: () => import('../../i18n/locales/uk/static/ai_assist_static.ts'),
+  pl: () => import('../../i18n/locales/pl/static/ai_assist_static.ts'),
+  en: () => import('../../i18n/locales/en/static/ai_assist_static.ts'),
+}
+
 /** Строки экрана для хода без текста модели — из ресурсов интерфейса на локали хода. */
 export async function loadShownTexts(locale) {
   if (!shownTextsCache.has(locale)) {
-    const { aiAssistStaticResources: resources } = await import(`../../i18n/locales/${locale}/static/ai_assist_static.ts`)
+    const load = SHOWN_TEXT_RESOURCES[locale]
+    if (!load) throw new Error(`путь службы: для локали ${locale} нет словаря экрана (SHOWN_TEXT_RESOURCES)`)
+    const { aiAssistStaticResources: resources } = await load()
     const texts = Object.fromEntries(Object.entries(SHOWN_TEXT_KEYS).map(([name, key]) => [name, resources[key]]))
     for (const [name, text] of Object.entries(texts)) if (typeof text !== 'string' || !text.trim()) throw new Error(`путь службы: в локали ${locale} нет строки ${SHOWN_TEXT_KEYS[name]}`)
     shownTextsCache.set(locale, texts)
