@@ -119,11 +119,18 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       '#!/bin/bash',
       'action="$1"',
       'echo "$action ${2:-}" >> "$PUBLICATION_CALLS"',
+      'echo "$*" >> "$PUBLICATION_CALLS.args"',
+      // `capability` as a signal point is the read of the live checks, after the
+      // switch; `capability-before-switch` is the read that precedes it (#3334).
+      'point="$action"',
+      'if [[ "$action" == capability && ! -f "$PUBLICATION_CALLS.publish" ]]; then point=capability-before-switch; fi',
       'if [[ "$action" == publish-code ]]; then echo "$*" > "$PUBLICATION_CALLS.publish"; fi',
-      'if [[ "$action" == "${STUB_SIGNAL_ON:-}" ]]; then kill -TERM "$HARNESS_PID"; sleep 0.3; fi',
+      'if [[ "$point" == "${STUB_SIGNAL_ON:-}" ]]; then kill -TERM "$HARNESS_PID"; sleep 0.3; fi',
       'if [[ "$action" == publish-code && -n "${STUB_PUBLISH_EXIT:-}" ]]; then exit "$STUB_PUBLISH_EXIT"; fi',
+      'if [[ "$action" == finalize-code && -n "${STUB_FINALIZE_EXIT:-}" ]]; then exit "$STUB_FINALIZE_EXIT"; fi',
+      'if [[ "$action" == rollback-code && -n "${STUB_ROLLBACK_EXIT:-}" ]]; then exit "$STUB_ROLLBACK_EXIT"; fi',
+      'if [[ " ${STUB_FAIL:-} " == *" $point "* ]]; then exit 1; fi',
       'if [[ "$action" == capability ]]; then printf \'%s\\n\' "$STUB_CAPABILITY"; fi',
-      'if [[ " ${STUB_FAIL:-} " == *" $action "* ]]; then exit 1; fi',
       'exit 0',
     ])
     fs.mkdirSync(path.join(work, 'scripts/lib'), { recursive: true })
@@ -171,18 +178,21 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
         cwd: work,
         env: {
           PUBLICATION_CALLS: calls, STUB_CAPABILITY: CAPABILITY, STUB_SIGNAL_ON: '', STUB_FAIL: '',
-          STUB_EXPECT_CURRENT: LIVE_SHA, STUB_GUARD_EXIT: '', STUB_PUBLISH_EXIT: '', ...env,
+          STUB_EXPECT_CURRENT: LIVE_SHA, STUB_GUARD_EXIT: '', STUB_PUBLISH_EXIT: '', STUB_FINALIZE_EXIT: '',
+          STUB_ROLLBACK_EXIT: '', ...env,
         },
       },
     )
   const actions = () => fs.readFileSync(calls, 'utf8').trim().split('\n').map((line) => line.trim())
   const publishCall = () => fs.readFileSync(`${calls}.publish`, 'utf8').trim()
+  const calledWith = (action: string) => fs.readFileSync(`${calls}.args`, 'utf8').trim().split('\n')
+    .filter((line) => line.startsWith(`${action} `))
 
   it('publishes, verifies and finalizes without a rollback on the ordinary path', () => {
     const result = publish()
 
     expect(result.status).toBe(0)
-    expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, 'capability', `finalize-code ${SHA}`])
+    expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`, 'capability', `finalize-code ${SHA}`])
     expect(result.stdout).toContain('PUBLISHED')
     expect(result.stdout).not.toContain('не подтверждён')
   })
@@ -194,7 +204,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     const result = publish({ STUB_SIGNAL_ON: 'capability' })
 
     expect(result.status).toBe(143)
-    expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, 'capability', `rollback-code ${SHA}`])
+    expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`, 'capability', `rollback-code ${SHA}`])
     expect(result.stdout).toContain(`Релиз ${SHA.slice(0, 9)} переключён, но не подтверждён`)
     expect(result.stdout).toContain('✅ Возврат выполнен')
     expect(result.stdout).not.toContain('PUBLISHED')
@@ -204,7 +214,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     const result = publish({ STUB_SIGNAL_ON: 'publish-code' })
 
     expect(result.status).toBe(143)
-    expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, `rollback-code ${SHA}`])
+    expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`, `rollback-code ${SHA}`])
   })
 
   it('rolls a failed live check back exactly once', () => {
@@ -230,7 +240,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
     const result = publish({ STUB_SIGNAL_ON: 'finalize-code' })
 
     expect(result.status).toBe(143)
-    expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, 'capability', `finalize-code ${SHA}`])
+    expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`, 'capability', `finalize-code ${SHA}`])
     expect(result.stdout).toContain(`релиз ${SHA.slice(0, 9)} уже принят, прод не возвращается`)
     expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
     expect(result.stdout).not.toContain('переключён, но не подтверждён')
@@ -280,7 +290,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_GUARD_EXIT: '75' })
 
       expect(result.status).toBe(75)
-      expect(actions()).toEqual([`stage ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability'])
       expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} остановлен до переключения: нас обогнали`)
       expect(result.stdout).toContain('ничего не возвращалось')
       expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
@@ -291,7 +301,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_GUARD_EXIT: '1' })
 
       expect(result.status).toBe(1)
-      expect(actions()).toEqual([`stage ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability'])
       expect(result.stdout).toContain('Живая ревизия перед публикацией не сверена')
     })
 
@@ -302,7 +312,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_PUBLISH_EXIT: '75' })
 
       expect(result.status).toBe(75)
-      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`])
       expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} остановлен на переключении: нас обогнали`)
       expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
       expect(result.stdout).not.toContain('переключён, но не подтверждён')
@@ -313,7 +323,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_PUBLISH_EXIT: '75', STUB_SIGNAL_ON: 'publish-code' })
 
       expect(result.status).toBe(143)
-      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`])
       expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
       expect(result.stdout).not.toContain('переключён, но не подтверждён')
     })
@@ -324,7 +334,7 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_PUBLISH_EXIT: '78' })
 
       expect(result.status).toBe(1)
-      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`])
       expect(result.stdout).toContain('помощник хоста не принял --expect-current')
       expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
     })
@@ -334,7 +344,133 @@ describe('build-prod.sh unconfirmed release (#3210)', () => {
       const result = publish({ STUB_PUBLISH_EXIT: code })
 
       expect(result.status).toBe(1)
-      expect(actions()).toEqual([`stage ${SHA}`, `publish-code ${SHA}`, `rollback-code ${SHA}`])
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`, `rollback-code ${SHA}`])
+    })
+  })
+
+  // #3334 (backend #3310): the receipt on the host is keyed by the sha, so the
+  // helper binds it to the publication that wrote it. One id per rollout goes to
+  // publish-code, finalize-code and rollback-code; `publication_mismatch` (the
+  // publisher's exit 77) means "not our publication, nothing was changed". Here
+  // the publisher is a stub; the real one answers a host stand-in in
+  // `deploy-publish-race.test.ts`.
+  describe('publication identity (#3334)', () => {
+    const WITH_ID = CAPABILITY.replace(/}$/, ',"code_publication":{"expect_current":true,"publication_id":true}}')
+    const idOf = (call: string) => /--publication-id ([A-Za-z0-9_-]+)$/.exec(call)?.[1]
+
+    it('gives the switch and the acceptance of one rollout the same publication id', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID })
+
+      expect(result.status).toBe(0)
+      const id = idOf(publishCall())
+      expect(id).toMatch(/^[a-f0-9]{32}$/)
+      expect(publishCall()).toBe(`publish-code ${SHA} --expect-current ${LIVE_SHA} --publication-id ${id}`)
+      expect(calledWith('finalize-code')).toEqual([`finalize-code ${SHA} --publication-id ${id}`])
+      expect(calledWith('rollback-code')).toEqual([])
+      expect(result.stdout).toContain(`🔖 Публикация ${SHA.slice(0, 9)}: --publication-id ${id}`)
+    })
+
+    it('returns a release that failed its live checks under the id it was switched with', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_LIVE_EXIT: '1' })
+
+      expect(result.status).toBe(1)
+      const id = idOf(publishCall())
+      expect(id).toMatch(/^[a-f0-9]{32}$/)
+      expect(calledWith('rollback-code')).toEqual([`rollback-code ${SHA} --publication-id ${id}`])
+      expect(calledWith('finalize-code')).toEqual([])
+    })
+
+    it('returns it under the same id from the EXIT handler too', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_SIGNAL_ON: 'capability' })
+
+      expect(result.status).toBe(143)
+      expect(calledWith('rollback-code')).toEqual([`rollback-code ${SHA} --publication-id ${idOf(publishCall())}`])
+    })
+
+    it('generates a new id for every rollout', () => {
+      publish({ STUB_CAPABILITY: WITH_ID })
+      const first = idOf(publishCall())
+      publish({ STUB_CAPABILITY: WITH_ID })
+
+      expect(first).toMatch(/^[a-f0-9]{32}$/)
+      expect(idOf(publishCall())).toMatch(/^[a-f0-9]{32}$/)
+      expect(idOf(publishCall())).not.toBe(first)
+    })
+
+    // The frontend ships before the backend too: a helper that does not
+    // advertise the protocol gets the former calls and says so in the report.
+    it('keeps the former calls for a host helper that does not advertise the protocol', () => {
+      const result = publish({ STUB_LIVE_EXIT: '1' })
+
+      expect(publishCall()).toBe(`publish-code ${SHA} --expect-current ${LIVE_SHA}`)
+      expect(calledWith('rollback-code')).toEqual([`rollback-code ${SHA}`])
+      expect(result.stdout).toContain('Помощник хоста не объявил publication_id')
+      expect(result.stdout).not.toContain('🔖 Публикация')
+    })
+
+    it('does not publish when the capability cannot be read right before the switch', () => {
+      const result = publish({ STUB_FAIL: 'capability-before-switch' })
+
+      expect(result.status).toBe(1)
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability'])
+      expect(result.stdout).toContain(`релиз ${SHA.slice(0, 9)} не опубликован, прод не менялся`)
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+    })
+
+    it('has nothing to return when a signal lands before the switch', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_SIGNAL_ON: 'capability-before-switch' })
+
+      expect(result.status).toBe(143)
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability'])
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+    })
+
+    // Another session is publishing this very revision: refused before a write.
+    it('leaves with the overtaken code and returns nothing when the switch answers "not our publication"', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_PUBLISH_EXIT: '77' })
+
+      expect(result.status).toBe(75)
+      expect(actions()).toEqual([`stage ${SHA}`, 'capability', `publish-code ${SHA}`])
+      expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} остановлен на переключении: эту ревизию публикует другая сессия`)
+      expect(result.stdout).toContain('ничего не возвращалось')
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+    })
+
+    // The receipt passed to another publication between our switch and our
+    // acceptance. A rollback-code would be refused the same way; before #3334 it
+    // ran without an id and could return that session's pair.
+    it('neither returns nor alarms when the acceptance answers "not our publication"', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_FINALIZE_EXIT: '77' })
+
+      expect(result.status).toBe(75)
+      expect(actions().at(-1)).toBe(`finalize-code ${SHA}`)
+      expect(calledWith('rollback-code')).toEqual([])
+      expect(result.stdout).toContain(`Выкат ${SHA.slice(0, 9)} не принят: публикацию этой ревизии ведёт другая сессия`)
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('переключён, но не подтверждён')
+      expect(result.stdout).not.toContain('PUBLISHED')
+    })
+
+    it('does not ask for a manual return when the automatic one answers "not our publication"', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_LIVE_EXIT: '1', STUB_ROLLBACK_EXIT: '77' })
+
+      expect(result.status).toBe(1)
+      expect(calledWith('rollback-code')).toHaveLength(1)
+      expect(result.stdout).toContain(`Возврат не выполнялся: сервер отказал до записи — receipt ревизии ${SHA.slice(0, 9)} не принадлежит этой публикации`)
+      expect(result.stdout).toContain('Ручной возврат не нужен')
+      expect(result.stdout).not.toContain('НУЖЕН РУЧНОЙ ВОЗВРАТ')
+      expect(result.stdout).not.toContain('✅ Возврат выполнен')
+    })
+
+    it('prints the manual return with the publication id when the automatic one really failed', () => {
+      const result = publish({ STUB_CAPABILITY: WITH_ID, STUB_LIVE_EXIT: '1', STUB_ROLLBACK_EXIT: '1' })
+
+      expect(result.status).toBe(1)
+      expect(result.stdout).toContain(`❌ НУЖЕН РУЧНОЙ ВОЗВРАТ: rollback-code ${SHA} не прошёл`)
+      expect(result.stdout).toContain(
+        `повтори: bash scripts/web-ssr-publication.sh rollback-code ${SHA} --publication-id ${idOf(publishCall())}\n`,
+      )
     })
   })
 

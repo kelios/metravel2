@@ -1,5 +1,7 @@
 'use strict'
 
+const crypto = require('node:crypto')
+
 // Both switches must agree: the route loader is stripped from the ordinary
 // static client, whereas the server export needs the loader-aware client.
 function resolveWebOutput(env = process.env) {
@@ -61,9 +63,21 @@ function getQuestControlPath(value, { allowUnavailable = false } = {}) {
   return route
 }
 
+// #3334: one id per rollout, generated before `publish-code` and passed to
+// `publish-code`, `finalize-code` and `rollback-code`, binds the receipt on the
+// host to this session (backend #3310): the helper then refuses to finalize or
+// roll back another session's publication of the same revision. The id is an
+// identity, not a secret. A helper that does not advertise the protocol gets
+// the former calls without it — hence the empty string.
+function createCodePublicationId(value, randomBytes = crypto.randomBytes) {
+  resolveWebSsrCapability(value)
+  return value.code_publication?.publication_id === true ? randomBytes(16).toString('hex') : ''
+}
+
 module.exports = {
   resolveWebOutput,
   resolveWebSsrCapability,
   resolveDeployWebOutput,
   getQuestControlPath,
+  createCodePublicationId,
 }

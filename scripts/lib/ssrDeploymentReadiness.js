@@ -56,6 +56,44 @@ function createReadinessTiming() {
   };
 }
 
+const READINESS_DEADLINE = 'SSR_READINESS_DEADLINE';
+
+// One deadline for every retry of a live check, and the reasons those retries
+// were refused (#3337). Running out of time is not a reason: the rollback log
+// must name the last check that failed and how often each one did. Before this
+// the deadline error of the final request replaced it, and a refused release
+// said only "deadline exceeded".
+function createReadinessBudget(label, timeoutMs, requestTimeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  const reasons = new Map();
+  let last = null;
+  let clipped = false;
+  const remaining = () => deadline - Date.now();
+  return {
+    remaining,
+    // A request never outlives the deadline.
+    fetch(fetchImpl, url, init) {
+      const budget = remaining();
+      if (budget <= 0) throw Object.assign(new Error(`${label} deadline exceeded`), { code: READINESS_DEADLINE });
+      clipped = budget < requestTimeoutMs;
+      return fetchImpl(url, { ...init, signal: AbortSignal.timeout(Math.min(requestTimeoutMs, budget)) });
+    },
+    // A request or a body read cut short by the deadline ran out of time too.
+    refused(error) {
+      if (error?.code === READINESS_DEADLINE || (clipped && error?.name === 'TimeoutError')) return;
+      last = String(error?.message || error);
+      reasons.set(last, (reasons.get(last) || 0) + 1);
+    },
+    failure() {
+      if (last === null) return new Error(`${label} failed: deadline exceeded before any check was refused`);
+      const counts = [...reasons].sort((a, b) => b[1] - a[1]);
+      const listed = counts.slice(0, 5).map(([reason, count]) => `${count}× ${reason}`);
+      if (counts.length > listed.length) listed.push(`+${counts.length - listed.length} more`);
+      return new Error(`${label} failed: ${last} (deadline exceeded; refused checks: ${listed.join('; ')})`);
+    },
+  };
+}
+
 function retryAfter(response) {
   const value = response.headers.get('retry-after');
   if (!value || !/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 30) {
@@ -127,4 +165,5 @@ function documentContentState(response, find) {
     error_code: code, retry_after_seconds: retryAfter(response) };
 }
 
-module.exports = { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, classifySelectedContent, documentContentState };
+module.exports = { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, createReadinessBudget,
+  classifySelectedContent, documentContentState };

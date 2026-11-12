@@ -27,38 +27,72 @@ remote() { remote_shell "${remote_prefix}python3 $helper $*"; }
 
 # #3307: `publish-code <sha> --expect-current <sha|none>` hands the server the
 # revision the rollout was checked against; under its lock the helper refuses
-# the switch when the current pair is another one (#3308). Two answers mean
-# "refused before any write" and leave with their own codes, so the caller does
-# not run rollback-code: its receipt is keyed by the sha and may belong to
-# another session's active publication of the same revision.
+# the switch when the current pair is another one (#3308).
+# #3334: `--publication-id <id>` on publish-code, finalize-code and
+# rollback-code is the identity of one rollout (backend #3310). The receipt
+# lives at web-ssr/receipts/<sha>.json, so without the id a session could
+# finalize or roll back another session's publication of the same revision.
+# The caller generates the id before publish-code and passes the same one to
+# all three actions, and only to a helper whose capability advertises it.
+# Three answers mean "refused before any write" and leave with their own codes;
+# the caller must not answer them with rollback-code:
 #   75  current_changed: production moved on, or already serves this sha;
+#   77  publication_mismatch: the receipt belongs to another publication (or is
+#       absent, or the release is already accepted) — nothing was changed;
 #   78  the host helper rejected the argument itself (argparse, before the lock).
-# Both are recognised by the helper's stderr line, not by the exit status that
-# travelled through ssh and `bash -ic`; no other failure leaves with 75 or 78.
+# All are recognised by the helper's stderr line, not by the exit status that
+# travelled through ssh and `bash -ic`; no other failure leaves with 75, 77 or 78.
 EXIT_OVERTAKEN=75
+EXIT_NOT_OURS=77
 EXIT_UNSUPPORTED=78
-publish_errors=''
-publish_code() {
-  local expect='' status=0 refusal actual
-  local args=(--sha "$sha" --receipt "$receipt")
-  if [[ $# -gt 0 ]]; then
-    if [[ $# -ne 2 || "$1" != --expect-current || ! "$2" =~ ^([a-f0-9]{40}|none)$ ]]; then
-      echo 'Expected: publish-code <sha> [--expect-current <full lowercase sha|none>]' >&2
-      exit 1
-    fi
-    expect="$2"
-    args+=(--expect-current "$expect")
+expect=''
+publication=''
+code_errors=''
+code_usage() {
+  if [[ "$action" == publish-code ]]; then
+    echo 'Expected: publish-code <sha> [--expect-current <full lowercase sha|none>] [--publication-id <16-64 of A-Za-z0-9_->]' >&2
+  else
+    echo "Expected: $action <sha> [--publication-id <16-64 of A-Za-z0-9_->]" >&2
   fi
-  publish_errors="$(mktemp -t metravel-publish-code 2>/dev/null || mktemp /tmp/metravel-publish-code.XXXXXX)"
-  trap 'rm -f "$publish_errors"' EXIT
-  remote publish-code "${args[@]}" 2>"$publish_errors" || status=$?
-  cat "$publish_errors" >&2
+  exit 1
+}
+parse_code_options() {
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == --expect-current && "$action" == publish-code && -z "$expect" && $# -ge 2 && "$2" =~ ^([a-f0-9]{40}|none)$ ]]; then
+      expect="$2"
+    elif [[ "$1" == --publication-id && -z "$publication" && $# -ge 2 && "$2" =~ ^[A-Za-z0-9_-]{16,64}$ ]]; then
+      publication="$2"
+    else
+      code_usage
+    fi
+    shift 2
+  done
+}
+unsupported_argument() {
+  local flag="$1" value="$2" contract="$3"
+  # Без якоря начала строки: вывод ~/.bashrc через `bash -ic` может стоять на той же строке.
+  [[ -n "$value" ]] && grep -Eq "[^ ]+: error: .*$flag" "$code_errors" || return 0
+  echo "❌ Помощник публикации на хосте не принял $flag $value — отказ до замка и записи, прод не менялся" >&2
+  echo "   Бэкенд на хосте старее контракта $contract либо отклонил значение: выкатите бэкенд и повторите выкат фронта." >&2
+  exit "$EXIT_UNSUPPORTED"
+}
+code_action() {
+  local status=0 refusal actual state owner
+  local args=(--receipt "$receipt")
+  parse_code_options "$@"
+  if [[ "$action" == publish-code ]]; then args=(--sha "$sha" --receipt "$receipt"); fi
+  if [[ -n "$expect" ]]; then args+=(--expect-current "$expect"); fi
+  if [[ -n "$publication" ]]; then args+=(--publication-id "$publication"); fi
+  code_errors="$(mktemp -t metravel-code-action 2>/dev/null || mktemp /tmp/metravel-code-action.XXXXXX)"
+  trap 'rm -f "$code_errors"' EXIT
+  # The helper's stderr is shown as it arrives and kept for its refusal line.
+  { remote "$action" "${args[@]}" 2>&1 >&3 | tee "$code_errors" >&2; } 3>&1 || status=$?
   [[ "$status" != 0 ]] || return 0
   if [[ -n "$expect" ]]; then
     # Not anchored at the line start: output of the interactive remote shell
     # without a trailing newline may precede the helper line on the same line.
     # The exact expected= value keeps a foreign refusal from matching.
-    refusal="$(tr -d '\r' <"$publish_errors" |
+    refusal="$(tr -d '\r' <"$code_errors" |
       grep -E "web-ssr release refused: current_changed expected=$expect actual=([a-f0-9]{40}|none) mutation=none\$" |
       tail -n 1 || true)"
     if [[ -n "$refusal" ]]; then
@@ -71,14 +105,34 @@ publish_code() {
       fi
       exit "$EXIT_OVERTAKEN"
     fi
-    # Без якоря начала строки: вывод ~/.bashrc через `bash -ic` может стоять на той же строке.
-    if grep -Eq '[^ ]+: error: .*--expect-current' "$publish_errors"; then
-      echo "❌ Помощник публикации на хосте не принял --expect-current $expect — отказ до замка и записи, прод не менялся" >&2
-      echo "   Бэкенд на хосте старее контракта #3308 либо отклонил значение: выкатите бэкенд и повторите выкат фронта." >&2
-      exit "$EXIT_UNSUPPORTED"
-    fi
   fi
-  if [[ "$status" == "$EXIT_OVERTAKEN" || "$status" == "$EXIT_UNSUPPORTED" ]]; then status=1; fi
+  # #3334: the helper names the receipt it refused; `sha=none` is a receipt
+  # whose name is not a revision.
+  refusal="$(tr -d '\r' <"$code_errors" |
+    grep -E "web-ssr release refused: publication_mismatch sha=($sha|none) state=[a-z_]+ receipt=(bound|unbound|missing) mutation=none\$" |
+    tail -n 1 || true)"
+  if [[ -n "$refusal" ]]; then
+    state="${refusal#* state=}"
+    state="${state%% *}"
+    owner="${refusal#* receipt=}"
+    owner="${owner%% *}"
+    echo "❌ $action ${sha:0:9}: это не наша публикация (state=$state, receipt=$owner) — сервер отказал до записи, прод этим вызовом не менялся; чужая публикация не финализируется и не возвращается" >&2
+    if [[ "$owner" == missing ]]; then
+      echo "   Receipt этой публикации на хосте нет: она ничего не переключала, возвращать нечего." >&2
+    elif [[ "$state" == finalized ]]; then
+      echo "   Релиз ${sha:0:9} уже принят (finalize-code завершён), автоматика его не возвращает: docs/WORKFLOW_OPERATIONS.md → «Аварийный возврат прошлой версии», путь 2." >&2
+    elif [[ "$owner" == bound && -z "$publication" ]]; then
+      echo "   Receipt привязан к идентификатору публикации: повторите с --publication-id <id> из лога того выката (строка «🔖 Публикация»)." >&2
+    elif [[ "$owner" == unbound ]]; then
+      echo "   Receipt записан без идентификатора (клиент до #3334): его публикацию ведёт та сессия; вручную — та же команда без --publication-id." >&2
+    else
+      echo "   Receipt ведёт другая сессия выката: её публикацию примет или вернёт она сама. Сверьте https://metravel.by/.build-source.json" >&2
+    fi
+    exit "$EXIT_NOT_OURS"
+  fi
+  unsupported_argument --expect-current "$expect" '#3308'
+  unsupported_argument --publication-id "$publication" '#3310'
+  if [[ "$status" == "$EXIT_OVERTAKEN" || "$status" == "$EXIT_NOT_OURS" || "$status" == "$EXIT_UNSUPPORTED" ]]; then status=1; fi
   exit "$status"
 }
 
@@ -131,8 +185,8 @@ case "$action" in
     remote verify-code --sha "$sha"
     ;;
   activate|rollback|finalize|publish-code|rollback-code|finalize-code)
-    if [[ "$action" == publish-code ]]; then
-      publish_code "${@:3}"
+    if [[ "$action" == publish-code || "$action" == rollback-code || "$action" == finalize-code ]]; then
+      code_action "${@:3}"
     elif [[ "$action" == activate ]]; then
       remote "$action" --sha "$sha" --receipt "$receipt"
     else

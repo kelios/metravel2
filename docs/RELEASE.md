@@ -434,7 +434,11 @@ backend SSR capability → `scripts/web-ssr-publication.sh
 stage/publish-code/finalize-code`, with `rollback-code` on a failed live
 check. `publish-code` carries `--expect-current <live sha>`: a rollout that was
 overtaken between its start and its publication is refused and exits with 75
-(#3307). `build-prod.sh` refuses `DEPLOY=1` without the SSR release. The
+(#3307). All three code actions carry one `--publication-id` per rollout when the
+backend capability advertises it (#3334, backend #3310): the helper refuses to
+finalize or roll back another session's publication of the same revision
+(`publication_mismatch`, publisher exit 77), and the rollout does not report
+that refusal as a failed return. `build-prod.sh` refuses `DEPLOY=1` without the SSR release. The
 static quest locale v1 package (`ru-only`/`translations` modes) was removed
 in #2766; [the quest locale release runbook](ops/quest-locale-release.md) keeps
 only the history and the still-live recovery helpers.

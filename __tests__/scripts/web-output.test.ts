@@ -37,6 +37,23 @@ describe('backend SSR capability', () => {
     expect(require('@/scripts/lib/webOutput')).not.toHaveProperty('WEB_SSR_ROLLOUT_ENABLED')
   })
 
+  // #3334: the id binds the receipt of a code publication to one rollout
+  // (backend #3310); it is passed only to a helper that advertises the protocol.
+  it('issues a publication id only for a host helper that advertises the protocol', () => {
+    const { createCodePublicationId } = require('@/scripts/lib/webOutput')
+    const capability = { schema_version: 2, available: true, enabled: true, quest_web: quest }
+    const advertised = { ...capability, code_publication: { expect_current: true, publication_id: true } }
+
+    const id = createCodePublicationId(advertised)
+    // What the helper accepts: 16-64 characters of [A-Za-z0-9_-].
+    expect(id).toMatch(/^[a-f0-9]{32}$/)
+    expect(createCodePublicationId(advertised)).not.toBe(id)
+    expect(createCodePublicationId(capability)).toBe('')
+    expect(createCodePublicationId({ ...capability, code_publication: { expect_current: true } })).toBe('')
+    expect(createCodePublicationId({ ...capability, code_publication: { publication_id: 'yes' } })).toBe('')
+    expect(() => createCodePublicationId({ schema_version: 3, available: true, enabled: true })).toThrow('Invalid backend SSR capability')
+  })
+
   it('uses only a canonical public control selected by the activated backend generation', () => {
     const capability = { schema_version: 2, available: true, enabled: true, quest_web: { ...quest, control_path: '/pl/quests/17/demo' } }
     expect(getQuestControlPath(capability)).toBe('/pl/quests/17/demo')

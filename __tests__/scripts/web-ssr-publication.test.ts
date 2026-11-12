@@ -287,6 +287,118 @@ describe('SSR publication pre-transfer checkout gate', () => {
     })
   })
 
+  // #3334 (backend #3310): the receipt is keyed by the sha, so the rollout
+  // passes one publication id to the switch, the acceptance and the return. A
+  // helper that finds the receipt under another publication refuses without a
+  // write: exit 4 and one stderr line. The publisher leaves with its own code
+  // 77 for all three actions, recognised by that line as for `current_changed`.
+  describe('--publication-id (#3334)', () => {
+    const target = 'c'.repeat(40)
+    const expected = 'd'.repeat(40)
+    const id = '0123456789abcdef0123456789abcdef'
+    const receipt = `web-ssr/receipts/${target}.json`
+    const NOISE = 'bash: cannot set terminal process group (-1): Inappropriate ioctl for device\nbash: no job control in this shell'
+    const mismatch = (state: string, binding: string, sha = target) =>
+      `web-ssr release refused: publication_mismatch sha=${sha} state=${state} receipt=${binding} mutation=none`
+    const ACTIONS = ['publish-code', 'finalize-code', 'rollback-code']
+
+    // The host helper: what it wrote to stderr and the status ssh returned.
+    const act = (action: string, stderr: string, status: string, args = ['--publication-id', id]) => {
+      fs.writeFileSync(path.join(fixture, 'ssh'), [
+        '#!/bin/sh',
+        'printf "%s\\n" "$*" >> "$SSR_TEST_CALLS"',
+        'case "$*" in *"-- report "*) exit 0;; esac',
+        'printf "%s\\n" "$SSR_TEST_STDERR" >&2',
+        'exit "$SSR_TEST_EXIT"',
+        '',
+      ].join('\n'), { mode: 0o755 })
+      return publication(action, { SSR_TEST_STDERR: stderr, SSR_TEST_EXIT: status }, args)
+    }
+
+    it('hands one publication id to the switch, the acceptance and the return', () => {
+      expect(act('publish-code', NOISE, '0', ['--expect-current', expected, '--publication-id', id]).commands[0]).toContain(
+        `web_ssr_release.py publish-code --sha ${target} --receipt ${receipt} --expect-current ${expected} --publication-id ${id}'`,
+      )
+      expect(act('finalize-code', NOISE, '0').commands[0]).toContain(`web_ssr_release.py finalize-code --receipt ${receipt} --publication-id ${id}'`)
+      expect(act('rollback-code', NOISE, '0').commands[0]).toContain(`web_ssr_release.py rollback-code --receipt ${receipt} --publication-id ${id}'`)
+    })
+
+    it.each(ACTIONS)('keeps the former %s call when no id is given', (action) => {
+      const { result, commands } = act(action, NOISE, '0', [])
+
+      expect(result.status).toBe(0)
+      expect(commands[0]).toContain(`--receipt ${receipt}'`)
+      expect(commands[0]).not.toContain('--publication-id')
+    })
+
+    it.each(ACTIONS.flatMap((action) => ['4', '255', '1'].map((status) => [action, status])))(
+      'reports "not our publication" for %s by the refusal line, whatever status came through ssh (%s)', (action, status) => {
+        const { result, commands } = act(action, `${NOISE}\nbash: warning: setlocale: LC_ALL${mismatch('active', 'bound')}`, status)
+
+        expect(result.status).toBe(77)
+        expect(result.stdout).toBe('')
+        expect(result.stderr).toContain(mismatch('active', 'bound'))
+        expect(result.stderr).toContain(`❌ ${action} ${target.slice(0, 9)}: это не наша публикация (state=active, receipt=bound) — сервер отказал до записи, прод этим вызовом не менялся`)
+        expect(result.stderr).toContain('Receipt ведёт другая сессия выката')
+        // A refused acceptance is not a finalized release: no disk report.
+        expect(commands).toHaveLength(1)
+      },
+    )
+
+    it.each([
+      ['a receipt this publication never wrote', mismatch('none', 'missing'), ['--publication-id', id], 'Receipt этой публикации на хосте нет'],
+      ['a receipt without a revision name', mismatch('none', 'missing', 'none'), ['--publication-id', id], 'Receipt этой публикации на хосте нет'],
+      ['an already accepted release', mismatch('finalized', 'bound'), ['--publication-id', id], `Релиз ${target.slice(0, 9)} уже принят`],
+      ['a bound receipt returned by hand without the id', mismatch('active', 'bound'), [], 'повторите с --publication-id <id> из лога того выката'],
+      ['a receipt written by a rollout that predates the id', mismatch('active', 'unbound'), ['--publication-id', id], 'Receipt записан без идентификатора'],
+    ])('explains %s', (_name, stderr, args, hint) => {
+      const { result } = act('rollback-code', stderr, '4', args)
+
+      expect(result.status).toBe(77)
+      expect(result.stderr).toContain(hint)
+    })
+
+    // Fail closed: without the exact line the helper may have written.
+    it.each([
+      ['the refusal status without the line', NOISE, '4', 4],
+      ['a refusal that names another revision', mismatch('active', 'bound', 'e'.repeat(40)), '4', 4],
+      ['a refusal that reports a mutation', mismatch('active', 'bound').replace('mutation=none', 'mutation=receipt'), '4', 4],
+      ['an ordinary refused return', 'web-ssr release refused: ValueError: stale code receipt cannot replace the active pair', '1', 1],
+      ['a foreign failure with the reserved status 77', NOISE, '77', 1],
+    ])('does not report "not our publication" for %s', (_name, stderr, status, exit) => {
+      for (const action of ['rollback-code', 'finalize-code']) {
+        const { result } = act(action, stderr, status)
+
+        expect(result.status).toBe(exit)
+        expect(result.stderr).not.toContain('не наша публикация')
+      }
+    })
+
+    it('names a host helper that predates the argument instead of a failed return', () => {
+      const { result } = act('rollback-code',
+        `${NOISE}\nusage: web_ssr_release.py [-h] action\nweb_ssr_release.py: error: unrecognized arguments: --publication-id ${id}`, '2')
+
+      expect(result.status).toBe(78)
+      expect(result.stderr).toContain(`Помощник публикации на хосте не принял --publication-id ${id}`)
+      expect(result.stderr).toContain('старее контракта #3310')
+    })
+
+    it.each([
+      ['rollback-code', ['--publication-id', 'too-short']],
+      ['rollback-code', ['--publication-id', `${id}!`]],
+      ['rollback-code', ['--publication-id']],
+      ['rollback-code', ['--publication-id', id, '--publication-id', id]],
+      ['finalize-code', ['--expect-current', expected]],
+      ['finalize-code', [id]],
+    ])('refuses malformed options of %s before reaching the host: %j', (action, args) => {
+      const { result, commands } = act(action, NOISE, '0', args)
+
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain(`Expected: ${action} <sha> [--publication-id <16-64 of A-Za-z0-9_->]`)
+      expect(commands).toEqual([])
+    })
+  })
+
   it('real final client packaging preserves linked publication inodes in a separate fresh candidate', () => {
     const source = fs.readFileSync(path.resolve('build-prod.sh'), 'utf8')
     const start = source.indexOf('if [[ "$SSR_CODE_RELEASE" == "1" ]]; then\n  # Publish the finished shell metadata')

@@ -6,9 +6,15 @@ const { DomUtils } = require('htmlparser2');
 const { assertSsrDocument } = require('./lib/ssrDocument');
 const { parseQuestPublicRoute, validateQuestPublicProjection } = require('../utils/questPublicPage');
 const { parseCliArgs, runCli } = require('./lib/cli-contract');
-const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, classifySelectedContent } = require('./lib/ssrDeploymentReadiness');
+const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, createReadinessBudget,
+  classifySelectedContent } = require('./lib/ssrDeploymentReadiness');
 
 const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+// A quest detail is `["TouristTrip", "CreativeWork"]` since #3321; a release still
+// serving the single-typed node (`TouristTrip`, `location`) must pass during a rollout.
+const hasSchemaType = (entry, type) => entry?.['@type'] === type
+  || (Array.isArray(entry?.['@type']) && entry['@type'].includes(type));
 
 function verifyQuestRuntimeResponse(response, html, { sha, projection, requireHit = false }) {
   const page = projection.page, canonical = page.meta.canonical;
@@ -35,12 +41,13 @@ function verifyQuestRuntimeResponse(response, html, { sha, projection, requireHi
   if (scripts.length !== 1) throw new Error('Quest public structured data is absent or duplicated');
   const graph = JSON.parse(DomUtils.textContent(scripts[0]))['@graph'];
   if (!Array.isArray(graph)) throw new Error('Quest structured graph is invalid');
-  const entity = graph.find((entry) => entry?.['@type'] === (projection.kind === 'detail' ? 'TouristTrip' : 'ItemList'));
-  const breadcrumb = graph.find((entry) => entry?.['@type'] === 'BreadcrumbList');
+  const entity = graph.find((entry) => hasSchemaType(entry, projection.kind === 'detail' ? 'TouristTrip' : 'ItemList'));
+  const breadcrumb = graph.find((entry) => hasSchemaType(entry, 'BreadcrumbList'));
   if (entity?.url !== canonical || breadcrumb?.itemListElement?.at(-1)?.item !== canonical
       || (projection.kind === 'detail' && (entity.mainEntityOfPage !== canonical || entity.inLanguage !== projection.locale
         || entity.name !== page.heading || entity.description !== page.meta.description
-        || entity.touristType !== page.meta.tourist_type || (page.meta.city_name && entity.location?.name !== page.meta.city_name)))) {
+        || entity.touristType !== page.meta.tourist_type
+        || (page.meta.city_name && (entity.contentLocation ?? entity.location)?.name !== page.meta.city_name)))) {
     throw new Error('Quest schema differs from the selected public route');
   }
   const alternatives = find((node) => node.name === 'link' && node.attribs?.rel === 'alternate' && node.attribs?.hreflang);
@@ -62,15 +69,11 @@ async function verifyLiveQuestSsr({ sha, controlPath, origin = 'https://metravel
   if (!route && !(mode === 'deployment' && !controlPath)) throw new Error('A published quest control path is required');
   if (mode === 'deployment') assertCodeHealth(await codeHealth(sha), sha);
   if (!route) return { sha, content_status: 'unavailable', error_code: 'no_published_control' };
-  const deadline = Date.now() + timeoutMs;
-  const request = async (path) => {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) throw new Error('Quest renderer readiness deadline exceeded');
-    return timing.response(await fetchImpl(new URL(path, base), { signal: AbortSignal.timeout(Math.min(5000, remaining)), credentials: 'omit', redirect: 'error' }));
-  };
+  // #3337: as in verify-live-web-ssr.js, the deadline never replaces the last refused check.
+  const budget = createReadinessBudget('Quest renderer readiness', timeoutMs);
+  const request = async (path) => timing.response(await budget.fetch(fetchImpl, new URL(path, base), { credentials: 'omit', redirect: 'error' }));
   const selection = route.kind === 'detail' ? `detail/${route.city}/${route.slug}` : route.kind === 'city' ? `city/${route.city}` : `country/${route.country}`;
-  let failure = new Error('Quest renderer readiness has no successful request');
-  while (Date.now() < deadline) {
+  while (budget.remaining() > 0) {
     timing.attempt();
     try {
       const api = await timing.measure('publication', async () => {
@@ -95,10 +98,10 @@ async function verifyLiveQuestSsr({ sha, controlPath, origin = 'https://metravel
         verifyQuestRuntimeResponse(response, await response.text(), { sha, projection, requireHit: true });
       });
       return { sha, canonical: projection.page.meta.canonical, locale: projection.locale, publication_id: projection.publication_id };
-    } catch (error) { failure = error; }
-    if (Date.now() < deadline) await sleep(Math.min(1000, deadline - Date.now()));
+    } catch (error) { budget.refused(error); }
+    if (budget.remaining() > 0) await sleep(Math.min(1000, budget.remaining()));
   }
-  throw new Error(`Quest renderer readiness failed: ${failure.message}`);
+  throw budget.failure();
 }
 
 const CLI_SPEC = { name: 'verify-live-quest-ssr', usage: 'node scripts/verify-live-quest-ssr.js --sha <full-sha> --control-path /quests/<city>/<slug> [--readiness-mode strict|deployment] [--origin https://metravel.by]',

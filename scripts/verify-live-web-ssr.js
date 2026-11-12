@@ -4,7 +4,8 @@
 const { setTimeout: wait } = require('node:timers/promises')
 const { DomUtils } = require('htmlparser2')
 const { assertSsrDocument } = require('./lib/ssrDocument')
-const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, documentContentState } = require('./lib/ssrDeploymentReadiness')
+const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, createReadinessBudget,
+  documentContentState } = require('./lib/ssrDeploymentReadiness')
 const { parseCliArgs, runCli, UsageError } = require('./lib/cli-contract')
 const { redirects } = require('./seo-redirects.json')
 
@@ -83,19 +84,16 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
   const base = new URL(origin)
   if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.pathname !== '/' || base.search || base.hash) throw new Error('Expected an HTTP origin')
   const codeProof = mode === 'deployment' ? assertCodeHealth(await codeHealth(sha), sha) : null
-  const deadline = Date.now() + timeoutMs
-  const request = async (url) => {
-    const remaining = deadline - Date.now()
-    if (remaining <= 0) throw new Error('Renderer readiness deadline exceeded')
-    return timing.response(await fetchImpl(url, { signal: AbortSignal.timeout(Math.min(5000, remaining)), redirect: 'error', credentials: 'omit' }))
-  }
+  // #3337: the budget keeps why each attempt was refused; the deadline itself
+  // never replaces the last refused check in the failure of a rollback.
+  const budget = createReadinessBudget('Renderer readiness', timeoutMs)
+  const request = async (url) => timing.response(await budget.fetch(fetchImpl, url, { redirect: 'error', credentials: 'omit' }))
   // The catalog control shares the renderer's retry deadline, as the quest API
   // does in verify-live-quest-ssr.js: one slow or 5xx answer right after the
   // paired restart is a transient, not a refused release (42f5681f2, 9bde01ff6).
   let slugs = null
   let legacyReady = mode !== 'deployment'
-  let failure = new Error('Renderer readiness has no successful request')
-  while (Date.now() < deadline) {
+  while (budget.remaining() > 0) {
     timing.attempt()
     try {
       if (!legacyReady) {
@@ -104,7 +102,7 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
       }
       slugs ??= await timing.measure('catalog', () => selectControlSlugs(request, origin))
     } catch (error) {
-      failure = error
+      budget.refused(error)
     }
     for (const slug of slugs || []) {
       try {
@@ -123,12 +121,12 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
         return { sha, canonical }
       } catch (error) {
         if (error?.code === 'SSR_CODE_CONTRACT') throw error
-        failure = error
+        budget.refused(error)
       }
     }
-    if (Date.now() < deadline) await sleep(Math.min(1000, deadline - Date.now()))
+    if (budget.remaining() > 0) await sleep(Math.min(1000, budget.remaining()))
   }
-  throw new Error(`Renderer readiness failed: ${failure.message}`)
+  throw budget.failure()
 }
 
 module.exports = { verifyRuntimeResponse, verifyLiveWebSsr }

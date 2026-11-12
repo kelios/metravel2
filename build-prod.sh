@@ -38,6 +38,12 @@ SOURCE_ALREADY_LIVE=0
 # подтверждён живыми проверками и finalize-code. Пока он не пуст, любой выход —
 # ошибка, сигнал, обрыв обёртки — обязан вернуть предыдущую пару.
 PUBLISH_UNCONFIRMED_SHA=''
+# #3334: идентификатор этой публикации (бэкенд #3310). Один на выкат, выдаётся
+# до publish-code и уходит в publish-code, finalize-code и rollback-code: receipt
+# на хосте лежит по sha, и с идентификатором сервер не даст финализировать или
+# вернуть публикацию той же ревизии из другой сессии. Пусто — помощник хоста
+# протокол не объявил (capability), вызовы идут по-прежнему без него.
+PUBLICATION_ID=''
 # #3272, #3307: код сигнала, отложенного на время publish-code и finalize-code:
 # исход серверной операции разбирается до выхода (см. defer_signals).
 DEFERRED_SIGNAL=''
@@ -168,17 +174,31 @@ close_planned_load_window() {
 # обёртки, остановка сессии) оставлял на проде непроверенную версию. Отметка
 # снимается до вызова — второй раз тот же релиз не возвращается.
 rollback_unconfirmed_release() {
-  local sha="$PUBLISH_UNCONFIRMED_SHA"
+  local sha="$PUBLISH_UNCONFIRMED_SHA" rollback_status=0
+  local rollback_args=("$sha") rollback_command="rollback-code $sha"
 
   [[ -n "$sha" ]] || return 0
   PUBLISH_UNCONFIRMED_SHA=''
+  if [[ -n "$PUBLICATION_ID" ]]; then
+    rollback_args+=(--publication-id "$PUBLICATION_ID")
+    rollback_command+=" --publication-id $PUBLICATION_ID"
+  fi
   echo "⚠️  Релиз ${sha:0:9} переключён, но не подтверждён — возвращаю связанную серверную и клиентскую версию"
-  if bash scripts/web-ssr-publication.sh rollback-code "$sha"; then
+  bash scripts/web-ssr-publication.sh rollback-code "${rollback_args[@]}" || rollback_status=$?
+  if [[ "$rollback_status" == "0" ]]; then
     echo "✅ Возврат выполнен: прод снова отдаёт предыдущий релиз"
     return 0
   fi
+  # #3334: код 77 — сервер ответил publication_mismatch: receipt этой ревизии не
+  # принадлежит нашей публикации (его ведёт другая сессия, его нет либо релиз
+  # уже принят). Отказ до записи: возвращать нечего, ручной возврат не нужен.
+  if [[ "$rollback_status" == "77" ]]; then
+    echo "⚠️  Возврат не выполнялся: сервер отказал до записи — receipt ревизии ${sha:0:9} не принадлежит этой публикации (причина — строкой выше), прод этим вызовом не менялся"
+    echo "   Ручной возврат не нужен. Сверь https://metravel.by/.build-source.json: чужую публикацию примет или вернёт её сессия."
+    return 0
+  fi
   echo "❌ НУЖЕН РУЧНОЙ ВОЗВРАТ: rollback-code $sha не прошёл."
-  echo "   Сверь https://metravel.by/.build-source.json и повтори: bash scripts/web-ssr-publication.sh rollback-code $sha"
+  echo "   Сверь https://metravel.by/.build-source.json и повтори: bash scripts/web-ssr-publication.sh $rollback_command"
   echo "   Если finalize-code успел завершиться, релиз уже принят и проверен: бэкенд его не возвращает, прод цел."
   echo "   (docs/WORKFLOW_OPERATIONS.md → «Аварийный возврат прошлой версии»)"
   return 1
@@ -477,10 +497,30 @@ deploy_prod() {
   stage "выкат: переключение и живые проверки"
   # Коды `publish-code` «сервер отказал до записи» (scripts/web-ssr-publication.sh):
   # 75 — прод сменил ревизию, пока шёл выкат («нас обогнали»), с ним же выходит
-  # выкат; 78 — помощник хоста не принял --expect-current.
-  local overtaken_exit=75 unsupported_exit=78
+  # выкат; 77 — receipt ревизии ведёт публикация другой сессии (#3334);
+  # 78 — помощник хоста не принял --expect-current или --publication-id.
+  local overtaken_exit=75 not_ours_exit=77 unsupported_exit=78
   local expect_current='' guard_status=0 publish_status=0 refused_exit=''
-  local publish_args=("$BUILD_SOURCE_SHA")
+  local publish_args=("$BUILD_SOURCE_SHA") finalize_args=("$BUILD_SOURCE_SHA")
+  local publication_capability=''
+  # #3334: идентификатор публикации выдаётся до переключения и только помощнику,
+  # который объявил протокол в capability: фронт выкатывается и раньше бэкенда
+  # #3310. Capability читается здесь, а не берётся из проверки до сборки: решение
+  # «с идентификатором или без» одно на publish-code, finalize-code и
+  # rollback-code этой публикации и принимается вплотную к ней.
+  PUBLICATION_ID=''
+  if ! publication_capability="$(bash scripts/web-ssr-publication.sh capability)" ||
+    ! PUBLICATION_ID="$(node -e 'process.stdout.write(require("./scripts/lib/webOutput").createCodePublicationId(JSON.parse(process.argv[1])))' "$publication_capability")"; then
+    PUBLICATION_ID=''
+    echo "❌ Capability бэкенда перед публикацией не прочитана — релиз ${BUILD_SOURCE_SHA:0:9} не опубликован, прод не менялся"
+    return 1
+  fi
+  if [[ -n "$PUBLICATION_ID" ]]; then
+    echo "🔖 Публикация ${BUILD_SOURCE_SHA:0:9}: --publication-id $PUBLICATION_ID"
+    finalize_args+=(--publication-id "$PUBLICATION_ID")
+  else
+    echo "⚠️  Помощник хоста не объявил publication_id (бэкенд старее #3310): публикация идёт без привязки receipt к этой сессии"
+  fi
   # #3307: сверка «цель содержит живую ревизию» из гейта источника к этому
   # моменту устарела на время сборки и заливки. 11.11.2026 два выката из разных
   # чекаутов прошли её оба, и предок переключил прод через 21 с после потомка.
@@ -500,6 +540,9 @@ deploy_prod() {
   if [[ -n "$expect_current" ]]; then
     publish_args+=(--expect-current "$expect_current")
   fi
+  if [[ -n "$PUBLICATION_ID" ]]; then
+    publish_args+=(--publication-id "$PUBLICATION_ID")
+  fi
   # Отметка ставится ДО переключения: receipt публикации бэкенд пишет раньше
   # смены указателя, и оборванный publish-code тоже возвращается rollback-code.
   # Отказ сервера до записи (#3307) отметку снимает, и снимает до любого выхода,
@@ -512,10 +555,16 @@ deploy_prod() {
     PUBLISH_UNCONFIRMED_SHA=''
     refused_exit="$overtaken_exit"
     echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: нас обогнали — сервер отказал до записи. Наш релиз не опубликован, ничего не возвращалось (код $overtaken_exit)"
+  elif [[ "$publish_status" == "$not_ours_exit" ]]; then
+    # #3334: эту же ревизию прямо сейчас публикует другая сессия, её публикация
+    # не завершена. Для нашего выката исход тот же, что «нас обогнали».
+    PUBLISH_UNCONFIRMED_SHA=''
+    refused_exit="$overtaken_exit"
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: эту ревизию публикует другая сессия — сервер отказал до записи. Наш релиз не опубликован, ничего не возвращалось (код $overtaken_exit)"
   elif [[ "$publish_status" == "$unsupported_exit" ]]; then
     PUBLISH_UNCONFIRMED_SHA=''
     refused_exit=1
-    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: помощник хоста не принял --expect-current — отказ до записи, прод не менялся, возврат не нужен"
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} остановлен на переключении: помощник хоста не принял --expect-current или --publication-id — отказ до записи, прод не менялся, возврат не нужен"
   fi
   resume_signals
   if [[ -n "$DEFERRED_SIGNAL" ]]; then
@@ -538,9 +587,16 @@ deploy_prod() {
   # Провал или обрыв самого finalize-code отметку не снимает — возврат, как раньше.
   local finalize_status=0
   defer_signals
-  bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA" || finalize_status=$?
+  bash scripts/web-ssr-publication.sh finalize-code "${finalize_args[@]}" || finalize_status=$?
   if [[ "$finalize_status" == "0" ]]; then
     PUBLISH_UNCONFIRMED_SHA=''
+  elif [[ "$finalize_status" == "$not_ours_exit" ]]; then
+    # #3334: receipt ревизии перешёл к публикации другой сессии (наша пара была
+    # вытеснена, и ревизию опубликовали заново). Отказ до записи; rollback-code
+    # с нашим идентификатором получил бы тот же ответ, поэтому отметка снимается.
+    PUBLISH_UNCONFIRMED_SHA=''
+    finalize_status="$overtaken_exit"
+    echo "❌ Выкат ${BUILD_SOURCE_SHA:0:9} не принят: публикацию этой ревизии ведёт другая сессия — сервер отказал до записи. Наш релиз не финализирован, ничего не возвращалось (код $overtaken_exit)"
   fi
   resume_signals
   if [[ -n "$DEFERRED_SIGNAL" ]]; then

@@ -78,6 +78,102 @@ describe('paired renderer publication readiness', () => {
     expect(fetchImpl.mock.calls.every(([url]) => String(url).includes('/api/travels/'))).toBe(true)
   })
 
+  // #3337: rollout 37c40a247 was rolled back on 11.11.2026 with nothing but
+  // "Renderer readiness deadline exceeded": 27 documents answered 200, and the
+  // deadline error of the final request replaced the check that refused them.
+  describe('refusal reason at the deadline (#3337)', () => {
+    let now: number
+    let clock: jest.SpyInstance
+    const sleep = async (delay: number) => { now += delay }
+    // Every response costs 700 ms of the shared deadline.
+    const live = (documentHeaders: Record<string, string>, catalog = () => Response.json({ results: [{ slug: 'example' }] })) =>
+      jest.fn(async (url: URL | string) => {
+        now += 700
+        return String(url).includes('/api/travels/') ? catalog() : response(documentHeaders)
+      })
+    const refusal = async (options: Record<string, unknown>) => {
+      const error = await verifyLiveWebSsr({ sha, sleep, ...options }).then(() => null, (reason: Error) => reason)
+      if (!error) throw new Error('The readiness check was expected to refuse the release')
+      return error.message
+    }
+
+    beforeEach(() => {
+      now = Date.now()
+      clock = jest.spyOn(Date, 'now').mockImplementation(() => now)
+    })
+    afterEach(() => clock.mockRestore())
+
+    it('names the check that refused the document, not the deadline that ended the retries', async () => {
+      const fetchImpl = live({ 'X-Cache-Status': 'MISS' })
+      // 0.7 s catalog, 1.4 s document, 2.1 s no HIT, pause, 3.8 s document:
+      // the repeated guest request finds the 3.5 s deadline already passed.
+      const message = await refusal({ fetchImpl, timeoutMs: 3500 })
+
+      expect(fetchImpl).toHaveBeenCalledTimes(4)
+      expect(message).toBe('Renderer readiness failed: Renderer HTML did not enter the guest cache'
+        + ' (deadline exceeded; refused checks: 1× Renderer HTML did not enter the guest cache)')
+    })
+
+    it('reports the last refused check first and counts every reason over the attempts', async () => {
+      let catalogReads = 0
+      const fetchImpl = live({ 'X-Cache-Status': 'MISS' }, () => (catalogReads += 1) === 1
+        ? new Response('', { status: 503 })
+        : Response.json({ results: [{ slug: 'example' }] }))
+      const message = await refusal({ fetchImpl, timeoutMs: 9000 })
+
+      expect(message).toMatch(/^Renderer readiness failed: Renderer HTML did not enter the guest cache \(deadline exceeded; /)
+      expect(message).toContain('refused checks: 3× Renderer HTML did not enter the guest cache; 1× Public travel control is unavailable: HTTP 503)')
+    })
+
+    it('does not let a request aborted by the deadline itself replace the refused check', async () => {
+      let documents = 0
+      const fetchImpl = jest.fn(async (url: URL | string, init: { signal: AbortSignal }) => {
+        now += 700
+        if (String(url).includes('/api/travels/')) return Response.json({ results: [{ slug: 'example' }] })
+        documents += 1
+        // The third document request starts with less than its own 5 s left.
+        if (documents > 2) throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+        expect(init.signal).toBeInstanceOf(AbortSignal)
+        return response({ 'X-Cache-Status': 'MISS' })
+      })
+      const message = await refusal({ fetchImpl, timeoutMs: 7000 })
+
+      expect(documents).toBeGreaterThan(2)
+      expect(message).toBe('Renderer readiness failed: Renderer HTML did not enter the guest cache'
+        + ' (deadline exceeded; refused checks: 1× Renderer HTML did not enter the guest cache)')
+    })
+
+    it('still reports a slow response that had its whole request timeout as a reason', async () => {
+      const fetchImpl = jest.fn(async () => {
+        now += 5000
+        throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+      })
+      const message = await refusal({ fetchImpl, timeoutMs: 5000 })
+
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+      expect(message).toBe('Renderer readiness failed: The operation was aborted due to timeout'
+        + ' (deadline exceeded; refused checks: 1× The operation was aborted due to timeout)')
+    })
+
+    it('says so when the deadline passed before any check could be refused', async () => {
+      const fetchImpl = jest.fn()
+      await expect(verifyLiveWebSsr({ sha, fetchImpl, timeoutMs: 0 }))
+        .rejects.toThrow('Renderer readiness failed: deadline exceeded before any check was refused')
+      expect(fetchImpl).not.toHaveBeenCalled()
+    })
+
+    it('lists at most five reasons and counts the rest', () => {
+      const { createReadinessBudget } = require('@/scripts/lib/ssrDeploymentReadiness')
+      const budget = createReadinessBudget('Renderer readiness', 1000)
+      for (const slug of ['a', 'b', 'c', 'd', 'e', 'f', 'g']) budget.refused(new Error(`Legacy article loader (${slug}): HTTP 502`))
+      budget.refused(new Error('Legacy article loader (c): HTTP 502'))
+
+      expect(budget.failure().message).toBe('Renderer readiness failed: Legacy article loader (c): HTTP 502 (deadline exceeded; refused checks: '
+        + '2× Legacy article loader (c): HTTP 502; 1× Legacy article loader (a): HTTP 502; 1× Legacy article loader (b): HTTP 502; '
+        + '1× Legacy article loader (d): HTTP 502; 1× Legacy article loader (e): HTTP 502; +2 more)')
+    })
+  })
+
   it('can select a public article whose slug contains Unicode', async () => {
     const unicodeCanonical = `https://metravel.by/travels/${encodeURIComponent('паездка')}`
     const unicodeHtml = html.replaceAll(canonical, unicodeCanonical)

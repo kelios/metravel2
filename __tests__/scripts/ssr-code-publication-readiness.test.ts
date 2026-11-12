@@ -125,7 +125,8 @@ deploy_prod prod
     } });
     if (!fs.existsSync(actions)) throw new Error(result.stderr || result.stdout || 'Publisher did not invoke its transport');
     const calls = fs.readFileSync(actions, 'utf8').trim().split('\n');
-    expect(calls).toEqual(['stage', 'publish-code', 'capability', 'verify-code', rollback ? 'rollback-code' : 'finalize-code']);
+    // The first capability read decides the publication id before the switch (#3334).
+    expect(calls).toEqual(['stage', 'capability', 'publish-code', 'capability', 'verify-code', rollback ? 'rollback-code' : 'finalize-code']);
     expect(result.stdout).toContain('⏱ SSR capability:');
     expect(result.stdout).toContain('⏱ SSR release: verify-code=');
     if (rollback) {

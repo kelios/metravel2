@@ -37,6 +37,18 @@ it('requires the activated source, selected published prose, SEO identity and gu
   expect(() => verifyQuestRuntimeResponse(response(), html.replace(sentence, ''), { sha, projection })).toThrow('prose');
 });
 
+// #3321: the rollout meets both markups — the released single-typed node with
+// `location` and the new `["TouristTrip", "CreativeWork"]` node with `contentLocation`.
+it('accepts the quest node as a TouristTrip string or a type list holding it, and nothing else', () => {
+  const swapped = (entity: Record<string, unknown>) => html.replace(JSON.stringify(graph), JSON.stringify({ '@graph': [entity, graph['@graph'][1]] }));
+  const { location, ...rest } = graph['@graph'][0] as Record<string, unknown>;
+  const merged = { ...rest, '@type': ['TouristTrip', 'CreativeWork'], contentLocation: location };
+  expect(() => verifyQuestRuntimeResponse(response(), html, { sha, projection })).not.toThrow();
+  expect(() => verifyQuestRuntimeResponse(response(), swapped(merged), { sha, projection })).not.toThrow();
+  expect(() => verifyQuestRuntimeResponse(response(), swapped({ ...merged, '@type': ['CreativeWork'] }), { sha, projection })).toThrow('schema');
+  expect(() => verifyQuestRuntimeResponse(response(), swapped({ ...merged, contentLocation: { '@type': 'City', name: 'Other' } }), { sha, projection })).toThrow('schema');
+});
+
 it('compares a selected API publication with rendered HTML and the immediately repeated cache HIT', async () => {
   const fetchImpl = jest.fn().mockResolvedValueOnce(Response.json(projection))
     .mockResolvedValueOnce(response({ 'X-Cache-Status': 'MISS' })).mockResolvedValueOnce(response());
@@ -45,6 +57,27 @@ it('compares a selected API publication with rendered HTML and the immediately r
   expect(String(fetchImpl.mock.calls[0][0])).toBe('https://metravel.by/api/quests/web/detail/7/fixture-city-walk/?lang=ru');
   expect(String(fetchImpl.mock.calls[1][0])).toBe(page.meta.canonical);
   expect(String(fetchImpl.mock.calls[2][0])).toBe(page.meta.canonical);
+});
+
+// #3337: the quest probe had the same single `failure` variable, and the
+// deadline error of the last request replaced the check that refused the page.
+it('names the check that refused the quest document when the deadline ends the retries', async () => {
+  let now = Date.now();
+  const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+  const fetchImpl = jest.fn(async (url: URL) => {
+    now += 700;
+    return url.pathname.startsWith('/api/quests/web/') ? Response.json(projection) : response({ 'X-Cache-Status': 'MISS' });
+  });
+  try {
+    // 0.7 s publication, 1.4 s document, 2.1 s no HIT, pause, 3.8 s publication:
+    // the document request finds the 3.5 s deadline already passed.
+    await expect(verifyLiveQuestSsr({ sha, controlPath: projection.canonical_path, fetchImpl, timeoutMs: 3500,
+      sleep: async (delay: number) => { now += delay; } })).rejects.toThrow(
+      /^Quest renderer readiness failed: (.*guest cache.*) \(deadline exceeded; refused checks: 1× \1\)$/);
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  } finally {
+    clock.mockRestore();
+  }
 });
 
 it.each([
