@@ -156,11 +156,8 @@ const QUEST_COUNTRY_LANDING_MIN_CITIES = 2;
  *
  * Это НЕ индексируемость. Дубликат посадочной города не стоит ни ссылки, ни
  * места в выдаче, но обратное неверно: страница может быть законным узлом
- * навигации и при этом не нести своего текста. Второе условие считается по
- * фактическому объёму и уникальности текста самой страницы
- * (`scripts/lib/questPageDepth.js`), потому что «городов ≥ 2» с объёмом текста
- * не коррелирует: 18 стран проходили этот порог, имея 112–270 слов прозы и
- * нулевую собственную лексику (#1929).
+ * навигации и при этом не набрать достаточно квестов для поискового хаба.
+ * Индексируемость отдельно решает `questCountryHubIndexVerdict` (#3259).
  */
 function questCountryLandingIsLinkable(country) {
   const cities = country?.cities;
@@ -178,19 +175,11 @@ const QUEST_COUNTRY_HUB_MIN_QUESTS = 5;
  * ссылок на свои города, квесты и статьи, без авторского текста (решение
  * владельца 09.11.2026, текст на страну отклонён в #1929), поэтому её
  * ценность — наполнение, а не объём прозы.
- *
- * `proseFloorsPass` — временное условие публикации, а не часть правила:
- * бэкенд принимает `indexable: true` только с прозовыми порогами
- * (`quests/services/web_publication.py` → `_quality`, ≥300 слов и ≥30% своей
- * лексики) и иначе отклоняет весь выпуск. Пока он не различает хаб страны,
- * хаб, прошедший порог наполнения, остаётся `noindex` с причиной
- * `publication-prose-floor`; после правки бэкенда условие удаляется отсюда.
  */
-function questCountryHubIndexVerdict(country, options = {}) {
+function questCountryHubIndexVerdict(country) {
   if (!questCountryLandingIsLinkable(country)) return { indexable: false, reason: 'single-city' };
   const quests = Array.isArray(country?.quests) ? country.quests.length : 0;
   if (quests < QUEST_COUNTRY_HUB_MIN_QUESTS) return { indexable: false, reason: 'thin-hub' };
-  if (!options.proseFloorsPass) return { indexable: false, reason: 'publication-prose-floor' };
   return { indexable: true, reason: 'hub' };
 }
 

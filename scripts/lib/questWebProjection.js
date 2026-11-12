@@ -235,11 +235,10 @@ function scoreCohort(cohort, kind, locale, countries) {
   scores.forEach((score, index) => { cohort[index].quality = { indexable: score.issues.length === 0,
     word_count: score.words, own_fivegram_ratio: score.ratio === null ? (score.words > 0 ? 1 : 0) : score.ratio }; });
   // #3259: страна — хаб ссылок; её index/noindex решает одно правило
-  // `questCountryHubIndexVerdict`, прозовые пороги входят в него только как
-  // текущее условие публикации на бэкенде.
+  // `questCountryHubIndexVerdict`, независимо от прозовых порогов.
   if (kind === 'country') cohort.forEach((entry) => {
     const country = countries.find((row) => row.countryCode === entry.country_code);
-    entry.quality.indexable = questCountryHubIndexVerdict(country, { proseFloorsPass: entry.quality.indexable }).indexable;
+    entry.quality.indexable = questCountryHubIndexVerdict(country).indexable;
   });
   // A non-empty detail cohort with zero eligible pages denotes lost public content.
   if (kind !== 'country' && cohort.length && !cohort.some((entry) => entry.quality.indexable)) throw new Error(`No ${locale} ${kind} page clears the public content floors`);

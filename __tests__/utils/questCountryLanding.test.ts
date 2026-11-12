@@ -100,8 +100,7 @@ describe('quest country landing groups', () => {
 
   // #1762: правило считается по каталогу, а не по списку стран — страна, у
   // которой появился второй город, обязана сама попасть в навигацию. Про место
-  // в выдаче эта функция больше не отвечает: индексируемость считается по
-  // фактическому тексту страницы (#1929, `scripts/lib/questPageDepth.js`).
+  // в выдаче эта функция не отвечает: хаб должен также набрать пять квестов.
   it('treats a country landing as linkable only from the second city on', () => {
     const groups = buildQuestCountryLandingGroups(quests)
     const belarus = groups.find((country: { countryAlias: string }) => country.countryAlias === 'belarus')
@@ -128,19 +127,17 @@ describe('quest country landing groups', () => {
     expect(questCountryLandingIsLinkable(grownPoland)).toBe(true)
   })
 
-  // #3259: одно правило index/noindex страны с порогом наполнения; прозовый
-  // порог бэкенда — временное условие публикации с собственной причиной.
-  it('decides country indexing by hub fill, with the publication prose floor as its own reason', () => {
+  it('decides country indexing by hub fill without a prose floor (#3377)', () => {
     const country = (cities: number, quests: number) => ({
       cities: Array.from({ length: cities }, (_, index) => ({ index })),
       quests: Array.from({ length: quests }, (_, index) => ({ index })),
     })
     expect(QUEST_COUNTRY_HUB_MIN_QUESTS).toBe(5)
-    expect(questCountryHubIndexVerdict(country(1, 9), { proseFloorsPass: true })).toEqual({ indexable: false, reason: 'single-city' })
-    expect(questCountryHubIndexVerdict(country(2, 4), { proseFloorsPass: true })).toEqual({ indexable: false, reason: 'thin-hub' })
-    expect(questCountryHubIndexVerdict(country(5, 6))).toEqual({ indexable: false, reason: 'publication-prose-floor' })
-    expect(questCountryHubIndexVerdict(country(2, 5), { proseFloorsPass: true })).toEqual({ indexable: true, reason: 'hub' })
-    expect(questCountryHubIndexVerdict(null, { proseFloorsPass: true }).indexable).toBe(false)
+    expect(questCountryHubIndexVerdict(country(1, 9))).toEqual({ indexable: false, reason: 'single-city' })
+    expect(questCountryHubIndexVerdict(country(2, 4))).toEqual({ indexable: false, reason: 'thin-hub' })
+    expect(questCountryHubIndexVerdict(country(2, 5))).toEqual({ indexable: true, reason: 'hub' })
+    expect(questCountryHubIndexVerdict(country(5, 6))).toEqual({ indexable: true, reason: 'hub' })
+    expect(questCountryHubIndexVerdict(null).indexable).toBe(false)
   })
 
   it('refuses a malformed country instead of guessing it is linkable', () => {

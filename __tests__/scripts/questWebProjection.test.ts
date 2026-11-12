@@ -132,7 +132,8 @@ describe('immutable public quest projection', () => {
   // #3259: страна — хаб ссылок. В её странице (её рисует сырой HTML) есть
   // каждый город, каждый квест и каждая статья страны; robots решает одно
   // правило `questCountryHubIndexVerdict`, а не прозовые пороги сами по себе.
-  it('publishes the country hub with links to every city, quest and country article', () => {
+  it.each([{ questCount: 4, indexable: false }, { questCount: 5, indexable: true }])(
+    'publishes all country hub links and indexes $questCount quests by fill ($indexable)', ({ questCount, indexable }) => {
     const source = questPrivateSnapshot();
     const base = source.catalog[0];
     source.catalog.push({ ...base, id: 300, quest_id: 'second-city-walk', city_id: '8', title: 'Квест второго города',
@@ -145,6 +146,15 @@ describe('immutable public quest projection', () => {
       (letter) => String.fromCharCode(97 + (letter.charCodeAt(0) - 97 + 7) % 26)) }));
     (source.bundles.ru as Record<string, unknown>)['8/second-city-walk'] = {
       ...ruBundle, quest_id: 'second-city-walk', title: 'Квест второго города', steps };
+    for (let index = 2; index < questCount; index += 1) {
+      const questId = `fixture-route-${index}`;
+      source.catalog.push({ ...base, id: 300 + index, quest_id: questId, title: `Ещё один маршрут ${index}` });
+      source.source_snapshot.quests.push({ ...source.source_snapshot.quests[0], quest_pk: 300 + index,
+        quest_slug: questId, locales: { ru: source.source_snapshot.quests[0].locales.ru } });
+      const ownSteps = ruBundle.steps.map((step) => ({ ...step, story: step.story.replace(/[a-z]/g,
+        (letter) => String.fromCharCode(97 + (letter.charCodeAt(0) - 97 + index) % 26)) }));
+      (source.bundles.ru as Record<string, unknown>)[`7/${questId}`] = { ...ruBundle, quest_id: questId, steps: ownSteps };
+    }
     const article = (id: number, countryCode: string, countryName = 'Беларусь') => ({ id, name: `Статья ${id}`,
       slug: `article-${id}`, cityName: '', countryName, countryCode, travelAddress: [] });
     source.travel_links = [
@@ -164,8 +174,10 @@ describe('immutable public quest projection', () => {
     expect(articles).toEqual(expect.arrayContaining(['/travels/article-900', '/travels/article-902']));
     expect(articles).not.toContain('/travels/article-901');
     expect(sections.every((part) => part.items.length <= 256)).toBe(true);
-    // Два города, но меньше пяти квестов: хаб тонкий, страница закрыта.
-    expect(country.quality.indexable).toBe(false);
+    expect(paths.filter((path) => /^\/quests\/\d+\//.test(path || ''))).toHaveLength(questCount);
+    // Country prose stays below the detail/city floor; only hub fill decides robots.
+    expect(country.quality.word_count).toBeLessThan(300);
+    expect(country.quality.indexable).toBe(indexable);
   });
 
   // #3236: head посадочной города собран из его мест, квестов и соседей, а не

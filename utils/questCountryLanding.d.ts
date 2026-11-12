@@ -17,10 +17,9 @@ export type QuestCountryLandingGroup<T = unknown> = {
 export const ISO_ALPHA2_CODES: Set<string>;
 export const QUEST_COUNTRY_LANDING_MIN_CITIES: number;
 export const QUEST_COUNTRY_HUB_MIN_QUESTS: number;
-export type QuestCountryHubIndexReason = 'single-city' | 'thin-hub' | 'publication-prose-floor' | 'hub';
+export type QuestCountryHubIndexReason = 'single-city' | 'thin-hub' | 'hub';
 export function questCountryHubIndexVerdict(
   country: { cities?: unknown[]; quests?: unknown[] } | null | undefined,
-  options?: { proseFloorsPass?: boolean },
 ): { indexable: boolean; reason: QuestCountryHubIndexReason };
 export function questCountryLandingIsLinkable(
   country: { cities?: unknown[] } | null | undefined,
