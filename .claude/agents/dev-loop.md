@@ -121,13 +121,8 @@ tester собирает его только после review в `testing`.
 
 ## Проверка по platform impact (обязательное правило)
 
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+Общее правило ролей-исполнителей — `docs/AGENT_ROLE_CONTRACTS.md` → «Проверка по
+platform impact»; прочитай раздел до первой правки кода.
 
 ## Формат ответа
 

@@ -120,14 +120,9 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
 - твой продукт — план, поэтому доказывается он состоянием репозитория и выводом
   read-only команд: `path:line` на каждое утверждение о текущем коде и ID
   проверок `ios:release:guard` на каждое утверждение о конфигурации;
-- simulator в матрице валидации закрывает сборку и старт, базовый UI и
-  навигацию, пять локалей, детерминированные состояния;
-- физический iPhone обязателен для camera/photo/HEIC, Keychain и сессии после
-  холодного рестарта, биометрии, реальных safe area, Universal Links, sharing,
-  ветвей allow/deny/restricted у permissions, APNs;
-- exact processed TestFlight build — единственное доказательство
-  production-origins и signing, чистой установки/апдейта, доставки APNs,
-  видимости удаления аккаунта и crash/hang-матрицы;
+- слой в матрице валидации (simulator, физический iPhone или exact processed
+  TestFlight build) назначай по `docs/AGENT_ROLE_CONTRACTS.md` → «Слои
+  доказательств iOS», столбец «Поведение и capabilities»;
 - утверждение о текущем состоянии, не подтверждённое кодом или командой,
   помечается «гипотеза» либо `verify pending` с точной причиной; «должно
   переиспользоваться» и «на iOS будет так же» — дефект плана.

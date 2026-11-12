@@ -92,14 +92,9 @@ code-review pass и перехода тикета в `testing`.
 
 - source/config, focused tests и guards до review доказывают только
   статические контракты;
-- в `testing` simulator доказывает сборку/старт без red screen, UI и навигацию,
-  пять локалей, детерминированные loading/error-состояния;
-- физический iPhone обязателен для: camera/photo/HEIC, Keychain и сессии после
-  холодного рестарта, биометрии, реальных safe area, Universal Links, sharing и
-  экспорта, ветвей allow/deny/restricted у permissions, APNs;
-- exact processed TestFlight build — единственное доказательство
-  production-origins и signing, чистой установки/апдейта, доставки APNs и
-  crash/hang-матрицы;
+- в `testing` слой каждого сценария (simulator, физический iPhone или exact
+  processed TestFlight build) — по `docs/AGENT_ROLE_CONTRACTS.md` → «Слои
+  доказательств iOS», столбец «Поведение и capabilities»;
 - непройденный runtime-слой в implementation/review не блокирует
   code verdict: его передают exact testing handoff. `VERIFY_PENDING`
   допустим только в самом `testing` при конкретном access/env blocker.

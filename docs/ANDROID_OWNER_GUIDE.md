@@ -1,6 +1,6 @@
 # Android release owner guide
 
-Актуализировано: 2026-07-15.
+Актуализировано: 2026-07-15; заметка об upload key reset в §2 — 2026-11-12.
 
 Android release не использует EAS/Expo cloud build или submit. Проект остаётся
 на Expo/React Native, но AAB собирается локальным Gradle, а Google Play
@@ -9,24 +9,6 @@ Android release не использует EAS/Expo cloud build или submit. П
 Production automation технически ограничена track `production`. Она не должна
 менять `alpha`, `internal`, `beta`, testers, countries или текущую сборку
 закрытого тестирования.
-
-## Temporary Google Play upload freeze
-
-15 июля 2026 года Google Play принял запрос на сброс upload key. Новый ключ
-начнёт действовать **17 июля 2026 года в 12:44 UTC (14:44 Europe/Warsaw)**.
-
-До этого момента:
-
-- локальные Gradle-сборки и установка на USB-устройство разрешены;
-- Google Play не принимает новые AAB/APK ни в один track, включая closed
-  testing и `production`;
-- текущая closed-testing сборка с `versionCode 11` и 12 подключёнными
-  тестировщиками продолжают работать без изменений;
-- запрос на сброс не отменяется и повторная загрузка не запускается.
-
-После указанного времени store upload выполняется только с новым локальным
-upload key. Обновление closed testing остаётся отдельной явно поставленной
-задачей; production-only automation не изменяет protected tracks.
 
 ## Current project contract
 
@@ -135,6 +117,12 @@ Upload certificate локального keystore должен совпадать
 нужно создать новый локальный upload key и выполнить штатный Play Console upload
 key reset. Reset не заменяет Google Play App Signing key и не требует изменения
 closed-testing track, но до подтверждения нового сертификата AAB не загружается.
+
+История: такой reset Google Play принял 15 июля 2026 года, новый ключ вступал в
+силу 17 июля 2026 года в 12:44 UTC. Временная заморозка загрузок на эти двое
+суток истекла 17.07.2026 и отдельным разделом больше не ведётся. Текущее
+состояние ключа и tracks этот документ не отслеживает: перед store upload сверь
+Upload key certificate в Play Console с локальным keystore.
 
 ## 3. Store assets and policy
 

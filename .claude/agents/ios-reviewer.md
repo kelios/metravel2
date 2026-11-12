@@ -114,14 +114,9 @@ build, запиши testing handoff, но не запускай этот сло�
 
 - чтение кода и `ios:release:guard` доказывают конфигурацию и статические
   контракты, но не поведение;
-- simulator доказывает сборку и старт без red screen, базовый UI и навигацию,
-  пять локалей, детерминированные loading/error-состояния;
-- физический iPhone обязателен для camera/photo/HEIC, Keychain и сессии после
-  холодного рестарта, биометрии, реальных safe area, Universal Links, sharing,
-  ветвей allow/deny/restricted у permissions, APNs;
-- exact processed TestFlight build — единственное доказательство
-  production-origins и signing, чистой установки/апдейта, доставки APNs,
-  видимости удаления аккаунта и crash/hang-матрицы;
+- что доказывает simulator, а что только физический iPhone или exact processed
+  TestFlight build — `docs/AGENT_ROLE_CONTRACTS.md` → «Слои доказательств iOS»,
+  столбец «Поведение и capabilities»;
 - обязательный runtime слой фиксируется как testing requirement; его отсутствие
   не является code-review finding или `verify pending` verdict.
 

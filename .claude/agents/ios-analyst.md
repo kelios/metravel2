@@ -104,14 +104,9 @@ localization impact, чем считается закрытым), решение
 - твой продукт — постановка, поэтому доказывается она состоянием репозитория и
   выводом read-only команд: `path:line` или ID проверки `ios:release:guard` на
   каждое утверждение о текущем состоянии;
-- simulator в критериях закрывает сборку и старт, базовый UI и навигацию, пять
-  локалей, детерминированные loading/error-состояния;
-- физический iPhone обязателен для camera/photo/HEIC, Keychain и сессии после
-  холодного рестарта, биометрии, реальных safe area, Universal Links, sharing,
-  ветвей allow/deny/restricted у permissions, APNs;
-- exact processed TestFlight build — единственное доказательство
-  production-origins и signing, чистой установки/апдейта, Apple-логина, доставки
-  APNs, видимости удаления аккаунта и crash/hang-матрицы;
+- слой в каждом критерии (simulator, физический iPhone или exact processed
+  TestFlight build) назначай по `docs/AGENT_ROLE_CONTRACTS.md` → «Слои
+  доказательств iOS», столбец «Поведение и capabilities»;
 - то, что доказывается только человеком в Apple-интерфейсе (членство,
   соглашения, статус App Review, storefront release), не является acceptance
   criterion агента и оформляется owner-пунктом;

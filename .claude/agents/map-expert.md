@@ -166,25 +166,12 @@ handoff и выполняются только после code-review pass в `t
 - **Доказательства по поверхностям** — назови отдельный риск каждого target по
   risk-based матрице; shared-файл сам по себе не добавляет повторный прогон.
 
-## Статус на борде (WIP-видимость) — load-bearing
+## Статус на борде и проверка по platform impact — load-bearing
 
-Раздел включается, только когда тебе передали id тикета («возьми #573» /
-«почини #545»); без id борд не трогай вообще. Статусные детали и исключения —
-`docs/TASK_BOARD_MCP.md`.
+Оба правила обязательны и общие для ролей-исполнителей. Текст — в
+`docs/AGENT_ROLE_CONTRACTS.md`; прочитай нужный раздел до первой правки кода:
 
-- **ДО первой правки кода:** `metravel_task_update` → `in_progress` плюс `assignee` = имя твоего агента. MCP-схемы борда подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
-- **После работы:** → `review`, а в `description` допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks, exact runtime-QA handoff для `testing`. `done` сам НЕ ставишь.
-- **Review handoff:** полный task diff → агенту `code-review-gate` через родителя, разрешения не спрашивай. Commit, push и переход `review → testing` — по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращают тикет исполнителю в `in_progress`.
-- **Блокер** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая причина в `description`. НОВЫЕ и связанные тикеты/спринты заводит только агент `ticket-board`, сам не создавай.
-- **Один тикет — один исполнитель:** чужие статусы и описания не трогай.
-- **Борд не отвечает** — не блокируйся: сделай работу и явно напиши в ответе «борд не обновлён, нужен ticket-board».
-
-## Проверка по platform impact (обязательное правило)
-
-Правило целиком — `docs/RULES.md` → «UI rules» (parity, web-only ветвления,
-темизация, контракт карточки точки) и «Development workflow» (стадии device QA).
-Без открытия документа:
-
-- Матрица проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»: shared-логику проверяй один раз, responsive/UI-изменения — mobile web first + desktop.
-- Native QA в `testing` нужен для отличающейся реализации/поведения; выбери релевантный эмулятор/симулятор, physical/release слой — по capabilities.
-- В мобильном вьюпорте нет web-only визуальных ветвлений; темизация тематических поверхностей — через `useThemedColors()`, не `DESIGN_TOKENS.colors.*`.
+- «Статус на борде (WIP-видимость)» — только с id тикета, без id борд не
+  трогай: `in_progress` и `assignee` до первой правки, `review` с evidence
+  после, `done` сам не ставишь;
+- «Проверка по platform impact» — всегда.

@@ -110,15 +110,9 @@ visual matrix для `ios-tester` после code-review pass в `testing`.
 
 - source/design audit до review доказывает токены, иерархию и
   план testing matrix, но не визуальный pass;
-- в `testing` simulator доказывает раскладку/иерархию, действия, светлую
-  и тёмную тему, пять локалей, состояния loading/empty/error, отсутствие
-  обрезания на длинных строках;
-- физический iPhone обязателен для: safe area под реальной чёлкой и home
-  indicator, клавиатуры и её перекрытий, системных диалогов permissions,
-  Dynamic Type и VoiceOver на устройстве, реального ощущения тач-таргетов;
-- exact processed TestFlight build — единственный источник скриншотов App Store
-  и подтверждения, что визуал совпал с production-конфигурацией; скриншоты для
-  стора делаются с реального билда, без мок-данных и персональных данных;
+- в `testing` слой каждого визуального сценария (simulator, физический iPhone
+  или exact processed TestFlight build) — по `docs/AGENT_ROLE_CONTRACTS.md` →
+  «Слои доказательств iOS», столбец «Визуал и HIG»;
 - на implementation/review отсутствие скрина ожидаемо: нужен exact
   testing handoff. В самом `testing` отсутствие обязательного evidence даёт
   `VERIFY_PENDING`, а не pass.
