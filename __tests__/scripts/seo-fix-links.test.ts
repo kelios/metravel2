@@ -325,6 +325,21 @@ describe('seo-fix-links: every link field of an article (#3330)', () => {
     expect(detectRegression(before, after, slugMap)).toEqual(['plus shrank 400 → 100'])
   })
 
+  it('measures a rewritten field against its expected length: a much shorter new slug is not a collapse (#264)', () => {
+    const longOld = 'marshrut-na-odin-den-dvorec-stanislava-varshickogo-zamok-morsko-peshchera-stefanova-dzyura-dzyadova-peshchera'
+    const shortNew = 'zamok-bekovets-i-dvorets-varshitskogo-marshrut'
+    const map = new Map([[longOld, shortNew]])
+    const field = (slug: string) =>
+      `<p>Замок "Бековец"&nbsp;<a href="https://metravel.by/travels/${slug}" rel="noopener noreferrer" target="_blank">https://metravel.by/travels/${slug}</a></p>`
+    const before = article({ recommendation: field(longOld) })
+    const after = { ...before, recommendation: field(shortNew) }
+    expect(after.recommendation.length).toBeLessThan(Math.floor(before.recommendation.length * 0.9))
+    expect(detectRegression(before, after, map)).toEqual([])
+    // the bar still holds against the expected text: a rewritten field that came back cut is caught
+    const cut = { ...before, recommendation: '<p>Замок</p>' }
+    expect(detectRegression(before, cut, map)).toEqual([`recommendation shrank ${field(shortNew).length} → ${cut.recommendation.length}`])
+  })
+
   it('stops the batch and rolls back when a rewritten field comes back with mangled text', async () => {
     const out = silence()
     const first = article({ recommendation: '<p>Маршрут: <a href="/travels/old-slug">тут</a></p>' })

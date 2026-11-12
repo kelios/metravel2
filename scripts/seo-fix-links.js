@@ -211,6 +211,12 @@ function latestBackup(id) {
  * no old slug remains as a link AND no rich-text field collapsed. Every field of
  * TRAVEL_LINK_FIELDS is held to it, rewritten or merely echoed: the PUT carries
  * all four, so all four can come back damaged.
+ *
+ * The collapse bar is measured against the EXPECTED field — the before text with
+ * the mirror's rewrites applied — not the original: a short field made of one
+ * link whose new slug is much shorter legitimately loses that difference twice
+ * (href and visible URL), and held to the original length it read as a collapse
+ * (#264: 359 → 233 for a 63-char shorter slug, rolled back on the first --apply).
  */
 function detectRegression(before, after, slugMap) {
   const problems = [];
@@ -222,8 +228,8 @@ function detectRegression(before, after, slugMap) {
   let remaining = 0;
   for (const field of TRAVEL_LINK_FIELDS) {
     const afterText = String(after[field] || '').trim();
-    const beforeLen = String(before[field] || '').trim().length;
-    if (afterText.length < Math.floor(beforeLen * 0.9)) problems.push(`${field} shrank ${beforeLen} → ${afterText.length}`);
+    const expectedLen = rewriteLinks(String(before[field] || ''), slugMap).html.trim().length;
+    if (afterText.length < Math.floor(expectedLen * 0.9)) problems.push(`${field} shrank ${expectedLen} → ${afterText.length}`);
     remaining += rewriteLinks(afterText, slugMap).count;
   }
   if (remaining > 0) problems.push(`${remaining} stale link(s) still present after write`);
