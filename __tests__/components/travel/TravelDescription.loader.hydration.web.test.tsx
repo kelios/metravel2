@@ -55,6 +55,11 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
   expect(island?.textContent).toContain('Канонический текст статьи.')
   expect(island?.querySelector('script')).toBeNull()
   expect(island?.querySelector('img')?.hasAttribute('onerror')).toBe(false)
+  // #3316: серверное тело не запрашивает картинки до LCP-фото первого экрана.
+  expect(island?.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml,/)
+  expect(island?.querySelector('img')?.getAttribute('data-deferred-src')).toBe('/photo.jpg')
+  expect(island?.querySelectorAll('noscript')).toHaveLength(1)
+  expect(island?.querySelector('noscript')?.textContent).toBe('<img src="/photo.jpg" alt="" loading="lazy">')
   expect(island?.querySelector('h1')).toBeNull()
   expect(island?.querySelector('h2#authored-heading')?.textContent).toBe('Раздел статьи')
   const errors: unknown[] = []
@@ -65,6 +70,9 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
     })
     expect(errors).toEqual([])
     expect(container.querySelector('[data-ssr-html-island="description"]')).toBe(island)
+    expect(island?.querySelector('img')?.getAttribute('src')).toBe('/photo.jpg')
+    expect(island?.querySelectorAll('img')).toHaveLength(1)
+    expect(island?.querySelectorAll('noscript')).toHaveLength(1)
   } finally {
     await act(async () => root?.unmount())
     container.remove()

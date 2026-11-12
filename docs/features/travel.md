@@ -252,6 +252,17 @@ runtime-проверка должна различать свежий backend re
 - Main image, blurred surround и slider chrome появляются как единый первый
   визуальный state после готовности runtime; interaction-gated activation не
   используется.
+- Картинки серверного острова тела статьи (`[data-ssr-html-island]`) не делят
+  канал с LCP-фото. Это часть самого инертного прохода:
+  `toInertHtml(html, { deferImages: true })` (`utils/inertHtmlDeferredImages.ts`)
+  кладёт адреса `<img>` в `data-deferred-*`, в `src` — прозрачная заглушка той же
+  пропорции, а сразу за картинкой — свой `<noscript>` с ней же по исходному
+  адресу (`src/srcset/sizes/alt/width/height`) для читателя без JS; браузер с JS
+  его не загружает. Авторские `noscript` и `data-deferred-*` проход по-прежнему
+  выбрасывает, `toInertHtml` остаётся последним шагом стока. Адреса возвращает
+  оболочка документа по `load`/`error` LCP-картинки либо по гидратации (правило
+  шрифта иконок), клиентский остров — при монтаже
+  (`utils/richTextDeferredImages.ts`); дальше `loading="lazy"` (#3316).
 - Изменения slider/details/media обязаны проходить обе стороны bilateral
   contract: `npm run verify:slider` и `npm run verify:slider-perf`, с запуском
   через общий quality-gate lock по `docs/RULES.md`.

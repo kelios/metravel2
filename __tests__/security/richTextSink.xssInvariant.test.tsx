@@ -19,6 +19,7 @@ let StableContent: React.ComponentType<SinkProps & { contentWidth: number }>
 let SafeHtml: React.ComponentType<SinkProps & { imageAlt?: string }>
 let Description: React.ComponentType<{ htmlContent: string; serverSanitized: boolean; noBox: boolean }>
 let LoaderProvider: React.Provider<unknown>
+let releaseDeferredRichTextImages: typeof import('@/utils/richTextDeferredImages').releaseDeferredRichTextImages
 
 beforeAll(() => {
   jest.resetModules()
@@ -54,6 +55,7 @@ beforeAll(() => {
   SafeHtml = require('@/components/article/SafeHtml').SafeHtml
   Description = require('@/components/travel/TravelDescription').default
   LoaderProvider = require('@/components/travel/details/travelLoaderData').TravelLoaderDataContext.Provider
+  ;({ releaseDeferredRichTextImages } = require('@/utils/richTextDeferredImages'))
 })
 
 const HOSTILE: readonly string[] = [
@@ -178,7 +180,15 @@ describe('rich-text web sinks: no executable markup after the full path (#3202)'
       const host = parseInto(renderToString(tree))
       const island = host.querySelector('[data-ssr-html-island="description"]')
       if (!island) return [{ sample: index, sink: 'TravelDescription island', problem: 'island not rendered' }]
-      return collectViolations(island, index, 'TravelDescription island')
+      // #3316: the island's inert pass defers images (`toInertHtml(html, { deferImages: true })`).
+      // Check what a reader without JS parses (noscript twins as markup) and what
+      // the browser gets after the shell moves `data-deferred-*` back into src/srcset.
+      const withoutScripting = new DOMParser().parseFromString(island.innerHTML, 'text/html').body
+      releaseDeferredRichTextImages(island)
+      return [
+        ...collectViolations(island, index, 'TravelDescription island (released)'),
+        ...collectViolations(withoutScripting, index, 'TravelDescription island (no JS)'),
+      ]
     })
     expect(violations).toEqual([])
   })

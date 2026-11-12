@@ -4,6 +4,7 @@ import {
   tokenizeHtml,
   type HtmlAttribute,
 } from '@/utils/htmlTokens'
+import { serializeDeferredImage } from '@/utils/inertHtmlDeferredImages'
 
 /**
  * #3202: последний рубеж перед web-стоком rich-text.
@@ -146,7 +147,12 @@ const isAllowedIframe = (attrs: readonly HtmlAttribute[]): boolean => {
   return typeof src === 'string' && ALLOWED_IFRAME_SRC_RE.test(decodeUrlReferences(src).trim())
 }
 
-export function toInertHtml(html: string | null | undefined): InertHtml {
+export type InertHtmlOptions = {
+  /** #3316: `<img>` откладываются до LCP-фото с `noscript`-двойником (`utils/inertHtmlDeferredImages.ts`). */
+  deferImages?: boolean
+}
+
+export function toInertHtml(html: string | null | undefined, options?: InertHtmlOptions): InertHtml {
   const source = String(html ?? '')
   if (!source) return '' as InertHtml
   let out = ''
@@ -181,7 +187,7 @@ export function toInertHtml(html: string | null | undefined): InertHtml {
           if (isAllowedIframe(attrs)) out += `${serializeStartTag(name, attrs)}</iframe>`
           break
         }
-        out += serializeStartTag(name, attrs)
+        out += name === 'img' && options?.deferImages ? serializeDeferredImage(attrs) : serializeStartTag(name, attrs)
         break
       }
       case 'end':

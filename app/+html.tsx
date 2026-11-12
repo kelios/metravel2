@@ -33,6 +33,7 @@ import { readRequestPathname } from '@/utils/ssr/requestLocale'
 import { Asset } from 'expo-asset'
 import Feather from '@expo/vector-icons/Feather'
 import { ICON_FONT_FAMILY, buildFontDisplayPolicyScript, buildIconFontLoaderScript } from '@/utils/iconFontShell'
+import { buildDeferredRichTextImagesScript } from '@/utils/richTextDeferredImagesShell'
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract'
 import { getLocaleBootCss, getLocaleBootScript } from '@/i18n/localeBootShell'
 import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff';
@@ -718,6 +719,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <script
       id="metravel-icon-font"
       dangerouslySetInnerHTML={{ __html: buildIconFontLoaderScript(iconFontUrl) }}
+    />
+
+    {/* #3316: картинки серверного тела статьи — тем же правилом, после LCP-фото. */}
+    <script
+      id="metravel-deferred-rich-images"
+      dangerouslySetInnerHTML={{ __html: buildDeferredRichTextImagesScript() }}
     />
 
     {/* #2107: до entry-бандла. Холодный заход не трогает адрес. В тёплой

@@ -114,7 +114,8 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
     const initialDescriptionHtml = useMemo(
         () => Platform.OS === 'web' && serverSanitized && hasLoaderTravel
             // #3237: серверный HTML несёт `alt` у каждой картинки — подпись автора или пустой.
-            ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)))
+            // #3316: адреса картинок отложены до LCP-фото первого экрана.
+            ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)), { deferImages: true })
             : null,
         [hasLoaderTravel, htmlContent, serverSanitized],
     );

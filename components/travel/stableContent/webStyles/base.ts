@@ -81,14 +81,18 @@ export const baseStyles = (
   margin-bottom: 1.2em;
 }
 
+/* #3316: в серверном острове за отложенной картинкой стоит её noscript-двойник. */
 .${cls} p > img + img,
+.${cls} p > img + noscript + img,
 .${cls} p > img + br + img,
+.${cls} p > img + noscript + br + img,
 .${cls} p > br + img {
   margin-top: 18px !important;
 }
 
 .${cls} p + img,
-.${cls} img + p {
+.${cls} img + p,
+.${cls} img + noscript + p {
   margin-top: 1.6em;
 }
 
