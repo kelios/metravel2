@@ -11,6 +11,7 @@ import { BECOME_AUTHOR_LAYOUT } from '@/components/author/becomeAuthorLayout';
 import { EMPTY_STATE_LAYOUT } from '@/components/ui/emptyStateLayout';
 import { CHIP_LAYOUT } from '@/components/ui/chipLayout';
 import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
+import { CONTRIBUTION_BANNER_LAYOUTS, CONTRIBUTION_CONTAINER_LAYOUTS } from '@/components/common/contributionBannerLayout';
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_RESERVE_CSS, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
@@ -302,5 +303,7 @@ export function buildCriticalCSS(): string {
     // #2258: кегль `Heading` по ступеням ширины (по возрастанию — позднее правило
     // побеждает); статический HTML несёт узкую ступень, как телефон и native.
     ...HEADING_LAYOUTS.map(buildBreakpointLayoutCss),
+    ...Object.values(CONTRIBUTION_BANNER_LAYOUTS).map(buildBreakpointLayoutCss),
+    ...CONTRIBUTION_CONTAINER_LAYOUTS.map(buildBreakpointLayoutCss),
   ].join('\n');
 }

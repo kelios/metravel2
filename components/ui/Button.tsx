@@ -17,6 +17,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable';
 import { normalizeExternalUrl } from '@/utils/externalLinks';
+import { webDataSetProps, type WebDataSet } from '@/utils/webProps';
 
 // soft = tonal (primarySoft bg + primaryText); danger-outline = красная рамка+текст, прозрачный фон
 // tonal = нейтральный серый фон (backgroundTertiary) + primaryText, для второстепенных pill-кнопок
@@ -55,6 +56,7 @@ export interface ButtonProps {
   accessibilityLabel?: string;
   accessibilityHint?: string;
   testID?: string;
+  dataSet?: WebDataSet;
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
   /** Explicit line limit for compact controls. Action labels wrap by default. */
@@ -88,6 +90,7 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   accessibilityLabel,
   accessibilityHint,
   testID,
+  dataSet,
   style,
   labelStyle,
   labelNumberOfLines,
@@ -121,6 +124,7 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   return (
     <Pressable
       ref={ref}
+      {...(Platform.OS === 'web' && dataSet ? webDataSetProps(dataSet) : null)}
       {...anchorProps}
       accessibilityRole={linkHref ? 'link' : 'button'}
       accessibilityState={{ disabled: isDisabled, busy: loading }}

@@ -768,6 +768,32 @@ guard, падающий в CI на попытке обойти этот конт
   слоя — 3 suite / 59 тестов PASS. Gate `#1564` продолжает держать narrow
   baseline.
 
+### CONTRIBUTION-BANNER-FIRST-FRAME-CLS-001 — приглашение меняет раскладку после width-zero кадра
+
+- **Инвариант:** regular/compact `ContributionBanner` и его существующий
+  контейнер имеют конечную viewport-геометрию до и после гидратации, сохраняя
+  тексты, действия и native-раскладку.
+- **Каноническая задача:** #3386, связанная prerequisite к #3382; #1334 исправляла
+  отдельную mobile-шапку Places, #3095 добавляла кампанию. Это не повтор общего
+  measured-transition механизма travel.
+- **Evidence 12.11.2026:** обязательный `verify:slider-perf` на `4c8d239dd`
+  дважды даёт Places desktop CLS `0.157282859` при лимите `0.1`, after-ready `0`.
+  Карточка баннера `(360,282,904,222)→(392,312,840,128)`, следующая сетка `514→480`.
+- **Причина:** обычный `useResponsive()` в баннере сначала возвращает ширину `0`.
+  Компактный wrapper меняет вертикальный padding `8→10`, вложенный
+  `ResponsiveContainer` — `8/4→40/32` (horizontal/vertical), card — column→row.
+  Получаются ровно X+32, Y+30, height−94 и сдвиг сетки `−94+30+30=−34`.
+- **Решение:** banner-owned `defineBreakpointLayout` registry для React и
+  critical CSS, метки на существующих узлах, optional web `dataSet` passthrough
+  существующего Button для `width:100%→auto`. Глобальные responsive hook и
+  ResponsiveContainer не меняются; резерв и таймер не добавляются.
+- **Контроль:** actual-banner/container SSR→hydration 390/1280, две плотности и
+  ветви действий, container tiers, native no-marker; исходный numeric FAIL
+  сохранён. Source: 8 suites/124 tests, полный lint, main/e2e types, prompt audit и
+  strict OpenSpec PASS; новая публикация и runtime pending. Общий компонент
+  используется в travel footer: final primary10 и
+  Lighthouse5 проверяются на новой ревизии, старый PASS не переименовывается.
+
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
 
 - **Инвариант:** deferred-placeholder остаётся в потоке до первого ненулевого

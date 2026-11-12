@@ -22,6 +22,12 @@ import { useTranslation } from '@/i18n/LocaleProvider'
 import { trackPlaceContribution } from '@/utils/placeContributionAnalytics'
 import { buildPlaceRequestsHref, type PlaceContributionSource } from '@/utils/placeRequestCreateIntent'
 import { isPlaceRequestsPilotEnabled } from '@/utils/placeRequestsConfig'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import {
+  CONTRIBUTION_BANNER_LAYOUTS,
+  CONTRIBUTION_CONTAINER_LAYOUTS,
+  contributionContainerStyle,
+} from './contributionBannerLayout'
 
 
 export type ContributionBannerVariant =
@@ -105,12 +111,13 @@ function ContributionBanner({ variant = 'default', density = 'regular', campaign
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const authReady = useAuthStore((state) => state.authReady)
-  const { isMobile } = useResponsive()
+  const { isMobile, width } = useResponsive()
   const isCompact = density === 'compact'
+  const layout = CONTRIBUTION_BANNER_LAYOUTS[density]
   const colors = useThemedColors()
   const styles = useMemo(
-    () => createStyles(colors, isMobile, isCompact),
-    [colors, isCompact, isMobile],
+    () => createStyles(colors, isMobile, isCompact, width),
+    [colors, isCompact, isMobile, width],
   )
 
   const copy = campaign ? {
@@ -192,29 +199,34 @@ function ContributionBanner({ variant = 'default', density = 'regular', campaign
   if (campaign && !isPlaceRequestsPilotEnabled()) return null
 
   return (
-    <View ref={impression.ref} onLayout={impression.onLayout} style={styles.wrapper}>
-      <ResponsiveContainer maxWidth="xl" padding>
-        <View style={styles.card}>
+    <View ref={impression.ref} onLayout={impression.onLayout} style={styles.wrapper} {...breakpointLayoutProps(layout, 'wrapper')}>
+      <ResponsiveContainer
+        maxWidth="xl" padding style={styles.container}
+        {...breakpointLayoutProps(CONTRIBUTION_CONTAINER_LAYOUTS[0], 'frame')}
+      >
+        <View style={styles.card} {...breakpointLayoutProps(layout, 'card')}>
           <View style={styles.iconRow}>
             <View style={styles.iconWrap}>
               <Feather
                 name={copy.icon as any}
                 size={isCompact ? 18 : isMobile ? 20 : 22}
                 color={colors.primaryDark}
+                style={styles.icon}
+                {...breakpointLayoutProps(layout, 'icon')}
               />
             </View>
           </View>
 
-          <View style={[styles.textBlock, isMobile ? styles.textBlockMobile : styles.textBlockDesktop]}>
-            <Text style={styles.title} numberOfLines={isCompact ? 2 : undefined}>
+          <View style={styles.textBlock} {...breakpointLayoutProps(layout, 'text')}>
+            <Text style={styles.title} numberOfLines={isCompact ? 2 : undefined} {...breakpointLayoutProps(layout, 'title')}>
               {copy.title}
             </Text>
-            <Text style={styles.subtitle} numberOfLines={isCompact ? 2 : undefined}>
+            <Text style={styles.subtitle} numberOfLines={isCompact ? 2 : undefined} {...breakpointLayoutProps(layout, 'subtitle')}>
               {copy.subtitle}
             </Text>
           </View>
 
-          <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
+          <View style={styles.buttons} {...breakpointLayoutProps(layout, 'buttons')}>
             {campaign ? (
               <LinkPressable
                 href={buildPlaceRequestsHref(campaign.source, { region: campaign.region }) as Href}
@@ -241,6 +253,7 @@ function ContributionBanner({ variant = 'default', density = 'regular', campaign
                 icon={<Feather name="user-plus" size={16} color={colors.textOnPrimary} />}
                 iconPosition="left"
                 style={styles.primaryBtn}
+                {...breakpointLayoutProps(layout, 'action')}
                 accessibilityLabel={i18nT('shared:components.common.ContributionBanner.zaregistrirovatsya_i_dobavit_mesto_160382f2')}
               />
             )}
@@ -253,6 +266,7 @@ function ContributionBanner({ variant = 'default', density = 'regular', campaign
               icon={<Feather name="plus" size={16} color={isAuthenticated ? colors.textOnPrimary : colors.primary} />}
               iconPosition="left"
               style={isAuthenticated ? styles.primaryBtn : styles.outlineBtn}
+              {...breakpointLayoutProps(layout, 'action')}
               accessibilityLabel={i18nT('shared:components.common.ContributionBanner.dobavit_mesto_na_kartu_b151a49c')}
             />
             </>
@@ -264,11 +278,14 @@ function ContributionBanner({ variant = 'default', density = 'regular', campaign
   )
 }
 
-const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolean) =>
-  StyleSheet.create({
+const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolean, width: number) => {
+  const layout = isCompact ? CONTRIBUTION_BANNER_LAYOUTS.compact : CONTRIBUTION_BANNER_LAYOUTS.regular
+  const responsive = (key: keyof typeof layout.blocks) => breakpointStyle(layout, key, !isMobile)
+  return StyleSheet.create({
+    container: contributionContainerStyle(width),
     wrapper: {
       width: '100%',
-      paddingVertical: isCompact ? (isMobile ? 8 : 10) : isMobile ? 12 : 20,
+      ...responsive('wrapper'),
     },
     authorLink: {
       flexDirection: 'row',
@@ -290,11 +307,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolea
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isCompact ? (isMobile ? 14 : 18) : isMobile ? 16 : 28,
-      paddingVertical: isCompact ? (isMobile ? 14 : 16) : isMobile ? 18 : 24,
-      flexDirection: isMobile ? 'column' : 'row',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      gap: isCompact ? (isMobile ? 12 : 14) : isMobile ? 14 : 20,
+      ...responsive('card'),
       ...Platform.select({
         web: {
           boxShadow: `0 2px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04)`,
@@ -317,44 +330,34 @@ const createStyles = (colors: ThemedColors, isMobile: boolean, isCompact: boolea
     },
     textBlock: {
       gap: isCompact ? 2 : 4,
+      ...responsive('text'),
     },
-    textBlockMobile: {
-      width: '100%',
-    },
-    textBlockDesktop: {
-      flex: 1,
-    },
+    icon: responsive('icon'),
     title: {
-      fontSize: isCompact ? (isMobile ? 14 : 16) : isMobile ? 15 : 17,
-      lineHeight: isCompact ? (isMobile ? 18 : 20) : undefined,
+      ...responsive('title'),
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.2,
     },
     subtitle: {
-      fontSize: isCompact ? 13 : isMobile ? 13 : 14,
+      ...responsive('subtitle'),
       color: colors.textMuted,
-      lineHeight: isCompact ? 18 : isMobile ? 19 : 21,
       fontWeight: '400',
     },
     buttons: {
       flexShrink: 0,
       gap: 10,
-    },
-    buttonsMobile: {
-      width: '100%',
-      flexDirection: 'column',
-    },
-    buttonsDesktop: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      ...responsive('buttons'),
     },
     primaryBtn: {
       borderRadius: DESIGN_TOKENS.radii.pill,
+      ...responsive('action'),
     },
     outlineBtn: {
       borderRadius: DESIGN_TOKENS.radii.pill,
+      ...responsive('action'),
     },
   })
+}
 
 export default memo(ContributionBanner)

@@ -4,6 +4,31 @@ import { getThemedColors } from '@/constants/designSystem'
 import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
+import { contributionContainerStyle, CONTRIBUTION_BANNER_LAYOUTS, CONTRIBUTION_CONTAINER_LAYOUTS } from '@/components/common/contributionBannerLayout'
+import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout'
+
+describe('contribution banner CSS-first geometry (#3386)', () => {
+  it('emits both densities and every container tier from their runtime registries in ascending order', () => {
+    const css = buildCriticalCSS()
+    for (const layout of Object.values(CONTRIBUTION_BANNER_LAYOUTS)) {
+      expect(css).toContain(buildBreakpointLayoutCss(layout))
+      expect(css).toContain(`[data-bp-layout="${layout.scope}-action"]{width:auto !important}`)
+    }
+    const positions = CONTRIBUTION_CONTAINER_LAYOUTS.map(layout => css.indexOf(buildBreakpointLayoutCss(layout)))
+    expect(positions.every(position => position >= 0)).toBe(true)
+    expect(positions).toEqual([...positions].sort((left, right) => left - right))
+  })
+
+  it.each([
+    [0, 8, 4, 1280], [359, 8, 4, 1280], [360, 16, 8, 1280],
+    [767, 16, 8, 1280], [768, 32, 24, 1280], [1023, 32, 24, 1280],
+    [1024, 40, 32, 1280], [1919, 40, 32, 1280], [1920, 40, 32, 1536],
+  ])('preserves the existing container geometry at width %i', (width, horizontal, vertical, maxWidth) => {
+    expect(contributionContainerStyle(width)).toEqual({
+      paddingLeft: horizontal, paddingRight: horizontal, paddingTop: vertical, paddingBottom: vertical, maxWidth,
+    })
+  })
+})
 
 it('reserves the quest filter panel in the static frame at the shared boundaries', () => {
   const css = buildCriticalCSS()

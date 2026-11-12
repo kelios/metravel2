@@ -45,6 +45,20 @@ describe('breakpointLayout', () => {
     ).toThrow(/одинаковые ключи/)
   })
 
+  it('keeps asymmetric padding as CSS-safe longhands shared with runtime', () => {
+    const padding = defineBreakpointLayout({
+      scope: 'padding', minWidth: 768,
+      blocks: { frame: {
+        narrow: { paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4 },
+        wide: { paddingLeft: 40, paddingRight: 40, paddingTop: 32, paddingBottom: 32 },
+      } },
+    })
+    expect(breakpointStyle(padding, 'frame', true)).toEqual({ paddingLeft: 40, paddingRight: 40, paddingTop: 32, paddingBottom: 32 })
+    expect(buildBreakpointLayoutCss(padding)).toContain(
+      'padding-left:40px !important;padding-right:40px !important;padding-top:32px !important;padding-bottom:32px !important',
+    )
+  })
+
   it('метка сливается с уже заданным dataSet узла', () => {
     const prev = Platform.OS
     ;(Platform.OS as any) = 'web'
