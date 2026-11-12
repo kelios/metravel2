@@ -69,6 +69,7 @@ import { useQuestCatalogSearchQuery } from './useQuestCatalogSearchQuery';
 import { translate as i18nT } from '@/i18n'
 import type { SupportedLocale } from '@/i18n/config'
 import { buildQuestLocaleHubPath } from '@/utils/questLocaleRouting'
+import { selectQuestHubMembers } from '@/utils/questLocaleHubs'
 import { QuestCatalogLocaleContext } from './questCatalogLocale'
 
 const { spacing, radii } = DESIGN_TOKENS;
@@ -101,7 +102,7 @@ export type QuestsCatalogRoute = QuestCatalogRouteSelection & { seo: React.React
 
 type QuestsScreenProps = {
     route?: QuestsCatalogRoute | null;
-    /** #3217: `/{locale}/quests` lists only quests published in that locale. */
+    /** #3217: `/{locale}/quests` lists only quests whose page the server serves in that locale. */
     localeHub?: Exclude<SupportedLocale, 'ru'> | null;
 };
 
@@ -141,7 +142,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     // API data
     const { quests: listedQuests, loading: questsLoading, failed: questsError } = useQuestsList();
     const ALL_QUESTS = useMemo(
-        () => localeHub ? listedQuests.filter((quest) => quest.availableLocales.includes(localeHub)) : listedQuests,
+        () => localeHub ? selectQuestHubMembers(listedQuests, localeHub) : listedQuests,
         [listedQuests, localeHub],
     );
     const catalogPath = (localeHub && buildQuestLocaleHubPath(localeHub)) || '/quests';

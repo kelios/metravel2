@@ -21,3 +21,12 @@ export function localizeQuestCatalogHref<T extends string | object>(href: T, loc
 export function questCatalogPathForLocale(locale: unknown): string {
   return isSupportedLocale(locale) ? String(localizeQuestCatalogHref('/quests', locale)) : '/quests'
 }
+
+/**
+ * Members of the hub `/{locale}/quests`: quests whose page in that locale the
+ * server serves (`served_locales`, #3349). A published translation alone is not
+ * enough — the server withholds a noindex page (404). No field — not a member.
+ */
+export function selectQuestHubMembers<T extends { servedLocales?: string[] }>(quests: T[], locale: Exclude<SupportedLocale, 'ru'>): T[] {
+  return quests.filter((quest) => quest.servedLocales?.includes(locale) ?? false)
+}

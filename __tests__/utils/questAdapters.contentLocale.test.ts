@@ -6,6 +6,7 @@ import { adaptBundle, adaptMeta, adaptStep } from '@/utils/questAdapters'
 import { createQuestCatalogSearch } from '@/utils/questCatalogSearch'
 import { buildQuestCityCatalog } from '@/screens/tabs/QuestsScreen.helpers'
 import { buildQuestCityLandingGroups } from '@/utils/questCityAlias'
+import { selectQuestHubMembers } from '@/utils/questLocaleHubs'
 
 const step = (id: string, extra: Record<string, unknown> = {}) => ({
   id: Number(id.replace(/\D/g, '')) || 1,
@@ -171,5 +172,32 @@ describe('content locale in the quest model', () => {
       contentLocale: 'pl',
       availableLocales: ['ru', 'be', 'uk', 'pl', 'en'],
     })
+  })
+})
+
+// #3217 / #3349: the hub `/{locale}/quests` lists only quests whose page the
+// server serves; a published translation (`available_locales`) is not enough.
+describe('locale hub membership', () => {
+  const all = ['ru', 'be', 'uk', 'pl', 'en']
+  const served = meta({ id: 1, quest_id: 'served', available_locales: all, served_locales: all })
+  const noindex = meta({ id: 2, quest_id: 'noindex', available_locales: all, served_locales: ['ru'] })
+  const noField = meta({ id: 3, quest_id: 'old-cache', available_locales: all })
+  const ruOnly = meta({ id: 4, quest_id: 'ru-only', available_locales: ['ru'], served_locales: ['ru'] })
+  const ids = (quests: Array<{ id: string }>) => quests.map((quest) => quest.id)
+
+  it('reads served_locales fail-closed: no field — no served page', () => {
+    expect(adaptMeta(served).servedLocales).toEqual(all)
+    expect(adaptMeta(noField).servedLocales).toEqual([])
+    expect(adaptMeta(meta({ served_locales: 'pl' as never })).servedLocales).toEqual([])
+  })
+
+  it('keeps a translated but unserved quest out of the hub before and after a refetch', () => {
+    const first = [served, noindex].map(adaptMeta)
+    expect(ids(selectQuestHubMembers(first, 'pl'))).toEqual(['served'])
+    const refetched = [served, noindex, noField, ruOnly].map(adaptMeta)
+    expect(ids(selectQuestHubMembers(refetched, 'pl'))).toEqual(['served'])
+    expect(ids(selectQuestHubMembers(refetched, 'en'))).toEqual(['served'])
+    // The Russian catalogue is not a hub and is not filtered.
+    expect(ids(refetched)).toEqual(['served', 'noindex', 'old-cache', 'ru-only'])
   })
 })

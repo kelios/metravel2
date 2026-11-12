@@ -181,6 +181,12 @@ export type ApiQuestMeta = {
      */
     content_locale?: string;
     available_locales?: string[];
+    /**
+     * #3349: locales whose page of this quest the server actually serves
+     * (`translated_detail_served`); `[]` without an active publication. Membership
+     * of the locale hubs `/{locale}/quests` (#3217) — never `available_locales`.
+     */
+    served_locales?: string[];
     /** Русское имя города при локализованном `city_name`: по нему считается alias. */
     city_name_canonical?: string;
     /**

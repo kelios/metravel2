@@ -14,6 +14,7 @@ import type {
 import {
     QUEST_SOURCE_LOCALE,
     readQuestAvailableLocales,
+    readQuestServedLocales,
     readQuestContentLocale,
 } from '@/api/questContentLocale';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
@@ -109,6 +110,8 @@ export type QuestMeta = {
     /** Язык контента (#2197): без поля в ответе — `ru`; переводы — `availableLocales`. */
     contentLocale: string;
     availableLocales: string[];
+    /** Locales whose page the server serves (#3349); adapters always supply it, old fixtures may omit it. */
+    servedLocales?: string[];
     countryName?: string;
     countryCode?: string;
     lat: number;
@@ -748,6 +751,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         ...(typeof apiMeta.city_quest_count === 'number' ? { cityQuestCount: apiMeta.city_quest_count } : null),
         contentLocale,
         availableLocales: readQuestAvailableLocales(apiMeta.available_locales, contentLocale),
+        servedLocales: readQuestServedLocales(apiMeta.served_locales),
         countryName: apiMeta.country_name || undefined,
         countryCode: normalizedCountryCode,
         lat,

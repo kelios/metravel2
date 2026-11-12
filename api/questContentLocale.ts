@@ -19,6 +19,11 @@ export function readQuestContentLocale(raw: unknown): string {
   return typeof raw === 'string' && raw.trim() ? raw.trim().toLowerCase() : QUEST_SOURCE_LOCALE
 }
 
+/** `served_locales` ответа (#3349); без поля — ни одной отдаваемой страницы (fail-closed). */
+export function readQuestServedLocales(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+}
+
 /** `available_locales` ответа; без поля квест доступен только на языке контента. */
 export function readQuestAvailableLocales(raw: unknown, contentLocale: string): string[] {
   const locales = Array.isArray(raw)

@@ -392,6 +392,28 @@ describe('useBreadcrumbModel', () => {
     ]);
   });
 
+  // #3217: with the locale hubs published, «Quests» and «Back» of a translated
+  // detail lead to its hub; the Russian detail keeps /quests.
+  it('leads «Quests» and «Back» of a translated detail to its locale hub when the hubs are on', async () => {
+    const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+    (Platform.OS as any) = 'web';
+    process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'true';
+    try {
+      useLocalSearchParams.mockReturnValue({});
+      usePathname.mockReturnValue('/pl/quests/12/brest-fortress');
+      const translated = await renderHook(() => useBreadcrumbModel(), { wrapper });
+      expect(translated.result.current.items[0]).toEqual({ label: 'Квесты', path: '/pl/quests' });
+      expect(translated.result.current.backToPath).toBe('/pl/quests');
+
+      usePathname.mockReturnValue('/quests/12/brest-fortress');
+      const russian = await renderHook(() => useBreadcrumbModel(), { wrapper });
+      expect(russian.result.current.items[0]).toEqual({ label: 'Квесты', path: '/quests' });
+    } finally {
+      if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS;
+      else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag;
+    }
+  });
+
   // #2466: the prefixed detail is the same quest crumb, never URL segments.
   it.each(['be', 'uk', 'pl', 'en'])('builds the quest crumb for the /%s/quests detail from the cached route bundle', async (locale) => {
     const { fetchQuestByQuestId } = jest.requireMock('@/api/quests') as { fetchQuestByQuestId: jest.Mock };

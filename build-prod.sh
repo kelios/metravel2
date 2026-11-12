@@ -326,12 +326,24 @@ apply_env() {
 # не требуют — поэтому включены по умолчанию. Значение из окружения или из
 # `.env.<env>` сильнее, в том числе пустое: строка `EXPO_PUBLIC_AI_SIMILAR_SOURCE=`
 # выключает блоки.
+#
+# Языковые хабы каталога квестов `/{be,uk,pl,en}/quests` (#3217): ссылки на них
+# включаются только при серверной отдаче хабов (#3261 — nginx, gateway, sitemap)
+# и составе хаба по `served_locales` (#3349); всё это есть лишь у prod.
+default_build_public_flag() {
+  local ENV="$1" NAME="$2" VALUE="$3"
+
+  if [[ -z "${!NAME+set}" ]] && ! grep -Eq "^[[:space:]]*${NAME}=" ".env.$ENV"; then
+    export "$NAME=$VALUE"
+  fi
+}
+
 apply_build_public_defaults() {
   local ENV="$1"
 
-  if [[ -z "${EXPO_PUBLIC_AI_SIMILAR_SOURCE+set}" ]] &&
-    ! grep -Eq '^[[:space:]]*EXPO_PUBLIC_AI_SIMILAR_SOURCE=' ".env.$ENV"; then
-    export EXPO_PUBLIC_AI_SIMILAR_SOURCE=static
+  default_build_public_flag "$ENV" EXPO_PUBLIC_AI_SIMILAR_SOURCE static
+  if [[ "$ENV" == "prod" ]]; then
+    default_build_public_flag "$ENV" EXPO_PUBLIC_QUEST_LOCALE_HUBS true
   fi
 }
 

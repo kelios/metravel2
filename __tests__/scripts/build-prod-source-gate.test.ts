@@ -425,6 +425,24 @@ describe('build-prod.sh tracked public build flags (#3292)', () => {
     expect(sourceAfter('EXPO_PUBLIC_API_URL=x\n', 'export EXPO_PUBLIC_AI_SIMILAR_SOURCE=')).toBe('')
   })
 
+  // #3217: the locale quest hubs are served by prod only (#3261, #3349).
+  it('publishes the locale quest hubs on prod builds only, unless the env decides', () => {
+    const hubsAfter = (env: string, envFile: string, setup: string) => {
+      fs.writeFileSync(path.join(work, `.env.${env}`), envFile, 'utf8')
+      const result = runHarness(
+        work,
+        [setup, `apply_env ${env}`, `apply_build_public_defaults ${env}`, 'echo "HUBS=[${EXPO_PUBLIC_QUEST_LOCALE_HUBS-unset}]"'].join('\n'),
+      )
+      expect(result.status).toBe(0)
+      return /HUBS=\[(.*)\]/.exec(result.stdout)?.[1]
+    }
+    const unset = 'unset EXPO_PUBLIC_QUEST_LOCALE_HUBS'
+    expect(hubsAfter('prod', 'EXPO_PUBLIC_API_URL=https://metravel.by\n', unset)).toBe('true')
+    expect(hubsAfter('dev', 'EXPO_PUBLIC_API_URL=https://dev.metravel.by\n', unset)).toBe('unset')
+    expect(hubsAfter('prod', 'EXPO_PUBLIC_QUEST_LOCALE_HUBS=false\n', unset)).toBe('unset')
+    expect(hubsAfter('prod', 'EXPO_PUBLIC_API_URL=x\n', 'export EXPO_PUBLIC_QUEST_LOCALE_HUBS=false')).toBe('false')
+  })
+
   it('is applied by build_env right after the env file, before the export starts', () => {
     const source = readCanonicalDeploy()
     const buildEnv = source.slice(source.indexOf('build_env() {'))
