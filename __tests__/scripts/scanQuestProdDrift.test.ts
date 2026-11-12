@@ -16,8 +16,8 @@
 //      хосте: 175 файлов, 179 квестов, ноль сравнений — и «Расхождений с продом
 //      нет» с кодом 0.
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
+import { makeTempDir, removeDir } from './cli-test-utils'
 
 const questBundles = require('@/scripts/lib/questBundles')
 const scanBaseline = require('@/scripts/lib/scanBaseline')
@@ -300,7 +300,7 @@ describe('baseline меты (#3373)', () => {
     }
 
     beforeEach(() => {
-      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'meta-baseline-'))
+      dir = makeTempDir('meta-baseline-')
       logs = []
       jest.spyOn(console, 'log').mockImplementation((...args: unknown[]) => { logs.push(args.join(' ')) })
       jest.spyOn(console, 'error').mockImplementation(() => {})
@@ -482,8 +482,10 @@ describe('main — корпусный прогон, который ничего 
 
   // Пустой baseline меты: боевой называет реальные файлы, которых в этих
   // фикстурах нет, и все его записи читались бы как устаревшие.
-  const emptyBaseline = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'meta-baseline-empty-')), 'baseline.json')
+  const emptyBaselineDir = makeTempDir('meta-baseline-empty-')
+  const emptyBaseline = path.join(emptyBaselineDir, 'baseline.json')
   fs.writeFileSync(emptyBaseline, JSON.stringify({ contractVersion: 1, note: 'пусто', known: {} }))
+  afterAll(() => removeDir(emptyBaselineDir))
 
   const run = (argv: string[]) => {
     process.argv = ['node', 'scripts/scan-quest-prod-drift.js', `--baseline=${emptyBaseline}`, ...argv]
