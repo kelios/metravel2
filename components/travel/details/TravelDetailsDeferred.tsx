@@ -239,19 +239,26 @@ export const TravelDeferredSections: React.FC<{
         ref={setMapRef}
         collapsable={false}
       >
-        {shouldLoadMapSection ? (
-          <Suspense fallback={MAP_PLACEHOLDER}>
-            <TravelDetailsMapSectionLazy
-              travel={travel}
-              anchors={anchors}
-              canRenderHeavy={canRenderHeavy}
-              scrollToMapSection={scrollToMapSection}
-              forceOpenKey={forceOpenKey}
-            />
-          </Suspense>
-        ) : (
-          MAP_PLACEHOLDER
-        )}
+        <TravelDetailsDeferredTransition
+          testID="travel-details-map-transition"
+          isMobile={isMobile}
+          pending={!shouldLoadMapSection}
+          placeholder={MAP_PLACEHOLDER}
+          runtimeFrameReady
+          allowEmptyRuntime
+        >
+          {shouldLoadMapSection ? (
+            <Suspense fallback={MAP_PLACEHOLDER}>
+              <TravelDetailsMapSectionLazy
+                travel={travel}
+                anchors={anchors}
+                canRenderHeavy={canRenderHeavy}
+                scrollToMapSection={scrollToMapSection}
+                forceOpenKey={forceOpenKey}
+              />
+            </Suspense>
+          ) : null}
+        </TravelDetailsDeferredTransition>
       </View>
 
       <View

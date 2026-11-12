@@ -112,19 +112,29 @@ export const TravelDetailsSidebarSection: React.FC<{
         </View>
         <Text style={styles.sectionSubtitle}>{getNearbyTravelsSubtitle()}</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
-          {hasValidTravelId && (
-            <View testID="travel-details-near-loaded">
-              <Suspense fallback={Platform.OS === 'web' ? <NearTravelListSkeleton travel={travel} /> : <View style={LIST_FALLBACK_STYLE} />}>
-                <NearTravelListComponent
-                  travel={travel}
-                  onTravelsLoaded={handleTravelsLoaded}
-                  showHeader={false}
-                  embedded
-                  fetchEnabled={nearInViewport}
-                />
-              </Suspense>
-            </View>
-          )}
+          <TravelDetailsDeferredTransition
+            key={travel.id}
+            testID="travel-details-near-transition"
+            isMobile={width < METRICS.breakpoints.tablet}
+            pending={false}
+            placeholder={hasValidTravelId ? <NearTravelListSkeleton travel={travel} /> : null}
+            runtimeFrameReady
+            allowEmptyRuntime
+          >
+            {hasValidTravelId && (
+              <View testID="travel-details-near-loaded">
+                <Suspense fallback={Platform.OS === 'web' ? <NearTravelListSkeleton travel={travel} /> : <View style={LIST_FALLBACK_STYLE} />}>
+                  <NearTravelListComponent
+                    travel={travel}
+                    onTravelsLoaded={handleTravelsLoaded}
+                    showHeader={false}
+                    embedded
+                    fetchEnabled={nearInViewport}
+                  />
+                </Suspense>
+              </View>
+            )}
+          </TravelDetailsDeferredTransition>
         </View>
       </View>
 

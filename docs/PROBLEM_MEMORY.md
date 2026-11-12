@@ -806,6 +806,23 @@ guard, падающий в CI на попытке обойти этот конт
 - **Решение для новой жалобы:** повторный сдвиг `deferred placeholder → runtime`
   в footer — `reopen #1604`; тот же механизм в другой секции —
   `create-linked` к `#160`, а не ещё один общий «CLS страницы».
+- **Causal delta #3382 (2026-11-12):** на статье Hexenstieg пять свежих
+  гостевых проходов `390×844` дали суммарный CLS
+  `0.325/0.972/0.090/1.168/0.205`, а `1440×900` — `0.0116–0.0139`.
+  Атрибуция resize и JavaScript scroll writes разделена: «Рядом» сжимается
+  `402→185px` внутри уже видимого сайдбара; внешний слот карты растёт
+  `692→1402px` и сжимается до `1203.3125px`, сдвигая видимый footer.
+  Общий aggregate runtime уже изменил позиции внутренних соседей до своего
+  измерения. Existing `TravelDetailsDeferredTransition` применяется на двух
+  фактически меняющихся child boundaries в `TravelDetailsDeferred.tsx` и
+  `sections/TravelDetailsSidebarSection.tsx`; его registry объединяет
+  измерение leaf и absolute ancestors до одной компенсации. Постоянного
+  `minHeight` нет, логика карты и данные не меняются. Новый контроль —
+  `e2e/cls-audit.spec.ts` / `travelFullScrollCls.ts`, по пять полных гостевых
+  проходов `390×844` и `1440×900`, порог суммы `0.1`; прежний контроль статьи
+  #2329 сохранён. Raw baseline/attribution — ignored
+  `.codex-temp/task3382/`. Source-проверки и production recheck передаются
+  независимому ревью/приёмке; этот delta не заявляет production pass.
 - **Последняя проверка:** 2026-08-27; implementation и повторный независимый
   code review завершены; первый production candidate выявил mobile recurrence и
   persistent-reserve риск, оба исправлены. Финальный Jest/ESLint — `3 suites /`

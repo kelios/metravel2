@@ -1,4 +1,4 @@
-import { createRef, type ReactNode } from 'react'
+import { createRef, type ReactElement, type ReactNode } from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -111,6 +111,10 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-near-loaded')).toBeTruthy()
+    const nearTransition = jest.mocked(TravelDetailsDeferredTransition).mock.calls.find(([props]) => props.testID === 'travel-details-near-transition')?.[0]
+    expect(nearTransition).toMatchObject({ pending: false, runtimeFrameReady: true, allowEmptyRuntime: true })
+    expect(nearTransition?.reserveHeight).toBeUndefined()
+    expect((nearTransition?.children as ReactElement<{ testID: string }>).props.testID).toBe('travel-details-near-loaded')
     expect(jest.mocked(TravelDetailsDeferredTransition).mock.calls.at(-1)?.[0]).toMatchObject({
       testID: 'travel-details-related-navigation-transition',
       allowEmptyRuntime: true,

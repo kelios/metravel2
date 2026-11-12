@@ -179,22 +179,19 @@ describe('TravelDeferredSections (web author defer)', () => {
       excursions: { current: null },
     }
 
-    await act(async () => {
-      await renderTree(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey={null}
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
+    await renderTree(
+      <Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey={null}
+          anchors={anchors}
+          scrollY={new Animated.Value(0)}
+          viewportHeight={900}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense>,
+    )
 
     // On desktop, author is shown in the sidebar (CompactSideBarTravel),
     // so DesktopAuthorSection returns null and AuthorCard is not rendered here.
@@ -240,23 +237,20 @@ describe('TravelDeferredSections (web author defer)', () => {
       excursions: { current: null },
     }
 
-    await act(async () => {
-      await renderTree(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey={null}
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      jest.advanceTimersByTime(400)
-      await Promise.resolve()
-    })
+    await renderTree(
+      <Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey={null}
+          anchors={anchors}
+          scrollY={new Animated.Value(0)}
+          viewportHeight={900}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense>,
+    )
+    await act(async () => { jest.advanceTimersByTime(400) })
 
     expect(mockMapSectionSpy).not.toHaveBeenCalled()
     expect(mockSidebarSectionSpy).not.toHaveBeenCalled()
@@ -295,22 +289,19 @@ describe('TravelDeferredSections (web author defer)', () => {
       excursions: { current: null },
     }
 
-    await act(async () => {
-      await renderTree(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="near"
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
+    await renderTree(
+      <Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey="near"
+          anchors={anchors}
+          scrollY={new Animated.Value(0)}
+          viewportHeight={900}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense>,
+    )
 
     // forceOpenKey='near' makes the deferred wrapper mount the sidebar section
     // (the sidebar itself doesn't consume forceOpenKey — loading is decided here).
@@ -319,22 +310,19 @@ describe('TravelDeferredSections (web author defer)', () => {
     mockSidebarSectionSpy.mockClear()
     mockCommentsSectionSpy.mockClear()
 
-    await act(async () => {
-      await renderTree(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="comments"
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
+    await renderTree(
+      <Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey="comments"
+          anchors={anchors}
+          scrollY={new Animated.Value(0)}
+          viewportHeight={900}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense>,
+    )
 
     expect(mockCommentsSectionSpy).toHaveBeenCalled()
   })
@@ -375,22 +363,19 @@ describe('TravelDeferredSections (web author defer)', () => {
       excursions: { current: null },
     }
 
-    await act(async () => {
-      await renderTree(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="comments"
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
+    await renderTree(
+      <Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey="comments"
+          anchors={anchors}
+          scrollY={new Animated.Value(0)}
+          viewportHeight={900}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense>,
+    )
 
     expect(mockCommentsSectionSpy.mock.calls).toEqual(
       expect.arrayContaining([
@@ -441,20 +426,17 @@ describe('TravelDeferredSections (web author defer)', () => {
     const transitionProps = (scope: Map<string, TransitionProps>, testID: string) => () => scope.get(testID)!
 
     let sidebarTree: RenderResult
-    await act(async () => {
-      sidebarTree = await renderTree(
-        <mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="near"
-            anchors={anchors}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense></mockTransitionScope.Provider>,
-      )
-      await Promise.resolve()
-    })
+    sidebarTree = await renderTree(
+      <mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey="near"
+          anchors={anchors}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense></mockTransitionScope.Provider>,
+    )
 
     const sidebarTransition = transitionProps(sidebarTransitions, 'travel-details-sidebar-transition')
     expect(sidebarTransition().runtimeFrameReady).toBe(false)
@@ -491,12 +473,9 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(sidebarTransition().runtimeFrameReady).toBe(true)
 
     // Old travel callbacks must not expose a new visit, even on back navigation.
-    await act(async () => {
-      await sidebarTree!.rerender(<mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}><TravelDeferredSections
-        travel={{ ...travel, id: 999 }} isMobile={false} forceOpenKey="near"
-        anchors={anchors} scrollToMapSection={() => {}} /></Suspense></mockTransitionScope.Provider>)
-      await Promise.resolve()
-    })
+    await sidebarTree!.rerender(<mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}><TravelDeferredSections
+      travel={{ ...travel, id: 999 }} isMobile={false} forceOpenKey="near"
+      anchors={anchors} scrollToMapSection={() => {}} /></Suspense></mockTransitionScope.Provider>)
     const newTransition = transitionProps(sidebarTransitions, 'travel-details-sidebar-transition')
     await act(async () => { sidebarVisibilityLayout(layoutEvent(300)) })
     expect(newTransition().runtimeVisibilityReady).toBe(false)
@@ -513,20 +492,17 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(newTransition().runtimeFrameReady).toBe(false)
 
     mockCommentsSectionSpy.mockClear()
-    await act(async () => {
-      await renderTree(
-        <mockTransitionScope.Provider value={commentsTransitions}><Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="comments"
-            anchors={anchors}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense></mockTransitionScope.Provider>,
-      )
-      await Promise.resolve()
-    })
+    await renderTree(
+      <mockTransitionScope.Provider value={commentsTransitions}><Suspense fallback={null}>
+        <TravelDeferredSections
+          travel={travel}
+          isMobile={false}
+          forceOpenKey="comments"
+          anchors={anchors}
+          scrollToMapSection={() => {}}
+        />
+      </Suspense></mockTransitionScope.Provider>,
+    )
 
     const commentsTransition = transitionProps(commentsTransitions, 'travel-details-comments-transition')
     expect(commentsTransition().runtimeFrameReady).toBe(false)
@@ -556,11 +532,39 @@ describe('TravelDeferredSections (web author defer)', () => {
     )
     mockSidebarLifecycle.length = 0
     let tree: RenderResult
-    await act(async () => { tree = await renderTree(sections(travelOf(6))); await Promise.resolve() })
+    tree = await renderTree(sections(travelOf(6)))
     expect(mockSidebarLifecycle).toEqual(['mount:6'])
 
-    await act(async () => { tree.rerender(sections(travelOf(7))); await Promise.resolve() })
+    await tree.rerender(sections(travelOf(7)))
     expect(mockSidebarLifecycle).toEqual(['mount:6', 'unmount:6', 'mount:7'])
     expect(mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.travel.id).toBe(7)
+  })
+
+  it('keeps map navigation anchors and load conditions inside a measured child frame', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
+    const anchors: any = Object.fromEntries(['comments', 'description', 'excursions', 'gallery', 'map', 'minus',
+      'near', 'plus', 'points', 'popular', 'recommendation', 'video'].map(key => [key, { current: null }]))
+    const travel: any = { id: 3382, gallery: [] }
+    const transitions = new Map<string, TransitionProps>()
+    const scrollToMapSection = jest.fn()
+    const sections = (forceOpenKey: string | null) => (
+      <mockTransitionScope.Provider value={transitions}>
+        <TravelDeferredSections travel={travel} isMobile forceOpenKey={forceOpenKey} anchors={anchors} scrollToMapSection={scrollToMapSection} />
+      </mockTransitionScope.Provider>
+    )
+    let tree: RenderResult
+    tree = await renderTree(sections(null))
+    expect(transitions.get('travel-details-map-transition')).toMatchObject({ pending: true })
+    expect(mockMapSectionSpy).not.toHaveBeenCalled()
+    await tree.rerender(sections('map'))
+    const transition = transitions.get('travel-details-map-transition')!
+    expect(transition).toMatchObject({ pending: false, runtimeFrameReady: true, allowEmptyRuntime: true })
+    expect(transition.reserveHeight).toBeUndefined()
+    expect(mockMapSectionSpy).toHaveBeenCalled()
+    const mapProps = mockMapSectionSpy.mock.calls.at(-1)![0]
+    expect(mapProps.travel).toBe(travel)
+    expect(mapProps.anchors).toBe(anchors)
+    expect(mapProps.scrollToMapSection).toBe(scrollToMapSection)
+    expect(mapProps.forceOpenKey).toBe('map')
   })
 })

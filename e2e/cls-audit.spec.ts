@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 import { assertTravelMobileCls } from './helpers/travelMobileCls';
+import { assertTravelFullScrollCls } from './helpers/travelFullScrollCls';
 
 type ClsEntry = {
   value: number;
@@ -145,6 +146,11 @@ test('@map-mobile-cls390 five fresh guest frames stay <=0.05', async ({ browser,
 // #2329: real article data and the actual RN-Web scroll owner are required.
 // A document-sized viewport is not evidence that this inner ScrollView reached its bottom.
 test('@perf @travel-mobile-cls390 five complete guest traversals stay <=0.1', assertTravelMobileCls);
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  test(`@perf @travel-full-scroll-cls${viewport.width} five complete article traversals stay <=0.1`,
+    ({ browser, baseURL }, testInfo) => assertTravelFullScrollCls({ browser, baseURL }, testInfo, viewport));
+}
 
 test.describe('@perf CLS audit', () => {
   // #2331: source regression for the late context-bar mount. Desktop execution
