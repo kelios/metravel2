@@ -146,20 +146,18 @@ const verifyCatalogMediaLoadingPolicy = async (page: Page, screenshotPath: strin
     node.scrollTop = node.scrollHeight - node.clientHeight;
     node.dispatchEvent(new Event('scroll', { bubbles: true }));
   });
-  await page.waitForTimeout(50);
-  const lifecycleAfterJump = await page.locator('img[data-catalog-lifecycle-marker]').evaluateAll(
-    (images) => images.map((img) => ({
-      marker: (img as HTMLImageElement).dataset.catalogLifecycleMarker || '',
-      src: (img as HTMLImageElement).src,
-    })),
-  );
-  const sourcesAfterJump = new Map(
-    lifecycleAfterJump.map(({ marker, src }) => [marker, src]),
-  );
-  expect(
-    lifecycleBefore.some(({ marker, src }) => sourcesAfterJump.get(marker) !== src),
-    'lifecycle control is vacuous: no cover <img> was remounted or reused',
-  ).toBe(true);
+  await expect.poll(async () => {
+    const lifecycleAfterJump = await page.locator('img[data-catalog-lifecycle-marker]').evaluateAll(
+      (images) => images.map((img) => ({
+        marker: (img as HTMLImageElement).dataset.catalogLifecycleMarker || '',
+        src: (img as HTMLImageElement).src,
+      })),
+    );
+    const sourcesAfterJump = new Map(
+      lifecycleAfterJump.map(({ marker, src }) => [marker, src]),
+    );
+    return lifecycleBefore.some(({ marker, src }) => sourcesAfterJump.get(marker) !== src);
+  }, { message: 'lifecycle control is vacuous: no cover <img> was remounted or reused' }).toBe(true);
   await scroll.evaluate((node: HTMLElement) => {
     node.scrollTop = 120;
     node.dispatchEvent(new Event('scroll', { bubbles: true }));

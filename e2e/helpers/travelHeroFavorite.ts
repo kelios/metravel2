@@ -105,8 +105,10 @@ export async function expectGuestFavoriteSignIn(page: Page, pathname: string): P
     return favorite !== null && Boolean(favorite.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
   })
   expect(descriptionFollowsAction).toBe(true)
-  // Подсказка о входе — не постоянный текст под кнопкой: нажатие само ведёт на вход.
-  await expect(page.getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.', { exact: true })).toHaveCount(0)
+  // The sign-in hint describes the action to assistive technology without visible copy below it.
+  const hint = 'Войдите или зарегистрируйтесь, чтобы сохранить маршрут.'
+  await expect(heroFavoriteButton(page)).toHaveAccessibleDescription(hint)
+  await expect(page.getByText(hint, { exact: true })).toBeHidden()
   await heroFavoriteButton(page).click()
   await expect(page).toHaveURL((url) =>
     (url.pathname === '/login' || url.pathname === '/registration') &&

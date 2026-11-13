@@ -68,6 +68,11 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
     if (route.request().method() !== 'GET' || !fixture) return route.fallback();
     return route.fulfill({ status: fixture.status, contentType: 'application/json', body: JSON.stringify(fixture.data) });
   });
+  await page.route((url) => url.pathname === '/api/user/subscriptions/status/'
+    && url.searchParams.get('user_id') === '99', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"is_subscribed":false}' });
+  });
   await page.route((url) => url.pathname === '/api/travels/' || url.pathname === '/travels/', (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     return route.fulfill({
