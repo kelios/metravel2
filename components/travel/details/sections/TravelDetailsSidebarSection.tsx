@@ -189,7 +189,6 @@ export const TravelDetailsSidebarSection: React.FC<{
               type="travel"
               id={Number(travel.id)}
               enabled={nearInViewport}
-              sectionKey="similar"
               anchorRef={anchors.similar}
             />
           </Suspense>

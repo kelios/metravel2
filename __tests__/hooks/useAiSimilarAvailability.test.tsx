@@ -120,7 +120,7 @@ describe('useAiSimilarAvailability follows the real AiSimilarSection', () => {
     renderUi(
       <QueryClientProvider client={client}>
         <MenuProbe />
-        <AiSimilarSection type="travel" id={42} sectionKey="similar" anchorRef={anchorRef} />
+        <AiSimilarSection type="travel" id={42} anchorRef={anchorRef} />
       </QueryClientProvider>,
     )
 

@@ -15,6 +15,12 @@ import { AiPickCard, AiPickCardSkeleton } from './AiPickCard'
 const CARD_SLOT_WIDTH = 320
 /** Сколько карточек показывать в одноколоночной раскладке телефона. */
 const NARROW_LIMIT = 3
+/**
+ * Ключ секции для навигации страницы (`data-section-key` на web, #3395). Блок статьи —
+ * пункт меню `similar`; ключ выводится здесь, а не передаётся из сайдбара: чанк
+ * сайдбара стоит на потолке бюджета (`config/bundle-budget.json`).
+ */
+const SECTION_KEY_BY_TYPE: Record<AiPickType, string> = { travel: 'similar', quest: 'ai-similar' }
 
 type Props = {
   /** Источник: статья (`travel`) или квест (`quest`). */
@@ -24,12 +30,7 @@ type Props = {
   /** Откладывает запрос, пока секция не рядом с вьюпортом. */
   enabled?: boolean
   testID?: string
-  /**
-   * Ключ секции для навигации страницы (`data-section-key` на web, #3395): статья
-   * передаёт `similar` — по нему прокручивает и подсвечивает пункт меню.
-   */
-  sectionKey?: string
-  /** Якорь секции для прокрутки на native (`AnchorsMap.similar`). */
+  /** Якорь секции для прокрутки на native (`AnchorsMap.similar`, #3395). */
   anchorRef?: React.Ref<React.ComponentRef<typeof View>>
 }
 
@@ -50,7 +51,6 @@ function AiSimilarSectionContent({
   limit = 6,
   enabled = true,
   testID = 'ai-similar-section',
-  sectionKey = 'ai-similar',
   anchorRef,
 }: Props) {
   const colors = useThemedColors()
@@ -77,7 +77,7 @@ function AiSimilarSectionContent({
       collapsable={false}
       accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as never) : undefined}
-      {...(Platform.OS === 'web' ? { dataSet: { sectionKey } } : {})}
+      {...(Platform.OS === 'web' ? { dataSet: { sectionKey: SECTION_KEY_BY_TYPE[type] } } : {})}
     >
       <View style={styles.headerRow}>
         <Feather name="compass" size={18} color={colors.primaryDark} />
