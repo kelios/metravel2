@@ -15,11 +15,16 @@
  */
 let suppressUntil = 0
 /**
- * Пользователь нажал «Приблизить» или «Отдалить». Пока флаг стоит,
- * авто-подгонка того же радиуса не переписывает этот зум. Сбрасывается
- * сменой радиуса и возвратом из маршрута в радиус.
+ * Карты, вид которых выбрал пользователь («Приблизить», «Отдалить», выбор места
+ * или города). Пока карта в наборе, авто-подгонка того же радиуса не переписывает
+ * её вид. Сбрасывается сменой радиуса и возвратом из маршрута в радиус.
+ *
+ * #3229: флаг принадлежит конкретному экземпляру карты, а не модулю. Модульный
+ * флаг переживал переход внутри приложения: выбор города на /map отключал
+ * стартовую подгонку новой карты /quests/map, и та открывалась на зуме по
+ * умолчанию без единого квеста в кадре. WeakSet не держит снятую карту в памяти.
  */
-let userAdjustedView = false
+let userAdjustedMaps = new WeakSet<object>()
 
 const now = (): number =>
   typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -42,18 +47,20 @@ export function isProgrammaticMapMoveActive(): boolean {
   return programmaticMapMoveRemainingMs() > 0
 }
 
-/** Зафиксировать, что вид карты выбрал пользователь, а не авто-фит. */
-export function noteUserMapGesture(): void {
-  userAdjustedView = true
+type MapIdentity = object | null | undefined
+
+/** Зафиксировать, что вид этой карты выбрал пользователь, а не авто-фит. */
+export function noteUserMapGesture(map: MapIdentity): void {
+  if (map) userAdjustedMaps.add(map)
 }
 
-export function hasUserAdjustedMapView(): boolean {
-  return userAdjustedView
+export function hasUserAdjustedMapView(map: MapIdentity): boolean {
+  return Boolean(map) && userAdjustedMaps.has(map as object)
 }
 
-/** Разрешить следующую авто-подгонку после смены радиуса или возврата из маршрута. */
-export function clearUserMapGesture(): void {
-  userAdjustedView = false
+/** Разрешить следующую авто-подгонку этой карты после смены радиуса или возврата из маршрута. */
+export function clearUserMapGesture(map: MapIdentity): void {
+  if (map) userAdjustedMaps.delete(map)
 }
 
 // --- Подписка (#2450) ----------------------------------------------------------
@@ -85,6 +92,6 @@ export function subscribeProgrammaticMapMove(listener: Listener): () => void {
 /** Только для тестов: сбросить окно и подписчиков. */
 export function __resetProgrammaticMapMoveForTests(): void {
   suppressUntil = 0
-  userAdjustedView = false
+  userAdjustedMaps = new WeakSet<object>()
   listeners.clear()
 }

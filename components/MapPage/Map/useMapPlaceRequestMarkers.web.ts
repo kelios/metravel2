@@ -181,7 +181,7 @@ export function useMapPlaceRequestMarkers({ leaflet, map, layer, ready, accent, 
     const previous = focused.current
     if (previous?.map === map && previous.key === key) return
     focused.current = { map, key }
-    noteUserMapGesture()
+    noteUserMapGesture(map)
     beginProgrammaticMapMove()
     map.setView([focusLat, focusLng], FOCUS_ZOOM, { animate: false })
   }, [focusLat, focusLng, map, ready, selectedId])

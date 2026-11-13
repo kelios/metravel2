@@ -365,7 +365,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // Первая фиксация радиуса — не жест пользователя. Сбрасываем флаг только
         // когда радиус действительно сменился, иначе стартовый эффект стирает
         // уже сделанный zoom-out.
-        if (radiusChanged) clearUserMapGesture();
+        if (radiusChanged) clearUserMapGesture(map);
       }
     }
 
@@ -376,7 +376,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (lastModeRef.current === 'route' && mode === 'radius') {
       hasInitializedRef.current = false;
       lastAutoFitKeyRef.current = null;
-      clearUserMapGesture();
+      clearUserMapGesture(map);
     }
 
     lastModeRef.current = mode;
@@ -433,7 +433,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // #2790 — пользователь уже отдал или приблизил карту. Приход точек, поздний
     // авто-фит и первый фикс локации не возвращают масштаб. Новый радиус и
     // возврат из маршрута сбрасывают флаг выше и подгоняют вид заново.
-    if (hasUserAdjustedMapView()) {
+    if (hasUserAdjustedMapView(map)) {
       lastAutoFitKeyRef.current = autoFitKey;
       hasInitializedRef.current = true;
       signalInitialViewReady();
@@ -568,7 +568,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
       const runFit = () => {
         if (cancelled) return;
-        if (hasUserAdjustedMapView()) {
+        if (hasUserAdjustedMapView(map)) {
           hasInitializedRef.current = true;
           signalInitialViewReady();
           return;

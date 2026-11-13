@@ -27,7 +27,6 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
   it('#2790 — a user zoom blocks the startup fit and a later result arrival', async () => {
     __resetProgrammaticMapMoveForTests();
-    noteUserMapGesture();
 
     const map = {
       fitBounds: jest.fn(),
@@ -46,6 +45,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       isValid: () => true,
       extend: jest.fn(),
     };
+    noteUserMapGesture(map);
     const onInitialViewReady = jest.fn();
     const props = {
       mapClickHandler: () => undefined,
@@ -103,6 +103,68 @@ describe('MapLogicComponent radius zoom initialization', () => {
       />,
     );
     await act(async () => {});
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  // #3229 — the gesture belongs to the map that received it. Choosing a city on
+  // /map used to set a module-wide flag, so the next map instance (/quests/map,
+  // reached by in-app navigation) skipped its startup fit and stayed on the
+  // default zoom with no quests in view.
+  it('#3229 — a gesture on another map does not block this map startup fit', async () => {
+    __resetProgrammaticMapMoveForTests();
+    const previousMap = {};
+    noteUserMapGesture(previousMap);
+
+    const map = {
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => 11),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.56 })),
+      on: jest.fn(),
+      off: jest.fn(),
+      stop: jest.fn(),
+    };
+    const bounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+    await render(
+      <MapLogicComponent
+        mapClickHandler={() => undefined}
+        mode="radius"
+        coordinates={{ lat: 53.9, lng: 27.56 }}
+        userLocation={{ lat: 53.9, lng: 27.56 }}
+        disableFitBounds={false}
+        L={{
+          latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+          latLngBounds: jest.fn(() => bounds),
+        }}
+        circleCenter={{ lat: 53.9, lng: 27.56 }}
+        radiusInMeters={50000}
+        fitBoundsPadding={{ paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] }}
+        setMapZoom={jest.fn()}
+        mapRef={{ current: null }}
+        onMapReady={jest.fn()}
+        onInitialViewReady={jest.fn()}
+        savedMapViewRef={{ current: null }}
+        hasInitializedRef={{ current: false }}
+        lastModeRef={{ current: null }}
+        lastAutoFitKeyRef={{ current: null }}
+        leafletBaseLayerRef={{ current: null }}
+        leafletOverlayLayersRef={{ current: new Map() }}
+        leafletControlRef={{ current: null }}
+        useMap={jest.fn(() => map)}
+        useMapEvents={jest.fn(() => null)}
+        initialResultsSettled
+        travelData={[]}
+      />,
+    );
+    await act(async () => {});
+
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
   });
 

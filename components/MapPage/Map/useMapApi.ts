@@ -229,7 +229,7 @@ export function useMapApi({
     return {
       zoomIn: () => {
         try {
-          noteUserMapGesture();
+          noteUserMapGesture(map);
           map.stop?.();
           map.zoomIn();
         } catch {
@@ -238,7 +238,7 @@ export function useMapApi({
       },
       zoomOut: () => {
         try {
-          noteUserMapGesture();
+          noteUserMapGesture(map);
           map.stop?.();
           map.zoomOut();
         } catch {
@@ -264,7 +264,7 @@ export function useMapApi({
 
           // An explicit place inspection owns the view just like a zoom button;
           // late startup/results fits must not replace it with the radius view.
-          noteUserMapGesture();
+          noteUserMapGesture(map);
           beginProgrammaticMapMove();
           if (typeof map.flyTo === 'function') {
             map.flyTo(CoordinateConverter.toLeaflet(parsed), targetZoom, { animate: true, duration: 0.35 } as any);

@@ -439,7 +439,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       if (!map) return
       // #2790 — жест отменяет ещё не доигравший авто-фит. Иначе zoomOut
       // вычитает единицу из цели фита, а data-map-zoom ещё показывает старт.
-      noteUserMapGesture()
+      noteUserMapGesture(map)
       map.stop?.()
       if (direction === 'in') map.zoomIn?.()
       else map.zoomOut?.()
