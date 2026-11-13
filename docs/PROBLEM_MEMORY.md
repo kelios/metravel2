@@ -803,16 +803,39 @@ guard, падающий в CI на попытке обойти этот конт
 - **Наблюдение:** один production cold `390×844` визит на `292c85ba3` дал общий
   CLS `0.3924044352233086`. Менялись filter/results-meta, сетка исчезала и
   возвращалась; весь баннер сместился на 22px при неизменных собственных
-  размерах, padding, направлении и относительных отступах. Инициирующий
-  query-state event не записан, причина не установлена.
-- **Каноническая задача:** #3387, `todo`/без исполнителя, related #3386/#1334.
-  Первый следующий check — независимый cold390 повтор с query-state/DOM identity
-  ledger, затем исправление только подтверждённого механизма. Это не доказанный
-  recurrence старой mobile-шапки #1334 и не дефект собственной геометрии #3386.
+  размерах, padding, направлении и относительных отступах. В исходном снимке
+  query-state event отсутствовал, поэтому причина тогда не была установлена.
+- **Каноническая задача:** #3387, production-приёмка PASS на `3e70d7d6b`;
+  related #3386/#1334. Первоначальный неизвестный механизм установлен независимым
+  query-state/DOM identity ledger; это отдельная причина от баннера #3386.
 - **Границы evidence:** исходный общий mobile FAIL сохранён без изменения;
   supplemental banner control получен из того же raw, не из нового визита.
   Пять desktop PASS и полный local guard `37/37` — контроли других границ,
   не отменяющие mobile-наблюдение. Evidence — `.codex-temp/task3382/acceptance-r5/`.
+
+- **Установленный механизм:** при restoration запрос бывает `pending/idle`;
+  `isLoading` уже false до начала fetching, поэтому сетка подменялась empty-state.
+  `usePlacesCatalogController.ts` теперь выводит initial loading из `isPending`.
+  Первый matching browser run сохранил сетку, но дал CLS `0.134808695193`: neutral
+  заголовок менялся с одной строки на две (+22px), до измерения ширины появлялась
+  desktop-кнопка сброса. В compact styles и critical CSS резервируются две строки,
+  существующий media-owner скрывает desktop action на compact viewport.
+- **Проверка:** original56 и последующие80 focused tests PASS (есть14 общих);
+  independent/full-task и formal review PASS. Permanent browser regression —
+  один matching export/один test на `e4686c2ab`, `1 passed`, CLS `0.0009762069863`.
+  Для отдельного production prefix собственные12файлов byte-identical;
+  compatibility review разрешил переиспользовать локальные утверждения,
+  не выдавая этот run за F1 runtime.
+- **Production:** normal publish `3e70d7d6b` и точный live source подтверждены;
+  пять fresh390 visits — CLS `0.0009762069863` каждый, desktop1280 —
+  `0.001858657201`. Сетка непрерывна, реальные GET/search/list PASS, console/network
+  ошибок0; все12metric и2functional PNG просмотрены. Evidence:
+  `.codex-temp/task3387/acceptance-F1-result.md` и полный raw ledger.
+- **Граница/повторная проверка:** сохраняются default10/explicit-empty URL,
+  loading/error/empty/refresh и locale semantics. Изменение query-status consumer,
+  restoration, responsive first-frame CSS или их геометрии требует повторного
+  permanent regression и фактической mobile/desktop приёмки; desktop-контроли
+  старого баннера по-прежнему не заменяют mobile gate.
 
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
 

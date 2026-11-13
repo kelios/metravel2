@@ -31,10 +31,10 @@ The catalog SHALL retain its loading grid while the current result has neither d
 - **WHEN** a filter or search update refreshes the result
 - **THEN** existing places remain visible according to the existing refresh contract
 
-#### Scenario: Compact URL intent commits before viewport measurement
+#### Scenario: Compact initial filters change the result heading
 - **GIVEN** the neutral exported title and default starter title occupy one and two lines respectively
-- **WHEN** URL intent commits on a compact viewport before React measures its width
-- **THEN** both frames reserve the existing two-line title height
+- **WHEN** the initial default filters become effective on a compact viewport
+- **THEN** the result heading and following content retain their vertical positions
 - **AND** the desktop-only clear control remains outside the compact layout throughout that transition
 
 ### Requirement: Cold mobile catalog stays within the layout stability budget
