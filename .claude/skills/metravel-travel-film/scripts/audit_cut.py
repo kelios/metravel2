@@ -110,6 +110,14 @@ for i, s in enumerate(SEG):
         if min(b_, s["out"]) - max(a_, s["in"]) > 1.0:
             add("ПОВТОР", T[i], note, f"кусок уже был в «{n_[:40]}»")
     used.setdefault(key, []).append((s["in"], s["out"], note))
+    for o in s.get("broll", []):                       # перебивки тоже: один кадр второй раз без замысла
+        if o.get("flash") or o.get("bridge"): continue
+        f0 = o.get("orig", {}).get("file", o["file"]); i0 = o.get("orig", {}).get("in", o.get("in", 0))
+        if f0 in alias: f0, sh = alias[f0][0], float(alias[f0][1]); i0 += sh
+        for a_, b_, n_ in used.get(f0, []):
+            if min(b_, i0 + o["dur"]) - max(a_, i0) > 1.0:
+                add("ПОВТОР", T[i] + o["at"] - s["in"], note, f"перебивка {os.path.basename(f0)[:28]} уже была в «{n_[:40]}»")
+        used.setdefault(f0, []).append((i0, i0 + o["dur"], note + " / перебивка"))
     cards = [c for c in s.get("cards", []) if not c.get("pip") and c["file"].lower().endswith(".png")]
     for c in cards:
         if c["dur"] < 3.0 and not teaser: add("ПЛАШКА", T[i] + c["at"] - s["in"], note, f"{os.path.basename(c['file'])} на экране {c['dur']:.1f} с")
