@@ -250,6 +250,12 @@ Detail data может загружаться по numeric ID или slug. Web d
 другого travel. Recoverable public errors могут читать stale payload, поэтому
 runtime-проверка должна различать свежий backend response и stale fallback.
 
+Первый web snapshot при SSR/hydrate воспроизводит сериализованные loader data
+либо generic loading shell сервера. Успевший direct-API preload и клиентский
+QueryClient cache становятся видимыми после гидратации. При обычном CSR mount
+готовые данные доступны синхронно; native data path сохраняется. Регрессии:
+`__tests__/hooks/useTravelDetails.hydration.dom.web.test.tsx`.
+
 ### Hero/media contract
 
 - Web hero/slider media сохраняет стабильную геометрию `70vh`.

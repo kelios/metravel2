@@ -12,10 +12,7 @@ import {
   readTravelFooterLayoutShiftReport,
   resetTravelFooterLayoutShiftGuard,
 } from './helpers/travelFooterLayoutShiftGuard'
-import {
-  isBenignThirdPartyResourceError,
-  isRecoverableReactHydrationError,
-} from './helpers/consoleGuards'
+import { isBenignThirdPartyResourceError } from './helpers/consoleGuards'
 
 const VIEWPORTS = [
   { height: 640, label: 'desktop-narrow', totalClsBudget: 0.388872, width: 1024 },
@@ -96,7 +93,10 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       const networkFailures: string[] = []
       page.on('pageerror', (error) => browserErrors.push(String(error.message || error)))
       page.on('console', (message) => {
-        if (message.type() === 'error') browserErrors.push(message.text())
+        if (message.type() === 'error') {
+          const url = message.location().url
+          browserErrors.push(`${message.text()}${url ? ` @ ${url}` : ''}`)
+        }
       })
       page.on('requestfailed', (request) => {
         if (!isRelevantNetworkRequest(request.url(), request.resourceType())) return
@@ -248,11 +248,7 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       const report = await readTravelFooterLayoutShiftReport(page)
       const unexpectedBrowserErrors = useLiveTravelData
         ? browserErrors
-        : browserErrors.filter(
-            (message) =>
-              !isRecoverableReactHydrationError(message) &&
-              !isBenignThirdPartyResourceError(message),
-          )
+        : browserErrors.filter((message) => !isBenignThirdPartyResourceError(message))
       await page.screenshot({
         path: `.codex-temp/task-1604/${viewport.label}-${useLiveTravelData ? 'live' : 'fixture'}.png`,
       })
@@ -263,6 +259,13 @@ test.describe('@perf Travel details deferred footer transition CLS', () => {
       console.log(
         `[task-1604][${viewport.label}][${useLiveTravelData ? 'live' : 'fixture'}] ${JSON.stringify({ finalGeometry, initialGeometry, report })}`,
       )
+      await test.info().attach('travel-footer-transition-probe', {
+        body: JSON.stringify({
+          browserErrors, unexpectedBrowserErrors, networkFailures,
+          finalGeometry, initialGeometry, report,
+        }),
+        contentType: 'application/json',
+      })
 
       expect(
         report.footerEntries,

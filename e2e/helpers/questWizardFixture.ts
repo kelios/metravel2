@@ -36,6 +36,8 @@ export type QuestFixtureOptions = {
   progressId: number
   /** Set before navigation so the first map frame uses the requested viewport. */
   viewport?: { width: number; height: number }
+  /** Observe an actual intro frame before the fixture's existing Start click. */
+  beforeStart?: (page: Page) => Promise<void>
   points: QuestFixturePoint[]
 }
 
@@ -175,6 +177,7 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     // Await our stub's fulfilled response rather than Response.finished(): the
     // latter stalled three parallel specs for 120s with the intro already ready.
     await expect.poll(() => recommendationsFulfilled, { timeout: 10_000 }).toBe(true)
+    await options.beforeStart?.(page)
     await startButton.click()
   }
 

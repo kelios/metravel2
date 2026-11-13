@@ -164,6 +164,17 @@ export async function mockFallbackTravelDetails(
   await page.route('**/travels/popular/**', routeHandler);
   await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/near/**`, routeHandler);
   await page.route(`**/travels/${FALLBACK_TRAVEL_ID}/near/**`, routeHandler);
+  await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/view/**`, async route => {
+    const request = route.request();
+    const expectedViewURL = new URL(`/api/travels/${FALLBACK_TRAVEL_ID}/view/`, page.url()).href;
+    // The synthetic article has no server record. Own only its normal view POST;
+    // every other write stays visible to the scenario's prior mutation sentinel.
+    if (request.method() === 'POST' && request.url() === expectedViewURL) {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.fallback();
+  });
 }
 
 export async function openFallbackTravelDetails(page: Page): Promise<boolean> {

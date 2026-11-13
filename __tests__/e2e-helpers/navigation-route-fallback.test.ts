@@ -1,12 +1,13 @@
 import type { Page, Route } from '@playwright/test'
-import { FALLBACK_TRAVEL_SLUG, mockFallbackTravelDetails } from '../../e2e/helpers/navigation'
+import { FALLBACK_TRAVEL_ID, FALLBACK_TRAVEL_SLUG, mockFallbackTravelDetails } from '../../e2e/helpers/navigation'
 
 jest.mock('@playwright/test', () => ({ expect: jest.fn() }))
 
-async function requestThroughDetailOwner(pattern: string, pathname: string, method = 'GET') {
+async function requestThroughDetailOwner(pattern: string, pathname: string, method = 'GET', origin = 'https://example.test') {
   const handlers = new Map<string, (route: Route) => Promise<unknown>>()
   const page = {
     route: async (matcher: string, handler: (route: Route) => Promise<unknown>) => { handlers.set(matcher, handler) },
+    url: () => `https://example.test/travels/${FALLBACK_TRAVEL_SLUG}`,
   } as unknown as Page
   const unexpected: string[] = []
   // This lower-priority owner represents a scenario's read/mutation sentinel.
@@ -20,7 +21,7 @@ async function requestThroughDetailOwner(pattern: string, pathname: string, meth
   const continueRequest = jest.fn()
   const fulfill = jest.fn()
   const route = {
-    request: () => ({ method: () => method, url: () => `https://example.test${pathname}` }),
+    request: () => ({ method: () => method, url: () => `${origin}${pathname}` }),
     fallback: () => priorOwner(route), continue: continueRequest, fulfill,
   } as unknown as Route
   await owner(route)
@@ -48,5 +49,33 @@ it('still owns the exact scenario details without reaching the sentinel', async 
   expect(result.fulfill).toHaveBeenCalledWith(expect.objectContaining({ status: 200, contentType: 'application/json' }))
   expect(JSON.parse(result.fulfill.mock.calls[0][0].body).name).toBe('Scenario article')
   expect(result.unexpected).toEqual([])
+  expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+const viewPath = `/api/travels/${FALLBACK_TRAVEL_ID}/view/`
+const viewOwner = `**/api/travels/${FALLBACK_TRAVEL_ID}/view/**`
+
+it('owns the declared synthetic article view without sending a write to the server', async () => {
+  const result = await requestThroughDetailOwner(viewOwner, viewPath, 'POST')
+  expect(result.fulfill).toHaveBeenCalledTimes(1)
+  expect(result.fulfill).toHaveBeenCalledWith({ status: 204 })
+  expect(result.unexpected).toEqual([])
+  expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['GET', viewPath, 'https://example.test'],
+  ['HEAD', viewPath, 'https://example.test'],
+  ['OPTIONS', viewPath, 'https://example.test'],
+  ['PATCH', viewPath, 'https://example.test'],
+  ['DELETE', viewPath, 'https://example.test'],
+  ['POST', '/api/travels/1/view/', 'https://example.test'],
+  ['POST', `${viewPath}?extra=1`, 'https://example.test'],
+  ['POST', `${viewPath}alias`, 'https://example.test'],
+  ['POST', viewPath, 'https://other.test'],
+])('leaves undeclared fixture-view request %s %s at %s with the prior sentinel', async (method, pathname, origin) => {
+  const result = await requestThroughDetailOwner(viewOwner, pathname, method, origin)
+  expect(result.unexpected).toEqual([`${method} ${new URL(pathname, origin).pathname}`])
+  expect(result.fulfill).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }))
   expect(result.continueRequest).not.toHaveBeenCalled()
 })

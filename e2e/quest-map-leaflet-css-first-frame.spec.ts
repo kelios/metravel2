@@ -2,6 +2,7 @@ import type { Page, Request } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { createQuestFixture } from './helpers/questWizardFixture'
+import { parentMovementIsExplained, type GeometryFrame, type Rect } from './helpers/questMapGeometry'
 
 /**
  * #2324 / #2332: actual map first-frame positioning and late CSS geometry.
@@ -14,16 +15,6 @@ const TILE_PNG = Buffer.from(
   'base64',
 )
 
-type Rect = { x: number; y: number; width: number; height: number }
-type GeometryFrame = {
-  timestamp: number
-  mapRect: Rect
-  viewportControls: Record<string, Rect>
-  relativeControls: Record<string, Rect>
-  viewport: { width: number; height: number; scrollX: number; scrollY: number }
-  scrollAncestors: Array<{ element: string; rect: Rect; scrollTop: number; scrollLeft: number }>
-  activeCard: { kind: 'intro' | 'step' | 'unknown'; rect: Rect | null }
-}
 type MapFrameProbe = {
   firstTilePosition: string | null
   mapShifts: Array<{ value: number; sources: string[] }>
@@ -37,37 +28,12 @@ type MapFrameProbe = {
 const readProbe = (page: Page) =>
   page.evaluate(() => (window as unknown as { __questMapCssProbe: MapFrameProbe }).__questMapCssProbe)
 
-// A start click alone cannot excuse translation of the map's owning layout.
-// Require either measured scroll or the exact height change of the preceding card.
-function parentMovementIsExplained(before: GeometryFrame, after: GeometryFrame, actions: MapFrameProbe['actions']): boolean {
-  const scrollOffset = (frame: GeometryFrame, axis: 'x' | 'y') =>
-    (axis === 'x' ? frame.viewport.scrollX : frame.viewport.scrollY) +
-    frame.scrollAncestors.reduce((sum, parent) => sum + (axis === 'x' ? parent.scrollLeft : parent.scrollTop), 0)
-  const delta = (axis: 'x' | 'y') => after.mapRect[axis] - before.mapRect[axis] +
-    scrollOffset(after, axis) - scrollOffset(before, axis)
-  if (before.viewport.width !== after.viewport.width || before.viewport.height !== after.viewport.height ||
-      before.mapRect.width !== after.mapRect.width || before.mapRect.height !== after.mapRect.height ||
-      JSON.stringify(before.scrollAncestors.map((parent) => parent.element)) !==
-        JSON.stringify(after.scrollAncestors.map((parent) => parent.element)) || delta('x') !== 0) return false
-  if (delta('y') === 0) return true
-  const priorCard = before.activeCard.rect
-  const nextCard = after.activeCard.rect
-  if (before.activeCard.kind !== 'intro' || after.activeCard.kind !== 'step' || !priorCard || !nextCard ||
-      !actions.some((action) => action.kind === 'quest-start' &&
-        action.timestamp >= before.timestamp && action.timestamp <= after.timestamp)) return false
-  const cardY = (frame: GeometryFrame, rect: Rect) => rect.y + scrollOffset(frame, 'y')
-  const beforeGap = before.mapRect.y - priorCard.y - priorCard.height
-  const afterGap = after.mapRect.y - nextCard.y - nextCard.height
-  return beforeGap >= 0 && beforeGap === afterGap && priorCard.width === nextCard.width &&
-    cardY(before, priorCard) === cardY(after, nextCard) && delta('y') === nextCard.height - priorCard.height
-}
-
 test('map geometry guard rejects unexplained parent movement, including recent Start input', () => {
   const frame: GeometryFrame = {
     timestamp: 10, mapRect: { x: 0, y: 200, width: 390, height: 300 },
     viewportControls: {}, relativeControls: {},
     viewport: { width: 390, height: 900, scrollX: 0, scrollY: 0 }, scrollAncestors: [],
-    activeCard: { kind: 'intro', rect: { x: 0, y: 0, width: 390, height: 180 } },
+    activeCard: { kind: 'intro', rect: { x: 0, y: 0, width: 390, height: 180 } }, mapFlow: null,
   }
   const moved = { ...frame, timestamp: 20, mapRect: { ...frame.mapRect, y: 297 } }
   const start = [{ timestamp: 15, kind: 'quest-start', target: 'button' }]
@@ -156,6 +122,14 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324, #
         const quest = createQuestFixture({
           questId: 'e2e-quest-map-css-first-frame', questTitle: 'E2E-квест карты: первый кадр',
           questNumericId: 91_724, progressId: 90_724, viewport: { width, height: 900 },
+          beforeStart: async (page) => {
+            // Deliberately exercise intro -> step instead of depending on whether
+            // the lazy map wins a race against the fixture's Start click.
+            await page.waitForFunction(() =>
+              (window as unknown as { __questMapCssProbe: MapFrameProbe }).__questMapCssProbe.geometryFrames
+                .some(frame => frame.activeCard.kind === 'intro' && frame.mapFlow !== null),
+            undefined, { timeout: 60_000 })
+          },
           points: [firstPoint,
             { id: 'css-step-2', lat: 53.9041, lng: 27.5652 },
             { id: 'css-step-3', lat: 53.9062, lng: 27.5598 }],
@@ -295,8 +269,27 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324, #
                 const marker = document.querySelector('[data-testid="quest-intro-start"]') ||
                   document.querySelector('[data-testid="quest-step-check"]')
                 const card = marker?.closest('[data-screen-content="first"]')
+                const toolbar = document.querySelector('[data-testid="quest-map-toolbar"]')
+                const root = toolbar?.parentElement
+                const panel = root?.parentElement
+                let mapFlow: GeometryFrame['mapFlow'] = null
+                // These are the owned QuestFullMap / QuestDesktopMapPanel roots.
+                // Reject a changed tree instead of guessing which block moved.
+                if (root && panel && root.contains(map) && root.nextElementSibling === null) {
+                  const navigation = root.previousElementSibling
+                  if (!navigation && panel.children.length === 1) {
+                    mapFlow = { rootRect: rectOf(root), panelRect: rectOf(panel), navigation: null }
+                  } else if (navigation && panel.children.length === 2 &&
+                    navigation === panel.firstElementChild &&
+                    navigation.querySelector('[role="button"][aria-label="Открыть навигацию"]') &&
+                    navigation.querySelector('[role="button"][aria-label^="Копировать координаты "]')) {
+                    mapFlow = { rootRect: rectOf(root), panelRect: rectOf(panel), navigation: {
+                      rect: rectOf(navigation), marginBottom: Number.parseFloat(getComputedStyle(navigation).marginBottom),
+                    } }
+                  }
+                }
                 const geometry = {
-                  mapRect, viewportControls, relativeControls,
+                  mapRect, viewportControls, relativeControls, mapFlow,
                   viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY }, scrollAncestors,
                   activeCard: { kind: marker?.getAttribute('data-testid') === 'quest-intro-start'
                     ? 'intro' as const : marker ? 'step' as const : 'unknown' as const,
@@ -364,6 +357,15 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324, #
               expect(frame.viewport, `${label}: window scrolled during CSS release`).toEqual(beforeGeometry.viewport)
               expect(frame.scrollAncestors, `${label}: ancestor scrolled/resized during CSS release`).toEqual(beforeGeometry.scrollAncestors)
               expect(frame.activeCard, `${label}: card changed during CSS release`).toEqual(beforeGeometry.activeCard)
+              expect(frame.mapFlow, `${label}: map owning flow changed during CSS release`).toEqual(beforeGeometry.mapFlow)
+            }
+            expect(probe.geometryFrames.every(frame => frame.mapFlow !== null),
+              `${label}: missing measured map-root/panel/navigation flow`).toBe(true)
+            if (label === 'quest start') {
+              expect(probe.geometryFrames.some(frame => frame.activeCard.kind === 'intro'),
+                'quest start: first intro map frame must be observed').toBe(true)
+              expect(probe.geometryFrames.some(frame => frame.activeCard.kind === 'step'),
+                'quest start: first step map frame must be observed').toBe(true)
             }
             for (let index = 1; index < probe.geometryFrames.length; index += 1) {
               expect(parentMovementIsExplained(probe.geometryFrames[index - 1], probe.geometryFrames[index], probe.actions),

@@ -4,7 +4,7 @@ import { readRetryTwice } from '@/utils/queryRetryPolicy';
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import { onlineManager, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
@@ -58,6 +58,9 @@ const PRELOAD_WAIT_TIMEOUT_MS = 500;
 const PRELOAD_BOOTSTRAP_READY_TIMEOUT_MS = 350;
 const PRELOAD_POLL_INTERVAL_MS = 25;
 const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+const subscribeToHydration = () => () => {};
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 // The inline preload bootstrap (app/+html.tsx) runs once, only for the initial
 // document URL, and records the path it targeted in __metravelTravelPreloadTargetPath.
@@ -304,6 +307,12 @@ async function waitForTravelPreload(
 
 export function useTravelDetails(): UseTravelDetailsReturn {
   const queryClient = useQueryClient();
+  const hasClientSnapshot = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const isWebServerSnapshot = Platform.OS === 'web' && !hasClientSnapshot;
   const { param } = useLocalSearchParams();
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
@@ -344,8 +353,8 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;
 
   const {
-    data: travel,
-    isLoading,
+    data: queryTravel,
+    isLoading: queryIsLoading,
     isError: queryIsError,
     error: queryError,
     refetch,
@@ -418,6 +427,15 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     placeholderData: undefined,
   });
 
+  // Direct-api preload and a warm client cache may win before hydrateRoot.
+  // The first web render must still match the document's loader snapshot;
+  // client-only mounts immediately retain the existing synchronous cache path.
+  const travel = isWebServerSnapshot ? loaderTravel : queryTravel;
+  const isLoading = isWebServerSnapshot ? !loaderTravel : queryIsLoading;
+  const hasInitialPreloadedTravel = isWebServerSnapshot
+    ? Boolean(loaderTravel)
+    : Boolean(initialPreloadedTravel);
+
   const stableRefetch = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -428,13 +446,13 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   // article with the full-page load error. The trimmed payload keeps legacy URL
   // fallbacks for below-fold media, so that path is fatal only with no usable
   // preload; all other query paths retain their existing error semantics.
-  const isError = queryIsError && !(preloadMediaPartial && travel);
+  const isError = !isWebServerSnapshot && queryIsError && !(preloadMediaPartial && travel);
   const error = isError ? queryError : null;
   const staleContentMeta = useMemo(() => getPublicStalePayloadMeta(travel), [travel]);
 
   return useMemo(() => ({
     travel,
-    hasInitialPreloadedTravel: Boolean(initialPreloadedTravel),
+    hasInitialPreloadedTravel,
     isLoading,
     isError,
     error: error as Error | null,
@@ -445,7 +463,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     staleContentMeta,
   }), [
     travel,
-    initialPreloadedTravel,
+    hasInitialPreloadedTravel,
     isLoading,
     isError,
     error,
