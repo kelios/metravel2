@@ -8,7 +8,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 
-import { AI_TAG_SUGGEST_MIN_TEXT_CHARS } from '@/api/aiAssist/policy'
+import { AI_TAG_SUGGEST_MIN_TEXT_CHARS } from '@/constants/aiFormPolicy'
 import { fetchAiTagSuggestions, normalizeTagSuggestionText } from '@/api/aiTagSuggestions'
 import { queryKeys } from '@/api/queryKeys'
 import { getActiveLocale } from '@/i18n'

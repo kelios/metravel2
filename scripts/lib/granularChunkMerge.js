@@ -107,7 +107,7 @@ function createRouteCoverage(entryPaths, appDir) {
     }
     coverage.set(entryPath, bits)
   }
-  return { coverage, words }
+  return { coverage, words, routes }
 }
 
 function routeKey(bits) {

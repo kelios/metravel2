@@ -87,6 +87,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
       expect.stringContaining('/travels/384/near/?page=1&perPage=6'),
       expect.objectContaining({ signal: expect.any(Object) }),
       expect.any(Number),
+      {},
     );
   });
 

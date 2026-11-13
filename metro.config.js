@@ -630,10 +630,14 @@ const { prepareWebChunkMetadata } = require('./scripts/lib/webChunkMetadataCodec
 // for one sha. Server bundles keep one shared counter.
 // EXPO_USE_METRO_REQUIRE keeps Expo's path-based factory.
 const { createScopedNumericModuleIdFactory } = require('./scripts/lib/scopedModuleIdFactory')
+const { getGranularModuleIdPriorities } = require('./scripts/lib/granularModuleIdPriority')
 const { env: expoMetroEnv } = require('@expo/metro-config/build/env')
 config.serializer = {
   ...config.serializer,
-  ...(expoMetroEnv.EXPO_USE_METRO_REQUIRE ? {} : { createModuleIdFactory: createScopedNumericModuleIdFactory }),
+  ...(expoMetroEnv.EXPO_USE_METRO_REQUIRE ? {} : {
+    createModuleIdFactory: createScopedNumericModuleIdFactory,
+    unstable_getGranularModuleIdPriorities: getGranularModuleIdPriorities,
+  }),
   unstable_granularWebExport: true,
   unstable_mergeGranularChunkPlan: mergeGranularChunkPlan,
   unstable_prepareWebChunkMetadata: prepareWebChunkMetadata,

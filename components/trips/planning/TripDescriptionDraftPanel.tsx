@@ -12,7 +12,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { AI_AUTHOR_DRAFT_TRIP_MIN_TEXT_CHARS } from '@/api/aiAssist/policy'
+import { AI_AUTHOR_DRAFT_TRIP_MIN_TEXT_CHARS } from '@/constants/aiFormPolicy'
 import { createAuthorAssistantStyles } from '@/components/travel/upsert/AuthorAssistantPanel'
 import { useAuthorDraft } from '@/components/travel/upsert/useAuthorDraft'
 import UIButton from '@/components/ui/Button'

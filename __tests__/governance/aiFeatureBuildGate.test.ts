@@ -38,7 +38,7 @@ const KNOWN_STATIC_IMPORTS = new Set([
   'components/listTravel/SearchPageSkeleton.tsx',
 ])
 // Ветка условия: от литерального флага до `?` и дальше без `;`/`:` до самого вызова.
-const FLAG_BRANCH = /process\.env\.EXPO_PUBLIC_AI_(?:PICKS|ASSISTANT)\b[^;]*\?[^;:]*$/
+const FLAG_BRANCH = /process\.env\.EXPO_PUBLIC_AI_(?:PICKS|ASSISTANT|SIMILAR_SOURCE)\b[^;]*\?[^;:]*$/
 const STATEMENT_START = /[\n;]\s*(?:export\s+)?(?:const|let|var|function|return|if|import)\b/g
 
 const listSources = (dir: string): string[] => {
@@ -55,38 +55,38 @@ type Reference = { file: string; line: number; kind: 'static' | 'gated' | 'ungat
 
 const lineOf = (source: string, index: number) => source.slice(0, index).split('\n').length
 
-const collectReferences = (): Reference[] => {
+const collectSourceReferences = (posix: string, source: string): Reference[] => {
+  if (FEATURE_FILE.test(posix)) return []
   const references: Reference[] = []
-  for (const file of ROOTS.flatMap(listSources)) {
-    const posix = file.split(path.sep).join('/')
-    if (FEATURE_FILE.test(posix)) continue
-    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8')
-    for (const match of source.matchAll(/^\s*import\s+(type\s+)?[^;]*?from\s+['"]([^'"]+)['"]/gm)) {
-      if (match[1] || !FEATURE_SPECIFIER.test(match[2]) || KNOWN_STATIC_IMPORTS.has(posix)) continue
-      references.push({ file: posix, line: lineOf(source, match.index ?? 0), kind: 'static', text: match[0].trim() })
-    }
-    for (const match of source.matchAll(/(typeof\s+)?\b(require|import)\(\s*['"]([^'"]+)['"]\s*\)/g)) {
-      if (match[1] || !FEATURE_SPECIFIER.test(match[3])) continue
-      const index = match.index ?? 0
-      // Только текущий оператор: от последнего начала объявления/оператора до вызова,
-      // иначе `?` соседнего выражения засчитал бы незащищённый import() (code-review-gate #2738).
-      const window = source.slice(Math.max(0, index - 400), index)
-      const statementStart = Math.max(
-        0,
-        ...[...window.matchAll(STATEMENT_START)].map((start) => (start.index ?? 0) + 1),
-      )
-      // `cond ? import(a) : null` и `React.lazy(() => cached ?? import(a))` внутри той же ветки.
-      const gated = FLAG_BRANCH.test(window.slice(statementStart))
-      references.push({
-        file: posix,
-        line: lineOf(source, index),
-        kind: gated ? 'gated' : 'ungated',
-        text: match[0],
-      })
-    }
+  for (const match of source.matchAll(/^\s*import\s+(type\s+)?[^;]*?from\s+['"]([^'"]+)['"]/gm)) {
+    if (match[1] || !FEATURE_SPECIFIER.test(match[2]) || KNOWN_STATIC_IMPORTS.has(posix)) continue
+    references.push({ file: posix, line: lineOf(source, match.index ?? 0), kind: 'static', text: match[0].trim() })
+  }
+  for (const match of source.matchAll(/(typeof\s+)?\b(require|import)\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+    if (match[1] || !FEATURE_SPECIFIER.test(match[3])) continue
+    const index = match.index ?? 0
+    // Только текущий оператор: от последнего начала объявления/оператора до вызова,
+    // иначе `?` соседнего выражения засчитал бы незащищённый import() (code-review-gate #2738).
+    const window = source.slice(Math.max(0, index - 400), index)
+    const statementStart = Math.max(
+      0,
+      ...[...window.matchAll(STATEMENT_START)].map((start) => (start.index ?? 0) + 1),
+    )
+    // `cond ? import(a) : null` и `React.lazy(() => cached ?? import(a))` внутри той же ветки.
+    const gated = FLAG_BRANCH.test(window.slice(statementStart))
+    references.push({
+      file: posix,
+      line: lineOf(source, index),
+      kind: gated ? 'gated' : 'ungated',
+      text: match[0],
+    })
   }
   return references
 }
+
+const collectReferences = (): Reference[] => ROOTS.flatMap(listSources).flatMap((file) =>
+  collectSourceReferences(file.split(path.sep).join('/'), fs.readFileSync(path.join(repoRoot, file), 'utf8')),
+)
 
 describe('AI feature build gate (#2738)', () => {
   const references = collectReferences()
@@ -114,5 +114,16 @@ describe('AI feature build gate (#2738)', () => {
 
   it('loads AI feature modules only under a literal process.env flag condition', () => {
     expect(references.filter((r) => r.kind === 'ungated')).toEqual([])
+  })
+
+  it.each(['PICKS', 'ASSISTANT', 'SIMILAR_SOURCE'])('scans the literal %s condition and rejects unguarded/helper imports', (flag) => {
+    const guarded = `const feature = process.env.EXPO_PUBLIC_AI_${flag} ? import('@/api/aiPicks') : null`
+    expect(collectSourceReferences('components/Fixture.tsx', guarded)).toMatchObject([{ kind: 'gated' }])
+    const helper = "const feature = isAiPicksEnabled() ? import('@/api/aiPicks') : null"
+    expect(collectSourceReferences('components/Fixture.tsx', helper)).toMatchObject([{ kind: 'ungated' }])
+    const unrelated = `const value = process.env.EXPO_PUBLIC_AI_${flag} ? 1 : 0;\nconst feature = import('@/api/aiPicks')`
+    expect(collectSourceReferences('components/Fixture.tsx', unrelated)).toMatchObject([{ kind: 'ungated' }])
+    expect(collectSourceReferences('components/Fixture.tsx', "import { fetchNearRoute } from '@/api/aiPicks'"))
+      .toMatchObject([{ kind: 'static' }])
   })
 })

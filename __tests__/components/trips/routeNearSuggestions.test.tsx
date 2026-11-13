@@ -60,7 +60,7 @@ const renderBlock = async (route: RoutePoint[], onAddPoint = jest.fn()) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const screen = await render(
     <QueryClientProvider client={client}>
-      <RouteNearSuggestions route={route} onAddPoint={onAddPoint} />
+      <React.Suspense fallback={null}><RouteNearSuggestions route={route} onAddPoint={onAddPoint} /></React.Suspense>
     </QueryClientProvider>,
   )
   return { screen, onAddPoint }
@@ -106,4 +106,11 @@ describe('RouteNearSuggestions (#2911)', () => {
     expect(noCoords.screen.queryByTestId('route-near-suggestions')).toBeNull()
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
+})
+
+const originalFeatureFlag = process.env.EXPO_PUBLIC_AI_PICKS
+beforeEach(() => { process.env.EXPO_PUBLIC_AI_PICKS = '1' })
+afterAll(() => {
+  if (originalFeatureFlag === undefined) delete process.env.EXPO_PUBLIC_AI_PICKS
+  else process.env.EXPO_PUBLIC_AI_PICKS = originalFeatureFlag
 })

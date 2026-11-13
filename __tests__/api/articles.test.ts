@@ -31,6 +31,7 @@ describe('fetchArticles', () => {
       expect.stringContaining('/api/articles?'),
       expect.any(Object),
       30000,
+      {},
     );
   });
 
@@ -183,6 +184,7 @@ describe('fetchArticle', () => {
       expect.stringContaining('/api/articles/5'),
       expect.any(Object),
       10000,
+      {},
     );
   });
 
@@ -241,6 +243,7 @@ describe('fetchArticleBySlug', () => {
       expect.stringContaining('/api/articles/resolve-slug/test-article/'),
       expect.any(Object),
       30000,
+      {},
     );
   });
 

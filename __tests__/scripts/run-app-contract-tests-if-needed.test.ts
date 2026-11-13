@@ -39,7 +39,7 @@ describe('run-app-contract-tests-if-needed', () => {
       'components/travel/UpsertTravel.tsx',
       'components/messages/ChatView.tsx',
     ])
-    expect(getMatchedCategoryNames(changedFiles)).toEqual(['travel', 'messages'])
+    expect(getMatchedCategoryNames(changedFiles)).toEqual(['ai-build-boundary', 'travel', 'messages'])
 
     expect(getTargetedTestsForChangedFiles(changedFiles)).toEqual([
       '__tests__/api/messages.test.ts',
@@ -54,6 +54,7 @@ describe('run-app-contract-tests-if-needed', () => {
       '__tests__/components/travel/TravelDetailsContainer.skeleton.web.test.tsx',
       '__tests__/components/travel/TravelDetailsLazy.test.tsx',
       '__tests__/components/travel/UpsertTravel.integration.test.tsx',
+      '__tests__/governance/aiFeatureBuildGate.test.ts',
       '__tests__/hooks/useTravelDetails.test.ts',
       '__tests__/hooks/useUpsertTravelController.test.ts',
       '__tests__/utils/travelFormNormalization.test.ts',
@@ -88,6 +89,7 @@ describe('run-app-contract-tests-if-needed', () => {
       '__tests__/components/travel/TravelDetailsContainer.skeleton.web.test.tsx',
       '__tests__/components/travel/TravelDetailsLazy.test.tsx',
       '__tests__/components/travel/UpsertTravel.integration.test.tsx',
+      '__tests__/governance/aiFeatureBuildGate.test.ts',
       '__tests__/hooks/useMapScreenController.buildRouteTo.test.ts',
       '__tests__/hooks/useTravelDetails.test.ts',
       '__tests__/hooks/useUpsertTravelController.test.ts',
@@ -110,6 +112,7 @@ describe('run-app-contract-tests-if-needed', () => {
 
   it('keeps category definitions aligned with targeted tests', () => {
     expect(CATEGORY_DEFINITIONS.map((category) => category.name)).toEqual([
+      'ai-build-boundary',
       'travel',
       'map',
       'account',
@@ -130,4 +133,28 @@ describe('run-app-contract-tests-if-needed', () => {
     expect(payload.reason).toBe('match')
     expect(payload.targetedTests).toBeGreaterThan(0)
   })
+})
+
+const AI_BUILD_GATE = '__tests__/governance/aiFeatureBuildGate.test.ts'
+
+it.each([
+  'components/trips/planning/RouteNearSuggestions.tsx',
+  'components/travel/upsert/useAuthorDraft.ts',
+  'hooks/useTravelTagSuggestions.ts',
+  'api/aiMapIntent.ts',
+  'constants/aiFormPolicy.ts',
+  'utils/aiPicksConfig.ts',
+  AI_BUILD_GATE,
+])('normal selective check selects AI governance for %s', (file) => {
+  expect(getTargetedTestsForChangedFiles([file])).toContain(AI_BUILD_GATE)
+  const { runSelectiveChecks } = require('@/scripts/run-local-selective-checks')
+  const check = runSelectiveChecks({ changedFiles: [file], dryRun: true, output: 'json' })
+    .find((item: { name: string }) => item.name === 'app-targeted-tests')
+  expect(check.result.status).toBe(0)
+  expect(JSON.parse(check.result.stdout)).toMatchObject({ decision: 'run', reason: 'match' })
+})
+
+it.each(['docs/features/ai-assistant.md', 'README.md', 'babel.config.js'])('unrelated %s does not select app AI governance', (file) => {
+  expect(getTargetedTestsForChangedFiles([file])).toEqual([])
+  expect(shouldRunForChangedFiles([file])).toBe(false)
 })

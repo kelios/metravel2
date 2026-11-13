@@ -1,8 +1,7 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js b/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
-index 3037d66..4778f53 100644
 --- a/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
 +++ b/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
-@@ -71,11 +71,14 @@ function createGranularChunkingStrategy(context) {
+@@ -71,11 +71,14 @@
          async serializeAsync () {
              const entryModule = graph.dependencies.get(entryFile);
              (0, _assert().default)(entryModule, `Granular entry is missing from the export graph: ${entryFile}`);
@@ -18,6 +17,44 @@ index 3037d66..4778f53 100644
              const materializedPlan = materializeChunkPlan(context, strategy, plan);
              const { chunks, entryChunk } = materializedPlan;
              entryPathsByChunk = materializedPlan.entryPathsByChunk;
+@@ -98,7 +101,9 @@
+                     ...chunks
+                 ].filter((chunk)=>chunk !== entryChunk).sort((a, b)=>a.name.localeCompare(b.name, 'en'))
+             ]);
+-            assignModuleIds(orderedChunks, options.createModuleId);
++            // METRAVEL_GRANULAR_ID_PRIORITIES: select before the first ID request/hash.
++            const priorities = context.serializerConfig?.unstable_getGranularModuleIdPriorities?.(plan, context);
++            assignModuleIds(orderedChunks, options.createModuleId, priorities);
+             return (0, _chunkingStrategy.serializeChunksAsync)(orderedChunks, context);
+         },
+         getAsyncChunkTargets (chunk) {
+@@ -259,7 +264,7 @@
+         chunksByEntryPath: workerChunksByEntryPath
+     };
+ }
+-function assignModuleIds(chunks, createModuleId) {
++function assignModuleIds(chunks, createModuleId, priorities) {
+     // Assign module IDs before serialization so chunk order does not determine them.
+     // Keep previously assigned module IDs.
+     const modulePaths = new Set();
+@@ -274,6 +279,17 @@
+             }
+         }
+     }
++    if (priorities !== undefined) {
++        (0, _assert().default)(Array.isArray(priorities), 'Granular module ID priorities must be an array.');
++        const seen = new Set();
++        for (const modulePath of priorities){
++            (0, _assert().default)(typeof modulePath === 'string' && modulePath.length > 0 && modulePaths.has(modulePath) && !seen.has(modulePath), `Invalid granular module ID priority: ${modulePath}`);
++            seen.add(modulePath);
++        }
++        for (const [index, modulePath] of priorities.entries()){
++            (0, _assert().default)(createModuleId(modulePath) === index, `Granular module ID priority conflicts with earlier allocation: ${modulePath}`);
++        }
++    }
+     for (const modulePath of [
+         ...modulePaths
+     ].sort())createModuleId(modulePath);
 diff --git a/node_modules/@expo/metro-config/build/serializer/withExpoSerializers.js b/node_modules/@expo/metro-config/build/serializer/withExpoSerializers.js
 index cfa717d..5305e46 100644
 --- a/node_modules/@expo/metro-config/build/serializer/withExpoSerializers.js

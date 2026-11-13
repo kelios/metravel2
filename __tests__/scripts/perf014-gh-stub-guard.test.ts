@@ -109,22 +109,42 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     jest.resetModules()
     const cfg = require(path.join(ROOT, 'metro.config.js'))
     const { mergeGranularChunkPlan } = require(path.join(ROOT, 'scripts/lib/granularChunkMerge.js'))
+    const { getGranularModuleIdPriorities } = require(path.join(ROOT, 'scripts/lib/granularModuleIdPriority.js'))
     expect(cfg.serializer.unstable_granularWebExport).toBe(true)
     expect(cfg.serializer.unstable_mergeGranularChunkPlan).toBe(mergeGranularChunkPlan)
+    expect(cfg.serializer.unstable_getGranularModuleIdPriorities).toBe(getGranularModuleIdPriorities)
   })
 
-  it('keeps the two-line granular patch applied after install and nothing of the old strategy', () => {
+  it('keeps path-ID mode on its existing factory without numeric priorities', () => {
+    const previous = process.env.EXPO_USE_METRO_REQUIRE
+    try {
+      process.env.EXPO_USE_METRO_REQUIRE = 'true'
+      jest.resetModules()
+      const cfg = require(path.join(ROOT, 'metro.config.js'))
+      const { createScopedNumericModuleIdFactory } = require(path.join(ROOT, 'scripts/lib/scopedModuleIdFactory.js'))
+      expect(cfg.serializer.createModuleIdFactory).not.toBe(createScopedNumericModuleIdFactory)
+      expect(cfg.serializer.unstable_getGranularModuleIdPriorities).toBeUndefined()
+    } finally {
+      if (previous === undefined) delete process.env.EXPO_USE_METRO_REQUIRE
+      else process.env.EXPO_USE_METRO_REQUIRE = previous
+      jest.resetModules()
+    }
+  })
+
+  it('keeps the owned granular hooks applied after install and nothing of the old strategy', () => {
     const patch = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_PATCH_REL), 'utf8')
     const installedPlanner = fs.readFileSync(path.join(ROOT, EXPO_GRANULAR_STRATEGY_REL), 'utf8')
     const installedSerializers = fs.readFileSync(path.join(ROOT, EXPO_SERIALIZERS_REL), 'utf8')
     const installedChunks = fs.readFileSync(path.join(ROOT, EXPO_CHUNK_SERIALIZER_REL), 'utf8')
     const installedRuntime = fs.readFileSync(path.join(ROOT, EXPO_ASYNC_RUNTIME_REL), 'utf8')
 
-    for (const marker of ['METRAVEL_MERGE_GRANULAR_PLAN', 'METRAVEL_GRANULAR_WEB_EXPORT']) {
+    for (const marker of ['METRAVEL_MERGE_GRANULAR_PLAN', 'METRAVEL_GRANULAR_WEB_EXPORT', 'METRAVEL_GRANULAR_ID_PRIORITIES']) {
       expect(patch).toContain(marker)
     }
     expect(installedPlanner).toContain('context.serializerConfig?.unstable_mergeGranularChunkPlan')
     expect(installedPlanner).toContain('mergePlan(rawPlan, context)')
+    expect(installedPlanner).toContain('context.serializerConfig?.unstable_getGranularModuleIdPriorities?.(plan, context)')
+    expect(installedPlanner.indexOf('unstable_getGranularModuleIdPriorities')).toBeLessThan(installedPlanner.indexOf('assignModuleIds(orderedChunks'))
     expect(installedSerializers).toContain('config.serializer?.unstable_granularWebExport === true')
     // Granular stays gated on a non-lazy web client export: native and dev keep legacy.
     expect(installedSerializers).toMatch(/context\.platform === 'web' && context\.environment === 'client'[^;]*!options\.dev && !isLazyBundle/)

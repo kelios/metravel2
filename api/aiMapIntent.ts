@@ -5,7 +5,7 @@
  * коротким JSON, но на одном vCPU первый токен приходит не сразу.
  * Отказы службы — `AiMapIntentError` с видом, по которому панель выбирает подсказку.
  */
-import { AI_MAP_INTENT_MAX_QUERY_CHARS, AI_MAP_INTENT_MIN_QUERY_CHARS } from '@/api/aiAssist/policy'
+import { AI_MAP_INTENT_MAX_QUERY_CHARS, AI_MAP_INTENT_MIN_QUERY_CHARS } from '@/constants/aiFormPolicy'
 import { buildAiPicksUrl } from '@/utils/aiPicksConfig'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 import { type MapIntent, normalizeMapIntent } from '@/utils/mapIntent'

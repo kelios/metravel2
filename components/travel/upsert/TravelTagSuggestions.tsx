@@ -15,7 +15,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { AI_TAG_SUGGEST_FIELDS, type AiTagSuggestField } from '@/api/aiAssist/policy'
+import { AI_TAG_SUGGEST_FIELDS, type AiTagSuggestField } from '@/constants/aiFormPolicy'
 import { isEmptyTagSuggestions } from '@/api/aiTagSuggestions'
 import UIButton from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'

@@ -6,7 +6,7 @@
  * id приходят числами, в форму визарда уходят строками (`TravelFormData.*: string[]`).
  * Модуль живёт только в отложенном чанке блока: без `EXPO_PUBLIC_AI_PICKS` его нет в сборке (#2738).
  */
-import { AI_TAG_SUGGEST_FIELDS, AI_TAG_SUGGEST_MAX_TEXT_CHARS, type AiTagSuggestField } from '@/api/aiAssist/policy'
+import { AI_TAG_SUGGEST_FIELDS, AI_TAG_SUGGEST_MAX_TEXT_CHARS, type AiTagSuggestField } from '@/constants/aiFormPolicy'
 import { ApiError } from '@/api/clientErrors'
 import { buildAiPicksUrl } from '@/utils/aiPicksConfig'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'

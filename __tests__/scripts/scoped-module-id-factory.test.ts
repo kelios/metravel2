@@ -31,6 +31,16 @@ const assign = (order: 'client-first' | 'server-first' | 'interleaved') => {
 }
 
 describe('scoped numeric module id factory', () => {
+  it('retains omitted context/platform/environment defaults and virtual path identities', () => {
+    const createModuleId = createScopedNumericModuleIdFactory()
+    expect(createModuleId('__prelude__')).toBe(0)
+    expect(createModuleId('__prelude__', {})).toBe(0)
+    expect(createModuleId('/app/a.tsx', { environment: 'client' })).toBe(1)
+    expect(createModuleId('/app/a.tsx', { platform: 'web' })).toBe(0)
+    expect(createModuleId('/app/a.tsx', CLIENT)).toBe(0)
+    expect(createModuleId('__prelude__')).toBe(0)
+  })
+
   it('numbers each environment by its own request order, whatever serializes first', () => {
     const expected = { client: [0, 1, 2], server: [0, 1, 2] }
     expect(assign('client-first')).toEqual(expected)

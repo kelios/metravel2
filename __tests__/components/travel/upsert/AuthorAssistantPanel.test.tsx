@@ -82,3 +82,10 @@ describe('AuthorAssistantPanel (#2885)', () => {
     expect(mockRequest).toHaveBeenCalledTimes(2)
   })
 })
+
+const originalFeatureFlag = process.env.EXPO_PUBLIC_AI_ASSISTANT
+beforeEach(() => { process.env.EXPO_PUBLIC_AI_ASSISTANT = '1' })
+afterAll(() => {
+  if (originalFeatureFlag === undefined) delete process.env.EXPO_PUBLIC_AI_ASSISTANT
+  else process.env.EXPO_PUBLIC_AI_ASSISTANT = originalFeatureFlag
+})

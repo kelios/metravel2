@@ -38,7 +38,8 @@ export function useQuestReviewPrompt(enabled = true): {
     // Решение и отметка — за async-границей (`utils/questReviewPromptCheck`):
     // сюда доходит только вошедший пользователь. Чанк не догрузился — просьбы
     // в этот заход нет, как и при отсутствии записи финиша.
-    void import('@/utils/questReviewPromptCheck')
+    void Promise.resolve()
+      .then(() => import('@/utils/questReviewPromptCheck'))
       .then(({ claimQuestReviewPrompt }) => claimQuestReviewPrompt(ownerId, () => cancelled))
       .then((next) => {
         if (!cancelled && next) setPrompt(next)

@@ -32,7 +32,7 @@ describe('metravel-assist: раскладка Docker-образа', () => {
   afterAll(() => removeDir(image))
 
   it('Dockerfile копирует код службы, индекса и общие модули ассистента', () => {
-    expect(copiedPaths()).toEqual(expect.arrayContaining(['scripts/ai-index/', 'scripts/ai-assist/', 'api/aiAssist/']))
+    expect(copiedPaths()).toEqual(expect.arrayContaining(['scripts/ai-index/', 'scripts/ai-assist/', 'api/aiAssist/', 'constants/aiFormPolicy.ts']))
   })
 
   it('служба грузится из файлов образа: общие модули не тянут файлы вне перечня COPY и CommonJS', () => {

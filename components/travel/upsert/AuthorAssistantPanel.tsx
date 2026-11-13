@@ -15,7 +15,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { AI_AUTHOR_DRAFT_PANEL_MIN_TEXT_CHARS, type AiAuthorDraftKind } from '@/api/aiAssist/policy'
+import { AI_AUTHOR_DRAFT_PANEL_MIN_TEXT_CHARS, type AiAuthorDraftKind } from '@/constants/aiFormPolicy'
 import UIButton from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'

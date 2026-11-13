@@ -35,7 +35,8 @@ function setFactory(plan: ReturnType<typeof makePlan>, file: string, bytes: numb
 describe('granularChunkMerge', () => {
   it('delivers a route through its .web entry: the shadowed fallback is an entry point of no route', () => {
     const entries = ['app/_layout.tsx', 'app/_layout.web.tsx', 'app/index.tsx', 'app/index.web.tsx', 'app/map.tsx'].map(at)
-    const { coverage } = createRouteCoverage(entries, APP)
+    const { coverage, routes } = createRouteCoverage(entries, APP)
+    expect(routes).toEqual([at('app/index.tsx'), at('app/map.tsx')])
     // Two routes (index, map): the .web pair is one delivery route, not two.
     expect(coverage.get(at('app/index.web.tsx'))).toEqual(new Uint32Array([1]))
     expect(coverage.get(at('app/map.tsx'))).toEqual(new Uint32Array([2]))

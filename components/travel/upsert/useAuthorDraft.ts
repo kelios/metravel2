@@ -8,8 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { isAuthorDraftError, requestAuthorDraft } from '@/api/aiAssist/authorDraft'
-import type { AiAuthorDraftKind } from '@/api/aiAssist/policy'
+import type { AiAuthorDraftKind } from '@/constants/aiFormPolicy'
 import { getActiveLocale } from '@/i18n'
 import { getAiPicksBaseUrl } from '@/utils/aiPicksConfig'
 
@@ -32,13 +31,20 @@ export function useAuthorDraft(text: string) {
       const controller = new AbortController()
       abortRef.current = controller
       setState({ status: 'loading', kind })
+      let authorDraft: typeof import('@/api/aiAssist/authorDraft') | null = null
       try {
-        const result = await requestAuthorDraft({ baseUrl: getAiPicksBaseUrl(), text, kind, locale: getActiveLocale(), signal: controller.signal })
+        authorDraft = process.env.EXPO_PUBLIC_AI_ASSISTANT ? await import('@/api/aiAssist/authorDraft') : null
+        if (controller.signal.aborted) return
+        if (!authorDraft) {
+          setState({ status: 'idle' })
+          return
+        }
+        const result = await authorDraft.requestAuthorDraft({ baseUrl: getAiPicksBaseUrl(), text, kind, locale: getActiveLocale(), signal: controller.signal })
         if (controller.signal.aborted) return
         setState({ status: 'variants', kind, variants: result.variants, remaining: result.remaining })
       } catch (error) {
         if (controller.signal.aborted) return
-        setState({ status: isAuthorDraftError(error) && error.kind === 'limit' ? 'limit' : 'unavailable' })
+        setState({ status: authorDraft?.isAuthorDraftError(error) && error.kind === 'limit' ? 'limit' : 'unavailable' })
       }
     },
     [text],

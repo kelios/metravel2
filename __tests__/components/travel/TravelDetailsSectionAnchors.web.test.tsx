@@ -135,6 +135,7 @@ jest.mock('@/components/travel/details/TravelDeferredAuthorSection', () => () =>
 jest.mock('@/components/travel/details/TravelDeferredRatingSection', () => () => null)
 jest.mock('@/components/travel/details/TravelDetailsFooterRuntimeFrame', () => () => null)
 jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => ({
+  TravelDetailsMeasuredFlow: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TravelDetailsDeferredTransition: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useDeferredSectionRuntimeSettle: () => ({ settled: false, onRuntimeFrameLayout: jest.fn() }),
 }))

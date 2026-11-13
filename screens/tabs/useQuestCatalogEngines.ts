@@ -25,7 +25,7 @@ let loadedRuntime: QuestCatalogRuntime | null = null;
 let pendingRuntime: Promise<QuestCatalogRuntime> | null = null;
 
 function importQuestCatalogRuntime(attempt = 0): Promise<QuestCatalogRuntime> {
-    return import('@/utils/questCatalogRuntime').catch((error: unknown) => {
+    return Promise.resolve().then(() => import('@/utils/questCatalogRuntime')).catch((error: unknown) => {
         const delay = RUNTIME_RETRY_DELAYS_MS[attempt];
         if (delay === undefined) throw error;
         return new Promise<QuestCatalogRuntime>((resolve) => setTimeout(resolve, delay))

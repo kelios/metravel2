@@ -12,6 +12,14 @@ const { buildSelectiveDecision, emitSelectiveDecision } = require('./selective-r
 
 const CATEGORY_DEFINITIONS = [
   {
+    name: 'ai-build-boundary',
+    patterns: [
+      /^(?:app|components|screens|hooks|context|utils|stores|api|constants)\/.+\.[cm]?[jt]sx?$/,
+      /^__tests__\/governance\/aiFeatureBuildGate\.test\.ts$/,
+    ],
+    tests: ['__tests__/governance/aiFeatureBuildGate.test.ts'],
+  },
+  {
     name: 'travel',
     patterns: [
       /^app\/\(tabs\)\/travel\/.+/,
