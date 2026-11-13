@@ -268,6 +268,7 @@ function QuestsContentPanel({
     const renderQuestItem = useCallback(({ item: quest, index }: ListRenderItemInfo<QuestListItem>) => (
         <View style={styles.questVirtualizedItem}>
             <QuestCard
+                clientOnly
                 styles={styles}
                 cityId={getQuestCityId(quest)}
                 quest={quest}
@@ -584,6 +585,7 @@ function QuestsContentPanel({
                                 {visibleQuests.map((quest, index) => (
                                     <QuestCard
                                         key={quest.id}
+                                        clientOnly
                                         styles={styles}
                                         cityId={getQuestCityId(quest)}
                                         quest={quest}

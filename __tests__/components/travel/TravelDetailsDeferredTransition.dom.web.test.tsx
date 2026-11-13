@@ -29,8 +29,10 @@ beforeAll(() => {
     const actual = jest.requireActual('react-native-web')
     const View = React.forwardRef(function ViewRefBoundary(props: Record<string, unknown>, ref: import('react').Ref<unknown>) {
       const domRef = React.useRef(null)
-      // Expose the platform ref contract while keeping genuine DOM rendering.
-      React.useImperativeHandle(ref, () => mockNonDOMViewRef ?? domRef.current)
+      const nativeHandle = mockNonDOMViewRef
+      // Match RNW's stable forwarded ref: detaching on each commit would make
+      // an established parent look unmeasured during its child layout effect.
+      React.useImperativeHandle(ref, () => nativeHandle ?? domRef.current, [nativeHandle])
       return React.createElement(actual.View, { ...props, ref: domRef })
     })
     return { ...actual, View }
@@ -1228,7 +1230,9 @@ it('allows genuine bottom clamping during settled responsive shrink without a sy
 // Production Sidebar has ONE aggregate child containing Near, Navigation and
 // Popular. A payload can make that previously offscreen child intersect the
 // viewport; its post-insertion bounds cannot replace the visible Comments frame.
-function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural: boolean, delivery: 'observer' | 'layout-commit', visibleFollowing = true) {
+type AggregateFirstPublication = { placeholderHeight: number; readingOffset?: number; scrollBeforePublication?: boolean }
+
+function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural: boolean, delivery: 'observer' | 'layout-commit', visibleFollowing = true, firstPublication?: AggregateFirstPublication) {
   const host = document.createElement('div')
   const owner = document.createElement('div')
   const mount = document.createElement('div')
@@ -1236,16 +1240,18 @@ function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural
   owner.append(mount)
   host.append(owner)
   document.body.append(host)
-  const initialTop = 23035
-  let top = initialTop
-  let adjustment = 0
+  const initialTop = firstPublication?.readingOffset ?? 23035
+  const baselineHeight = firstPublication?.placeholderHeight ?? 844
+  let runtimeVisible = !firstPublication
+  let top = firstPublication ? 0 : initialTop
+  let adjustment = firstPublication ? -initialTop : 0
   let payload = 0
   let near = 0
   let settled = false
   const writes: number[] = []
   const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="aggregate-${id}"]`)!
   const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
-  const flow = () => Math.max(Number.parseFloat(node('sidebar')?.style.minHeight || '0'), height('sidebar'))
+  const flow = () => Math.max(Number.parseFloat(node('sidebar')?.style.minHeight || '0'), height('sidebar'), height('sidebar-placeholder-content'))
   const intrinsic = () => rawHeight + payload + near + height('navigation')
   Object.defineProperties(owner, {
     clientHeight: { configurable: true, value: 790 },
@@ -1253,22 +1259,22 @@ function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural
     scrollHeight: { configurable: true, get: () => 30000 + height('outer') },
     scrollTop: {
       configurable: true,
-      get: () => natural ? initialTop + flow() - 844 + adjustment : top,
-      set: value => { top = value; adjustment = value - initialTop - flow() + 844; writes.push(value) },
+      get: () => natural ? Math.max(0, initialTop + flow() - baselineHeight + adjustment) : top,
+      set: value => { top = value; adjustment = value - initialTop - flow() + baselineHeight; writes.push(value) },
     },
   })
   owner.getBoundingClientRect = () => rect(54, 790)
   const originalRect = HTMLElement.prototype.getBoundingClientRect
   HTMLElement.prototype.getBoundingClientRect = function () {
     const shift = owner.scrollTop - initialTop
-    const sidebarTop = commentsTop - 844 - shift
+    const sidebarTop = commentsTop - baselineHeight - shift
     switch (this.dataset.testid) {
       case 'aggregate-sidebar': return rect(sidebarTop, flow())
       case 'aggregate-sidebar-runtime': return rect(sidebarTop, intrinsic())
       case 'aggregate-sidebar-runtime-frame': return rect(sidebarTop, intrinsic())
       case 'aggregate-popular': return rect(sidebarTop + rawHeight - 396 + near + height('navigation'), 364 + payload)
       case 'aggregate-navigation-runtime': return rect(0, Number.parseFloat((this.firstElementChild as HTMLElement).style.height || '0'))
-      case 'aggregate-comments': return rect(commentsTop + flow() - 844 - shift, 844)
+      case 'aggregate-comments': return rect(commentsTop + flow() - baselineHeight - shift, 844)
       case 'aggregate-comments-transition-runtime': return rect(0, 226)
       case 'aggregate-outer-runtime': return rect(sidebarTop, flow() + 844)
       default: return originalRect.call(this)
@@ -1279,7 +1285,9 @@ function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural
     isMobile: true, pending: false, placeholder: null, runtimeFrameReady: true, testID: 'aggregate-outer',
     children: createElement('div', null,
       createElement(Transition, {
-        isMobile: true, pending: false, placeholder: null, runtimeFrameReady: settled, runtimeVisibilityReady: true,
+        isMobile: true, pending: false,
+        placeholder: firstPublication ? createElement('div', { 'data-testid': 'aggregate-sidebar-placeholder-content', style: { height: firstPublication.placeholderHeight } }) : null,
+        runtimeFrameReady: settled, runtimeVisibilityReady: runtimeVisible,
         reserveHeight: 844, testID: 'aggregate-sidebar',
         children: createElement('div', { 'data-testid': 'aggregate-sidebar-runtime-frame' },
           createElement('div', { 'data-testid': 'aggregate-near' }),
@@ -1309,10 +1317,11 @@ function aggregateSidebarFixture(rawHeight: number, commentsTop: number, natural
     else { resize('sidebar'); resize('outer') }
   })
   act(() => root.render(tree()))
-  owner.scrollTop = initialTop
+  owner.scrollTop = firstPublication?.scrollBeforePublication === false ? 0 : initialTop
   writes.length = 0
   return {
     node, height, flow, owner, writes, initialTop,
+    publish: () => { runtimeVisible = true; act(() => root.render(tree(height('navigation')))) },
     payload: (value: number) => { payload = value; update() },
     near: (value: number) => { near = value; update() },
     navigation: (value: number) => act(() => root.render(tree(value))),
@@ -1381,5 +1390,107 @@ it.each([false, true])('uses a drawn runtime only as the release fallback withou
     f.release()
     expect(f.node('sidebar-runtime-frame').getBoundingClientRect().top).toBe(before)
     expect(f.flow()).toBe(979)
+  } finally { f.cleanup() }
+})
+
+// The reader can reach the already-painted Comments placeholder before the
+// sidebar's first visible measurement. Preserve that existing reading frame,
+// not a sibling newly constructed in the sidebar's runtime payload.
+it.each([
+  [32, 170.3125, false], [32, 170.3125, true],
+  [32, 770.3125, false], [32, 770.3125, true],
+  [157, 170.3125, false], [157, 170.3125, true],
+  [157, 770.3125, false], [157, 770.3125, true],
+] as const)('preserves already-visible Comments through first sidebar publication (growth=%s, y=%s, natural=%s)', (growth, y, natural) => {
+  const f = aggregateSidebarFixture(949 + growth, y, natural, 'observer', true, { placeholderHeight: 949 })
+  try {
+    const comments = f.node('comments')
+    const before = comments.getBoundingClientRect().top
+    const beforeOuter = f.height('outer')
+    expect(before).toBe(y)
+    expect(f.owner.scrollTop).toBe(f.initialTop)
+    expect(f.node('outer').dataset.deferredTransitionState).toBe('runtime')
+    expect(f.node('sidebar').dataset.deferredTransitionState).toBe('measuring-runtime')
+    expect(f.node('sidebar').style.height).toBe('')
+    expect(f.node('sidebar-placeholder-content')).not.toBeNull()
+    expect(f.flow()).toBe(949)
+    expect(beforeOuter).toBe(949 + 844)
+    expect(getComputedStyle(f.node('comments-transition-runtime')).opacity).toBe('0')
+    expect(getComputedStyle(comments).opacity).not.toBe('0')
+
+    f.publish()
+    expect(f.node('comments')).toBe(comments)
+    expect(comments.getBoundingClientRect().top).toBe(before)
+    expect(f.node('sidebar-placeholder-content')).toBeNull()
+    expect(f.node('sidebar').dataset.deferredTransitionState).toBe('shown-pending')
+    expect(f.flow()).toBe(949 + growth)
+    expect(f.height('outer')).toBe(beforeOuter + growth)
+    expect(f.owner.scrollTop).toBe(f.initialTop + growth)
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + growth])
+
+    // Repeated observer delivery and a real React children commit must not
+    // compensate the same publication twice; later growth has its own delta.
+    f.repeat()
+    f.publish()
+    expect(comments.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + growth])
+    f.navigation(157)
+    expect(comments.getBoundingClientRect().top).toBe(before)
+    expect(f.flow()).toBe(949 + growth + 157)
+    expect(f.height('outer')).toBe(beforeOuter + growth + 157)
+    expect(f.owner.scrollTop).toBe(f.initialTop + growth + 157)
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + growth, f.initialTop + growth + 157])
+    f.repeat()
+    expect(f.writes).toEqual(natural ? [] : [f.initialTop + growth, f.initialTop + growth + 157])
+  } finally { f.cleanup() }
+})
+
+it.each([
+  [32, 0], [157, 0],
+  [32, 23035], [157, 23035],
+] as const)('does not scroll first sidebar publication without an existing visible reading frame (growth=%s, scrollTop=%s)', (growth, readingOffset) => {
+  // At a fresh page start the949px sidebar begins at the owner top54 and
+  // Comments follows at1003. At a reading offset the same below-viewport
+  // geometry must likewise not manufacture a visible anchor.
+  const f = aggregateSidebarFixture(949 + growth, 1003, false, 'observer', true, { placeholderHeight: 949, readingOffset })
+  try {
+    const before = f.node('comments').getBoundingClientRect().top
+    expect(f.node('sidebar').getBoundingClientRect().top).toBe(54)
+    expect(before).toBeGreaterThanOrEqual(844)
+    expect(f.owner.scrollTop).toBe(readingOffset)
+    f.publish()
+    expect(f.flow()).toBe(949 + growth)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before + growth)
+    expect(f.owner.scrollTop).toBe(readingOffset)
+    expect(f.writes).toEqual([])
+    f.repeat()
+    f.publish()
+    expect(f.owner.scrollTop).toBe(readingOffset)
+    expect(f.writes).toEqual([])
+  } finally { f.cleanup() }
+})
+
+it.each([32, 157])('preserves later growth after the same aggregate first publishes before the reader arrives (first growth=%s)', growth => {
+  const f = aggregateSidebarFixture(949 + growth, 170.3125, false, 'observer', true, { placeholderHeight: 949, scrollBeforePublication: false })
+  try {
+    expect(f.owner.scrollTop).toBe(0)
+    expect(f.node('comments').getBoundingClientRect().top).toBeGreaterThan(844)
+    f.publish()
+    expect(f.flow()).toBe(949 + growth)
+    expect(f.height('outer')).toBe(949 + growth + 844)
+    expect(f.owner.scrollTop).toBe(0)
+    expect(f.writes).toEqual([])
+    f.owner.scrollTop = f.initialTop + growth
+    f.writes.length = 0
+    const before = f.node('comments').getBoundingClientRect().top
+    expect(before).toBe(170.3125)
+    f.navigation(157)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    expect(f.owner.scrollTop).toBe(f.initialTop + growth + 157)
+    expect(f.writes).toEqual([f.initialTop + growth + 157])
+    f.repeat()
+    f.publish()
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([f.initialTop + growth + 157])
   } finally { f.cleanup() }
 })

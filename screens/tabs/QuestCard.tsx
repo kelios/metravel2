@@ -15,6 +15,7 @@ import UserAvatar from '@/components/layout/UserAvatar';
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useBreakpoints } from '@/hooks/useResponsive';
+import type { HydrationReadyOptions } from '@/hooks/useHydrationReady';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -61,7 +62,7 @@ const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
     }
 };
 
-type QuestCardProps = {
+type QuestCardProps = HydrationReadyOptions & {
     styles: any;
     cardWidth: number;
     cityId: string;
@@ -83,10 +84,11 @@ function QuestCard({
     approximateDistance = false,
     index,
     onOpen,
+    clientOnly = false,
 }: QuestCardProps) {
     const colors = useThemedColors();
     const { activeSeasonalTheme } = useTheme();
-    const { isPhone } = useBreakpoints();
+    const { isPhone } = useBreakpoints({ clientOnly });
     const [isHovered, setIsHovered] = useState(false);
     const [reviewsOpen, setReviewsOpen] = useState(false);
 

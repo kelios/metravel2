@@ -5,9 +5,14 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRICS } from '@/constants/layout'
 import { useResponsive } from '@/hooks/useResponsive'
 import { translate as i18nT } from '@/i18n'
+import { webDataSetProps } from '@/utils/webProps'
 
-import { TRAVEL_FIRST_SCREEN } from './travelFirstScreenLayout'
-
+import { TRAVEL_FIRST_SCREEN, TRAVEL_FIRST_SCREEN_STYLES } from './travelFirstScreenLayout'
+import { TRAVEL_WEB_LAYOUT_STYLES } from './travelRouterSsrStyles'
+import {
+  getTravelDetailsDesktopContentColumnStyle,
+  getTravelDetailsDesktopLayoutStyle,
+} from './travelDetailsCriticalShellModel'
 
 const ROOT_TEST_ID = 'travel-details-loading'
 const MOBILE_TITLE_LINE_PX = Math.round(
@@ -16,6 +21,84 @@ const MOBILE_TITLE_LINE_PX = Math.round(
 const MOBILE_TITLE_BAR_PX = TRAVEL_FIRST_SCREEN.titleFontSizePx
 
 export default function TravelDetailsLoadingFallback() {
+  return Platform.OS === 'web' ? <WebTravelDetailsLoadingFallback /> : <NativeTravelDetailsLoadingFallback />
+}
+
+function WebTravelDetailsLoadingFallback() {
+  return (
+    <View
+      testID={ROOT_TEST_ID}
+      accessibilityRole="progressbar"
+      accessibilityLabel={i18nT('travel:components.travel.details.TravelDetailsLoadingFallback.zagruzka_puteshestviya_a918061e')}
+      {...webDataSetProps({ travelWebLayout: 'true', travelWebLoading: 'true' })}
+      style={{ flex: 1 }}
+    >
+      <style data-travel-web-layout-styles="true">{TRAVEL_WEB_LAYOUT_STYLES + TRAVEL_FIRST_SCREEN_STYLES}</style>
+      <View {...webDataSetProps({ travelWebContent: 'true' })}>
+        <View style={getTravelDetailsDesktopLayoutStyle()}>
+          <View {...webDataSetProps({ travelWebSidebar: 'true' })} style={{ flexShrink: 0, gap: DESIGN_TOKENS.spacing.md }}>
+            <View style={{ padding: DESIGN_TOKENS.spacing.lg, gap: DESIGN_TOKENS.spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.md }}>
+                <SkeletonLoader width={48} height={48} borderRadius={24} />
+                <View style={{ flex: 1, gap: DESIGN_TOKENS.spacing.sm }}>
+                  <SkeletonLoader width="50%" height={20} borderRadius={8} />
+                  <SkeletonLoader width="70%" height={14} borderRadius={6} />
+                </View>
+                <SkeletonLoader width={34} height={34} borderRadius={10} />
+              </View>
+              <SkeletonLoader width="82%" height={42} borderRadius={21} />
+            </View>
+            <View style={{ gap: DESIGN_TOKENS.spacing.sm }}>
+              {Array.from({ length: 8 }, (_, index) => (
+                <SkeletonLoader key={index} width="100%" height={index === 0 ? 38 : 18} borderRadius={8} />
+              ))}
+            </View>
+          </View>
+          <View {...webDataSetProps({ travelWebLoadingColumn: 'true' })} style={getTravelDetailsDesktopContentColumnStyle()}>
+            <View testID="travel-details-hero-slider-container">
+              <SkeletonLoader width="100%" height="100%" borderRadius={DESIGN_TOKENS.radii.xl} />
+            </View>
+            <div data-travel-first-screen="heading" data-travel-loading-heading="true">
+              <div data-travel-first-screen="title" data-travel-loading-title="true">
+                <SkeletonLoader width="92%" height={MOBILE_TITLE_BAR_PX} borderRadius={8} />
+                <div data-travel-loading-title-continuation="true">
+                  <SkeletonLoader width="64%" height={MOBILE_TITLE_BAR_PX} borderRadius={8} />
+                </div>
+              </div>
+              <div data-travel-first-screen="meta">
+                <SkeletonLoader width="62%" height={TRAVEL_FIRST_SCREEN.metaLineHeightPx} borderRadius={6} />
+              </div>
+              <div data-travel-first-screen="favorite">
+                <SkeletonLoader width={TRAVEL_FIRST_SCREEN.favoriteReserveWidthPx} height={TRAVEL_FIRST_SCREEN.favoriteReservePx} borderRadius={DESIGN_TOKENS.radii.pill} />
+              </div>
+            </div>
+            <View style={{ paddingVertical: DESIGN_TOKENS.spacing.lg, gap: DESIGN_TOKENS.spacing.lg }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm }}>
+                <SkeletonLoader width={100} height={20} borderRadius={12} />
+                <SkeletonLoader width={88} height={20} borderRadius={12} />
+                <SkeletonLoader width={140} height={20} borderRadius={12} />
+              </View>
+              <View style={{ gap: DESIGN_TOKENS.spacing.sm }}>
+                <SkeletonLoader width="100%" height={18} borderRadius={6} />
+                <SkeletonLoader width="96%" height={18} borderRadius={6} />
+                <SkeletonLoader width="92%" height={18} borderRadius={6} />
+                <SkeletonLoader width="80%" height={18} borderRadius={6} />
+              </View>
+              {[320, 220, 220].map((height, index) => (
+                <View key={index} style={{ gap: DESIGN_TOKENS.spacing.md }}>
+                  <SkeletonLoader width={180} height={24} borderRadius={8} />
+                  <SkeletonLoader width="100%" height={height} borderRadius={DESIGN_TOKENS.radii.lg} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function NativeTravelDetailsLoadingFallback() {
   // useResponsive is hydration-safe (width=0 during SSR/first client render, matching
   // the width-0 SSG snapshot) → avoids React #418 on /travels/<slug> (project_travel_hydration_418).
   // At width=0, isMobile is true → neutral mobile branch.
