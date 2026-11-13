@@ -35,7 +35,7 @@ describe('guest server route transport', () => {
     await expect(fetchPublicRouteJson({ signal: new AbortController().signal }, 'quests/web/detail/17/demo/?lang=pl'))
       .resolves.toEqual({ schema_version: 2 })
     expect(fetchMock).toHaveBeenCalledWith('http://app:8000/api/quests/web/detail/17/demo/?lang=pl', expect.objectContaining({
-      credentials: 'omit', headers: { Accept: 'application/json', Host: 'metravel.by', 'X-Forwarded-Proto': 'https' },
+      credentials: 'omit', headers: { Accept: 'application/json', 'X-Metravel-Render': 'ssr', Host: 'metravel.by', 'X-Forwarded-Proto': 'https' },
     }))
     expect(jest.getTimerCount()).toBe(0)
     expect(globalFetchMock).not.toHaveBeenCalled()
@@ -56,7 +56,7 @@ describe('guest server route transport', () => {
     await expect(fetchPublicRouteJson({ signal: new AbortController().signal }, 'travels/by-slug/demo/'))
       .resolves.toEqual({ via: 'fetch' })
     expect(globalFetchMock).toHaveBeenCalledWith('https://metravel.by/api/travels/by-slug/demo/', expect.objectContaining({
-      headers: { Accept: 'application/json' },
+      credentials: 'omit', headers: { Accept: 'application/json', 'X-Metravel-Render': 'ssr' },
     }))
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -76,6 +76,7 @@ describe('guest server route transport', () => {
     const pending = fetchPublicRouteJson({ signal: controller.signal }, 'travels/by-slug/demo/')
     controller.abort()
     await expect(pending).rejects.toMatchObject({ httpStatus: 503 })
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ 'X-Metravel-Render': 'ssr' })
     expect(jest.getTimerCount()).toBe(0)
   })
 
@@ -86,6 +87,11 @@ describe('guest server route transport', () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 })
     await expect(fetchPublicRouteJson({ signal: new AbortController().signal }, 'travels/by-slug/demo/'))
       .rejects.toMatchObject({ httpStatus: 503 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init.headers).toMatchObject({ Accept: 'application/json', 'X-Metravel-Render': 'ssr' })
+      expect(init.credentials).toBe('omit')
+    }
     expect(jest.getTimerCount()).toBe(0)
   })
 })

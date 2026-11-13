@@ -6,6 +6,31 @@
 import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { isTimeoutError } from '@/api/clientErrors';
 
+describe('caller-selected retry policy', () => {
+  const originalFetch = global.fetch;
+  afterEach(() => { global.fetch = originalFetch; });
+
+  it('does not replay a local proxy 502 when the caller disables retries', async () => {
+    const rejected = { status: 502 } as Response;
+    const fetchMock = jest.fn().mockResolvedValue(rejected);
+    global.fetch = fetchMock;
+
+    await expect(fetchWithTimeout(`${window.location.origin}/api/travels/17/view/`, { method: 'POST' }, 1000, { retry: false })).resolves.toBe(rejected);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the existing one local proxy retry by default', async () => {
+    const accepted = { status: 200 } as Response;
+    const fetchMock = jest.fn().mockResolvedValueOnce({ status: 502 }).mockResolvedValueOnce(accepted);
+    global.fetch = fetchMock;
+
+    await expect(fetchWithTimeout(`${window.location.origin}/api/travels/`, { method: 'GET' }, 1000)).resolves.toBe(accepted);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('fetchWithTimeout timeout error', () => {
   const realFetch = global.fetch;
 

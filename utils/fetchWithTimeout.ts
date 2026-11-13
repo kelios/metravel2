@@ -19,11 +19,14 @@ function createTimeoutError(timeout: number): Error {
     return err;
 }
 
+export type FetchRetryPolicy = { retry?: boolean };
+
 async function fetchWithTimeoutLifecycle<Result>(
     url: string,
     options: RequestInit,
     timeout: number,
-    consume: (response: Response) => Result | Promise<Result>
+    consume: (response: Response) => Result | Promise<Result>,
+    policy: FetchRetryPolicy = {}
 ): Promise<Result> {
     const createAbortError = (): Error => {
         if (typeof DOMException !== 'undefined') {
@@ -83,7 +86,7 @@ async function fetchWithTimeoutLifecycle<Result>(
 
     try {
         let response = await runFetch();
-        if (response.status === 502 && shouldRetryLocalApiProxy502(url, options)) {
+        if (policy.retry !== false && response.status === 502 && shouldRetryLocalApiProxy502(url, options)) {
             response = await runFetch();
         }
         // Keep the same deadline and external abort listener until this consumer finishes.
@@ -135,9 +138,10 @@ async function fetchWithTimeoutLifecycle<Result>(
 export function fetchWithTimeout(
     url: string,
     options: RequestInit = {},
-    timeout: number = 10000
+    timeout: number = 10000,
+    policy: FetchRetryPolicy = {}
 ): Promise<Response> {
-    return fetchWithTimeoutLifecycle(url, options, timeout, response => response);
+    return fetchWithTimeoutLifecycle(url, options, timeout, response => response, policy);
 }
 
 /** Status-only probes finish the actual body before releasing deadline/abort ownership. */

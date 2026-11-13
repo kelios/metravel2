@@ -13,6 +13,7 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
 import { useThemedColors } from '@/hooks/useTheme';
+import { TravelViewVisitProvider } from '@/hooks/useTravelView';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 import {
@@ -414,6 +415,7 @@ export default function TravelDetailsCriticalShell({
       : null;
 
   return (
+    <TravelViewVisitProvider>
     <View
       testID="travel-details-page"
       id="travel-main-content"
@@ -506,5 +508,6 @@ export default function TravelDetailsCriticalShell({
         </View>
       </SafeAreaView>
     </View>
+    </TravelViewVisitProvider>
   );
 }

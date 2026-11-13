@@ -57,9 +57,15 @@ describe('travel route loader', () => {
     expect(first).toBe(second)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/api/travels/by-slug/demo/', expect.objectContaining({
-      credentials: 'omit', headers: { Accept: 'application/json' },
+      credentials: 'omit', headers: { Accept: 'application/json', 'X-Metravel-Render': 'ssr' },
     }))
     expect(fetchMock.mock.calls[1][0]).toBe('http://localhost:8000/api/quests/web/discovery/?lang=ru&view=travel&travel_id=42')
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(url).not.toMatch(/\/view\//)
+      expect(init.method ?? 'GET').toBe('GET')
+      expect(init.credentials).toBe('omit')
+      expect(init.headers).toMatchObject({ 'X-Metravel-Render': 'ssr' })
+    }
     expect(first?.linkGraph).toEqual(graph)
     expect(setResponseHeaders).toHaveBeenCalledWith({ 'X-Metravel-Travel-Graph-State': 'available' })
     expect(jest.getTimerCount()).toBe(0)
@@ -167,7 +173,7 @@ describe('travel route loader', () => {
     }
     expect(fetchMock).toHaveBeenCalledWith('http://app:8000/api/travels/by-slug/demo/', expect.objectContaining({
       credentials: 'omit',
-      headers: { Accept: 'application/json', Host: 'metravel.by', 'X-Forwarded-Proto': 'https' },
+      headers: { Accept: 'application/json', 'X-Metravel-Render': 'ssr', Host: 'metravel.by', 'X-Forwarded-Proto': 'https' },
     }))
   })
 

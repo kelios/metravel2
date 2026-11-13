@@ -13,7 +13,7 @@ export async function fetchPublicRouteJsonResponse(
   redirect: 'error' | 'manual' = 'error',
 ): Promise<{ status: number; ok: boolean; data: unknown }> {
   const apiBase = String(process.env.SSR_API_ORIGIN || process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '')
-  const headers: Record<string, string> = { Accept: 'application/json' }
+  const headers: Record<string, string> = { Accept: 'application/json', 'X-Metravel-Render': 'ssr' }
   try {
     const transport = new URL(apiBase)
     const decodedPath = decodeURIComponent(endpoint.split('?')[0])

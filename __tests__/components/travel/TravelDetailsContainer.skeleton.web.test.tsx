@@ -31,6 +31,12 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({ setOptions: mockSetOptions }),
 }))
 
+// This isolated first-paint fixture precedes session restoration; the app's
+// route tree supplies this auth boundary through root AppProviders.
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: (selector: (state: { authReady: boolean }) => unknown) => selector({ authReady: false }),
+}))
+
 jest.mock('expo-router/head', () => require('../../helpers/helmetHead').createHelmetHeadMock())
 
 jest.mock('@/hooks/useTdTrace', () => ({

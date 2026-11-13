@@ -2,6 +2,7 @@ import React, { memo } from 'react'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
+import { useTravelView } from '@/hooks/useTravelView'
 
 import { TravelHeroSection } from './TravelDetailsSections'
 import type { AnchorsMap } from './TravelDetailsTypes'
@@ -102,6 +103,7 @@ export function TravelDetailsContentBlock({
   TravelDetailsHeroDeferredColumnProps,
   'anchors' | 'forceOpenKey' | 'isMobile' | 'travel'
 >) {
+  useTravelView(travel.id)
   return (
     <TravelDetailsContentSection
       travel={travel}

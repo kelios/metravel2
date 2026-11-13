@@ -25,11 +25,16 @@ function ssrApiRequest(url, { headers = {}, signal } = {}) {
       reject(new Error('Unsupported SSR API protocol'))
       return
     }
+    const requestHeaders = { ...headers }
+    for (const name of Object.keys(requestHeaders)) {
+      if (name.toLowerCase() === 'x-metravel-render') delete requestHeaders[name]
+    }
+    requestHeaders['X-Metravel-Render'] = 'ssr'
     const send = (retried = false) => {
       let receivedResponse = false
       try {
         const request = client.request(target, {
-          method: 'GET', headers, signal, ...(retried ? { agent: false } : {}),
+          method: 'GET', headers: requestHeaders, signal, ...(retried ? { agent: false } : {}),
         }, (response) => {
           receivedResponse = true
           const chunks = []

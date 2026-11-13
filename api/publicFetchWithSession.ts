@@ -15,7 +15,7 @@
 // Обёртка над сырым fetch, а не `apiClient`: вызывающие читают `Response`
 // (304 с ETag, 404, офлайн-ветки).
 
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+import { fetchWithTimeout, type FetchRetryPolicy } from '@/utils/fetchWithTimeout'
 import { getSecureItem } from '@/utils/secureStorage'
 import { getCsrfHeader } from '@/utils/csrf'
 import {
@@ -43,6 +43,7 @@ export async function fetchPublicWithSession(
   url: string,
   init: RequestInit = {},
   timeoutMs: number,
+  policy: FetchRetryPolicy = {},
 ): Promise<Response> {
   const token = shouldUseStoredAuthToken()
     ? await getSecureItem(ACCESS_TOKEN_STORAGE_KEY).catch(() => null)
@@ -62,8 +63,9 @@ export async function fetchPublicWithSession(
       ...(Object.keys(sessionHeaders).length ? { headers: sessionHeaders } : {}),
     },
     timeoutMs,
+    policy,
   )
-  if (response.status !== 401) return response
+  if (policy.retry === false || response.status !== 401) return response
   return fetchWithTimeout(
     url,
     {

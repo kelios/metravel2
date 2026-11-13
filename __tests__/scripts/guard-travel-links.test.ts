@@ -107,6 +107,98 @@ describe('guard-travel-links', () => {
     expect(result).toMatchObject({ ok: true, violations: [] })
   })
 
+  it('accepts the real API-base-prefixed view endpoint', () => {
+    const filePath = 'api/travelViews.ts'
+    const result = run(filePath, fs.readFileSync(path.join(process.cwd(), filePath), 'utf8'))
+
+    expect(result).toMatchObject({ ok: true, violations: [] })
+  })
+
+  it.each([
+    ['api/client.ts', '@/api/apiConfig', 'API_BASE_URL'],
+    ['api/client.ts', './apiConfig', 'API_BASE_URL as backendUrl'],
+    ['services/nested/client.ts', '../../api/apiConfig.ts', 'API_BASE_URL as backendUrl'],
+  ])('recognizes the canonical API base imported in %s from %s', (filePath, modulePath, binding) => {
+    const localName = binding.split(' as ').at(-1)
+    const content = [
+      `import { DEFAULT_TIMEOUT, ${binding} } from '${modulePath}'`,
+      'const endpoint = `${ ' + localName + ' }/travels/${encodeURIComponent(String(id))}/view/`',
+    ].join('\n')
+
+    expect(run(filePath, content)).toMatchObject({ ok: true, violations: [] })
+  })
+
+  it('recognizes a multiline canonical API-base interpolation', () => {
+    const content = "import { API_BASE_URL } from '@/api/apiConfig'\n" +
+      'const endpoint = `${\n API_BASE_URL\n}/travels/${id}/view/`'
+
+    expect(run('api/client.ts', content)).toMatchObject({ ok: true, violations: [] })
+  })
+
+  it('keeps the canonical import valid outside an unrelated shadow scope', () => {
+    const content = "import { API_BASE_URL } from '@/api/apiConfig'\n" +
+      'function other(API_BASE_URL: string) { return API_BASE_URL }\n' +
+      'const endpoint = `${API_BASE_URL}/travels/${id}/view/`'
+
+    expect(run('api/client.ts', content)).toMatchObject({ ok: true, violations: [] })
+  })
+
+  it.each([
+    ['parameter', 'API_BASE_URL', 'function make(API_BASE_URL: string) { return `${API_BASE_URL}/travels/${slug}/` }'],
+    ['local constant', 'API_BASE_URL', 'function make() { const API_BASE_URL = getSiteBaseUrl(); return `${API_BASE_URL}/travels/${slug}/` }'],
+    ['aliased arrow parameter', 'API_BASE_URL as baseUrl', 'const make = (baseUrl: string) => `${baseUrl}/travels/${slug}/`'],
+    ['destructured parameter', 'API_BASE_URL', 'function make({ publicBase: API_BASE_URL }: { publicBase: string }) { return `${API_BASE_URL}/travels/${slug}/` }'],
+    ['array binding', 'API_BASE_URL', 'function make() { const [API_BASE_URL] = [getSiteBaseUrl()]; return `${API_BASE_URL}/travels/${slug}/` }'],
+    ['catch binding', 'API_BASE_URL', 'try {} catch (API_BASE_URL) { const href = `${API_BASE_URL}/travels/${slug}/` }'],
+  ])('reports a public base shadowing the import with a %s', (_label, binding, construction) => {
+    const content = `import { ${binding} } from '@/api/apiConfig'\n` + construction
+
+    expect(run('services/links.ts', content).violations).toEqual([
+      expect.objectContaining({ rule: 'ad-hoc-builder', line: 2 }),
+    ])
+  })
+
+  it.each([
+    ['local public base', 'const API_BASE_URL = getSiteBaseUrl()'],
+    ['different module', "import { API_BASE_URL } from '@/config/site'"],
+    ['different export', "import { SITE_BASE_URL as API_BASE_URL } from '@/api/apiConfig'"],
+    ['commented import', "// import { API_BASE_URL } from '@/api/apiConfig'"],
+    ['string import', `const note = "import { API_BASE_URL } from '@/api/apiConfig'"`],
+    ['template import', "const note = `import { API_BASE_URL } from '@/api/apiConfig'`"],
+  ])('does not treat a %s as API-base provenance', (_label, declaration) => {
+    const result = run('api/client.ts', declaration + '\nconst href = `${API_BASE_URL}/travels/${slug}/`')
+
+    expect(result.violations).toEqual([expect.objectContaining({ rule: 'ad-hoc-builder', line: 2 })])
+  })
+
+  it.each([
+    ['public template', 'const href = `${getSiteBaseUrl()}/travels/${slug}/`'],
+    ['public literal', 'const href = `https://metravel.by/travels/${slug}/`'],
+    ['other base', 'const href = `${SITE_BASE_URL}/travels/${slug}/`'],
+    ['extra prefix', 'const href = `https://metravel.by${API_BASE_URL}/travels/${slug}/`'],
+    ['extra path', 'const href = `${API_BASE_URL}/articles/travels/${slug}/`'],
+    ['missing endpoint slash', 'const href = `${API_BASE_URL}/travels/${slug}`'],
+    ['string containing a template', "const href = '`${API_BASE_URL}/travels/${slug}/`'"],
+    ['escaped template head', 'const href = `prefix \\`${API_BASE_URL}/travels/${slug}/`'],
+    ['mixed same line', 'const endpoint = `${API_BASE_URL}/travels/${id}/view/`; const href = `${SITE_BASE_URL}/travels/${slug}/`'],
+  ])('still reports a %s next to a real API import', (_label, construction) => {
+    const content = "import { API_BASE_URL } from '@/api/apiConfig'\n" + construction
+    const result = run('api/client.ts', content)
+
+    expect(result.violations).toEqual([expect.objectContaining({ rule: 'ad-hoc-builder', line: 2 })])
+  })
+
+  it('keeps stale public literals enforced next to an API-base import', () => {
+    const result = run('api/client.ts', [
+      "import { API_BASE_URL } from '@/api/apiConfig'",
+      "const href = '/travels/old-slug'",
+    ].join('\n'))
+
+    expect(result.violations).toEqual([
+      expect.objectContaining({ rule: 'stale-literal', line: 2, fix: '/travels/live-slug' }),
+    ])
+  })
+
   it('lets a baseline file assemble the path and flags a baseline entry that no longer does', () => {
     const allowed = run('utils/travelLinkGraph.js', 'return key ? `/travels/${key}` : ""')
     expect(allowed.ok).toBe(true)

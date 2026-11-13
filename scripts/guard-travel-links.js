@@ -20,7 +20,8 @@ const path = require('path')
 //      `/travels/null` и `/travels/0` (#1185, #1438).
 //
 // API-эндпоинты (`/travels/${id}/`, `/api/travels/…`) адресами страниц не
-// являются и под правило 2 не попадают: их отличает слэш после сегмента.
+// являются и под правило 2 не попадают: относительный путь или canonical API
+// base в начале шаблона и слэш после сегмента отличают их от адреса страницы.
 
 const OUTPUT_CONTRACT_VERSION = 1
 const REDIRECT_MANIFEST = 'scripts/seo-redirects.json'
@@ -135,6 +136,51 @@ const readTemplateExpression = (line, start) => {
   return { expression: line.slice(start), next: '' }
 }
 
+/** Смещения API-путей, чья база действительно ссылается на canonical named import. */
+const readApiEndpointOffsets = ({ filePath, content }) => {
+  const offsets = new Set()
+  if (!/\bAPI_BASE_URL\b/.test(content)) return offsets
+  // Уже установленный parser загружается лишь для API-base кандидатов. Symbol
+  // identity различает импорт и одноимённые параметры/локальные bindings.
+  const ts = require('typescript')
+  const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true)
+  const imports = new Set()
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
+        !statement.importClause || statement.importClause.isTypeOnly) continue
+    const module = statement.moduleSpecifier.text
+    const modulePath = module.startsWith('@/')
+      ? module.slice(2)
+      : module.startsWith('.')
+        ? path.posix.join(path.posix.dirname(filePath), module)
+        : ''
+    if (path.posix.normalize(modulePath).replace(/\.[cm]?[jt]sx?$/, '') !== 'api/apiConfig') continue
+    const named = statement.importClause.namedBindings
+    if (!named || !ts.isNamedImports(named)) continue
+    for (const specifier of named.elements) {
+      if (!specifier.isTypeOnly && (specifier.propertyName || specifier.name).text === 'API_BASE_URL') imports.add(specifier)
+    }
+  }
+  if (!imports.size) return offsets
+
+  const options = { noLib: true, noResolve: true, allowJs: true }
+  const host = ts.createCompilerHost(options)
+  host.getSourceFile = (name) => name === filePath ? source : undefined
+  const checker = ts.createProgram([filePath], options, host).getTypeChecker()
+  const visit = (node) => {
+    if (ts.isTemplateExpression(node) && node.head.text === '' && node.templateSpans.length >= 2) {
+      const [base, id] = node.templateSpans
+      if (ts.isIdentifier(base.expression) && base.literal.text === '/travels/' && id.literal.text.startsWith('/')) {
+        const binding = checker.getSymbolAtLocation(base.expression)
+        if (binding?.declarations?.some((declaration) => imports.has(declaration))) offsets.add(base.literal.getStart(source) + 1)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return offsets
+}
+
 const findStaleLiterals = ({ filePath, content, redirects }) => {
   const violations = []
   content.split('\n').forEach((line, idx) => {
@@ -164,17 +210,20 @@ const findAdHocBuilders = ({ filePath, content, includeBaseline = false }) => {
   const violations = []
   if (!includeBaseline && AD_HOC_BUILDER_BASELINE.has(filePath)) return violations
   if (!content.includes('/travels/')) return violations
+  const apiEndpointOffsets = readApiEndpointOffsets({ filePath, content })
+  let offset = 0
   content.split('\n').forEach((line, idx) => {
+    const lineOffset = offset
+    offset += line.length + 1
     if (isCommentLine(line)) return
     let adHoc = false
     for (const match of line.matchAll(TEMPLATE_REGEX)) {
       const { expression, next } = readTemplateExpression(line, match.index + match[0].length)
-      // `${string}` — шаблонный тип TypeScript. Эндпоинт API — относительный путь
-      // клиента (литерал начинается с `/travels/`) со слэшем после сегмента; у
-      // абсолютного адреса сайта (`https://metravel.by/travels/${slug}/`) хвостовой
-      // слэш эндпоинтом его не делает.
+      // API: относительный путь или проверенный AST template head из настоящего
+      // импортированного API base. Слэш после id всё ещё обязателен.
       const startsLiteral = /[`'"]/.test(line[match.index - 1] || '')
-      const isApiEndpoint = next === '/' && startsLiteral
+      const isApiEndpoint = (next === '/' && startsLiteral) || apiEndpointOffsets.has(lineOffset + match.index)
+      // `${string}` — шаблонный тип TypeScript.
       if (expression.trim() !== 'string' && !isApiEndpoint) adHoc = true
     }
     if (CONCAT_REGEX.test(line)) adHoc = true
