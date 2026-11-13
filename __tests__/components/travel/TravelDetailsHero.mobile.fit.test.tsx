@@ -6,6 +6,7 @@ import type { TestInstance } from 'test-renderer'
 
 import { Platform, StyleSheet, useWindowDimensions } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
+import { TravelLoaderDataContext } from '@/components/travel/details/travelLoaderData'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 const mockAuthorQuickLinkSpy: jest.Mock<any, any> = jest.fn(() => {
@@ -198,6 +199,61 @@ describe('TravelHeroSection mobile image fit', () => {
     const flattenedStyle = StyleSheet.flatten(sliderContainer.props.style)
     const viewport = useWindowDimensions()
     expect(flattenedStyle.height).toBe(Math.max(260, Math.round(viewport.height * 0.7)))
+  })
+
+  it('keeps web height and mobile-author membership independent of the hydration width snapshot', async () => {
+    Platform.OS = 'web'
+    Platform.select = (obj: any) => obj.web ?? obj.default
+    const travel: any = {
+      id: 3398, name: 'Web geometry',
+      gallery: [{ id: 1, url: 'https://cdn.example.com/web.jpg', width: 1200, height: 800 }],
+      travelAddress: [],
+    }
+    const draw = (isMobile: boolean, heroTravel = travel) => (
+      <Suspense fallback={null}>
+        <__testables.TravelHeroSection
+          travel={heroTravel}
+          anchors={{ gallery: { current: null } } as any}
+          isMobile={isMobile}
+          renderSlider
+          onFirstImageLoad={() => {}}
+          sectionLinks={[]}
+          onQuickJump={() => {}}
+        />
+      </Suspense>
+    )
+    const tree = await renderTree(draw(true))
+    const frame = within(tree.container).getByTestId('travel-details-hero-slider-container', { includeHiddenElements: true })
+    expect(StyleSheet.flatten(frame.props.style).height).toBeUndefined()
+    const findAuthor = () => tree.container.queryAll(
+      node => typeof node.type === 'string' && node.props['data-travel-mobile-author'] === 'true',
+      { includeSelf: true },
+    )
+    const author = findAuthor()[0]
+    expect(author).toBeTruthy()
+    expect(within(tree.container).getByTestId('mock-travel-author-quick-link', { includeHiddenElements: true })).toBeTruthy()
+
+    await tree.rerender(draw(false))
+    const desktopFrame = within(tree.container).getByTestId('travel-details-hero-slider-container', { includeHiddenElements: true })
+    expect(StyleSheet.flatten(desktopFrame.props.style).height).toBeUndefined()
+    expect(findAuthor()).toHaveLength(1)
+    expect(findAuthor()[0]).toBe(author)
+    expect(within(tree.container).queryByTestId('mock-travel-author-quick-link', { includeHiddenElements: true })).toBeNull()
+
+    await tree.rerender(
+      <TravelLoaderDataContext.Provider value={{ travel } as any}>
+        {draw(false)}
+      </TravelLoaderDataContext.Provider>,
+    )
+    expect(within(tree.container).getByTestId('mock-travel-author-quick-link', { includeHiddenElements: true })).toBeTruthy()
+
+    const withoutGallery = { ...travel, gallery: [] }
+    await tree.rerender(
+      <TravelLoaderDataContext.Provider value={{ travel: withoutGallery } as any}>
+        {draw(false, withoutGallery)}
+      </TravelLoaderDataContext.Provider>,
+    )
+    expect(within(tree.container).queryByTestId('mock-travel-author-quick-link', { includeHiddenElements: true })).toBeNull()
   })
 
   it('renders the mobile author quick link below the hero slider container', async () => {

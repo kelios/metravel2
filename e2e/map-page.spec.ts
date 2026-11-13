@@ -1473,18 +1473,15 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Ensure map markers are mounted so openPopupForCoord has something to target.
     await page.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible', timeout: 30_000 });
 
-    await cards.first().click({ position: { x: 16, y: 16 } });
+    // The photo's top-left corner is the separate save action. Select the
+    // place title so this exercises the card's focus/inspection action.
+    await cards.first().getByText('Mock point 1', { exact: true }).click();
+    await expect(page).toHaveURL(/\/map(?:\?|$)/);
 
-    // Leaflet popup rendered in DOM.
+    // The card itself must open the selected place, without a fallback marker tap.
     const popupLocator = page.locator('.leaflet-popup');
-    const opened = await popupLocator.isVisible({ timeout: 8_000 }).catch(() => false);
-    if (!opened) {
-      const marker = page.locator('.leaflet-marker-icon').first();
-      if (await marker.isVisible().catch(() => false)) {
-        await marker.click({ force: true });
-      }
-    }
     await expect(popupLocator).toBeVisible({ timeout: 20_000 });
+    await expect(popupLocator).toContainText('Mock point 1');
   });
 
   test('desktop: scroll reaches footer area', async ({ page }) => {

@@ -1,5 +1,6 @@
 import type React from 'react'
 import type { Root } from 'react-dom/client'
+import '@testing-library/jest-dom'
 
 // #3144: the guest sign-in explanation under «Хочу поехать» is no longer
 // permanent text. react-native-web 0.21 drops `accessibilityHint` (not in its
@@ -71,18 +72,24 @@ describe('TravelHeroFavoriteToggle guest hint in the real RN-web DOM (#3144)', (
     mockUseAuth.mockReturnValue({ isAuthenticated: false })
     const button = await draw()
     expect(button).not.toBeNull()
-    expect(button!.getAttribute('aria-description')).toBe(HINT)
-    expect(container.textContent).not.toContain(HINT)
+    expect(button).toHaveAccessibleDescription(HINT)
+    expect(button).not.toHaveAttribute('aria-description')
+    const hint = document.getElementById(button!.getAttribute('aria-describedby')!)
+    expect(hint).toHaveTextContent(HINT)
+    expect(hint).not.toBeVisible()
   })
 
   it('drops the hint once the reader is signed in', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false })
     const button = await draw()
-    expect(button!.getAttribute('aria-description')).toBe(HINT)
+    expect(button).toHaveAccessibleDescription(HINT)
+    const hintId = button!.getAttribute('aria-describedby')!
 
     mockUseAuth.mockReturnValue({ isAuthenticated: true })
     const same = await draw()
     expect(same).toBe(button)
-    expect(same!.hasAttribute('aria-description')).toBe(false)
+    expect(same).not.toHaveAttribute('aria-describedby')
+    expect(same).not.toHaveAccessibleDescription()
+    expect(document.getElementById(hintId)).toBeNull()
   })
 })

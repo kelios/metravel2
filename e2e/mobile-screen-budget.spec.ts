@@ -331,8 +331,10 @@ test.describe('Mobile screen budget (#2094)', () => {
         const held = new Promise<void>((resolve) => { release = resolve })
         return { key, held, release }
       })
-      await page.route(/\/api\/(?:travels\/\?|user\/(?:subscribers|subscriptions)\/)/, async (route) => {
+      const requestedLists = new Set<string>()
+      await page.route(/\/api\/(?:travels|user\/(?:subscribers|subscriptions))\/(?:\?|$)/, async (route) => {
         const gate = gates.find(({ key }) => route.request().url().includes(`/${key}/`))
+        if (gate) requestedLists.add(gate.key)
         await gate?.held
         await route.fallback()
       })
@@ -362,15 +364,23 @@ test.describe('Mobile screen budget (#2094)', () => {
         ))
         await page.evaluate(() => document.fonts.ready)
         await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+        expect([...requestedLists].filter((key) => key !== 'travels'), 'списки подписок остаются ленивыми до открытия вкладки').toEqual([])
         for (const key of ['subscriptions', 'subscribers', 'travels']) {
-          const before = await tabGeometry()
+          const label = countLabels.find(([countKey]) => countKey === key)![1]
+          const count = counts![key]
+          const tab = page.getByRole('tab', { name: count > 0 ? `${label}: ${count}` : label, exact: true })
           const response = page.waitForResponse((result) => {
             const url = new URL(result.url())
             if (!url.pathname.endsWith(`/api/${key === 'travels' ? '' : 'user/'}${key}/`) || !result.ok()) return false
-            if (key !== 'travels') return true
+            if (key !== 'travels') return url.searchParams.get('view') === 'compact' && url.searchParams.get('page') === '1'
             const where = JSON.parse(url.searchParams.get('where') || '{}') as Record<string, unknown>
             return where.user_id != null && where.publication_status == null && where.publish == null && where.moderation == null
           })
+          await tab.click()
+          await expect(tab).toHaveAttribute('aria-selected', 'true')
+          await expect.poll(() => requestedLists.has(key)).toBe(true)
+          await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+          const before = await tabGeometry()
           gates.find((gate) => gate.key === key)!.release()
           const listResponse = await response
           await listResponse.finished()
@@ -381,11 +391,12 @@ test.describe('Mobile screen budget (#2094)', () => {
               await expect(page.getByRole('tab', { name: count > 0 ? `${label}: ${count}` : label, exact: true })).toBeAttached()
             }
           } else {
-            const profiles = await listResponse.json() as unknown[]
-            expect(Array.isArray(profiles), `${key} возвращает полный список`).toBe(true)
-            expect(profiles.length, `${key} совпадает со счётчиком профиля`).toBe(counts![key])
-            const label = countLabels.find(([countKey]) => countKey === key)![1]
-            await expect(page.getByRole('tab', { name: profiles.length > 0 ? `${label}: ${profiles.length}` : label, exact: true })).toBeAttached()
+            const socialPage = await listResponse.json() as { count: number; next: string | null; results: unknown[] }
+            expect(Array.isArray(socialPage.results), `${key} возвращает compact-страницу`).toBe(true)
+            expect(socialPage.count, `${key} совпадает со счётчиком профиля`).toBe(counts![key])
+            expect(socialPage.next, 'фикстура целиком помещается на первой странице').toBeNull()
+            expect(socialPage.results.length).toBe(socialPage.count)
+            await expect(page.getByRole('tab', { name: socialPage.count > 0 ? `${label}: ${socialPage.count}` : label, exact: true })).toBeAttached()
           }
           await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
           const after = await tabGeometry()

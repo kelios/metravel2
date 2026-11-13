@@ -97,11 +97,11 @@ export function getApiBaseFromEnv(): string {
   return raw.replace(/\/+$/, '');
 }
 
-// Module-level login memoization (TD-028): within a single worker process we
-// must not re-issue logins for the shared test account. The backend rotates the
-// auth token on each login, which would invalidate the live UI session that
-// shares the same token from storageState. Cache the in-flight/resolved login
-// Promise per email; drop the cache on rejection so a failed login can retry.
+// Module-level login memoization (TD-028) avoids duplicate authentication
+// requests and rate limiting within one worker. Backend login reuses an existing
+// account token; logout revokes that shared token. Session isolation therefore
+// requires a dedicated logout actor, not this cache. Drop a rejected Promise so
+// a failed login can retry.
 const loginCache = new Map<string, Promise<E2EApiContext>>();
 
 function loginMemoized(email: string, password: string): Promise<E2EApiContext> {
@@ -158,8 +158,8 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   }
 
   // (b) Reuse the single session issued by global-setup (storageState token).
-  // This avoids re-logging-in the shared account, which would rotate/invalidate
-  // the token used by the live UI session (TD-028).
+  // Avoid redundant login requests and keep the same session as the live UI
+  // (TD-028). Login reuses it; logout by this account would revoke it for both.
   const tokenFromState = tokenFromStorageState();
   if (tokenFromState) {
     return { apiBase, token: tokenFromState, userId: userIdFromStorageState() };

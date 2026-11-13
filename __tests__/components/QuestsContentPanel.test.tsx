@@ -1022,6 +1022,22 @@ describe('QuestsContentPanel', () => {
         expect(getByTestId('quest-card-quest-0').props.accessibilityLabel).toBe('warsaw');
     });
 
+    it.each([true, false])('keeps an active filter reset available before catalog data arrives (mobile=%s)', async (isMobile) => {
+        mockIsMobile = isMobile;
+        (Platform as { OS: string }).OS = 'web';
+        const onResetFilters = jest.fn();
+        const props = { ...makeBaseProps(), isMobile, onResetFilters };
+        const { getByTestId, rerender } = await render(
+            <QuestsContentPanel {...props} dataLoaded={false} questsAll={[]} />,
+        );
+        const reset = getByTestId('quests-reset-filters');
+        await fireEvent.press(reset);
+        expect(onResetFilters).toHaveBeenCalledTimes(1);
+
+        await rerender(<QuestsContentPanel {...props} dataLoaded />);
+        expect(getByTestId('quests-reset-filters')).toBe(reset);
+    });
+
     it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';

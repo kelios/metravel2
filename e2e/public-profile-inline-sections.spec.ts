@@ -38,7 +38,10 @@ async function setupPublicProfile(page: import('@playwright/test').Page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        results: [{ id: 42, user: 42, first_name: 'Анна', last_name: 'Путешественница', avatar: null }],
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ user: 42, display_name: 'Анна Путешественница', avatar_url: null, travels_total: 0, travels_preview: [] }],
       }),
     })
   );
@@ -48,7 +51,10 @@ async function setupPublicProfile(page: import('@playwright/test').Page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        results: [{ id: 43, user: 43, first_name: 'Иван', last_name: 'Подписчик', avatar: null }],
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ user: 43, display_name: 'Иван Подписчик', avatar_url: null, travels_total: 0, travels_preview: [] }],
       }),
     })
   );

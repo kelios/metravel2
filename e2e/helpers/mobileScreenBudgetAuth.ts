@@ -39,6 +39,7 @@ const travel = (id: number, publicationStatus: 'draft' | 'published', userId = O
   gallery: [], travelAddress: [], coordsMeTravel: [], countUnicIpView: '7',
   created_at: '2026-09-01T09:00:00Z', updated_at: '2026-09-01T09:00:00Z',
 })
+const authorTravels = (userId: number) => [travel(992020 + userId, 'published', userId)]
 
 // A two-digit organized count must replace the pending slot: a zero-only
 // fixture would conceal proportional-digit/count-width layout shifts.
@@ -122,8 +123,23 @@ export async function prepareMobileScreenBudgetAuth(page: Page, options: BudgetA
   const tripListPaths = new Set(['/api/trips/planned/me/', '/api/trip-applications/', '/api/trip-notifications/'])
   await page.route((url) => reads.has(url.pathname), async (route) => {
     if (route.request().method() !== 'GET') return route.fallback()
-    const pathname = new URL(route.request().url()).pathname
+    const url = new URL(route.request().url())
+    const pathname = url.pathname
     if (tripListPaths.has(pathname)) await options.beforeTripListsResponse?.()
+    if (url.searchParams.get('view') === 'compact' &&
+      (pathname === '/api/user/subscriptions/' || pathname === '/api/user/subscribers/')) {
+      const profiles = pathname === '/api/user/subscriptions/' ? subscriptions : subscribers
+      return fulfill(route, paginated(profiles.map((profile) => {
+        const previews = pathname === '/api/user/subscriptions/' ? authorTravels(profile.user) : []
+        return {
+          user: profile.user,
+          display_name: `${profile.first_name} ${profile.last_name}`.trim(),
+          avatar_url: profile.avatar,
+          travels_total: previews.length,
+          travels_preview: previews,
+        }
+      })))
+    }
     return fulfill(route, reads.get(pathname))
   })
   const authorIds = new Set([OWNER_ID, ...subscriptions.map((entry) => entry.user)])
@@ -137,7 +153,7 @@ export async function prepareMobileScreenBudgetAuth(page: Page, options: BudgetA
     const where = JSON.parse(url.searchParams.get('where') || '{}') as {
       user_id: number | string; publication_status?: string[]; publish?: number; moderation?: number
     }
-    let items = Number(where.user_id) === OWNER_ID ? ownTravels : [travel(992020 + Number(where.user_id), 'published', Number(where.user_id))]
+    let items = Number(where.user_id) === OWNER_ID ? ownTravels : authorTravels(Number(where.user_id))
     if (where.publication_status) items = items.filter((item) => where.publication_status!.includes(item.publication_status))
     if (where.publish != null) items = items.filter((item) => Number(item.publish) === where.publish)
     if (where.moderation != null) items = items.filter((item) => Number(item.moderation) === where.moderation)

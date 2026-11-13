@@ -4,7 +4,6 @@ import TravelDetailsContainer from './TravelDetailsContainer'
 import { TravelLoaderDataContext, type TravelLoaderPayload } from './travelLoaderData'
 import { getTravelDetailsSeoMetadata } from './hooks/travelDetailsContainerViewModel'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
-import { TRAVEL_ROUTER_SSR_STYLES } from './travelRouterSsrStyles'
 import { buildTravelArticleStructuredData, buildTravelBreadcrumbStructuredData } from '@/utils/travelArticleJsonLd'
 import { DEFAULT_LOCALE } from '@/i18n/config'
 
@@ -41,7 +40,6 @@ export default function TravelLoaderScreen() {
   }, [payload])
   return (
     <TravelLoaderDataContext.Provider value={payload}>
-      {payload ? <style>{TRAVEL_ROUTER_SSR_STYLES}</style> : null}
       {structuredData ? jsonLdScript(structuredData, { marker: 'travel-article' }) : null}
       <TravelDetailsContainer />
     </TravelLoaderDataContext.Provider>

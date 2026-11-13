@@ -48,6 +48,11 @@ export default function MessagesScreen() {
 
 function MessagesSession() {
     const { isAuthenticated, authReady, userId } = useAuth();
+    // Не монтируем owner-scoped UI под временным ключом guest, пока сессия
+    // восстанавливается: смена guest → userId перемонтировала шапку (#3398).
+    if (!authReady) {
+        return <MessagesHydrationFallback />;
+    }
     const ownerId = isAuthenticated ? userId : null;
     return (
         <MessagesScreenContent

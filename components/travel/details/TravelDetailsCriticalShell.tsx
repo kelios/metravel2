@@ -33,6 +33,7 @@ import TravelDetailsHeroDeferredColumn, {
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 import { TravelHeroFavoriteToggleSlot } from './TravelHeroSlots';
 import { useTravelLoaderPayload } from './travelLoaderData';
+import { TRAVEL_WEB_LAYOUT_STYLES } from './travelRouterSsrStyles';
 import {
   TRAVEL_FIRST_SCREEN_STYLES,
   buildTravelFirstScreenMetaParts,
@@ -53,14 +54,9 @@ import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/Link
 // (hero, sub-nav, content).
 const STICKY_NAV_INDICES = [1];
 
-// Desktop-only left sidebar. It renders solely when width resolves to a desktop
-// breakpoint (shouldShowTravelDetailsDesktopSidebar); the hydration-safe
-// useResponsive reports width=0 on SSR + first client render, so isMobile=true
-// and the sidebar is never on the synchronous first-paint path on any platform.
-// Loading it lazily therefore keeps its subtree (author/weather widgets, route
-// GPX/KML download utils) out of the eager travel-route chunk without changing
-// first-screen output; the fixed-width column below reserves its space so the
-// Suspense fallback introduces no CLS.
+// CSS reserves the web sidebar column before React knows the browser width.
+// Its heavy subtree still waits for the real desktop breakpoint and remains
+// lazy; native keeps its existing breakpoint-driven structure.
 const CompactSideBarTravelLazy = lazyWithRetry(
   () => import('@/components/travel/CompactSideBarTravel'),
   { name: 'CompactSideBarTravel' },
@@ -158,6 +154,7 @@ export default function TravelDetailsCriticalShell({
   const colors = useThemedColors();
   const loaderPayload = useTravelLoaderPayload();
   const isRouterSsrTravel = Platform.OS === 'web' && Boolean(loaderPayload?.travel);
+  const hasWebLayout = Platform.OS === 'web' && Boolean(travel);
 
   // Drop legacy sr-only headings once the real React H1 has mounted. The current
   // SSG title is a visible normal-flow H1, so demote it to a same-class div
@@ -248,8 +245,8 @@ export default function TravelDetailsCriticalShell({
   );
 
   const mainContainerStyle = useMemo(
-    () => [styles.mainContainer, !isRouterSsrTravel && isMobile && styles.mainContainerMobile],
-    [styles.mainContainer, styles.mainContainerMobile, isMobile, isRouterSsrTravel]
+    () => [styles.mainContainer, !hasWebLayout && isMobile && styles.mainContainerMobile],
+    [styles.mainContainer, styles.mainContainerMobile, isMobile, hasWebLayout]
   );
 
   const contentWrapperStyle = useMemo(
@@ -422,8 +419,12 @@ export default function TravelDetailsCriticalShell({
       role="main"
       aria-label={mainAriaLabel}
       style={wrapperStyle}
-      {...(isRouterSsrTravel ? { dataSet: { routerSsr: 'travel' } } : {})}
+      {...(hasWebLayout || isRouterSsrTravel ? { dataSet: {
+        ...(hasWebLayout ? { travelWebLayout: 'true' } : {}),
+        ...(isRouterSsrTravel ? { routerSsr: 'travel' } : {}),
+      } } : {})}
     >
+      {hasWebLayout ? <style data-travel-web-layout-styles="true">{TRAVEL_WEB_LAYOUT_STYLES}</style> : null}
       {Platform.OS === 'web' && travel ? <style>{TRAVEL_FIRST_SCREEN_STYLES}</style> : null}
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={mainContainerStyle}>
@@ -456,12 +457,12 @@ export default function TravelDetailsCriticalShell({
                 <View
                   style={contentWrapperStyle}
                   collapsable={false}
-                  {...(isRouterSsrTravel ? { dataSet: { ssrTravelContent: 'true' } } : {})}
+                  {...(hasWebLayout ? { dataSet: { travelWebContent: 'true' } } : {})}
                 >
                   {topNotice}
-                  {travel && (showDesktopSidebar || isRouterSsrTravel) ? (
+                  {travel && (showDesktopSidebar || hasWebLayout) ? (
                     <View style={desktopLayoutStyle} collapsable={false}>
-                      <View style={desktopSidebarContainerStyle} {...(isRouterSsrTravel ? { dataSet: { ssrTravelSidebar: 'true' } } : {})}>
+                      <View style={desktopSidebarContainerStyle} {...(hasWebLayout ? { dataSet: { travelWebSidebar: 'true' } } : {})}>
                         {showDesktopSidebar ? (
                         <Animated.View
                           testID="travel-details-side-menu"

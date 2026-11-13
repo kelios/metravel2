@@ -8,6 +8,7 @@ import {
   readTravel,
   reorderGalleryApi,
 } from './helpers/e2eApi';
+import { liveUploadImage } from './helpers/liveUploadImage';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -18,12 +19,6 @@ type UploadedImage = {
 
 const UPLOAD_PATH = '/api/upload';
 
-// 1x1 PNG pixel
-const tinyPngBuffer = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-  'base64'
-);
-
 function pickFirstId(list: unknown): string | null {
   if (!Array.isArray(list) || list.length === 0) return null;
   const first = list[0];
@@ -31,7 +26,7 @@ function pickFirstId(list: unknown): string | null {
   if (typeof first === 'string' || typeof first === 'number') return String(first);
   if (typeof first === 'object') {
     const rec = first as AnyRecord;
-    const raw = rec.id ?? rec.pk ?? rec.value ?? null;
+    const raw = rec.id ?? rec.country_id ?? rec.pk ?? rec.value ?? null;
     return raw == null ? null : String(raw);
   }
   return null;
@@ -115,54 +110,36 @@ async function uploadTravelImage(
   ctx: E2EApiContext,
   travelId: string | number,
   fileName: string,
-): Promise<UploadedImage | null> {
-  const collections = ['gallery', 'travelImageAddress'];
-  let lastError = '';
-
-  for (const collection of collections) {
-    const api = await request.newContext({
-      baseURL: ctx.apiBase,
-      extraHTTPHeaders: {
-        Authorization: `Token ${ctx.token}`,
-      },
-    });
+): Promise<UploadedImage> {
+  const api = await request.newContext({
+    baseURL: ctx.apiBase,
+    extraHTTPHeaders: {
+      Authorization: `Token ${ctx.token}`,
+    },
+  });
+  try {
     const uploadResp = await api.post(UPLOAD_PATH, {
       multipart: {
-        file: {
-          name: fileName,
-          mimeType: 'image/png',
-          buffer: tinyPngBuffer,
-        },
-        collection,
+        file: liveUploadImage(fileName),
+        collection: 'gallery',
         id: String(travelId),
       },
     });
-
+    expect(uploadResp.ok(), `Gallery upload returned HTTP ${uploadResp.status()}`).toBe(true);
     const rawBody = await uploadResp.text();
-    await api.dispose();
-
-    if (!uploadResp.ok()) {
-      lastError = `${collection}: ${uploadResp.status()} ${uploadResp.statusText()} ${rawBody.slice(0, 200)}`;
-      continue;
-    }
-
     const parsed = parseUploadResponse(rawBody);
+    expect(parsed.id, 'Gallery upload must return a positive image ID').toBeGreaterThan(0);
+    expect(parsed.url, 'Gallery upload must return an HTTP image URL').toMatch(/^https?:\/\//);
     if (!parsed.id || !parsed.url) {
-      lastError = `${collection}: missing id/url in response ${rawBody.slice(0, 200)}`;
-      continue;
+      throw new Error('Gallery upload did not return its image ID and URL');
     }
-
     return {
       id: parsed.id,
       url: parsed.url,
     };
+  } finally {
+    await api.dispose();
   }
-
-  test.info().annotations.push({
-    type: 'note',
-    description: `Image upload unavailable in current env. ${lastError}`,
-  });
-  return null;
 }
 
 test.describe('Travel persistence', () => {
@@ -172,12 +149,33 @@ test.describe('Travel persistence', () => {
     if (!ctx) throw new Error('Live-contract API auth context is unavailable');
 
     const filtersApi = await apiRequestContext(ctx);
-    const filtersResponse = await filtersApi.get('/api/getFiltersTravel/');
-    const filters = (await filtersResponse.json().catch(() => ({}))) as AnyRecord;
-    await filtersApi.dispose();
+    let filters: AnyRecord;
+    let countriesRaw: unknown;
+    try {
+      const [filtersResponse, countriesResponse] = await Promise.all([
+        filtersApi.get('/api/getFiltersTravel/'),
+        filtersApi.get('/api/countries/'),
+      ]);
+      expect(filtersResponse.ok(), 'Travel reference dictionaries must load').toBe(true);
+      expect(countriesResponse.ok(), 'Country references must load').toBe(true);
+      filters = await filtersResponse.json() as AnyRecord;
+      countriesRaw = await countriesResponse.json();
+    } finally {
+      await filtersApi.dispose();
+    }
 
-    const countryId = pickFirstId(filters.countries);
+    const countries = Array.isArray(countriesRaw)
+      ? countriesRaw
+      : countriesRaw && typeof countriesRaw === 'object'
+        ? (countriesRaw as AnyRecord).results ?? (countriesRaw as AnyRecord).data
+        : [];
+    const countryId = pickFirstId(countries);
+    expect(countryId, 'A real country reference is required for persistence').not.toBeNull();
+    if (countryId === null) throw new Error('Local country reference data is missing');
     const categoryId = pickFirstId(filters.categories);
+    const pointCategoryId = pickFirstId(filters.categoryTravelAddress);
+    expect(pointCategoryId, 'A real route-point category is required for persistence').not.toBeNull();
+    if (pointCategoryId === null) throw new Error('Local route-point category data is missing');
     const transportId = pickFirstId(filters.transports);
     const complexityId = pickFirstId(filters.complexity);
     const companionId = pickFirstId(filters.companions);
@@ -191,13 +189,12 @@ test.describe('Travel persistence', () => {
     const minus = `Минусы ${unique}`;
     const recommendation = `Рекомендации ${unique}`;
     const youtube = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-    const fallbackCoverUrl = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200';
 
     const payload = {
       id: null,
       name: travelName,
       description,
-      countries: countryId ? [countryId] : [],
+      countries: [countryId],
       cities: [],
       over_nights_stay: overnightId ? [overnightId] : [],
       complexity: complexityId ? [complexityId] : [],
@@ -239,18 +236,16 @@ test.describe('Travel persistence', () => {
     createdTravels.add(travelId);
 
     const uploadedImages = [
-      await uploadTravelImage(ctx, travelId, `gallery-1-${unique}.png`),
-      await uploadTravelImage(ctx, travelId, `gallery-2-${unique}.png`),
-    ].filter((img): img is UploadedImage => img != null);
-
-    const galleryReady = uploadedImages.length >= 2;
-    const galleryIds = galleryReady ? uploadedImages.map((img) => img.id) : [];
-    const coverUrl = galleryReady ? uploadedImages[0].url : fallbackCoverUrl;
+      await uploadTravelImage(ctx, travelId, `gallery-1-${unique}.webp`),
+      await uploadTravelImage(ctx, travelId, `gallery-2-${unique}.webp`),
+    ];
+    const galleryIds = uploadedImages.map((img) => img.id);
+    const coverUrl = uploadedImages[0].url;
 
     await createOrUpdateTravel(ctx, {
       ...payload,
       id: travelId,
-      gallery: galleryReady ? uploadedImages.map((img) => ({ id: img.id, url: img.url })) : [],
+      gallery: uploadedImages.map((img) => ({ id: img.id, url: img.url })),
       thumbs200ForCollectionArr: galleryIds,
       travelImageThumbUrlArr: galleryIds,
       travelImageThumbUrArr: galleryIds,
@@ -260,9 +255,9 @@ test.describe('Travel persistence', () => {
           id: null,
           lat: 53.90454,
           lng: 27.56152,
-          country: countryId ? Number(countryId) : null,
+          country: Number(countryId),
           address: 'Minsk center',
-          categories: categoryId ? [Number(categoryId)] : [],
+          categories: [Number(pointCategoryId)],
           image: coverUrl,
         },
       ],
@@ -277,21 +272,25 @@ test.describe('Travel persistence', () => {
     expect(String(readback?.plus ?? '')).toContain(plus);
     expect(String(readback?.minus ?? '')).toContain(minus);
     expect(String(readback?.recommendation ?? '')).toContain(recommendation);
+    expect(pickFirstId(readback?.countries)).toBe(countryId);
 
-    if (galleryReady) {
-      const galleryFromRead = normalizeGalleryUrls(readback?.gallery);
-      expect(galleryFromRead.length).toBeGreaterThanOrEqual(2);
+    const galleryFromRead = normalizeGalleryUrls(readback?.gallery);
+    expect(galleryFromRead.length).toBeGreaterThanOrEqual(2);
 
-      const reversedImages = [...uploadedImages].reverse();
-      const reversedIds = reversedImages.map((img) => img.id);
-      await reorderGalleryApi(ctx, travelId, reversedIds);
+    const reversedImages = [...uploadedImages].reverse();
+    const reversedIds = reversedImages.map((img) => img.id);
+    await reorderGalleryApi(ctx, travelId, reversedIds);
 
-      const reorderedReadback = await readTravel(ctx, travelId);
-      expect(normalizeGalleryIds(reorderedReadback?.gallery).slice(0, 2)).toEqual(reversedIds);
-    }
+    const reorderedReadback = await readTravel(ctx, travelId);
+    expect(normalizeGalleryIds(reorderedReadback?.gallery).slice(0, 2)).toEqual(reversedIds);
 
     const routeFromRead = Array.isArray(readback?.coordsMeTravel) ? readback.coordsMeTravel : [];
-    expect(routeFromRead.length).toBeGreaterThan(0);
+    expect(routeFromRead).toHaveLength(1);
+    const [persistedPoint] = routeFromRead;
+    expect(persistedPoint.address).toBe('Minsk center');
+    expect(Number(persistedPoint.country)).toBe(Number(countryId));
+    const pointCategories = Array.isArray(persistedPoint.categories) ? persistedPoint.categories.map(Number) : [];
+    expect(pointCategories).toEqual([Number(pointCategoryId)]);
 
     const editUrl = `/travel/${travelId}`;
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
@@ -309,9 +308,7 @@ test.describe('Travel persistence', () => {
 
     await expect(page.getByText('Галерея путешествия').first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByPlaceholder('Введите ссылку на YouTube')).toHaveValue(youtube, { timeout: 30_000 });
-    if (galleryReady) {
-      await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
-    }
+    await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
 
     await page.goto('/metravel', { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
@@ -324,9 +321,7 @@ test.describe('Travel persistence', () => {
       await page.getByLabel('К медиа').click();
     }
     await expect(page.getByPlaceholder('Введите ссылку на YouTube')).toHaveValue(youtube, { timeout: 30_000 });
-    if (galleryReady) {
-      await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
-    }
+    await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
   });
 
   test('persists gallery order via the dedicated reorder endpoint', async ({ createdTravels }) => {
@@ -376,12 +371,10 @@ test.describe('Travel persistence', () => {
     expect(travelId, 'Upsert did not return travel id').toBeTruthy();
     createdTravels.add(travelId);
 
-    const uploaded = (
-      await Promise.all([
-        uploadTravelImage(ctx, travelId, `reorder-1-${unique}.png`),
-        uploadTravelImage(ctx, travelId, `reorder-2-${unique}.png`),
-      ])
-    ).filter((img): img is UploadedImage => Boolean(img && img.id && img.url));
+    const uploaded = await Promise.all([
+      uploadTravelImage(ctx, travelId, `reorder-1-${unique}.webp`),
+      uploadTravelImage(ctx, travelId, `reorder-2-${unique}.webp`),
+    ]);
 
     expect(uploaded, 'Two uploaded images are required to verify gallery ordering').toHaveLength(2);
 

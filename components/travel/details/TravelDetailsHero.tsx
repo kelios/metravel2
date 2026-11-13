@@ -144,18 +144,22 @@ function TravelHeroSectionInner({
   const willRenderQuickJumps = !suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0
   const showFavoriteToggle = !deferExtras && Platform.OS !== 'web'
 
+  const isWeb = Platform.OS === 'web'
   const loaderPayload = useTravelLoaderPayload()
-  const isRouterSsrTravel = Platform.OS === 'web' && Boolean(loaderPayload?.travel)
+  const shouldRenderMobileAuthor = isMobile || (isWeb && Boolean(firstImg) && Boolean(loaderPayload?.travel))
   const heroContainerStyle = useMemo(
     () => [
       styles.sliderContainer,
-      !isRouterSsrTravel ? { height: heroHeight } : null,
-      Platform.OS === 'web' ? ({ overflow: 'hidden' } as const) : null,
+      !isWeb ? { height: heroHeight } : null,
+      isWeb ? ({ overflow: 'hidden' } as const) : null,
     ],
-    [styles.sliderContainer, heroHeight, isRouterSsrTravel],
+    [styles.sliderContainer, heroHeight, isWeb],
   )
-
-  const isWeb = Platform.OS === 'web'
+  const authorQuickLink = isWeb ? (
+    <div data-travel-mobile-author="true">
+      {shouldRenderMobileAuthor ? <TravelAuthorQuickLink travel={travel} /> : null}
+    </div>
+  ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null
 
   const sliderUnderOverlayStyle = useMemo(
     () => [
@@ -209,7 +213,7 @@ function TravelHeroSectionInner({
     return (
       <>
         {titleSlot}
-        {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+        {authorQuickLink}
         <ExtrasSlot
           styles={styles}
           extrasReady={extrasReady}
@@ -283,8 +287,8 @@ function TravelHeroSectionInner({
                   <OptimizedLCPHero
                     img={firstImg}
                     alt={heroAlt}
-                    height={heroHeight}
-                    viewportHeight={isRouterSsrTravel}
+                    height={isWeb ? undefined : heroHeight}
+                    viewportHeight={isWeb}
                     isMobile={isMobile}
                     media={findGalleryMediaImage(travel.media, firstImg.id)}
                     onLoad={handleCoverLoad}
@@ -325,9 +329,7 @@ function TravelHeroSectionInner({
 
       {titleSlot}
 
-      {isRouterSsrTravel ? (
-        <div data-ssr-mobile-author="true"><TravelAuthorQuickLink travel={travel} /></div>
-      ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
+      {authorQuickLink}
 
       <ExtrasSlot
         styles={styles}

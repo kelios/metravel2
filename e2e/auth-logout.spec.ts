@@ -3,6 +3,7 @@ import type { Page, Response } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 import { acceptAuthTerms } from './helpers/auth';
+import { requireLiveLogoutAccount } from './helpers/liveLogoutAccount';
 
 const WEB_AUTH_COOKIE = 'authToken';
 const JS_AUTH_STORAGE_KEYS = [
@@ -11,15 +12,6 @@ const JS_AUTH_STORAGE_KEYS = [
   'userToken',
   'refreshToken',
 ] as const;
-
-function requireCredentials(): { email: string; password: string } {
-  const email = String(process.env.E2E_EMAIL || '').trim();
-  const password = String(process.env.E2E_PASSWORD || '');
-  if (!email || !password) {
-    throw new Error('Auth cookie E2E requires E2E_EMAIL and E2E_PASSWORD from .env.e2e');
-  }
-  return { email, password };
-}
 
 async function fillLoginForm(page: Page, email: string, password: string): Promise<void> {
   const emailInput = page
@@ -117,7 +109,7 @@ test.describe('HttpOnly-cookie web auth', () => {
 
   test('login -> profile -> reload -> logout keeps credentials out of JS storage', async ({ page }) => {
     test.setTimeout(180_000);
-    const { email, password } = requireCredentials();
+    const { email, password } = requireLiveLogoutAccount();
     const tokenHeaderRequests: string[] = [];
 
     page.on('request', (request) => {

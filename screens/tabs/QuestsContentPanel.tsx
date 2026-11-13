@@ -350,7 +350,9 @@ function QuestsContentPanel({
             touchTarget={isMobile}
         />
     ) : null;
-    const showResetChip = dataLoaded && !searchActive && filtersActive;
+    // При известном фильтре сброс доступен и во время загрузки: поздняя
+    // вставка первого чипа сдвигала всю мобильную ленту (#3398).
+    const showResetChip = !searchActive && filtersActive;
 
     // На телефоне заголовок с количеством живёт в начале прокручиваемого списка,
     // а не в липкой шапке: шапка обязана укладываться в ~20% вьюпорта.

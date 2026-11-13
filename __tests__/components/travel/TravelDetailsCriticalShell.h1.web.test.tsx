@@ -1,4 +1,27 @@
-import { render } from '@testing-library/react'
+import type React from 'react'
+import type { Root } from 'react-dom/client'
+
+let act: typeof import('react').act
+let createElement: typeof import('react').createElement
+let createRoot: typeof import('react-dom/client').createRoot
+const mountedRoots: Root[] = []
+
+beforeAll(() => {
+  // Same isolated RN-web recipe as the other real-DOM travel regressions.
+  jest.resetModules()
+  jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  ;({ act, createElement } = require('react'))
+  ;({ createRoot } = require('react-dom/client'))
+})
+
+function render(element: React.ReactElement) {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  mountedRoots.push(root)
+  act(() => { root.render(element) })
+  return { container }
+}
 
 // The shell renders a deep tree (hero, maps, sidebar). For the single-H1
 // regression we only care about the shell's own visible <h1>, its placement
@@ -32,14 +55,12 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
   let consoleErrorSpy: jest.SpyInstance
 
   beforeEach(() => {
-    const RN = require('react-native')
-    RN.Platform.OS = 'web'
-    RN.Platform.select = (obj: any) => obj.web ?? obj.default
     document.body.innerHTML = ''
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
+    act(() => { mountedRoots.splice(0).forEach(root => root.unmount()) })
     consoleErrorSpy.mockRestore()
   })
 
@@ -47,41 +68,60 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     isMobile = false,
     screenWidth = 1280,
     travel = { id: 1, name: 'Тропа ведьм' },
-  }: { isMobile?: boolean; screenWidth?: number; travel?: Record<string, unknown> } = {}) {
+    loaderTravel = false,
+  }: { isMobile?: boolean; screenWidth?: number; travel?: Record<string, unknown> | null; loaderTravel?: boolean } = {}) {
     const Shell = require('@/components/travel/details/TravelDetailsCriticalShell').default
+    const { TravelLoaderDataContext } = require('@/components/travel/details/travelLoaderData')
     const { Animated } = require('react-native')
-    return render(
-      <Shell
-        travel={travel as any}
-        isMobile={isMobile}
-        screenWidth={screenWidth}
-        wrapperStyle={{}}
-        styles={{}}
-        skeletonPhase="hidden"
-        skeletonFallback={null}
-        scrollRef={{ current: null }}
-        scrollViewStyle={{}}
-        scrollEventHandler={() => {}}
-        handleContentSizeChange={() => {}}
-        handleLayout={() => {}}
-        contentHorizontalPadding={16}
-        anchors={{}}
-        onFirstImageLoad={() => {}}
-        sectionLinks={[]}
-        onQuickJump={() => {}}
-        deferHeroExtras={false}
-        forceOpenKey={null}
-        activeSection={null}
-        closeMenu={() => {}}
-        onNavigate={() => {}}
-        menuWidthNum={320}
-        animatedX={new Animated.Value(0)}
-        sideMenuPlatformStyles={{}}
-        deferredContent={null}
-        mainAriaLabel="Тропа ведьм"
-      />
-    )
+    return render(createElement(TravelLoaderDataContext.Provider,
+      { value: loaderTravel ? { travel } : null },
+      createElement(Shell, {
+        travel, isMobile, screenWidth, wrapperStyle: {}, styles: {},
+        skeletonPhase: 'hidden', skeletonFallback: null,
+        scrollRef: { current: null }, scrollViewStyle: {},
+        scrollEventHandler: () => {}, handleContentSizeChange: () => {}, handleLayout: () => {},
+        contentHorizontalPadding: 16, anchors: {}, onFirstImageLoad: () => {},
+        sectionLinks: [], onQuickJump: () => {}, deferHeroExtras: false,
+        forceOpenKey: null, activeSection: null, closeMenu: () => {}, onNavigate: () => {},
+        menuWidthNum: 320, animatedX: new Animated.Value(0), sideMenuPlatformStyles: {},
+        deferredContent: null, mainAriaLabel: 'Тропа ведьм',
+      }),
+    ))
   }
+
+  describe('loaded web geometry ownership (#3398)', () => {
+    it.each([
+      ['hydration snapshot', true, 0],
+      ['mobile', true, 390],
+      ['desktop', false, 1100],
+    ])('provides the same CSS-owned structure without claiming loader SSR (%s)', (_label, isMobile, screenWidth) => {
+      const { container } = renderShell({ isMobile, screenWidth })
+      const root = container.querySelector('[data-testid="travel-details-page"]')!
+      expect(root.getAttribute('data-travel-web-layout')).toBe('true')
+      expect(root.hasAttribute('data-router-ssr')).toBe(false)
+      expect(container.querySelector('[data-router-travel-h1]')).toBeNull()
+      expect(container.querySelectorAll('[data-travel-web-layout-styles="true"]')).toHaveLength(1)
+      expect(container.querySelectorAll('[data-travel-web-content="true"]')).toHaveLength(1)
+      expect(container.querySelectorAll('[data-travel-web-sidebar="true"]')).toHaveLength(1)
+    })
+
+    it('retains real loader SSR markers while using the same single geometry stylesheet', () => {
+      const { container } = renderShell({ isMobile: true, screenWidth: 0, loaderTravel: true })
+      const root = container.querySelector('[data-testid="travel-details-page"]')!
+      expect(root.getAttribute('data-router-ssr')).toBe('travel')
+      expect(root.getAttribute('data-travel-web-layout')).toBe('true')
+      expect(container.querySelector('[data-router-travel-h1="true"]')).not.toBeNull()
+      expect(container.querySelectorAll('[data-travel-web-layout-styles="true"]')).toHaveLength(1)
+    })
+
+    it('does not apply loaded geometry to the no-data loading shell', () => {
+      const { container } = renderShell({ isMobile: true, screenWidth: 0, travel: null })
+      const root = container.querySelector('[data-testid="travel-details-page"]')!
+      expect(root.hasAttribute('data-travel-web-layout')).toBe(false)
+      expect(root.hasAttribute('data-router-ssr')).toBe(false)
+      expect(container.querySelector('[data-travel-web-layout-styles]')).toBeNull()
+    })
+  })
 
   it.each([
     ['desktop web', false, 1280, '34px'],

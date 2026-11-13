@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
@@ -36,30 +36,14 @@ export const TravelHeroFavoriteToggle: React.FC<{
 
   // Гостю подсказка о входе — не постоянный текст под кнопкой: нажатие само
   // ведёт на вход с намерением «сохранить» (`useFavoriteToggle`), а смысл
-  // получает скринридер. react-native-web 0.21 `accessibilityHint` до DOM не
-  // доносит (его нет в `forwardedProps`), поэтому на web подсказка ставится
-  // атрибутом `aria-description` на узел кнопки по ref.
+  // получает скринридер через общий Button.accessibilityHint.
   const guestSaveHint = isAuthenticated
     ? undefined
     : t('travel:components.travel.details.TravelHeroFavoriteToggle.guestSaveHint')
-  const webGuestHintRef = useCallback(
-    (node: unknown) => {
-      const target = node as {
-        setAttribute?: (name: string, value: string) => void
-        removeAttribute?: (name: string) => void
-      } | null
-      if (!target?.setAttribute) return
-      if (guestSaveHint) target.setAttribute('aria-description', guestSaveHint)
-      else target.removeAttribute?.('aria-description')
-    },
-    [guestSaveHint],
-  )
-
   if (Platform.OS === 'web') {
     return (
       <View style={webStyles.container}>
         <Button
-          ref={webGuestHintRef}
           testID="travel-first-screen-favorite"
           label={favoriteButtonLabel}
           accessibilityLabel={favoriteButtonA11yLabel}

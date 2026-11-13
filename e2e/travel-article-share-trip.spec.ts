@@ -17,11 +17,13 @@ const SOURCE_DESCRIPTION = 'SOURCE_ARTICLE_DESCRIPTION_DO_NOT_COPY';
 const READER_EMAIL = 'article-reader@example.test';
 const READER_PASSWORD = 'FixtureOnly2677!';
 const isUpsert = (url: URL) => /\/(?:api\/)?travels\/upsert\/?$/.test(url.pathname);
+const isSourceTravelView = (url: URL) => url.pathname === `/api/travels/${FALLBACK_TRAVEL_ID}/view/`;
 
 type FixtureState = {
   registrations: number;
   logins: number;
   loginUrl: string | null;
+  sourceViews: number;
   upserts: Record<string, unknown>[];
   unexpectedMutations: string[];
   unexpectedReads: string[];
@@ -29,7 +31,7 @@ type FixtureState = {
 
 async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   const state: FixtureState = {
-    registrations: 0, logins: 0, loginUrl: null, upserts: [], unexpectedMutations: [], unexpectedReads: [],
+    registrations: 0, logins: 0, loginUrl: null, sourceViews: 0, upserts: [], unexpectedMutations: [], unexpectedReads: [],
   };
 
   // Register before every endpoint owner: an undeclared read is a fixture
@@ -141,6 +143,11 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   });
   await page.route((url) => url.pathname === `/api/travels/${FALLBACK_TRAVEL_ID + 1}/routes/`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.route(isSourceTravelView, (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    state.sourceViews += 1;
+    return route.fulfill({ status: 204, body: '' });
+  });
 
   // Run before every shared fixture: some shared read handlers use continue()
   // for other methods, which would bypass a guard registered ahead of them.
@@ -151,6 +158,7 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
     const url = new URL(request.url());
     const isFixtureWrite = (method === 'POST'
       && ['/api/user/registration/', '/api/user/login/', '/api/user/consents/'].includes(url.pathname))
+      || (method === 'POST' && isSourceTravelView(url))
       || (['POST', 'PUT'].includes(method) && isUpsert(url));
     if (isFixtureWrite) return route.fallback();
     state.unexpectedMutations.push(`${method} ${url.pathname}`);
@@ -251,6 +259,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expect(state.logins).toBe(1);
       expect(state.loginUrl).not.toBeNull();
       await expectReaderSessionCookie(page, state.loginUrl!);
+      expect(state.sourceViews).toBe(1);
       expect(state.upserts).toEqual([]);
       expect(state.unexpectedMutations).toEqual([]);
       expect(state.unexpectedReads, 'Every API read must have an explicit scenario fixture').toEqual([]);
@@ -356,6 +365,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         expect(JSON.stringify(payload)).not.toContain(SOURCE_DESCRIPTION);
       }
       expect(state.unexpectedMutations, 'Fixture flow must never write to a live backend').toEqual([]);
+      expect(state.sourceViews).toBe(1);
       expect(state.unexpectedReads, 'Every API read must have an explicit scenario fixture').toEqual([]);
       expect(pageErrors).toEqual([]);
       await expectReaderSessionCookie(page, state.loginUrl!);

@@ -246,7 +246,7 @@ async function openComments(page: import('@playwright/test').Page) {
   await expect(page.locator('#root')).toHaveAttribute('data-travel-details-ready', 'true');
   const commentsSlot = page.locator('[data-section-key="comments"]');
   await expect(commentsSlot).toBeAttached();
-  const commentsButton = page.getByRole('button', { name: 'Перейти к разделу Комментарии' });
+  const commentsButton = page.getByRole('button', { name: /^(?:Перейти к разделу )?Комментарии$/ });
   await expect(commentsButton).toBeVisible();
   await commentsButton.click();
   await commentsSlot.scrollIntoViewIfNeeded();

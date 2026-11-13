@@ -55,7 +55,8 @@ export async function expectTravelFavoriteAction(
 ): Promise<void> {
   const button = heroFavoriteButton(page)
   await expect(button).toBeVisible({ timeout: 30_000 })
-  await expect(button).toHaveText('Хочу поехать')
+  await expect(button.getByText('Хочу поехать', { exact: true })).toBeVisible()
+  await expect(button).toHaveAccessibleName(/^(?:Хочу поехать|Добавить в «Хочу поехать»)$/)
   await expect(page.locator(HERO_CONTAINER).getByTestId('travel-first-screen-favorite')).toHaveCount(0)
   if (initialViewport) {
     await expect(button).toBeInViewport({ ratio: 1 })

@@ -1,4 +1,4 @@
-import React, { forwardRef, memo, useMemo } from 'react';
+import React, { forwardRef, memo, useId, useMemo } from 'react';
 import {
   type ViewInstance,
   ActivityIndicator,
@@ -98,6 +98,8 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   pressedStyle,
 }, ref) => {
   const colors = useThemedColors();
+  const hintId = useId();
+  const webHint = Platform.OS === 'web' ? accessibilityHint : undefined;
   const styles = staticStyles;
   const variantStyles = useMemo(() => getVariantStyles(colors), [colors]);
   const variantHoverStyles = useMemo(() => getVariantHoverStyles(colors), [colors]);
@@ -130,6 +132,7 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityLabel={accessibilityLabel || label}
       accessibilityHint={accessibilityHint}
+      {...(webHint ? { 'aria-describedby': hintId } : null)}
       testID={testID}
       disabled={isDisabled}
       onPress={handlePress}
@@ -172,6 +175,11 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
         {!loading && !iconOnly && icon && iconPosition === 'right' ? <View style={styles.icon}>{icon}</View> : null}
         {!loading && !iconOnly && trailingIcon ? <View style={styles.trailingIcon}>{trailingIcon}</View> : null}
       </View>
+      {webHint ? (
+        // RN-web drops accessibilityHint; an explicitly referenced hidden node
+        // still supplies the accessible description without changing layout.
+        <Text nativeID={hintId} style={styles.accessibilityHint}>{webHint}</Text>
+      ) : null}
     </Pressable>
   );
 });
@@ -181,6 +189,7 @@ ButtonComponent.displayName = 'Button';
 // Стили визуального «шелла» кнопки не зависят от темы — цвет текста/иконки
 // применяется инлайном через getForegroundColor(), а фон/бордер — через variantStyles.
 const staticStyles = StyleSheet.create({
+  accessibilityHint: { display: 'none' },
   base: {
     borderRadius: radii.md,
     borderWidth: 1,

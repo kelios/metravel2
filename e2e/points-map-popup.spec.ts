@@ -91,9 +91,9 @@ test.describe('Travel points -> map marker', () => {
       el.dispatchEvent(new Event('scroll', { bubbles: true }));
     });
 
-    await page
-      .getByRole('button', { name: /Перейти к разделу Координаты мест/i })
-      .click();
+    // At the desktop viewport section navigation lives in the sidebar; the
+    // mobile hero quick-jump chips are deliberately hidden at this width.
+    await page.getByRole('button', { name: 'Координаты мест', exact: true }).click();
     const pointsSection = page.locator(tid('travel-details-points')).first();
     await expect(pointsSection).toBeVisible({ timeout: 20_000 });
     await pointsSection.scrollIntoViewIfNeeded();
