@@ -379,6 +379,10 @@ try { attributionBudget = JSON.parse(fs.readFileSync(budgetPath, 'utf8')) } catc
 const ownerSplits = readOwnerSplits(attributionBudget)
 const forbiddenPayloads = readForbiddenPayloads(attributionBudget?.forbiddenPayloads)
 const exactBrotliBudget = readExactBrotliBudget(attributionBudget)
+if (attributionBudget && Object.prototype.hasOwnProperty.call(attributionBudget, 'measurementReference')) {
+  try { require('./lib/productionBundleEvidence').validateCalibrationReference(attributionBudget.measurementReference, attributionBudget) }
+  catch (error) { die(error.message) }
+}
 const ownerCandidates = []
 
 // Aggregate per logical chunk (a logical name can map to >1 hashed file
@@ -517,6 +521,7 @@ if (UPDATE) {
   )
   const budget = {
     description: existingBudget.description || DEFAULT_BUDGET_DESCRIPTION,
+    ...(existingBudget.measurementReference ? { measurementReference: existingBudget.measurementReference } : {}),
     tolerancePct: DEFAULT_TOLERANCE_PCT,
     deferredChunks,
     ...(Array.isArray(existingBudget.forbiddenChunks)

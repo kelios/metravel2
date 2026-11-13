@@ -46,6 +46,16 @@ function fixture() {
 }
 
 describe('exact delivered Brotli byte ceilings', () => {
+  it.each([null, false, ''])('rejects an explicitly malformed calibration reference %p', (reference) => {
+    const f = fixture()
+    try {
+      f.budget.measurementReference = reference
+      f.save()
+      const result = f.run('--fail')
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('Invalid canonical bundle calibration reference')
+    } finally { removeDir(f.dir) }
+  })
   it('passes equality, then fails one-byte entry growth despite legacy tolerance, including loader metadata', () => {
     const f = fixture()
     try {
@@ -147,6 +157,28 @@ describe('exact delivered Brotli byte ceilings', () => {
       expect(updated.chunks.entry.maxBrotliBytes).toBe(f.bytes - 1)
       expect(updated.eager.maxBrotliBytesByRoute).toEqual({ '(tabs)/index.html': f.bytes - 2 })
       expect(f.run('--fail', '--json').status).toBe(1)
+    } finally { removeDir(f.dir) }
+  })
+
+  it('preserves historical canonical provenance on update and rejects a pin/reference mismatch', () => {
+    const f = fixture()
+    try {
+      f.budget.eager.maxBrotliBytesByRoute = { 'index.html': f.bytes }
+      f.budget.measurementReference = { schema_version: 1, contract: 'canonical-isolated-ssr-v1',
+        kind: 'historical-canonical-report-with-parity-proof', source_sha: 'a'.repeat(40), raw_artifacts_retained: false,
+        report_sha256: 'b'.repeat(64), build_log_sha256: 'f'.repeat(64), home_log_line: 1,
+        env_parity_proof_sha256: 'c'.repeat(64), layout_proof_sha256: 'd'.repeat(64),
+        browser_input_fingerprint: 'e'.repeat(64), entry_full_brotli_bytes: f.bytes, home_full_brotli_bytes: f.bytes }
+      f.save()
+      expect(f.run('--update').status).toBe(0)
+      const updated = JSON.parse(fs.readFileSync(f.config, 'utf8'))
+      expect(updated.measurementReference).toEqual(f.budget.measurementReference)
+      expect(f.run('--fail').status).toBe(0)
+      updated.chunks.entry.maxBrotliBytes += 1
+      fs.writeFileSync(f.config, JSON.stringify(updated))
+      const mismatch = f.run('--fail')
+      expect(mismatch.status).toBe(1)
+      expect(mismatch.stderr).toContain('Invalid canonical bundle calibration reference')
     } finally { removeDir(f.dir) }
   })
 })

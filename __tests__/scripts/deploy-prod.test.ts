@@ -10,6 +10,7 @@
  */
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 import { liveOriginEnv } from './remote-deploy-test-utils'
@@ -63,6 +64,18 @@ const BUILD_STUB = [
   'echo "⏱  stub stage: 0 с"',
   'echo "⏱  Время этапов:"',
   'echo "      0 с  stub stage"',
+  'if [[ "${STUB_PUBLIC_EVIDENCE:-0}" == "1" ]]; then',
+  '  mkdir -p dist/prod/_expo/static/js/web',
+  '  printf "module.exports={parseQuestUrlLocale:function(){}};" > dist/prod/_expo/static/js/web/entry-abcdef.js',
+  '  printf \'<script src="/_expo/static/js/web/entry-abcdef.js"></script>\' > dist/prod/index.html',
+  '  printf \'{"sha":"%s","dirty":false}\' "$(git rev-parse HEAD)" > dist/prod/.build-source.json',
+  '  cp .env.prod .env',
+  '  export CI=1 NODE_ENV=production EXPO_ENV=prod EXPO_PUBLIC_RNW_SLIM=1 EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false',
+  '  export EXPO_PUBLIC_AI_SIMILAR_SOURCE=static EXPO_PUBLIC_QUEST_LOCALE_HUBS=true',
+  '  BUNDLE_BUDGET_RUN_ID="$(node scripts/lib/productionBundleEvidence.js context prod)"',
+  '  export BUNDLE_BUDGET_RUN_ID',
+  '  BUNDLE_BUDGET_JS_DIR="$PWD/dist/prod/_expo/static/js/web" BUNDLE_BUDGET_HTML_DIR="$PWD/dist/prod" node scripts/guard-bundle-budget.js --fail --report',
+  'fi',
   'if [[ "${STUB_BUNDLE_GUARD:-0}" == "1" ]]; then',
   '  mkdir -p .codex-temp/bundle-fixture/js',
   '  printf "a%.0s" {1..200} > .codex-temp/bundle-fixture/js/entry-abcdef.js',
@@ -100,7 +113,7 @@ function makeFixture(): Fixture {
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
   // assert-deployable-source.js is the shipped live-revision gate (#3207).
   for (const script of ['assert-deployable-source.js', 'lib/buildStamp.js', 'lib/live-build-source.js', 'guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
-    'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js']) {
+    'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js', 'lib/productionBundleEvidence.js', 'lib/metroCacheInputs.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.copyFileSync(path.join(process.cwd(), 'scripts', script), target)
@@ -108,7 +121,9 @@ function makeFixture(): Fixture {
   fs.chmodSync(path.join(repo, 'scripts/deploy-prod.sh'), 0o755)
   writeFile(path.join(repo, 'scripts/run-with-build-lock.js'), LOCK_RUNNER_STUB)
   writeFile(path.join(repo, 'build-prod.sh'), BUILD_STUB, 0o755)
-  writeFile(path.join(repo, '.gitignore'), 'node_modules\n.env.*\n.codex-temp/')
+  writeFile(path.join(repo, '.gitignore'), 'node_modules\n.env\n.env.*\n.codex-temp/\ndist/')
+  writeFile(path.join(repo, 'package.json'), '{"name":"evidence-fixture","version":"1.0.0","scripts":{}}')
+  writeFile(path.join(repo, 'config/bundle-budget.json'), '{"tolerancePct":0,"chunks":{"entry":{"maxRawKB":10}},"eager":{"chunks":["entry"],"htmlRoutes":true}}')
   fs.symlinkSync(path.join(process.cwd(), 'node_modules'), path.join(repo, 'node_modules'), 'dir')
   writeFile(path.join(repo, '.env.prod'), 'APP_ENV=production')
   writeFile(path.join(repo, '.env.deploy'), 'PROD_SSH_USER=stub')
@@ -192,6 +207,89 @@ describe('build lock root', () => {
 })
 
 describe('scripts/deploy-prod.sh', () => {
+  const retainedManifest = (fixture: Fixture, sha: string) => {
+    const root = path.join(fixture.repo, '.codex-temp/deploy/bundle-artifacts')
+    const directory = fs.readdirSync(root).find((name) => name.startsWith(`${sha}-`))!
+    const file = path.join(root, directory, 'manifest.json')
+    return { file, value: JSON.parse(fs.readFileSync(file, 'utf8')) }
+  }
+
+  it('keeps measurement and publishing on one fixed owned root/shared dependencies across different SHAs', () => {
+    const fixture = makeFixture()
+    try {
+      const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const deployEnv = addDeployStubs(fixture)
+      const measured = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const ssr = { METRAVEL_WEB_OUTPUT: 'server', EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true', EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true', STUB_PUBLIC_EVIDENCE: '1', RETAIN_BUNDLE_EVIDENCE: '1' }
+      const measure = runDeploy(fixture, [measured], { ...ssr, STUB_SSH_STATUS: ' M forbidden', STUB_CAPABILITY: 'unavailable' })
+      expect(measure.status).toBe(0)
+      expect(measure.stdout).not.toContain('Backend SSR')
+      expect(measure.stdout).not.toContain('stub live check')
+      expect(readStubOut(fixture)).toMatchObject({ cwd: fixture.worktree, deploy: '0', lock_owned: '1' })
+      const before = retainedManifest(fixture, measured).value
+      expect(before).toMatchObject({ reference_eligible: true, original_exit_code: 0, source_sha: measured })
+      const logDirectory = path.join(fixture.repo, '.codex-temp/deploy')
+      const logName = fs.readdirSync(logDirectory).find((name) => name.startsWith(`prod-${measured.slice(0, 9)}-`) && name.endsWith('.log'))!
+      const finalLog = fs.readFileSync(path.join(logDirectory, logName))
+      expect(finalLog.length).toBeGreaterThan(before.log_prefix.bytes)
+      expect(crypto.createHash('sha256').update(finalLog.subarray(0, before.log_prefix.bytes)).digest('hex')).toBe(before.log_prefix.sha256)
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+      writeFile(path.join(fixture.repo, 'later.txt'), 'next revision')
+      git(fixture.repo, ['add', 'later.txt'])
+      git(fixture.repo, ['commit', '-qm', 'next revision'])
+      git(fixture.repo, ['push', '-q', 'origin', 'main'])
+      const published = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const publish = runDeploy(fixture, [published], { ...deployEnv, ...ssr, ...liveOriginEnv(fixture.root, live) })
+      expect(publish.status).toBe(0)
+      expect(publish.stdout).toContain('stub live check')
+      expect(readStubOut(fixture)).toMatchObject({ cwd: fixture.worktree, deploy: '1', lock_owned: '1' })
+      const after = retainedManifest(fixture, published).value
+      expect(after.reference_eligible).toBe(true)
+      expect(after.context.layout).toEqual(before.context.layout)
+      expect(after.context.layout).toMatchObject({ project_root: fixture.worktree,
+        canonical_root: fixture.repo, dependency_root: fs.realpathSync(path.join(fixture.repo, 'node_modules')), canonical: true })
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+      expect(worktreeCount(fixture)).toBe(1)
+    } finally { removeDir(fixture.root) }
+  })
+
+  it('retains a complete real budget failure by default before cleanup and preserves exit 1', () => {
+    const fixture = makeFixture()
+    try {
+      writeFile(path.join(fixture.repo, 'config/bundle-budget.json'), '{"tolerancePct":0,"chunks":{"entry":{"maxRawKB":10,"maxBrotliBytes":0}},"eager":{"chunks":["entry"],"htmlRoutes":true}}')
+      git(fixture.repo, ['add', 'config/bundle-budget.json'])
+      git(fixture.repo, ['commit', '-qm', 'strict fixture cap'])
+      git(fixture.repo, ['push', '-q', 'origin', 'main'])
+      const sha = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const result = runDeploy(fixture, [sha], { STUB_PUBLIC_EVIDENCE: '1', METRAVEL_WEB_OUTPUT: 'server', EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true', EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true' })
+      expect(result.status).toBe(1)
+      const { file, value } = retainedManifest(fixture, sha)
+      expect(value).toMatchObject({ reference_eligible: true, original_exit_code: 1, reasons: [] })
+      const report = JSON.parse(fs.readFileSync(path.join(path.dirname(file), 'budget-report.json'), 'utf8'))
+      expect(report).toMatchObject({ verdict: 'fail', measurement_status: 'complete', errors: [] })
+      expect(report.breaches.length).toBeGreaterThan(0)
+      expect(result.stdout).not.toContain('stub live check')
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+    } finally { removeDir(fixture.root) }
+  })
+
+  it('keeps unavailable evidence ineligible and preserves the original build failure', () => {
+    const fixture = makeFixture()
+    try {
+      const sha = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const result = runDeploy(fixture, [sha], { STUB_EXIT: '7' })
+      expect(result.status).toBe(7)
+      expect(retainedManifest(fixture, sha).value).toMatchObject({ reference_eligible: false, original_exit_code: 7 })
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+    } finally { removeDir(fixture.root) }
+  })
+
+  it('keeps both canonical launchers executable', () => {
+    for (const file of ['build-prod.sh', 'scripts/deploy-prod.sh']) {
+      expect(fs.statSync(path.resolve(file)).mode & 0o111).toBe(0o111)
+    }
+  })
+
   it('builds the named commit in the fixed isolated worktree and removes it afterwards', () => {
     const fixture = makeFixture()
     try {
@@ -293,7 +391,7 @@ describe('scripts/deploy-prod.sh', () => {
       expect(result.stdout.slice(0, tailStart)).toContain('♨️  Metro: тёплый кэш выката (32 МБ)')
       expect(result.stdout.slice(0, tailStart)).not.toContain('noise line')
       expect(result.stdout.slice(tailStart)).toContain('noise line')
-      const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))
+      const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy')).filter((name) => name.endsWith('.log'))
       expect(fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', log), 'utf8').trimEnd().split('\n').at(-1))
         .toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 3$/)
       expect(fs.existsSync(fixture.worktree)).toBe(false)

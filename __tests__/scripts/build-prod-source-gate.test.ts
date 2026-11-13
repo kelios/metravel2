@@ -66,6 +66,56 @@ const STATIC_BUILD_ENV = {
 const PRELUDE = extractGatePrelude()
 const ENTRY_POINT = extractEntryPoint()
 
+describe('canonical export environment provenance', () => {
+  it('captures the same effective defaults and command-local overrides as Expo in measure and publish modes', () => {
+    const root = makeTempDir('build-prod-export-env-')
+    try {
+      const source = readCanonicalDeploy()
+      const functions = ['apply_env', 'default_build_public_flag', 'apply_build_public_defaults', 'create_export_log', 'prepare_metro_cache', 'build_env']
+        .map((name) => {
+          const match = source.match(new RegExp(`^${name}\\(\\) \\{[\\s\\S]*?^\\}`, 'm'))
+          if (!match) throw new Error(`Missing shipped function ${name}`)
+          return match[0]
+        }).join('\n')
+      const bin = path.join(root, 'bin')
+      fs.mkdirSync(bin)
+      // Intercept every Node child, including `env ... node`: no Expo or render
+      // runs. Keep only fingerprints and known synthetic flags in the fixture.
+      fs.writeFileSync(path.join(bin, 'node'), `#!${process.execPath}
+const fs=require('node:fs'),crypto=require('node:crypto'),{parseEnv}=require('node:util');
+const args=process.argv.slice(2), command=args[0];
+if(command==='scripts/lib/productionBundleEvidence.js'||command==='scripts/build-web-safe.js') {
+ const env={...parseEnv(fs.readFileSync('.env','utf8')),...process.env};
+ const ignore=new Set(['DEPLOY','BUNDLE_BUDGET_RUN_ID']);
+ const entries=Object.entries(env).filter(([key])=>!ignore.has(key)).sort(([a],[b])=>a.localeCompare(b));
+ const keys=['NODE_ENV','EXPO_ENV','EXPO_WEB_BUILD_MINIFY','EXPO_WEB_BUILD_GENERATE_SOURCE_MAP','EXPO_PUBLIC_RNW_SLIM','EXPO_PUBLIC_AI_SIMILAR_SOURCE','EXPO_PUBLIC_QUEST_LOCALE_HUBS','METRAVEL_WEB_OUTPUT','EXPO_PUBLIC_WEB_RUNTIME_SSR','EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR','EXPO_PUBLIC_E2E_SCREENSHOT_MODE','EXPO_PUBLIC_SHOW_DEVTOOLS','EXPO_PUBLIC_IS_LOCAL_API'];
+ fs.writeFileSync(command.includes('productionBundleEvidence')?'capture.json':'export.json',JSON.stringify({fingerprint:crypto.createHash('sha256').update(JSON.stringify(entries)).digest('hex'),flags:Object.fromEntries(keys.map(key=>[key,env[key]??'<unset>']))}));
+ if(command.includes('productionBundleEvidence')) process.stdout.write('a'.repeat(32));
+}
+`, { mode: 0o755 })
+      fs.writeFileSync(path.join(root, '.env.prod'), 'EXPO_PUBLIC_API_URL=https://fixture.invalid\nEXPO_PUBLIC_IS_LOCAL_API=false\nEXPO_PUBLIC_E2E_SCREENSHOT_MODE=false\nEXPO_PUBLIC_SHOW_DEVTOOLS=false\n')
+      const results: unknown[] = []
+      for (const deploy of ['0', '1']) {
+        const body = [functions, "ENV_BACKUP=''", 'ENV_BACKUP_PRESENT=0', 'METRO_CACHE_ARGS=(-c)',
+          'SSR_EXPORT_DIR="$PWD/ssr-export"', 'SSR_RELEASE_DIR="$PWD/ssr-release"',
+          'mktemp() { echo "$PWD/env-backup"; }', 'unset EXPO_PUBLIC_AI_SIMILAR_SOURCE EXPO_PUBLIC_QUEST_LOCALE_HUBS', 'build_env prod'].join('\n')
+        const result = runCli('bash', ['-c', body], { cwd: root, env: { PATH: `${bin}:${process.env.PATH}`,
+          ...SSR_DEPLOY_ENV, DEPLOY: deploy, METRAVEL_METRO_CACHE_DIR: '',
+          EXPO_WEB_BUILD_MINIFY: 'false', EXPO_WEB_BUILD_GENERATE_SOURCE_MAP: 'true',
+          EXPO_PUBLIC_RNW_SLIM: '0' } })
+        expect(result.status).toBe(0)
+        const captured = JSON.parse(fs.readFileSync(path.join(root, 'capture.json'), 'utf8'))
+        const exported = JSON.parse(fs.readFileSync(path.join(root, 'export.json'), 'utf8'))
+        expect(captured).toEqual(exported)
+        expect(captured.flags).toMatchObject({ NODE_ENV: 'production', EXPO_ENV: 'prod', EXPO_WEB_BUILD_MINIFY: 'true',
+          EXPO_WEB_BUILD_GENERATE_SOURCE_MAP: 'false', EXPO_PUBLIC_RNW_SLIM: '1', EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'static', EXPO_PUBLIC_QUEST_LOCALE_HUBS: 'true' })
+        results.push(captured)
+      }
+      expect(results[0]).toEqual(results[1])
+    } finally { removeDir(root) }
+  })
+})
+
 const GIT_ENV = {
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_SYSTEM: '/dev/null',

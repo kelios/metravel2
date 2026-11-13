@@ -23,13 +23,14 @@ const MAX_EAGER_BROTLI_KB = 690
 // #3316: the routes of the card. The worst-route ceiling above cannot see them
 // (the home page is 214 KiB lighter), so each has its own.
 const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
-  'index.html': 469.5,
+  'index.html': 469.3,
   '(tabs)/travels/[param].html': 558,
 }
-// #3374: full delivered bytes of the normal 2026-11-12 SSR candidate,
-// including loader metadata. Exact equality leaves no tolerance or rounding spare.
-const ENTRY_BROTLI_BYTES = 232696
-const HOME_BROTLI_BYTES = 480758
+// #3374: full delivered bytes of canonical isolated F3, including loader metadata.
+// The historical report + parity proofs bootstrap provenance; raw JS was cleaned.
+// The next ordinary publisher creates the first complete retained evidence package.
+const ENTRY_BROTLI_BYTES = 232864
+const HOME_BROTLI_BYTES = 480545
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
 const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
@@ -186,6 +187,7 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
   if (exactRoutes['index.html'] !== HOME_BROTLI_BYTES) {
     throw new Error('bundle budget home exact Brotli bytes must match the committed measured pin.')
   }
+  require('../../scripts/lib/productionBundleEvidence').validateCalibrationReference(budget.measurementReference, budget)
   const eagerChunks = requireStringArray(eager.chunks, 'bundle budget.eager.chunks')
   if (eagerChunks.length !== 2 || eagerChunks[0] !== 'entry' || eagerChunks[1] !== '__expo-metro-runtime') {
     throw new Error('bundle budget.eager.chunks must keep entry and __expo-metro-runtime.')
@@ -1486,13 +1488,17 @@ describe('bundle budget release contract', () => {
       const tmpDir = makeTempDir('metravel-bundle-budget-index-update-')
       try {
         const committed = validateCommittedBudget(budgetPath)
+        // This synthetic owner-only export has no measured entry/home and is
+        // deliberately not a production calibration reference.
+        const synthetic = { ...committed }
+        delete synthetic.measurementReference
         const { jsDir, testBudgetPath } = writeFixture(
           tmpDir,
           {
             'index-1a2b3c4d.js': chunkSource(HOME_MARKER, 1000),
             'index-5e6f7a8b.js': chunkSource(QUESTS_MARKER, 3000),
           },
-          { ...committed, chunks: ownerRows },
+          { ...synthetic, chunks: ownerRows },
         )
         const pinnedContractPath = path.join(tmpDir, 'contract.test.ts')
         fs.copyFileSync(contractTestPath, pinnedContractPath)

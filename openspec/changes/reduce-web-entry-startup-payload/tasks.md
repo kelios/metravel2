@@ -1,7 +1,7 @@
 ## 1. Causal evidence and planning
 
 - [x] 1.1 Record the task scope, fixed byte baseline, validation layers and coordinated build/source freezes.
-- [x] 1.2 Export the clean production candidate with a current source map under the canonical build lock; record input identity and module/consumer ownership without claiming normalized map bytes as normal delivery.
+- [x] 1.2 Record current diagnostic source-map composition under the shared build lock and input identity; keep canonical startup ownership provisional until retained script-set verification, without claiming normalized map bytes as normal delivery.
 - [x] 1.3 Select and document parser/shell/serving boundaries from the current source map and preserve public contracts.
 
 ## 2. Exact budget regression control
@@ -17,8 +17,8 @@
 
 ## 4. Normal production measurement and code review
 
-- [x] 4.1 In the separately coordinated after window, export the normal source-map-off production candidate; verify both fixed byte targets and no locale chunk growth.
-- [x] 4.2 Pin exact entry/home bytes with no spare, lower their legacy KB ceilings, ratchet the committed contract test and pass `node scripts/guard-bundle-budget.js --fail`; reconcile the full scripts run with targeted reruns under the operation gate (5989 initial passes, prerequisite #3388, final contract suites; the existing optional OSM dependency skip remains explicit).
+- [ ] 4.1 Validate the next canonical isolated production candidate against both fixed byte targets with retained provenance; local-root exports remain diagnostic evidence.
+- [ ] 4.2 Calibrate exact canonical entry/home bytes with no spare, reconcile legacy KB ceilings and canonical reference metadata, then verify the next ordinary publisher's actual guard result.
 - [ ] 4.3 Run independent full-diff code review and repair findings, with code-only validation and no runtime/browser work during review.
 
 ## 5. Testing and completion owned by the delivery session
@@ -26,3 +26,11 @@
 - [ ] 5.1 After review/publication, verify the exact published revision, mobile-web then desktop home/article screenshots and console, plus affected persisted non-RU boot/recovery behavior after required backend preflight.
 - [ ] 5.2 Reconcile evidence with the unchanged public locale/URL contracts and record any remaining exact recheck.
 - [ ] 5.3 Run OpenSpec strict validation (and final all-spec validation before archive), then archive only after acceptance is complete.
+
+## 6. Canonical measurement correction after F3
+
+- [x] 6.1 Prove compiler-env and fixed-root parity of the existing build-only command; preserve the failed canonical report and distinguish full vs normalized measurements.
+- [x] 6.2 Capture the exact export child's effective provenance outside the served web root using the same environment array as Expo.
+- [x] 6.3 Retain bounded public-only evidence before cleanup on failure or explicit measurement opt-in; preserve original status and reject incomplete references.
+- [x] 6.4 Test real stubbed wrapper lifecycle, different SHAs/modes, environment equivalence, public allowlist, secret/symlink exclusion and failure cleanup.
+- [ ] 6.5 Record canonical reference caps, provenance and locale comparison; prove browser inputs unchanged from F3, then obtain independent review before the next ordinary publisher.

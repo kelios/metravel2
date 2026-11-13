@@ -791,6 +791,43 @@ Worktree снимается на любом выходе: брошенный wor
 консоль идут только этапы, таблица времени и итоги. `DEPLOY=0` — тот же путь без
 выкладки.
 
+Для точного bundle-budget эталон — этот же фиксированный worktree и его реальные
+симлинк-зависимости, а не экспорт из основного checkout: Metro использует
+абсолютный порядок путей для module IDs и относительные пути для chunk metadata.
+Build-only измерение production SSR запускается существующим wrapper, с теми же
+тремя SSR-входами, которые DEPLOY=1 получает после capability gate:
+
+```bash
+METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true \
+  DEPLOY=0 DEPLOY_QUIET=1 RETAIN_BUNDLE_EVIDENCE=1 scripts/deploy-prod.sh <sha>
+```
+
+Обычный `DEPLOY=0` без этих входов остаётся static preview. Оба режима держат
+один глобальный lock от fetch до cleanup и компилируют в одном абсолютном
+`dirname(MT)/worktrees/deploy-prod`, независимо от sha и времени. AI/HUBS defaults
+и command-local minifier flags по-прежнему задаёт `build-prod.sh`.
+
+До Expo `productionBundleEvidence` получает ту же effective env, что exporter,
+после defaults. Приватный context вне `dist/` хранит только известные безопасные
+значения флагов и hashes source/toolchain/dotenv/compiled-env/вычисленного public
+Expo config (включая APP_MANIFEST); raw env/config не сохраняются. Уникальный run
+ID связывает context с budget report и fingerprint конкретного budget config.
+Перед cleanup wrapper сохраняет публичные HTML/JS/CSS и `.build-source.json` в
+ignored `.codex-temp/deploy/bundle-artifacts/<sha>-<run>/`, автоматически при
+ошибке и при `RETAIN_BUNDLE_EVIDENCE=1` на успехе. Архив ограничен 64 MiB/1024
+файлами; `.env`, server, source maps, произвольные файлы и симлинки исключаются.
+Manifest содержит exact full-file sizes/SHA-256, отдельно normalized entry,
+полный home script sum и ownership markers фактических home/article script sets.
+Complete budget breach остаётся измерением; error/incomplete/missing/mismatched
+evidence не даёт `reference_eligible`. Код исходного build/deploy сохраняется.
+
+Новые автоматические byte pins требуют полного eligible-пакета. Исключение
+bootstrap #3374 явно обозначено в `measurementReference`: исторический canonical
+F3 report плюс независимые source/env/layout proofs; удалённый JS не объявляется
+восстановленным. Следующий обычный publisher создаёт первый полный пакет и
+проверяет exact caps. Full delivered entry и legacy normalized entry — разные
+метрики; integer byte caps не используют tolerance или округление KiB.
+
 Выкат монотонен (#3207): до worktree и SSH скрипт читает живую ревизию из
 `https://metravel.by/.build-source.json` и сверяет её с целью реальным
 `git merge-base`. Цель обязана содержать живую ревизию:

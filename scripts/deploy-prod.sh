@@ -55,6 +55,7 @@ export BUNDLE_BUDGET_REPORT_DIR="$LOG_DIR"
 QUIET_PATTERN='^(▶|⏱|🎉|❌|⚠️|✅|📊|🔖)|^(🧊|🧹|♨️) +Metro:|^ +[0-9]+ с  |Error|ERROR|^(Number of regular files transferred|Total transferred file size|Literal data|Matched data):'
 LOG=''
 STARTED_AT=$SECONDS
+BUILD_STARTED_AT=''
 
 remove_worktree() {
   local link
@@ -100,6 +101,13 @@ on_exit() {
   local status=$?
   trap - EXIT
   trap '' INT TERM HUP
+  # Preserve only public client evidence, before the fixed worktree disappears.
+  # A diagnostic archive failure must never rewrite the build/publication result.
+  if [[ -n "$BUILD_STARTED_AT" && ( "$status" != "0" || "${RETAIN_BUNDLE_EVIDENCE:-0}" == "1" ) ]]; then
+    if ! node "$SCRIPT_DIR/lib/productionBundleEvidence.js" archive "$WT" "$MT" "$SHA" "$LOG" "$status" "$BUILD_STARTED_AT"; then
+      echo '⚠️ Public bundle evidence unavailable; this attempt cannot establish new byte pins'
+    fi
+  fi
   remove_worktree || true
   # Итог — и в консоль, и последней строкой лога: падение до сборки, после неё
   # или по сигналу (130/143/129) иначе по логам не отличить (#2942). Лог без
@@ -174,6 +182,7 @@ if [[ "$DEPLOY" == "1" ]]; then
   export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true
   echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация' | tee -a "$LOG"
 fi
+BUILD_STARTED_AT="$(date +%s)"
 set +e
 if [[ "${DEPLOY_QUIET:-0}" == "1" ]]; then
   (cd "$WT" && DEPLOY="$DEPLOY" ./build-prod.sh prod) 2>&1 | tee -a "$LOG" | grep --line-buffered -E "$QUIET_PATTERN"

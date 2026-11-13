@@ -4,6 +4,25 @@ Keep initial web JavaScript delivery measurable and prevent any byte growth afte
 
 ## ADDED Requirements
 
+### Requirement: Reference measurement uses the production build context
+
+Release byte ceilings MUST come from the same fixed isolated production checkout, shared dependencies, effective compiler inputs and build pipeline used for publication. Diagnostic exports in another checkout SHALL NOT establish release ceilings. Public client evidence and private provenance MUST survive cleanup after a failed build, and after a successful measurement when retention is explicitly requested. Incomplete or mismatched provenance SHALL be ineligible for pinning.
+
+#### Scenario: Build-only reference
+- **WHEN** the existing build-only command is given the production SSR inputs for a reviewed revision
+- **THEN** it uses the same fixed absolute checkout and shared dependency location as publication
+- **AND** it applies the same compiler/default flags and never stages or publishes code
+
+#### Scenario: Failed budget keeps evidence
+- **WHEN** a build produces client files and a complete measurement but fails a byte ceiling
+- **THEN** cleanup still runs and preserves the original failure code
+- **AND** a bounded archive retains public client files, their full sizes/hashes, the matching report and private provenance
+- **AND** environment files, secrets, server code and symlinks are absent from the archive
+
+#### Scenario: Missing or invalid evidence
+- **WHEN** the report, source identity, public files or canonical build context cannot be verified
+- **THEN** the retained receipt reports incomplete evidence and cannot establish a byte ceiling
+
 ### Requirement: Initial payload is reduced from the recorded baseline
 
 The normal production web build SHALL deliver an entry below 233211 B Brotli and a home document script set below 481252 B Brotli. The evidence MUST identify current startup dependencies and their home/article first-render ownership without treating diagnostic source-map annotations as normal production delivery.

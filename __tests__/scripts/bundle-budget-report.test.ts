@@ -42,6 +42,22 @@ function fixture() {
 const reportFiles = (directory: string): string[] => fs.readdirSync(directory).filter((name) => name.endsWith('.json')).map((name) => path.join(directory, name))
 
 describe('exact bundle budget reports', () => {
+  it('supports legacy reports without a run link and rejects malformed optional run identities', () => {
+    const f = fixture()
+    try {
+      const result = f.run()
+      expect(result.status).toBe(0)
+      const report = JSON.parse(result.stdout).diagnostic_report
+      delete report.build_run_id
+      expect(() => validateReport(report)).not.toThrow()
+      report.build_run_id = 'a'.repeat(32)
+      expect(() => validateReport(report)).not.toThrow()
+      for (const malformed of ['not-a-run', ['a'.repeat(32)], null, 123]) {
+        report.build_run_id = malformed
+        expect(() => validateReport(report)).toThrow('build_run_id')
+      }
+    } finally { removeDir(f.dir) }
+  })
   it('resolves toolchain versions from the requested root and keeps malformed package fallback', () => {
     const f = fixture()
     try {

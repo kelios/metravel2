@@ -425,13 +425,21 @@ build_env() {
   apply_build_public_defaults "$ENV"
   node scripts/generate-home-responsive-css.js --check
   prepare_metro_cache
+  # One environment for provenance and Expo: command-local minifier/runtime
+  # overrides must be captured after the canonical public defaults above.
+  local web_export_env=(
+    CI=1 EXPO_NO_INTERACTIVE=1 NODE_ENV=production EXPO_ENV="$ENV"
+    EXPO_NO_METRO_LAZY=true EXPO_PUBLIC_RNW_SLIM=1
+    EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false
+  )
+  if [[ "$ENV" == "prod" ]]; then
+    BUNDLE_BUDGET_RUN_ID="$(env "${web_export_env[@]}" node scripts/lib/productionBundleEvidence.js context "$ENV")"
+    export BUNDLE_BUDGET_RUN_ID
+  fi
 
   if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
     rm -rf "$DIR" "$SSR_EXPORT_DIR" "$SSR_RELEASE_DIR"
-    CI=1 EXPO_NO_INTERACTIVE=1 NODE_ENV=production EXPO_ENV="$ENV" \
-      EXPO_NO_METRO_LAZY=true EXPO_PUBLIC_RNW_SLIM=1 \
-      EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-      node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} --output-dir "$SSR_EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
+    env "${web_export_env[@]}" node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} --output-dir "$SSR_EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
     node scripts/prepare-web-ssr.js --export-dir "$SSR_EXPORT_DIR" --static-dir "$DIR" \
       --runtime-dir "$SSR_RELEASE_DIR" --env-file ".env.$ENV"
     rm -f "$EXPORT_LOG"
@@ -445,15 +453,7 @@ build_env() {
   # (dist/.prod-staging, dist/.prod-build.lock) — иначе bash-флоу сметает их.
   find dist -mindepth 1 -maxdepth 1 ! -name "$ENV" ! -name '.*' -exec rm -rf {} + 2>/dev/null || true
 
-  CI=1 \
-  EXPO_NO_INTERACTIVE=1 \
-  NODE_ENV=production \
-  EXPO_ENV="$ENV" \
-  EXPO_NO_METRO_LAZY=true \
-  EXPO_PUBLIC_RNW_SLIM=1 \
-  EXPO_WEB_BUILD_MINIFY=true \
-  EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-    node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} 2>&1 | tee "$EXPORT_LOG"
+  env "${web_export_env[@]}" node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} 2>&1 | tee "$EXPORT_LOG"
 
   if [[ ! -f "dist/index.html" ]]; then
     echo "❌ Сборка не завершилась: не найден dist/index.html"

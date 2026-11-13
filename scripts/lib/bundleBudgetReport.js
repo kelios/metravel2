@@ -47,6 +47,7 @@ function reportIdentity(root, budgetPath) {
   const lockfile = { name: 'yarn.lock', fingerprint: fingerprintFile(path.join(root, 'yarn.lock'), 'Lockfile', errors) }
   return {
     schema_version: 1,
+    ...(process.env.BUNDLE_BUDGET_RUN_ID ? { build_run_id: process.env.BUNDLE_BUDGET_RUN_ID } : {}),
     sha,
     dirty,
     generated_at: new Date().toISOString(),
@@ -63,6 +64,7 @@ function reportIdentity(root, budgetPath) {
 function validateReport(value) {
   const invalid = (label) => { throw new Error(`Invalid bundle budget report: ${label}`) }
   if (!record(value) || value.schema_version !== 1) invalid('unsupported schema_version')
+  if (value.build_run_id !== undefined && (typeof value.build_run_id !== 'string' || !/^[a-f0-9]{32}$/.test(value.build_run_id))) invalid('build_run_id')
   if (value.sha !== null && !/^[0-9a-f]{40}$/.test(value.sha)) invalid('sha')
   if (value.dirty !== null && typeof value.dirty !== 'boolean') invalid('dirty')
   if (typeof value.generated_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value.generated_at) || !Number.isFinite(Date.parse(value.generated_at))) invalid('generated_at')
