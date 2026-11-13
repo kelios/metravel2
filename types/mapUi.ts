@@ -46,4 +46,12 @@ export type MapPlaceSearchFeedback = {
   scope: string;
   status: MapPlaceSearchStatus | null;
   retry: () => void;
+  selectCity?: (coordinates: { lat: number; lng: number }) => void;
+};
+
+export type MapCitySearchResult = {
+  id: string;
+  label: string;
+  lat: number;
+  lng: number;
 };

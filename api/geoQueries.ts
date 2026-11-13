@@ -101,6 +101,8 @@ interface UseLocationSearchQueryArgs {
   query: string
   enabled?: boolean
   limit?: number
+  /** Keep explicit search intent from being repeated by observer lifecycle events. */
+  userInitiatedOnly?: boolean
 }
 
 interface UseReverseGeocodeQueryArgs {
@@ -113,7 +115,7 @@ interface UseReverseGeocodeQueryArgs {
  * Location search via Nominatim. The query passed here should already be the
  * debounced value — debounce belongs to the input component, not the cache key.
  */
-export function useLocationSearchQuery({ query, enabled = true, limit = 7 }: UseLocationSearchQueryArgs) {
+export function useLocationSearchQuery({ query, enabled = true, limit = 7, userInitiatedOnly = false }: UseLocationSearchQueryArgs) {
   const trimmed = query.trim()
   const locale = getActiveLocale()
 
@@ -121,6 +123,12 @@ export function useLocationSearchQuery({ query, enabled = true, limit = 7 }: Use
     queryKey: queryKeys.locationSearch(trimmed, locale),
     enabled: enabled && trimmed.length >= 3,
     retry: false,
+    ...(userInitiatedOnly ? {
+      networkMode: 'always' as const,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    } : {}),
     staleTime: GEO_STALE_TIME_MS,
     gcTime: GEO_GC_TIME_MS,
     queryFn: async ({ signal }) => {

@@ -37,6 +37,7 @@ import type { TravelCoords } from '@/types/types';
 import { resolveMapCategorySelection } from '@/utils/mapCategorySelection';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
 import { parseWebViewJsonObject, toFiniteCoordinate } from '@/utils/webViewBridge';
+import { isValidCoordinate } from '@/utils/coordinateValidator';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 
 import { getLiveUserPosition } from '@/hooks/map/liveUserPosition';
@@ -263,6 +264,14 @@ export function useMapController({
     radius: filterValues.radius,
     onUserInitiatedMove,
   });
+
+  const searchAtCity = useCallback(({ lat, lng }: { lat: number; lng: number }) => {
+    if (mode !== 'radius' || !isValidCoordinate(lat, lng)) return;
+    cancelPendingCenterOnUser();
+    clearSelectedPlace();
+    setSearchAreaCenter({ latitude: lat, longitude: lng });
+    latestMapUiApiRef.current?.focusOnCoord?.(`${lat},${lng}`, { zoom: 12 });
+  }, [mode, cancelPendingCenterOnUser, clearSelectedPlace, setSearchAreaCenter]);
 
   // Data Controller
   // F-49 — an explicit "Search this area" pick (searchAreaCenter) wins over every
@@ -621,6 +630,8 @@ export function useMapController({
     // F-49 — "Search this area"
     canSearchThisArea,
     handleSearchThisArea,
+
+    searchAtCity,
 
     // Travels data
     radiusQuery,

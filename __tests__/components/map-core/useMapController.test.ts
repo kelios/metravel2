@@ -304,6 +304,73 @@ describe('useMapController (#991 smoke)', () => {
     }
   })
 
+  it('selecting a city moves the camera and radius anchor without changing filters or GPS origin', async () => {
+    const gps = { latitude: 53.9, longitude: 27.5667 }
+    mockMapCoordinatesResult.currentLocation = gps
+    const filterValues = { ...baseParams.filterValues, radius: '50', searchQuery: 'Несвиж', categoryTravelAddress: ['Замок'] }
+    const { result, rerender } = await renderHook(() => useMapController({ ...baseParams, filterValues }))
+    const focusOnCoord = jest.fn()
+    await act(() => {
+      result.current.mapPanelProps.onMapUiApiReady({ focusOnCoord } as any)
+      result.current.searchAtCity({ lat: 53.218, lng: 26.677 })
+    })
+    expect(mockSetSearchAreaCenter).toHaveBeenCalledWith({ latitude: 53.218, longitude: 26.677 })
+    expect(focusOnCoord).toHaveBeenCalledWith('53.218,26.677', { zoom: 12 })
+    mockSearchAreaCenter = mockSetSearchAreaCenter.mock.calls.at(-1)?.[0]
+    try {
+      await rerender()
+      expect(result.current.mapPanelProps.coordinates).toEqual({ latitude: 53.218, longitude: 26.677 })
+      expect(result.current.radiusQuery.source).toBe('manual')
+      expect(result.current.mapPanelProps.userLocation).toEqual(gps)
+      expect(result.current.mapPanelProps.radius).toBe('50')
+      expect(result.current.mapPanelProps.mapClusterFilters.query).toBe('Несвиж')
+      expect(filterValues.categoryTravelAddress).toEqual(['Замок'])
+    } finally {
+      mockSearchAreaCenter = null
+    }
+  })
+
+  it.each([{ lat: 91, lng: 26 }, { lat: 53, lng: Infinity }])('does not apply an invalid city coordinate %o', async city => {
+    const { result } = await renderHook(() => useMapController(baseParams))
+    const focusOnCoord = jest.fn()
+    await act(() => result.current.mapPanelProps.onMapUiApiReady({ focusOnCoord } as any))
+    await act(() => result.current.searchAtCity(city))
+    expect(mockSetSearchAreaCenter).not.toHaveBeenCalled()
+    expect(focusOnCoord).not.toHaveBeenCalled()
+  })
+
+  it('hands a selected city to the initial renderer while its map API is still unavailable', async () => {
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
+    expect(result.current.mapUiApi).toBeNull()
+    await act(() => result.current.searchAtCity({ lat: 53.218, lng: 26.677 }))
+    mockSearchAreaCenter = mockSetSearchAreaCenter.mock.calls.at(-1)?.[0]
+    try {
+      await rerender()
+      expect(result.current.mapPanelProps.coordinates).toEqual({ latitude: 53.218, longitude: 26.677 })
+      expect(result.current.radiusQuery.source).toBe('manual')
+      await act(() => result.current.mapPanelProps.onMapUiApiReady({ focusOnCoord: jest.fn() } as any))
+      expect(result.current.mapPanelProps.coordinates).toEqual({ latitude: 53.218, longitude: 26.677 })
+    } finally {
+      mockSearchAreaCenter = null
+    }
+  })
+
+  it('a city selection cancels pending GPS centering and clears the previous point card', async () => {
+    const { result, rerender } = await renderHook(() => useMapController({ ...baseParams, isMobile: true }))
+    const centerOnUser = jest.fn()
+    await act(() => result.current.mapPanelProps.onMapUiApiReady({ centerOnUser, focusOnCoord: jest.fn() } as any))
+    await act(() => {
+      result.current.centerOnUser()
+      result.current.mapPanelProps.onMarkerSelect?.({ coord: '53.9,27.5', address: 'Old point' } as any)
+    })
+    expect(result.current.selectedPlace).not.toBeNull()
+    await act(() => result.current.searchAtCity({ lat: 53.218, lng: 26.677 }))
+    expect(result.current.selectedPlace).toBeNull()
+    mockMapCoordinatesResult.currentLocation = { latitude: 54, longitude: 28 }
+    await rerender()
+    expect(centerOnUser).not.toHaveBeenCalled()
+  })
+
   it.each([false, true])('keeps the explicit URL point separate from fetched results (mobile=%s)', async isMobile => {
     const urlSelectedPlace = { id: 'url-49.261877,19.930121', coord: '49.261877,19.930121', address: 'Тропа над Реглями, Закопане' }
     const { result } = await renderHook(() => useMapController({ ...baseParams, isMobile,

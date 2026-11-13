@@ -5,8 +5,11 @@ import Feather from '@expo/vector-icons/Feather'
 
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import Chip from '@/components/ui/Chip'
+import LinkPressable from '@/components/ui/LinkPressable'
+import MapCitySearchRecovery from './MapCitySearchRecovery'
 import { formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
 import { getNextRadiusOption } from './mapEmptyState'
@@ -224,6 +227,17 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             )}
           </View>
         )}
+        {placeSearch?.selectCity && (
+          <MapCitySearchRecovery
+            query={searchQueryValue}
+            enabled={searchStatus === 'empty'}
+            onSelect={placeSearch.selectCity}
+            hintStyle={styles.sectionHint}
+          />
+        )}
+        <LinkPressable href="/quests/map" testID="map-quests-map-link" style={{ minHeight: DESIGN_TOKENS.touchTarget.minHeight, justifyContent: 'center' }}>
+          <Text style={[styles.sectionHint, { color: colors.primary }]}>{i18nT('map:placeSearch.questsMap')}</Text>
+        </LinkPressable>
       </View>
 
       {/* Радиус вынесен в плавающую иконку на карте (десктоп) и в верхний тулбар

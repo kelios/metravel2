@@ -6,6 +6,22 @@ import { getThemedColors, ThemeProvider } from '@/hooks/useTheme'
 import { FiltersProvider } from '@/context/MapFiltersContext'
 import type { RoutePoint } from '@/types/route'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useLocationSearchQuery } from '@/api/geoQueries'
+
+jest.mock('expo-router', () => {
+  const mocks = require('@/__tests__/helpers/expoRouterMock')
+  return {
+    Link: mocks.mockExpoRouterLink,
+    router: mocks.mockExpoRouterSingleton,
+    useRouter: mocks.mockUseRouter,
+    usePathname: () => '/map',
+    useLocalSearchParams: () => ({}),
+    useIsFocused: () => true,
+  }
+})
+
+jest.mock('@/api/geoQueries', () => ({ useLocationSearchQuery: jest.fn() }))
+const mockGeocode = jest.mocked(useLocationSearchQuery)
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native')
@@ -106,6 +122,7 @@ const renderWithTheme = async (ui: React.ReactNode, contextProps: any = defaultP
 describe('FiltersPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGeocode.mockReturnValue({ data: [], isFetching: false, isPending: false, isError: false, refetch: jest.fn() } as any)
   })
 
   it('renders correctly', async () => {
@@ -127,6 +144,34 @@ describe('FiltersPanel', () => {
     expect(defaultProps.onFilterChange).toHaveBeenCalledTimes(1)
     expect(defaultProps.onFilterChange).toHaveBeenCalledWith('radius', '100')
     expect(getByTestId('map-search-input').props.value).toBe('Мирский замок')
+  })
+
+  it('offers an explicit verified city after an empty area search and keeps the query', async () => {
+    const select = jest.fn()
+    mockGeocode.mockReturnValue({
+      data: [{ place_id: 'nesvizh', name: 'Несвиж', display_name: 'Несвиж, Беларусь', type: 'town', lat: '53.218', lon: '26.677', address: { town: 'Несвиж' } }],
+      isFetching: false, isPending: false, isError: false, refetch: jest.fn(),
+    } as any)
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      filterValue: { ...mockFilterValue, searchQuery: 'Несвиж' },
+      placeSearch: {
+        scope: '50 км от Минска', status: 'empty', retry: jest.fn(),
+        selectCity: select,
+      },
+    })
+    expect(select).not.toHaveBeenCalled()
+    await fireEvent.press(getByTestId('map-city-search-start'))
+    await fireEvent.press(getByTestId('map-city-search-result-0'))
+    expect(select).toHaveBeenCalledWith({ lat: 53.218, lng: 26.677 })
+    expect(getByTestId('map-search-input').props.value).toBe('Несвиж')
+  })
+
+  it('exposes the existing quest map as an internal discovery link', async () => {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />)
+    const link = getByTestId('map-quests-map-link')
+    expect(link.props.href).toBe('/quests/map')
+    expect(link.props.accessibilityRole).toBe('link')
   })
 
   it.each([

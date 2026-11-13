@@ -98,6 +98,7 @@ export function useMapScreenController() {
     radiusQuery,
     placeSearchStatus,
     retryPlaceSearch,
+    searchAtCity,
     locationState,
     geoError,
     refreshLocation,
@@ -246,8 +247,8 @@ export function useMapScreenController() {
     ? formatMapRadiusSummary(radiusQuery.radius, radiusQuery.source)
     : undefined;
   const placeSearch = useMemo(
-    () => placeSearchScope ? { scope: placeSearchScope, status: placeSearchStatus, retry: retryPlaceSearch } : undefined,
-    [placeSearchScope, placeSearchStatus, retryPlaceSearch],
+    () => placeSearchScope ? { scope: placeSearchScope, status: placeSearchStatus, retry: retryPlaceSearch, selectCity: searchAtCity } : undefined,
+    [placeSearchScope, placeSearchStatus, retryPlaceSearch, searchAtCity],
   );
   const {
     filtersValuesSlice,
