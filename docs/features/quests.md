@@ -1528,7 +1528,8 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   (#2817). Группы указателя — независимые нативные `details/summary`, закрытые
   при открытии страницы (#3399): весь набор ссылок остаётся в серверном HTML,
   раскрытие работает без JavaScript и с клавиатуры. Пустые группы не выводятся;
-  макет — `docs/design/quest-catalog-directory.md`.
+  focus-outline наследуется из общего critical CSS. Макет и production-приёмка
+  на 390/1980 px — `docs/design/quest-catalog-directory.md`.
   Размер каталога — одна цифра: плейсхолдер счётчика пишет
   `catalogTotal`, `ItemList` в JSON-LD несёт `numberOfItems`. Наличие ссылок на
   живой странице проверяет `npm run test:seo:prod` (`HUB_CONTENT_LINKS`).

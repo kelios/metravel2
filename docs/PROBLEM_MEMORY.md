@@ -8696,5 +8696,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Постоянный контроль:** `hubRawHtmlLinks.web.test.tsx` проверяет закрытые
   `details`, `summary/h2`, отсутствие пустых разделов и прежний состав ссылок.
   Живая приёмка требует mobile/desktop, клавиатуру, no-JS и отсутствие overflow.
+- **Приёмка 13.11.2026:** prod `77a9a9d5b`, mobile web 390×844 и desktop
+  1980×990, JS/no-JS — три закрытых summary по 44 px, указатель 132 px,
+  independent tap/click/Enter/Space, системный focus 2 px / offset 2 px,
+  292 прежних href и отсутствие overflow; EN no-JS — 242 локализованные ссылки.
+  Успешные контексты без page/console errors; начальный HTTP504 документа
+  сохранён отдельно с recovery200 и bounded remaining-only retest.
+  Подробное evidence/ограничения — `docs/design/quest-catalog-directory.md`.
 - **Повторная жалоба:** тот же механизм — reopen #3399; потеря href или иной
   сбой сетки/прокрутки требует отдельной проверки до выбора связанной задачи.
