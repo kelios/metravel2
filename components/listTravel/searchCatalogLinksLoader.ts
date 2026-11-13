@@ -1,4 +1,4 @@
-import type { ImmutableRequest } from 'expo-server'
+import { setResponseHeaders, type ImmutableRequest } from 'expo-server'
 import { fetchPublicRouteJsonResponse, publicRouteError } from '@/utils/ssr/fetchPublicRouteJson'
 import { memoizePublicRouteData, type PublicRouteRequest } from '@/utils/ssr/publicRouteData'
 import { buildTravelPath } from '@/utils/routePaths'
@@ -50,7 +50,11 @@ function fetchSearchCatalogLinks(request: PublicRouteRequest, page: number): Pro
       // Первая страница — сам каталог: сбой вспомогательного запроса не роняет
       // /search, блок ссылок просто не рисуется. Адрес `?page=N` существует
       // только ради блока, поэтому там сбой — 503/404.
-      if (page === 1) return null
+      if (page === 1) {
+        // #3363: backend must not cache an incomplete first-page document.
+        setResponseHeaders({ 'X-Metravel-Search-Catalog-State': 'degraded' })
+        return null
+      }
       throw error
     }
   })

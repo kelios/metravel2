@@ -1,4 +1,4 @@
-import type { ImmutableRequest } from 'expo-server'
+import { setResponseHeaders, type ImmutableRequest } from 'expo-server'
 import { loadSearchCatalogLinks } from '@/components/listTravel/searchCatalogLinksLoader'
 import {
   parseSearchCatalogQuery,
@@ -66,6 +66,7 @@ describe('search catalog links loader', () => {
     process.env.EXPO_PUBLIC_API_URL = 'http://localhost:8000'
     process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR = 'true'
     global.fetch = fetchMock
+    jest.mocked(setResponseHeaders).mockClear()
     fetchMock.mockReset().mockImplementation(async (url: string) => {
       const number = Number(new URL(url).searchParams.get('page'))
       return number > 37 ? answer(404, { detail: 'Invalid page.' }) : answer(200, page(number))
@@ -97,6 +98,7 @@ describe('search catalog links loader', () => {
   it('has no previous page on /search and no next page on the last one', async () => {
     await expect(loadSearchCatalogLinks(request())).resolves.toMatchObject({ page: 1, prevPath: null, nextPath: '/search?page=2' })
     await expect(loadSearchCatalogLinks(request('?page=37'))).resolves.toMatchObject({ page: 37, prevPath: '/search?page=36', nextPath: null })
+    expect(setResponseHeaders).not.toHaveBeenCalled()
   })
 
   it('answers 404 for a page out of range and for an invalid page', async () => {
@@ -113,16 +115,20 @@ describe('search catalog links loader', () => {
   it('answers 503 for an API failure on page N but keeps /search itself alive', async () => {
     fetchMock.mockResolvedValueOnce(answer(500, {}))
     await expect(loadSearchCatalogLinks(request('?page=3'))).rejects.toMatchObject({ httpStatus: 503 })
+    expect(setResponseHeaders).not.toHaveBeenCalled()
     fetchMock.mockResolvedValueOnce(answer(500, {}))
     await expect(loadSearchCatalogLinks(request())).resolves.toBeNull()
+    expect(setResponseHeaders).toHaveBeenNthCalledWith(1, { 'X-Metravel-Search-Catalog-State': 'degraded' })
     fetchMock.mockResolvedValueOnce(answer(200, { unexpected: true }))
     await expect(loadSearchCatalogLinks(request('?page=1'))).resolves.toBeNull()
+    expect(setResponseHeaders).toHaveBeenNthCalledWith(2, { 'X-Metravel-Search-Catalog-State': 'degraded' })
   })
 
   it('leaves a filtered catalogue alone, whatever its page parameter', async () => {
     await expect(loadSearchCatalogLinks(request('?search=minsk'))).resolves.toBeNull()
     await expect(loadSearchCatalogLinks(request('?page=abc&categories=2'))).resolves.toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(setResponseHeaders).not.toHaveBeenCalled()
   })
 
   it('stays out of the way without the SSR runtime (static /search.html)', async () => {
@@ -131,6 +137,7 @@ describe('search catalog links loader', () => {
     process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR = 'true'
     await expect(loadSearchCatalogLinks(undefined)).resolves.toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(setResponseHeaders).not.toHaveBeenCalled()
   })
 
   it('asks the API once per request for the loader and the metadata', async () => {
