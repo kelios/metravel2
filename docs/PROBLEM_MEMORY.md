@@ -8500,3 +8500,44 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   без причины — `reopen #3337`; причина названа и повторяется при
   `quest-web-refresh` — новая связанная карточка на проверку или шлюз, а не
   увеличение дедлайна.
+
+### SEARCH-CATALOG-DEGRADED-RENDER-CACHED-001 — неполный SSR-каталог неотличим от полного для кэша
+
+- **Problem key:** `search-catalog-degraded-render-cached`.
+- **Цепочка:** backend #3279 — потребитель внутреннего маркера; frontend #3323 —
+  ссылки каталога, #3335 — видимый указатель; #3363 — недостающий producer
+  маркера, принят 13.11.2026. Это отдельный механизм от slug/SSG-семейства
+  `SEO-SSR-001`, build-time `BUILD-CATALOG-001` и transport retry
+  `WEB-SSR-KEEPALIVE-RESET-001`; их история не меняется.
+- **Подтверждённая причина:** `fetchSearchCatalogLinks` при сбое
+  `GET /api/travels/catalog-links/?page=1` возвращал `null`, сохраняя 200 для
+  `/search`, но не помечал неполный документ. Существующее backend-правило
+  запрета кэширования не могло отличить его от полного. Риск кэширования
+  установлен из контракта и RED-тестов; live-сбой и cache-hit не имитировались.
+- **Инвариант и исправление:** только первая страница с неполученными ссылками
+  несёт `X-Metravel-Search-Catalog-State: degraded` от рендерера; её 200/null
+  fallback сохранён. В `searchCatalogLinksLoader.ts:53–57` используется
+  существующий request-local `expo-server.setResponseHeaders`. Успех,
+  фильтрованный/не-SSR запрос и последующие здоровые ответы не получают маркер;
+  страницы ≥2 сохраняют прежние 503/404. Platform impact: серверный HTML
+  desktop/mobile web; Android/iOS и localization: none.
+- **Постоянный контроль:**
+  [loader tests](../__tests__/components/listTravel/searchCatalogLinksLoader.test.ts)
+  и [response tests](../__tests__/components/listTravel/searchCatalogLinksResponse.test.ts):
+  HTTP/transport/JSON/payload failures первой страницы, здоровые ответы,
+  отказы поздних страниц, memoization, interleaved/sequential isolation.
+  34/34 PASS; response-тест использует реальный Expo Node request scope и
+  `Response`, подменяя только API. Контракт закреплён в
+  [search-catalog-render-state](../openspec/specs/search-catalog-render-state/spec.md).
+- **Приёмка 13.11.2026:** независимые review/gate PASS без findings; опубликован
+  `b3a5febd2dc8de7c6b7df80bd0969f15574d9a9f`, live SHA совпал, `dirty: false`.
+  Normal GET/HEAD `/search` — 200 без публичного маркера; HTML parser нашёл
+  один настоящий page-1 nav и 12 различных подписанных ссылок на статьи.
+  11/11 assertions PASS, parser controls отсекают escaped/script/template
+  маркеры. Публичное отсутствие заголовка само по себе не доказывает producer:
+  nginx скрывает его; failure/isolation evidence остаётся на уровне unit.
+- **Повторная проверка:** при изменении loader, Expo response scope, API payload,
+  SSR flags, пагинации или политики скрытия заголовка повторить соответствующий
+  producer/isolation control и production SHA + normal raw-nav/HTTP gate.
+  Тот же пропущенный marker или утечка состояния — `reopen #3363`; иной сбой
+  gateway/nginx/cache — связанная backend-задача с отдельным evidence.
