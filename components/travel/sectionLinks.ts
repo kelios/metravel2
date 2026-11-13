@@ -15,6 +15,12 @@ export type TravelSectionLink = {
 
 type BuildTravelSectionLinksOptions = {
   platform?: typeof Platform.OS
+  /**
+   * Блок «Похожие статьи» (#2459) есть на странице. Наличие известно только из
+   * ответа соседей, поэтому его передаёт вызывающий (`useAiSimilarAvailability`),
+   * а не выводит построитель из полей статьи (#3395).
+   */
+  hasSimilar?: boolean
 }
 
 const pushIf = (
@@ -69,6 +75,8 @@ export const buildTravelSectionLinks = (
   pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: i18nT('travel:components.travel.sectionLinks.koordinaty_mest_b024ee27') })
   links.push({ key: "near", icon: "map-pin", label: i18nT('travel:components.travel.sectionLinks.ryadom_mozhno_posmotret_a8f25f47') })
   links.push({ key: "popular", icon: "star", label: i18nT('travel:components.travel.sectionLinks.populyarnye_marshruty_95d66469') })
+  // Порядок пунктов повторяет порядок секций: блок «Похожие» стоит после «Популярные».
+  pushIf(options.hasSimilar === true, links, { key: "similar", icon: "book-open", label: i18nT('aiPicksStatic:similar.travelTitle') })
   links.push({ key: "comments", icon: "message-circle", label: i18nT('travel:components.travel.sectionLinks.kommentarii_80cf82b1') })
 
   return links

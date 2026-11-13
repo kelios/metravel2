@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
+import { useAiSimilarAvailability } from '@/hooks/useAiSimilarAvailability'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { noteTravelViewForAppInstall } from '@/utils/appInstallSignal'
 import { rIC } from '@/utils/rIC'
@@ -124,7 +125,12 @@ export function useTravelDetailsContainerViewModel({
   themedPrimarySoft,
   travel,
 }: UseTravelDetailsContainerViewModelArgs) {
-  const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel])
+  // #3395: пункт «Похожие статьи» есть, пока у статьи есть смысловые соседи.
+  const hasSimilar = useAiSimilarAvailability('travel', Number(travel?.id), 'travel')
+  const sectionLinks = useMemo(
+    () => buildTravelSectionLinks(travel, { hasSimilar }),
+    [travel, hasSimilar]
+  )
   const trackScrollDepth = useContentScrollAnalytics({
     source: 'travel_detail',
     contentType: 'travel',

@@ -85,6 +85,14 @@
   `nearInViewport`; кадр сайдбара не объявляется устоявшимся, пока идёт запрос
   `queryKeys.aiSimilarSource`), `app/(tabs)/quests/[city]/[questId].tsx` (`relatedTravelsSlot`),
   `ListTravelBase` (`listIntroContent` — заголовок прокручиваемого списка, только путь `/search`).
+- Пункт меню статьи «Похожие статьи» (#3395): ключ секции `similar` (`SECTION_KEYS`,
+  `AnchorsMap`, `SIDEBAR_FORCE_OPEN_KEYS`), блок статьи получает `sectionKey="similar"` и
+  `anchorRef` (у квеста остаётся `ai-similar`). Наличие пункта решает
+  `hooks/useAiSimilarAvailability.ts`: читает кэш того же запроса (`aiSimilarQueryKey`, общий с
+  `useAiSimilar`) через `useSyncExternalStore`, своего запроса не делает и `api/aiPicks` в чанк
+  меню не тянет. До ответа пункт оптимистично есть (слепок покрывает все статьи индекса), пустой
+  ответ или ошибка его убирают, выключенный блок — пункта нет. Связку хук ↔ блок держит тест
+  `__tests__/hooks/useAiSimilarAvailability.test.tsx` на настоящем `AiSimilarSection`.
 
 ## Подсказка значений в визарде статьи (#2886)
 

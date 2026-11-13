@@ -185,7 +185,13 @@ export const TravelDetailsSidebarSection: React.FC<{
         */}
         {AiSimilarSectionLazy && hasValidTravelId ? (
           <Suspense fallback={null}>
-            <AiSimilarSectionLazy type="travel" id={Number(travel.id)} enabled={nearInViewport} />
+            <AiSimilarSectionLazy
+              type="travel"
+              id={Number(travel.id)}
+              enabled={nearInViewport}
+              sectionKey="similar"
+              anchorRef={anchors.similar}
+            />
           </Suspense>
         ) : null}
         {shouldShowNavigationArrows && (

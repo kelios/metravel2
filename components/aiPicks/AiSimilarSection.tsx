@@ -24,6 +24,13 @@ type Props = {
   /** Откладывает запрос, пока секция не рядом с вьюпортом. */
   enabled?: boolean
   testID?: string
+  /**
+   * Ключ секции для навигации страницы (`data-section-key` на web, #3395): статья
+   * передаёт `similar` — по нему прокручивает и подсвечивает пункт меню.
+   */
+  sectionKey?: string
+  /** Якорь секции для прокрутки на native (`AnchorsMap.similar`). */
+  anchorRef?: React.Ref<React.ComponentRef<typeof View>>
 }
 
 /**
@@ -37,7 +44,15 @@ export function AiSimilarSection(props: Props) {
   return isAiSimilarEnabled() ? <AiSimilarSectionContent {...props} /> : null
 }
 
-function AiSimilarSectionContent({ type, id, limit = 6, enabled = true, testID = 'ai-similar-section' }: Props) {
+function AiSimilarSectionContent({
+  type,
+  id,
+  limit = 6,
+  enabled = true,
+  testID = 'ai-similar-section',
+  sectionKey = 'ai-similar',
+  anchorRef,
+}: Props) {
   const colors = useThemedColors()
   const { isHydrated, isMobile } = useResponsive()
   const isNarrowLayout = isHydrated && isMobile
@@ -56,12 +71,13 @@ function AiSimilarSectionContent({ type, id, limit = 6, enabled = true, testID =
 
   return (
     <View
+      ref={anchorRef}
       style={styles.section}
       testID={testID}
       collapsable={false}
       accessibilityLabel={heading}
       accessibilityRole={Platform.OS === 'web' ? ('region' as never) : undefined}
-      {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'ai-similar' } } : {})}
+      {...(Platform.OS === 'web' ? { dataSet: { sectionKey } } : {})}
     >
       <View style={styles.headerRow}>
         <Feather name="compass" size={18} color={colors.primaryDark} />

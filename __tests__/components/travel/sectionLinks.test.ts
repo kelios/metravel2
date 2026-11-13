@@ -75,4 +75,22 @@ describe('buildTravelSectionLinks', () => {
       )
     },
   )
+
+  // #3395: блок «Похожие статьи» есть на странице только при смысловых соседях —
+  // о них знает вызывающий, построитель лишь ставит пункт в порядок секций.
+  it('places the similar link right after popular when the block is present', () => {
+    const keys = buildTravelSectionLinks(travelWithPoints, { platform: 'web', hasSimilar: true }).map((link) => link.key)
+
+    expect(keys.slice(keys.indexOf('popular'), keys.indexOf('popular') + 3)).toEqual(['popular', 'similar', 'comments'])
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['false', false],
+  ] as const)('drops the similar link when hasSimilar is %s', (_label, hasSimilar) => {
+    const keys = buildTravelSectionLinks(travelWithPoints, { platform: 'web', hasSimilar }).map((link) => link.key)
+
+    expect(keys).not.toContain('similar')
+    expect(keys).toEqual(expect.arrayContaining(['popular', 'comments']))
+  })
 })

@@ -65,6 +65,7 @@ const SECTION_KEYS = [
   'points',
   'near',
   'popular',
+  'similar',
   'excursions',
   'comments',
 ] as const;

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { fetchAiSearch, fetchAiSimilar, fetchNearRoute, AI_SEARCH_MIN_QUERY_LENGTH, type AiNearRoutePoint, type AiPickType } from '@/api/aiPicks'
 import { queryKeys } from '@/api/queryKeys'
+import { aiSimilarQueryKey, toAiSimilarSourceId } from '@/hooks/useAiSimilarAvailability'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getActiveLocale } from '@/i18n'
 import { isAiPicksEnabled, isAiSimilarEnabled } from '@/utils/aiPicksConfig'
@@ -26,9 +27,9 @@ export interface UseAiSimilarOptions {
 
 export function useAiSimilar({ type, id, limit, resultType, enabled = true }: UseAiSimilarOptions) {
   const locale = getActiveLocale()
-  const numericId = typeof id === 'number' && Number.isInteger(id) && id > 0 ? id : 0
+  const numericId = toAiSimilarSourceId(id)
   return useQuery({
-    queryKey: queryKeys.aiSimilar(type, numericId, locale, resultType ?? 'all'),
+    queryKey: aiSimilarQueryKey(type, numericId, locale, resultType),
     queryFn: ({ signal }) => fetchAiSimilar({ type, id: numericId, locale, limit, resultType, signal }),
     // #3292: блоки «Похожие» работают и без службы — на статическом слепке.
     enabled: enabled && isAiSimilarEnabled() && numericId > 0,

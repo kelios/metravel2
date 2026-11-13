@@ -77,7 +77,7 @@ const TravelDetailsFooterSectionLazy = React.lazy(() =>
 )
 
 const MAP_FORCE_OPEN_KEYS = new Set(['map', 'points', 'excursions'])
-const SIDEBAR_FORCE_OPEN_KEYS = new Set(['near', 'popular'])
+const SIDEBAR_FORCE_OPEN_KEYS = new Set(['near', 'popular', 'similar'])
 
 function shouldForceLoadMapSection(forceOpenKey: string | null) {
   return !!forceOpenKey && MAP_FORCE_OPEN_KEYS.has(forceOpenKey)
