@@ -25,7 +25,6 @@ const DIRECTORY_CSS = `
 [data-quests-directory]{margin:${spacing.xl}px 0 ${spacing.xs}px;color:var(--color-text)}
 [data-quests-directory] summary{min-height:${touchTarget.minHeight}px;padding:${spacing.xs}px 0;box-sizing:border-box;cursor:pointer}
 [data-quests-directory] summary h2{display:inline;font-size:${typography.sizes.lg}px;line-height:1.3;margin:0}
-[data-quests-directory] summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:${spacing.xxs}px}
 [data-quests-directory] ul{list-style:none;margin:0;padding:0;font-size:15px;line-height:2.2}
 [data-quests-directory] li{display:inline}
 [data-quests-directory] li:not(:last-child)::after{content:"· ";margin-left:10px;word-spacing:6px;color:var(--color-textMuted)}
