@@ -6,7 +6,7 @@
 
 ## 2. Exact budget regression control
 
-- [x] 2.1 Add optional exact full-chunk and normalized HTML-route Brotli integer ceilings, fail-closed input/target handling and compatible persisted diagnostics.
+- [x] 2.1 Add optional exact full-chunk and full HTML-route Brotli integer ceilings, fail-closed input/target handling and compatible persisted diagnostics.
 - [x] 2.2 Prove exact equality, +1 B failure despite legacy tolerance, loader metadata inclusion, missing/malformed targets, legacy compatibility and preservation on update in focused script tests.
 
 ## 3. Startup ownership
@@ -17,15 +17,15 @@
 
 ## 4. Normal production measurement and code review
 
-- [ ] 4.1 Validate the next canonical isolated production candidate against both fixed byte targets with retained provenance; local-root exports remain diagnostic evidence.
-- [ ] 4.2 Calibrate exact canonical entry/home bytes with no spare, reconcile legacy KB ceilings and canonical reference metadata, then verify the next ordinary publisher's actual guard result.
-- [ ] 4.3 Run independent full-diff code review and repair findings, with code-only validation and no runtime/browser work during review.
+- [x] 4.1 Validate canonical isolated candidate `db532a547b908e3c723f2de518e7dddfd3bcfbab` against both fixed byte targets with eligible retained provenance; local-root exports remain diagnostic evidence.
+- [x] 4.2 Calibrate exact canonical entry/home bytes with no spare, reconcile legacy KB ceilings and historical reference metadata, then verify the publisher's actual guard: complete/pass, zero breaches, entry 232864 B and home 480545 B Brotli.
+- [x] 4.3 Complete independent full-diff audit and code-review gate, repairing findings with code-only validation before production QA; retain the composite 154-test evidence rather than claiming a new full run.
 
 ## 5. Testing and completion owned by the delivery session
 
-- [ ] 5.1 After review/publication, verify the exact published revision, mobile-web then desktop home/article screenshots and console, plus affected persisted non-RU boot/recovery behavior after required backend preflight.
-- [ ] 5.2 Reconcile evidence with the unchanged public locale/URL contracts and record any remaining exact recheck.
-- [ ] 5.3 Run OpenSpec strict validation (and final all-spec validation before archive), then archive only after acceptance is complete.
+- [x] 5.1 Verify published `db532a547` with guest desktop 1440×900 home/article screenshots, script identities, network and console evidence, plus direct `/pl/quests` SSR/client boot (`lang=pl`, no pending/recovery). Reuse the unchanged mobile rendering boundary and locale failure/recovery code tests under `.codex-temp/task3374/acceptance-selection.md`; no new mobile or injected-failure runtime is claimed.
+- [x] 5.2 Reconcile all 30 passing production assertions, four deployed catalog SHA/raw/q11 identities, reused 557 i18n tests and 55 RU/default source identities with unchanged URL/locale contracts. Preserve the article warning `No available adapters.`; recheck on changed bundled inputs, served SHA/assets, provenance/caps or locale/SSR/error behavior.
+- [x] 5.3 Run change/specs/all OpenSpec strict validation, verify inline canonical-spec sync, and archive on 2026-11-13 after production acceptance is complete.
 
 ## 6. Canonical measurement correction after F3
 
@@ -33,4 +33,4 @@
 - [x] 6.2 Capture the exact export child's effective provenance outside the served web root using the same environment array as Expo.
 - [x] 6.3 Retain bounded public-only evidence before cleanup on failure or explicit measurement opt-in; preserve original status and reject incomplete references.
 - [x] 6.4 Test real stubbed wrapper lifecycle, different SHAs/modes, environment equivalence, public allowlist, secret/symlink exclusion and failure cleanup.
-- [ ] 6.5 Record canonical reference caps, provenance and locale comparison; prove browser inputs unchanged from F3, then obtain independent review before the next ordinary publisher.
+- [x] 6.5 Record canonical reference caps, provenance and locale comparison; prove browser inputs unchanged from F3, obtain independent review, and confirm the normal publisher's complete same-run package and deployed identities.

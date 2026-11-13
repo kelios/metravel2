@@ -32,3 +32,8 @@ None. Existing locale, URL, API and navigation behavior is preserved.
 - Non-goals: chunk merge plan, caching, screen content, dependency/framework rewrites, native/store releases, unrelated byte pins, protected files and neighboring optimizations.
 - Reactivation evidence: the F3 canonical export remained below both original goals but exceeded the invalid local-root entry pin. The custom runner omitted the production HUBS default, and absolute path ordering changed module IDs/shared metadata. Keep application and Metro behavior unchanged; correct the measurement/provenance mechanism and calibrate exact caps from the actual canonical report.
 - Open questions: none for implementation. The next ordinary canonical publication validates retained provenance and both byte gates; no redundant diagnostic export is required.
+
+
+## Delivery result — 2026-11-13
+
+Published and accepted revision: `db532a547b908e3c723f2de518e7dddfd3bcfbab`. Full delivered entry is 232864 B Brotli; home scripts total 480545 B over 13 files, both exactly equal to the no-spare caps and below the fixed original thresholds. Production acceptance passed 30/30 assertions on desktop home/article and the PL hub, with unchanged mobile/code boundaries reused. The complete eligible canonical public package supersedes the historical calibration-only artifact; design.md records metric bases, source identities, the one article warning and the limits of reused evidence.

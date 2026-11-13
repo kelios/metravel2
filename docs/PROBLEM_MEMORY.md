@@ -5053,6 +5053,51 @@ guard, падающий в CI на попытке обойти этот конт
   Полевой INP #2846 и эти будущие границы не подменяют Done gate #2738:
   новый artifact с нулём превышений, штатная публикация и живая web-приёмка.
 
+#### Приёмка startup payload и canonical measurement — #3374, 13.11.2026
+
+- **Механизм:** startup-потребители URL/локали импортировали полный quest
+  routing facade с serving projection. Parser leaf отделён от shell helpers и
+  route-owned serving API с сохранением прежних exports/типов и SSR packaging.
+  Retained canonical home/article script sets содержат parser/shell markers без
+  serving-projection marker; прежняя HUBS-off карта остаётся диагностической.
+- **Рецидив измерения:** первый local-root pin не выдержал canonical F3:
+  custom runner пропустил prod HUBS default, а перенос app в worktree при общих
+  real node_modules менял абсолютный порядок module IDs и chunk metadata.
+  Это не основание ослаблять guard. Эталон — существующий canonical wrapper,
+  один фиксированный `worktrees/deploy-prod`, общий build lock, те же compiler
+  inputs/defaults. Upstream/Metro/chunk-merge алгоритм не переписан.
+- **Постоянные controls:** exact integer entry/home byte caps учитывают loader
+  metadata, не используют KiB rounding/tolerance и ловят +1 B; legacy policy
+  остальных строк сохранена. Provenance получает точную effective env export
+  child; private context и report связаны run/source/config fingerprints.
+  До cleanup сохраняется ограниченный public-only JS/HTML/CSS пакет; secrets,
+  server и symlinks исключены, incomplete/error evidence не годится для pin.
+  Complete measured budget breach сохраняет исходный nonzero exit и evidence.
+- **Фактический canonical результат:** production
+  `db532a547b908e3c723f2de518e7dddfd3bcfbab`; full entry **232864 B Brotli**,
+  home **480545 B / 13 scripts**, exact caps равны этим значениям. Запас до
+  исходных fixed thresholds 233211/481252 B — 347/707 B; это не controlled
+  same-source causal delta. Normalized entry отдельно **232870 B**.
+  Eligible same-run manifest содержит 416 public files; hashes/source/context/
+  config/report проверены. Historical F3 raw JS был удалён, его SHA не заявлен.
+- **Живая приёмка:** 13.11.2026 00:52 UTC, **30/30 PASS**, guest desktop
+  1440×900, home и реальная travel article; PL `/pl/quests` имеет SSR/client
+  `lang=pl`, без pending/recovery. Console/page errors — 0; сохранён один
+  article warning `No available adapters.`. Deployed BE/UK/PL/EN совпадают с
+  retained SHA/raw/q11 и историческими canonical именами/полными размерами;
+  отдельного deferred RU нет. Неизменённая mobile boundary и locale recovery/
+  grammar/SSR tests переиспользованы по
+  [selection](../.codex-temp/task3374/acceptance-selection.md), нового mobile
+  runtime не заявлено. Warm terminal, first-page2/cache-HIT и CLS этого SHA
+  этой приёмкой не утверждаются.
+- **Receipts/recheck:** [production report](../.codex-temp/task3374/acceptance/production-2026-11-13T00-52-13-947Z/report.json),
+  [Done verdict](../.codex-temp/task3374/acceptance/3374-done-verdict.json),
+  [canonical manifest](../.codex-temp/deploy/bundle-artifacts/db532a547b908e3c723f2de518e7dddfd3bcfbab-20261113T004343879Z-64190/manifest.json).
+  При изменении bundled inputs, served SHA/assets, layout/provenance, exact cap
+  или locale/SSR/error behavior нужен соответствующий свежий check; local
+  estimate, diagnostic export и чужой viewport не заменяют эти доказательства.
+
+
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 
 - **Инвариант:** медианный prod mobile TBT укладывается в сайтовый бюджет
