@@ -14,5 +14,5 @@
 
 - [x] 3.1 Run all five failed suites and affected AI/native/selection tests through the normal wrapper; retain RED and GREEN logs.
 - [x] 3.2 Run scoped lint, typecheck, relevant guards and strict OpenSpec validation; freeze explicit source hashes for combined review.
-- [ ] 3.3 Complete root-owned final combined full lint, independent review and formal code-review gate.
-- [ ] 3.4 Complete root-owned canonical build byte attribution/budget checks and selected production acceptance after publication authority.
+- [x] 3.3 Complete root-owned final combined full lint, independent review and formal code-review gate.
+- [x] 3.4 Complete root-owned canonical build byte attribution/budget checks and selected production acceptance after publication authority.
