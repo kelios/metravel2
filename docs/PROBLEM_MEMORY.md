@@ -118,6 +118,51 @@ guard, падающий в CI на попытке обойти этот конт
 
 ## Реестр
 
+### view-counter-counts-service-traffic — реальные показы статьи отделены от SSR
+
+- **Каноническая цепочка:** backend #3336, frontend #3362 (13.11.2026).
+  Чтение данных и показ человеку имеют разные контракты: renderer/preload не
+  создаёт событие просмотра, суточную уникальность определяет backend.
+- **Механизм:** `api/travelViews.ts` отправляет bodyless POST через существующую
+  платформенную auth/CSRF-транспортную границу с opt-in `retry:false`; ошибки
+  молча завершаются. `hooks/useTravelView.ts` ждёт committed content, focus и
+  authReady. Visit-provider в `TravelDetailsCriticalShell` сохраняет попытку
+  при responsive-remount дочернего контента и сбрасывает её при настоящем blur.
+  Оба SSR-транспорта маркируют исходные и retry-запросы `X-Metravel-Render:ssr`.
+- **Постоянные controls:** `travelViews.test.ts`, `useTravelView.test.tsx`,
+  `TravelDetailsContentBlock.view.test.tsx`, реальные loader/SSR/socket и retry
+  tests. Actual-shell RED воспроизвёл дубликат при remount на web/Android/iOS;
+  GREEN проверяет стабильного владельца визита. API-template `/view/` не является
+  публичной page-ссылкой: link guard проверяет symbol provenance канонического
+  API-base import, включая shadowed/aliased/multiline controls (40/40), сохраняя
+  закрытый baseline публичных ссылок.
+- **Приёмка production `016c051f73e23e13e93fae50e0601886b74daf52`:** cookie/CSRF
+  non-author104: первый bodyless POST204 и counter +1; responsive390→1440→390
+  без нового POST/history; реальный уход/возврат — один POST204 и daily +0.
+  Guest +1; SSR-document/service/author +0; console/page errors — 0. Два
+  неподходящих QA-селектора сохранены как harness failures, дополнительные
+  реальные открытия учтены отдельно от client retries.
+- **Android:** exact installed standalone API34 arm64 APK/embedded source verified;
+  настоящие POST1/0/1, два204, history104 `4→5→5→6`, unique counter `2→2`.
+  Поворот392.7↔807.3dp пересёк768 без дубля. Возврат — numeric URI в тот же
+  Activity/PID после подтверждённого ухода в каталог; hardware Back остался в
+  каталоге и не заявляется refocus. Token/noCookie/noCSRF — exact embedded source
+  плюс параметризованные Android/iOS unit tests и authenticated104 runtime
+  history; runtime packet headers не снимались. iOS-specific код не менялся.
+- **Галерея и очистка:** `verify:slider`2/2 и `verify:slider-perf`37/37, один
+  честный E2E-build текущего SHA с warm reuse; watchdog49/49 HTTP200. Реальная
+  production headless-guest галерея: child-touch1→2→3→2, drag/tap/fullscreen и
+  vertical scroll, settled screenshots, counter994→994/errors0. Статьи970/971
+  и временный автор341 удалены, десять scoped SQL counts —0;104 не удалялся.
+- **Receipts/recheck:** `.codex-temp/task3362/done-verdict.json`,
+  `acceptance/web-final.json`, `android/report.json`, `acceptance/bilateral.json`,
+  `acceptance/manual-gallery.json`, `acceptance/cleanup.json` под task3362.
+  GET-by-ID кэширует counter3600s: свежие проверки используют scoped read-only
+  DB и uncached service-marked by-slug GET. Один204 не доказывает +1, а daily
+  counter не доказывает cardinality; её проверяет target-only access log.
+  Повторять соответствующий контроль при изменении auth/focus/retry/SSR,
+  visitor identity, responsive ownership, gallery или release provenance.
+
 ### Web-навигация и подпись даты поездки — 05.11.2026
 
 | Problem key | Карточки | Подтверждённый механизм и постоянная проверка |
@@ -5097,6 +5142,32 @@ guard, падающий в CI на попытке обойти этот конт
   или locale/SSR/error behavior нужен соответствующий свежий check; local
   estimate, diagnostic export и чужой viewport не заменяют эти доказательства.
 
+
+#### Явный режим named Brotli и tighter pins — #3362, 13.11.2026
+
+- Первая штатная сборка `39c7ab584` измерила full entry232602/home480437 B, но
+  завершилась exit1 до публикации: legacy normalized entry232940 превышал
+  legacy guard limit232908 на32B (policy `rounded_kib_0.1`, configured216.6KiB).
+  Исходный complete failed report и eligible416-file archive
+  сохранены; это эталон измерения, а не успешный выкат. Снижение full bytes
+  не выдаётся за controlled causal delta или доказательство причины ID-remap.
+- Контракт мигрирован явно: named row выбирает `maxBrotliBytes` (FULL exact)
+  либо `maxBrotliKB` (legacy NORMAL/tolerance); оба поля, включая null, invalid.
+  Updater сохраняет exact numeric pin и режим без возврата KB. Raw/gzip,
+  legacy-only rows и eager route coarse/exact policies сохранены. Ни один
+  потолок не поднят: entry232864→232602, home480545→480437; удалён только
+  named entry legacy216.6KiB. Full/normalized остаются разными diagnostics.
+- Независимо проверены manifest/report SHA, source/context/config и все416
+  public-файлов. Portable retained descriptor и historical branch различаются;
+  обычный build проверяет descriptor/pins без private baseline I/O, а текущий
+  archive проходит прежнюю проверку. Negative controls mixed/null/+1 byte,
+  updater freeze, legacy/eager/raw/gzip и provenance:133/133 PASS.
+- Reviewed source016c051 опубликован штатным wrapper за195s, exit0,
+  readiness/SSR/SEO32 PASS; entry/home равны новым pins. Entry filename/bytes,
+  browser/compiler/toolchain fingerprints совпали с failed39c, изменился
+  reviewed budget fingerprint. Receipts: task3362/budget-fix и retained
+  `.codex-temp/deploy/bundle-artifacts/016c051f73e23e13e93fae50e0601886b74daf52-20261113T043837316Z-24467/manifest.json`.
+  Retest: mode/updater/reference либо compiler, source, context и served assets.
 
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 
