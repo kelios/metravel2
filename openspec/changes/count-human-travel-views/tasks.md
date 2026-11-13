@@ -5,6 +5,8 @@
 - [x] 1.3 Add real hook/owner lifecycle tests for first commit, auth restoration, unfocused routes, Suspense/SSR, rerenders, StrictMode, actual-shell responsive remounts, ID changes and blur/refocus.
 - [x] 1.4 Add SSR transport/header/retry tests and strengthen actual loader assertions that all reads are marked and never emit a view POST; obtain a meaningful coordinated RED result.
 - [x] 1.5 Cover the mandatory travel-link guard's API endpoint exclusion with canonical import/alias/relative-path positives and public/shadowed/stale-link negative controls, preserving its closed baseline.
+- [x] 1.6 Strictly validate the bounded release-guard policy plan before code; verify the retained canonical manifest/report hashes, eligibility/context and full-byte pins, keeping historical provenance truthful.
+- [x] 1.7 Obtain meaningful RED controls for exclusive named Brotli modes/null bypass, full exact +1/equality versus normalized diagnostics, legacy/raw/gzip/eager compatibility, updater preservation and retained/historical references.
 
 ## 2. Implementation
 
@@ -12,12 +14,17 @@
 - [x] 2.2 Implement the per-visible-visit hook in the committed shared article block without query/cache/counter or preload changes.
 - [x] 2.3 Add the mandatory SSR marker to both renderer transports, preserving caller headers, original/retry semantics and input immutability.
 - [x] 2.4 Classify the canonical API-base view endpoint as an API request without changing its URL or relaxing page-link rules and baselines.
+- [x] 2.5 Implement explicit named-chunk Brotli field exclusivity and mode-preserving updater; retain raw/gzip, legacy-only rows, eager policies and both diagnostic measurements.
+- [x] 2.6 Add portable retained-canonical reference validation alongside the historical branch; remove only entry legacy Brotli and tighten exact entry/home to 232602/480437 B from the verified source-39c7 retained reference, leaving other ceilings unchanged.
 
 ## 3. Code-Level Verification and Review
 
 - [x] 3.1 Obtain coordinated GREEN focused Jest evidence for client/owner/auth/retry and SSR/loader/socket consumers; run applicable lint, typecheck and scoped fast checks under the existing operation lock.
 - [ ] 3.2 Complete independent full-diff review-and-fix, then the formal code-review gate; repeat affected code checks for confirmed fixes.
 - [x] 3.3 Pass one complete explicit-task-scope `check:fast` under the normal quality lock after the mandatory guard repair; retain its full output and exact manifest.
+- [ ] 3.4 Obtain coordinated GREEN release-policy controls and targeted static checks; diagnostically re-evaluate the retained public bytes with original source identity, without a new export or current-publication claim. Independently review the full prerequisite diff and actual calibration artifacts before the delivery owner retries canonical publication.
+
+Release-prerequisite implementation evidence: four focused suites pass (133 tests), scoped ESLint passes, and the retained source-39c7 diagnostic is complete/pass with no breaches and every measurement equal to its original archived failed report. Manifest/report and all 416 public file hashes were verified; only the stated exact pin reductions and named legacy-field removal changed numeric policy. Independent review, formal gate and fresh canonical publication remain with the root delivery owner; no product runtime acceptance is inferred.
 
 ## 4. Testing After Review and Publication
 

@@ -109,11 +109,18 @@ function shapeContext(value) {
 
 function validateCalibrationReference(reference, budget) {
   const sha = (value, length) => typeof value === 'string' && new RegExp(`^[a-f0-9]{${length}}$`).test(value)
+  // These reviewed descriptors are portable provenance, not a claim that every
+  // build rehashes private baseline files. Calibration/review verifies the actual
+  // baseline artifacts; archiveEvidence independently validates each current run.
+  const historical = reference?.kind === 'historical-canonical-report-with-parity-proof'
+    && reference.raw_artifacts_retained === false
+    && ['build_log_sha256', 'env_parity_proof_sha256', 'layout_proof_sha256'].every((key) => sha(reference[key], 64))
+    && Number.isSafeInteger(reference.home_log_line) && reference.home_log_line > 0
+  const retained = reference?.kind === 'retained-canonical-artifact-report'
+    && reference.raw_artifacts_retained === true && sha(reference.manifest_sha256, 64)
   if (!reference || reference.schema_version !== 1 || reference.contract !== CONTRACT
-      || reference.kind !== 'historical-canonical-report-with-parity-proof'
-      || reference.raw_artifacts_retained !== false || !sha(reference.source_sha, 40)
-      || !['report_sha256', 'build_log_sha256', 'env_parity_proof_sha256', 'layout_proof_sha256', 'browser_input_fingerprint'].every((key) => sha(reference[key], 64))
-      || !Number.isSafeInteger(reference.home_log_line) || reference.home_log_line <= 0
+      || !(historical || retained) || !sha(reference.source_sha, 40)
+      || !['report_sha256', 'browser_input_fingerprint'].every((key) => sha(reference[key], 64))
       || !Number.isSafeInteger(reference.entry_full_brotli_bytes) || reference.entry_full_brotli_bytes <= 0
       || !Number.isSafeInteger(reference.home_full_brotli_bytes) || reference.home_full_brotli_bytes <= 0
       || reference.entry_full_brotli_bytes !== budget.chunks?.entry?.maxBrotliBytes

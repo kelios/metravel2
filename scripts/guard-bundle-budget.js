@@ -353,6 +353,9 @@ function readExactBrotliBudget(config) {
   const chunks = new Map()
   for (const [name, row] of Object.entries(config?.chunks || {})) {
     if (row && Object.prototype.hasOwnProperty.call(row, 'maxBrotliBytes')) {
+      if (Object.prototype.hasOwnProperty.call(row, 'maxBrotliKB')) {
+        die(`chunks.${name} must select only one Brotli mode: maxBrotliBytes or maxBrotliKB.`)
+      }
       chunks.set(name, requireBytes(row.maxBrotliBytes, `chunks.${name}.maxBrotliBytes`))
     }
   }
@@ -543,10 +546,11 @@ if (UPDATE) {
   for (const [name, c] of [...chunks.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
     budget.chunks[name] = {
       ...(ownerFiles.has(name) ? { marker: ownerFiles.get(name).marker } : {}),
-      ...(exactBrotliBudget.chunks.has(name) ? { maxBrotliBytes: exactBrotliBudget.chunks.get(name) } : {}),
+      ...(exactBrotliBudget.chunks.has(name)
+        ? { maxBrotliBytes: exactBrotliBudget.chunks.get(name) }
+        : { maxBrotliKB: toKB(c.brotli) }),
       maxRawKB: toKB(c.raw),
       maxGzipKB: toKB(c.gzip),
-      maxBrotliKB: toKB(c.brotli),
     }
   }
   const budgetLineEnding = detectLineEnding(existingBudgetSource)
@@ -715,7 +719,9 @@ for (const [name, b] of Object.entries(budget.chunks || {})) {
   if (!c) continue // chunk dropped/renamed — not a size regression
   check(`${name} (raw)`, toKB(c.raw), b.maxRawKB, tol, c.raw)
   check(`${name} (gzip)`, toKB(c.gzip), b.maxGzipKB, tol, c.gzip)
-  check(`${name} (brotli)`, toKB(c.brotli), b.maxBrotliKB, tol, c.brotli)
+  if (!exactBrotliBudget.chunks.has(name)) {
+    check(`${name} (brotli)`, toKB(c.brotli), b.maxBrotliKB, tol, c.brotli)
+  }
 }
 if (budget.total) {
   check('TOTAL (raw)', toKB(totalRaw), budget.total.maxRawKB, tol, totalRaw)

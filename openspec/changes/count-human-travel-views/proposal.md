@@ -8,6 +8,7 @@ After #3011 removed the duplicate hydrated article read, human readers no longer
 - Reuse web cookie/CSRF and native secure-token authentication, with a caller-selected policy disabling every transport retry. Ignore failures without changing the displayed counter.
 - Mark every request through both renderer transports with `X-Metravel-Render: ssr`, including their existing bounded retry.
 - Preserve hydrated/preloaded detail reuse, by-slug behavior, server-owned 24-hour identity deduplication, and existing transport defaults for other callers.
+- Repair the blocking release-guard contract through exclusive named-chunk Brotli modes (full exact bytes or legacy normalized KiB), a mode-preserving updater and truthful retained-canonical provenance. Tighten exact entry/home pins to verified retained bytes without increasing other ceilings or changing application/compiler inputs.
 
 ## Capabilities
 
@@ -17,7 +18,7 @@ After #3011 removed the duplicate hydrated article read, human readers no longer
 
 ### Modified Capabilities
 
-None.
+- `web-startup-payload-budget`: explicit named Brotli mode selection and portable retained-reference calibration alongside historical provenance.
 
 ## Impact
 
@@ -29,7 +30,7 @@ None.
 - **Fallback/mock policy:** network/OS boundaries may be mocked for code tests. Production acceptance uses the real endpoint and a controlled public article/non-author reader; no client fallback counter or mock-only completion.
 - **SEO:** renderer marking prevents service traffic from being counted; URLs, metadata, redirects, JSON-LD, sitemap and robots do not change.
 - **Accessibility:** not applicable; rendered semantics and interactions do not change.
-- **Performance:** one small post-commit request per visible visit; no duplicate detail fetch or new eager shared-entry dependency. Existing entry/home budgets stay fixed.
+- **Performance:** one small post-commit request per visible visit; no duplicate detail fetch or new eager shared-entry dependency. The release prerequisite migrates the named entry to full exact Brotli enforcement and tightens entry/home exact pins to 232602/480437 B from eligible retained source `39c7ab584e03b323218ba38c39aa96074e6c0f0a`; all other numeric ceilings remain unchanged. It does not replace the original runtime or bilateral acceptance gates.
 - **Security:** preserve HttpOnly cookie plus existing CSRF helper on web and secure Token storage with omitted cookies on native. Human requests never inherit the renderer marker.
 - **Analytics:** only the explicit backend view event changes; existing analytics events remain intact.
 

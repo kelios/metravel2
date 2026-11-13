@@ -26,11 +26,11 @@ const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
   'index.html': 469.3,
   '(tabs)/travels/[param].html': 558,
 }
-// #3374: full delivered bytes of canonical isolated F3, including loader metadata.
-// The historical report + parity proofs bootstrap provenance; raw JS was cleaned.
-// The next ordinary publisher creates the first complete retained evidence package.
-const ENTRY_BROTLI_BYTES = 232864
-const HOME_BROTLI_BYTES = 480545
+// #3362: full delivered bytes of eligible retained canonical source 39c7ab584e,
+// including loader metadata. Its failed report is measurement, not publication.
+// Historical #3374 provenance remains supported as a separate reference kind.
+const ENTRY_BROTLI_BYTES = 232602
+const HOME_BROTLI_BYTES = 480437
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
 const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
@@ -180,6 +180,9 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
   const entry = requireRecord(requireRecord(budget.chunks, 'bundle budget.chunks').entry, 'bundle budget.chunks.entry')
   if (entry.maxBrotliBytes !== ENTRY_BROTLI_BYTES) {
     throw new Error('bundle budget entry exact Brotli bytes must match the committed measured pin.')
+  }
+  if (Object.prototype.hasOwnProperty.call(entry, 'maxBrotliKB')) {
+    throw new Error('bundle budget exact entry must not configure legacy Brotli mode.')
   }
 
   const eager = requireRecord(budget.eager, 'bundle budget.eager')

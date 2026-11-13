@@ -3,11 +3,22 @@ import path from 'node:path'
 import zlib from 'node:zlib'
 import { makeTempDir, removeDir, runCli } from './cli-test-utils'
 
-const { captureContext, archiveEvidence, CONTEXT_FILE, browserInputFingerprint } = require('../../scripts/lib/productionBundleEvidence')
+const { captureContext, archiveEvidence, CONTEXT_FILE, browserInputFingerprint, validateCalibrationReference } = require('../../scripts/lib/productionBundleEvidence')
 const { createReportContext, persistReport } = require('../../scripts/lib/bundleBudgetReport')
 const GIT_ENV = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null', GIT_AUTHOR_NAME: 'evidence test', GIT_AUTHOR_EMAIL: 'evidence@test.invalid', GIT_COMMITTER_NAME: 'evidence test', GIT_COMMITTER_EMAIL: 'evidence@test.invalid' }
 const SECRET = 'SYNTHETIC_PRIVATE_VALUE_NEVER_ARCHIVED'
 const SSR_ENV = { NODE_ENV: 'production', EXPO_ENV: 'prod', METRAVEL_WEB_OUTPUT: 'server', EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true', EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true', EXPO_PUBLIC_RNW_SLIM: '1', EXPO_WEB_BUILD_MINIFY: 'true', EXPO_WEB_BUILD_GENERATE_SOURCE_MAP: 'false', EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'static', EXPO_PUBLIC_QUEST_LOCALE_HUBS: 'true' }
+
+function calibration(kind = 'retained-canonical-artifact-report') {
+  const budget = { chunks: { entry: { maxBrotliBytes: 100 } }, eager: { maxBrotliBytesByRoute: { 'index.html': 200 } } }
+  const reference: any = { schema_version: 1, contract: 'canonical-isolated-ssr-v1', kind,
+    source_sha: 'a'.repeat(40), report_sha256: 'b'.repeat(64), browser_input_fingerprint: 'c'.repeat(64),
+    entry_full_brotli_bytes: 100, home_full_brotli_bytes: 200 }
+  if (kind === 'retained-canonical-artifact-report') Object.assign(reference, { raw_artifacts_retained: true, manifest_sha256: 'd'.repeat(64) })
+  else Object.assign(reference, { raw_artifacts_retained: false, build_log_sha256: 'd'.repeat(64),
+    env_parity_proof_sha256: 'e'.repeat(64), layout_proof_sha256: 'f'.repeat(64), home_log_line: 1 })
+  return { reference, budget }
+}
 
 function fixture() {
   const root = fs.realpathSync(makeTempDir('production-bundle-evidence-'))
@@ -65,6 +76,51 @@ function fixture() {
 }
 
 describe('canonical public bundle evidence', () => {
+  it.each(['retained-canonical-artifact-report', 'historical-canonical-report-with-parity-proof'])('validates the portable %s descriptor without private baseline files', (kind) => {
+    const { reference, budget } = calibration(kind)
+    expect(() => validateCalibrationReference(reference, budget)).not.toThrow()
+  })
+
+  it.each(['source_sha', 'report_sha256', 'browser_input_fingerprint', 'manifest_sha256'])('rejects malformed retained %s', (field) => {
+    const { reference, budget } = calibration()
+    reference[field] = 'invalid'
+    expect(() => validateCalibrationReference(reference, budget)).toThrow('Invalid canonical bundle calibration reference')
+  })
+
+  it.each(['kind', 'raw_artifacts_retained', 'entry_full_brotli_bytes', 'home_full_brotli_bytes'])('rejects retained identity or pin mismatch in %s', (field) => {
+    const { reference, budget } = calibration()
+    reference[field] = field === 'kind' ? 'historical-canonical-report-with-parity-proof'
+      : field === 'raw_artifacts_retained' ? false : reference[field] + 1
+    expect(() => validateCalibrationReference(reference, budget)).toThrow('Invalid canonical bundle calibration reference')
+  })
+
+  it.each(['build_log_sha256', 'env_parity_proof_sha256', 'layout_proof_sha256', 'home_log_line', 'raw_artifacts_retained'])('keeps historical %s validation', (field) => {
+    const { reference, budget } = calibration('historical-canonical-report-with-parity-proof')
+    reference[field] = field === 'raw_artifacts_retained' ? true : null
+    expect(() => validateCalibrationReference(reference, budget)).toThrow('Invalid canonical bundle calibration reference')
+  })
+
+  it('excludes release policy files from browser inputs while still tracking application changes', () => {
+    const f = fixture()
+    try {
+      const commit = (files: string[]) => {
+        for (const args of [['add', ...files], ['commit', '-qm', 'fixture policy or app change']]) {
+          const result = runCli('git', args, { cwd: f.canonicalRoot, env: GIT_ENV })
+          expect(result.status).toBe(0)
+        }
+      }
+      fs.writeFileSync(path.join(f.canonicalRoot, 'config/bundle-budget.json'), '{"changed":"release policy"}')
+      fs.mkdirSync(path.join(f.canonicalRoot, 'scripts/lib'), { recursive: true })
+      fs.writeFileSync(path.join(f.canonicalRoot, 'scripts/guard-bundle-budget.js'), '// release-only guard')
+      fs.writeFileSync(path.join(f.canonicalRoot, 'scripts/lib/productionBundleEvidence.js'), '// release-only evidence')
+      commit(['config/bundle-budget.json', 'scripts/guard-bundle-budget.js', 'scripts/lib/productionBundleEvidence.js'])
+      expect(browserInputFingerprint(f.canonicalRoot)).toBe(f.context.browser_input_fingerprint)
+      fs.writeFileSync(path.join(f.canonicalRoot, 'app/index.tsx'), 'export default 2')
+      commit(['app/index.tsx'])
+      expect(browserInputFingerprint(f.canonicalRoot)).not.toBe(f.context.browser_input_fingerprint)
+    } finally { removeDir(f.root) }
+  })
+
   it('keeps complete public bytes/full-vs-normalized metrics and shaped private provenance, without env/server/arbitrary files', () => {
     const f = fixture()
     try {

@@ -27,7 +27,7 @@ function fixture() {
   fs.writeFileSync(path.join(html, 'index.html'), '<script src="/_expo/static/js/web/entry-abcdef.js"></script>')
   const budget: any = {
     tolerancePct: 100,
-    chunks: { entry: { maxBrotliKB: 1, maxBrotliBytes: bytes } },
+    chunks: { entry: { maxBrotliBytes: bytes } },
     eager: {
       chunks: ['entry'], htmlRoutes: true, maxBrotliKB: 1, tolerancePct: 100,
       maxRequests: 1, maxRequestsByRoute: { 'index.html': 1 },
@@ -46,6 +46,73 @@ function fixture() {
 }
 
 describe('exact delivered Brotli byte ceilings', () => {
+  it.each([[1, 1], [1, null], [null, 1], [null, null]])('rejects mixed named Brotli fields (%p, %p), including null', (exact, legacy) => {
+    const f = fixture()
+    try {
+      Object.assign(f.budget.chunks.entry, { maxBrotliBytes: exact, maxBrotliKB: legacy })
+      f.save()
+      const result = f.run('--fail')
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('chunks.entry must select only one Brotli mode')
+    } finally { removeDir(f.dir) }
+  })
+
+  it('uses full exact bytes even when real normalized recompression is higher, while preserving legacy breaches', () => {
+    const f = fixture()
+    try {
+      const body = 'globalThis.fixturePayload=' + JSON.stringify(Array.from({ length: 65 }, (_, i) => `k${(i * 17 + 15) % 31}:${(i * 11) % 19}`).join(',')) + ';'
+      const source = body + '__d(function(){},1,{"0":7,"paths":{"1":"/chunk.js"}});'
+      const normalized = body + '__d(function(){},1,{"0":7});'
+      const full = brotli(source)
+      const legacy = brotli(normalized)
+      expect(legacy).toBeGreaterThan(full)
+      fs.writeFileSync(path.join(f.js, 'entry-abcdef.js'), source)
+      f.budget.chunks.entry.maxBrotliBytes = full
+      f.budget.eager.maxBrotliBytesByRoute['(tabs)/index.html'] = full
+      f.save()
+      const exact = f.run('--fail', '--json')
+      expect(exact.status).toBe(0)
+      const report = JSON.parse(exact.stdout).diagnostic_report
+      expect(report.measurements.files['entry-abcdef.js'].brotli).toBe(full)
+      expect(report.measurements.named.entry.brotli).toBe(legacy)
+      delete f.budget.chunks.entry.maxBrotliBytes
+      f.budget.tolerancePct = 0
+      f.budget.chunks.entry.maxBrotliKB = 0.1 // normalized measurement rounds to 0.2 KiB
+      f.save()
+      const legacyResult = f.run('--fail', '--json')
+      expect(legacyResult.status).toBe(1)
+      expect(JSON.parse(legacyResult.stdout).diagnostic_report.breaches).toEqual([
+        expect.objectContaining({ label: 'entry (brotli)', actual: legacy, policy: 'rounded_kib_0.1' }),
+      ])
+    } finally { removeDir(f.dir) }
+  })
+
+  it.each(['maxRawKB', 'maxGzipKB'])('keeps %s enforcement in exact Brotli mode', (field) => {
+    const f = fixture()
+    try {
+      f.budget.chunks.entry[field] = 0
+      f.save()
+      const result = f.run('--fail', '--json')
+      expect(result.status).toBe(1)
+      expect(JSON.parse(result.stdout).diagnostic_report.breaches).toEqual([
+        expect.objectContaining({ label: `entry (${field === 'maxRawKB' ? 'raw' : 'gzip'})`, policy: 'rounded_kib_0.1' }),
+      ])
+    } finally { removeDir(f.dir) }
+  })
+
+  it('keeps eager coarse Brotli enforcement alongside exact full-byte route pins', () => {
+    const f = fixture()
+    try {
+      f.budget.eager.maxBrotliKB = 0
+      f.save()
+      const result = f.run('--fail', '--json')
+      expect(result.status).toBe(1)
+      expect(JSON.parse(result.stdout).diagnostic_report.breaches).toEqual([
+        expect.objectContaining({ label: 'EAGER (brotli)', actual: f.bytes, basis: 'html_scripts_with_loader_metadata' }),
+      ])
+    } finally { removeDir(f.dir) }
+  })
+
   it.each([null, false, ''])('rejects an explicitly malformed calibration reference %p', (reference) => {
     const f = fixture()
     try {
@@ -79,6 +146,7 @@ describe('exact delivered Brotli byte ceilings', () => {
       expect(text.status).toBe(1)
       expect(text.stdout).toContain(`entry (brotli bytes): ${f.bytes} B > ${f.bytes - 1} B`)
       delete f.budget.chunks.entry.maxBrotliBytes
+      f.budget.chunks.entry.maxBrotliKB = 1
       f.save()
       expect(f.run('--fail', '--json').status).toBe(0)
     } finally { removeDir(f.dir) }
@@ -155,8 +223,17 @@ describe('exact delivered Brotli byte ceilings', () => {
       expect(f.run('--update').status).toBe(0)
       const updated = JSON.parse(fs.readFileSync(f.config, 'utf8'))
       expect(updated.chunks.entry.maxBrotliBytes).toBe(f.bytes - 1)
+      expect(updated.chunks.entry).not.toHaveProperty('maxBrotliKB')
       expect(updated.eager.maxBrotliBytesByRoute).toEqual({ '(tabs)/index.html': f.bytes - 2 })
+      // Named-mode migration does not change the existing eager updater/pins.
       expect(f.run('--fail', '--json').status).toBe(1)
+      delete f.budget.chunks.entry.maxBrotliBytes
+      f.budget.chunks.entry.maxBrotliKB = 1
+      f.save()
+      expect(f.run('--update').status).toBe(0)
+      const legacy = JSON.parse(fs.readFileSync(f.config, 'utf8')).chunks.entry
+      expect(legacy).not.toHaveProperty('maxBrotliBytes')
+      expect(legacy.maxBrotliKB).toBe(Math.round(brotli(f.stripped) / 1024 * 10) / 10)
     } finally { removeDir(f.dir) }
   })
 
