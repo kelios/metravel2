@@ -14,20 +14,20 @@
 - [x] 2.7 Strictly validate the bounded publication-prerequisite delta before code; preserve the failed canonical FULL byte evidence and unchanged 232602/480437 B ceilings.
 - [x] 2.8 Capture installed-serializer RED for new lazy static leaves at two lexical positions while initial/home/boundary sets remain unchanged.
 - [x] 2.9 Implement the one fixed four-tier priority helper, numeric-only registration, additive route-list reuse and owned optional Expo pre-prime hook; keep allocator/merge/codec/hash/default context behavior unchanged.
-- [ ] 2.10 Pass protected ID, complete universe/injectivity, prior-prefix, input-order, real dependency/root/premodule/VM, async locale, worker and absent/ineligible-context controls plus existing metadata/cache/scoped-ID/exact-byte regressions.
-- [ ] 2.11 Pass required code-level lint/type/static/full tests in the sole coordinated quality window; preserve original failures and hand off exact scope hashes and remaining acceptance.
+- [x] 2.10 Pass protected ID, complete universe/injectivity, prior-prefix, input-order, real dependency/root/premodule/VM, async locale, worker and absent/ineligible-context controls plus existing metadata/cache/scoped-ID/exact-byte regressions.
+- [x] 2.11 Pass required code-level lint/type/static/full tests in the sole coordinated quality window; preserve original failures and hand off exact scope hashes and remaining acceptance.
 
 ## 3. Independent Review
 
-- [ ] 3.1 Root obtains independent review-and-fix of the full task diff, repeats required code checks and passes formal code-review gate.
+- [x] 3.1 Root obtains independent review-and-fix of the full task diff, repeats required code checks and passes formal code-review gate.
 
 ## 4. Testing After Review
 
-- [ ] 4.1 Root publishes the reviewed revision under the authorized board pipeline and verifies exact live SHA.
-- [ ] 4.2 Accept mobile web first then desktop on production: guest Minsk50 → Несвиж → explicit city lookup → verified offer → explicit move with camera and request anchor; no geocoder call before lookup or on locale/focus/reconnect after disarm; local match, absent city and error controls; real quest link/destination and OSM credit. Capture screenshots, console and network evidence.
-- [ ] 4.3 Validate one long-label locale layout and confirm unchanged shared/native boundaries; add a justified native runtime target only for a newly changed distinct native implementation.
-- [ ] 4.4 Verify one canonical published candidate passes FULL entry <=232602 B and FULL home <=480437 B Brotli plus every existing release/eager/closure guard. Preserve failed evidence without order/tier retry or cap/reference changes. Verify home/article and persisted non-RU lazy-language boot on the published SHA with console/network evidence.
+- [x] 4.1 Root publishes the reviewed revision under the authorized board pipeline and verifies exact live SHA.
+- [x] 4.2 Accept mobile web first then desktop on production: guest Minsk50 → Несвиж → explicit city lookup → verified offer → explicit move with camera and request anchor; no geocoder call before lookup or on locale/focus/reconnect after disarm; local match, absent city and error controls; real quest link/destination and OSM credit. Capture screenshots, console and network evidence.
+- [x] 4.3 Validate one long-label locale layout and confirm unchanged shared/native boundaries; add a justified native runtime target only for a newly changed distinct native implementation.
+- [x] 4.4 Verify one canonical published candidate passes FULL entry <=232602 B and FULL home <=480437 B Brotli plus every existing release/eager/closure guard. Preserve failed evidence without order/tier retry or cap/reference changes. Verify home/article and persisted non-RU lazy-language boot on the published SHA with console/network evidence.
 
 ## 5. Closeout
 
-- [ ] 5.1 Record accepted evidence and exact scope in feature/problem memory through the coordinating root, validate all specs, synchronize and archive only after required acceptance passes.
+- [x] 5.1 Record accepted evidence and exact scope in feature/problem memory through the coordinating root, validate all specs, synchronize and archive only after required acceptance passes.

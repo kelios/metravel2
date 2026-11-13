@@ -163,6 +163,15 @@ guard, падающий в CI на попытке обойти этот конт
   Повторять соответствующий контроль при изменении auth/focus/retry/SSR,
   visitor identity, responsive ownership, gallery или release provenance.
 
+### MAP-USER-VIEW-FLAG-CROSS-INSTANCE-001 — флаг жеста одной карты отключал подгонку другой
+
+| Problem key | Карточки | Подтверждённый механизм и постоянная проверка |
+| --- | --- | --- |
+| MAP-USER-VIEW-FLAG-CROSS-INSTANCE-001 | #2790 → #3229 | Флаг «вид выбрал пользователь» был модульным (`programmaticMoveSignal.ts`). Выбор города на `/map` ставил его, и после перехода внутри приложения `/quests/map` пропускала стартовую подгонку и оставалась на `DEFAULT_ZOOM` 11 без квестов. Флаг теперь хранится по экземпляру Leaflet-карты (WeakSet), все вызовы передают свою карту. `MapLogicComponent.zoom-radius.test.tsx` «#3229 — a gesture on another map does not block this map startup fit» (красный на старом модуле) и #2790-кейс той же карты; прод-проба `.codex-temp/task3229/acceptance/run-auto.js desktop`. |
+
+Любое новое модульное состояние карты (`let` в `components/MapPage/Map/*`) проверять на
+переход между экземплярами: экраны вкладок остаются смонтированными, модуль живёт всю сессию.
+
 ### Web-навигация и подпись даты поездки — 05.11.2026
 
 | Problem key | Карточки | Подтверждённый механизм и постоянная проверка |
