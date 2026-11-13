@@ -1,4 +1,5 @@
 import { test, expect, type Browser, type TestInfo } from '@playwright/test';
+import { installReadOnlyTravelApi } from './readOnlyTravelApi';
 
 const ARTICLE = '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg';
 
@@ -99,15 +100,10 @@ export async function assertTravelFullScrollCls(
   for (let sample = 1; sample <= 5; sample++) {
     const context = await browser.newContext({ viewport, baseURL, storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
-    const errors: string[] = [], writes: string[] = [], consoleErrors: string[] = [];
+    const errors: string[] = [], consoleErrors: string[] = [];
     page.on('pageerror', error => errors.push(`${error.name}: ${error.message}`));
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-    await context.route('**/api/**', async route => {
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) {
-        writes.push(route.request().method());
-        await route.abort('blockedbyclient');
-      } else await route.continue();
-    });
+    const { handledViews, unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: 544 });
     // Keep the same fresh-guest storage as the original production probe.
     await page.addInitScript(() => localStorage.setItem('consent_v1', '1'));
     await page.addInitScript(() => {
@@ -186,10 +182,10 @@ export async function assertTravelFullScrollCls(
     const valid = observation?.supported === true && observation.installed === true && observation.error === null && Array.isArray(observation.entries) &&
       observation.entries.every(entry => Number.isFinite(entry.value) && Number.isFinite(entry.time));
     const cumulative = valid ? observation!.entries.filter(entry => !entry.hadRecentInput).reduce((sum, entry) => sum + entry.value, 0) : null;
-    results.push({ sample, viewport, first, firstWheel, steps, final, observation, cumulative, errors, consoleErrors, writes, failure,
+    results.push({ sample, viewport, first, firstWheel, steps, final, observation, cumulative, errors, consoleErrors, writes, handledViews, failure,
       pass: !failure && valid && cumulative !== null && cumulative <= 0.1 &&
         first !== null && first.top === 0 && final !== null && final.top > first.top && final.top + final.viewport >= final.height - 2 &&
-        final.transitionsReady && final.excursionsResolved && final.footerVisible && errors.length === 0 && writes.length === 0 });
+        final.transitionsReady && final.excursionsResolved && final.footerVisible && errors.length === 0 && writes.length === 0 && handledViews.length === 1 });
   }
   await testInfo.attach(`travel-full-scroll-cls${viewport.width}-five-raw`, { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
   expect(results).toHaveLength(5);

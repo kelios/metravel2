@@ -1,5 +1,6 @@
 import { test, expect, type Browser, type TestInfo } from '@playwright/test';
 import { preacceptCookies } from './navigation';
+import { installReadOnlyTravelApi } from './readOnlyTravelApi';
 
 const { resolveApiProxyTarget } = require('../../scripts/serve-web-build') as { resolveApiProxyTarget: () => string };
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
@@ -20,7 +21,7 @@ export async function assertTravelMobileCls(
   for (let sample = 1; sample <= 5; sample++) {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: { cookies: [], origins: [] }, baseURL });
     const page = await context.newPage();
-    const errors: string[] = [], writes: string[] = [];
+    const errors: string[] = [];
     const localImageFallbacks: string[] = [];
     if (webOrigin && LOOPBACK_HOSTS.has(webOrigin.hostname) && LOOPBACK_HOSTS.has(mediaProxy.hostname)) {
       // The local database has production article records, while its media bucket
@@ -59,12 +60,7 @@ export async function assertTravelMobileCls(
     page.on('response', response => { const entry = api.get(response.request()); if (entry) entry.status = response.status(); });
     page.on('requestfinished', request => { const entry = api.get(request); if (entry) entry.finished = true; });
     page.on('requestfailed', request => { const entry = api.get(request); if (entry) entry.failed = true; });
-    await context.route('**/api/**', async requestRoute => {
-      if (!['GET', 'HEAD', 'OPTIONS'].includes(requestRoute.request().method())) {
-        writes.push(requestRoute.request().method());
-        await requestRoute.abort('blockedbyclient');
-      } else await requestRoute.continue();
-    });
+    const { handledViews, unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: 791 });
     await preacceptCookies(page);
     await page.addInitScript(() => {
       const state = { supported: PerformanceObserver.supportedEntryTypes.includes('layout-shift'), installed: false, error: false, entries: [] as any[] };
@@ -162,10 +158,10 @@ export async function assertTravelMobileCls(
     const rawSum = valid ? observation.entries.reduce((sum: number, entry: any) => sum + entry.value, 0) : null;
     const ledger = [...api.values()];
     const stableApiWindow = ledger.length === settledRequestIds.length && ledger.every((entry, index) => entry.id === settledRequestIds[index]);
-    results.push({ sample, first, samples, final, observation, cumulative, rawSum, settledRequestIds, stableApiWindow, ledger, errors, writes, localImageFallbacks, failure,
+    results.push({ sample, first, samples, final, observation, cumulative, rawSum, settledRequestIds, stableApiWindow, ledger, errors, writes, handledViews, localImageFallbacks, failure,
       pass: !failure && valid && moved && final?.top + final?.viewport >= final?.height - 2 &&
         final?.footerVisible === true && final?.transitionsReady === true && final?.clamped === 0 && cumulative <= 0.1 &&
-        errors.length === 0 && writes.length === 0 && stableApiWindow && ledger.length > 0 && ledger.every(entry => entry.finished && !entry.failed && entry.status !== null && entry.status < 400) });
+        errors.length === 0 && writes.length === 0 && handledViews.length === 1 && stableApiWindow && ledger.length > 0 && ledger.every(entry => entry.finished && !entry.failed && entry.status !== null && entry.status < 400) });
   }
   await testInfo.attach('travel-mobile-cls390-five-raw', { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
   expect(results).toHaveLength(5);

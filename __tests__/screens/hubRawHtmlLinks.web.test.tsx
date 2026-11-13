@@ -94,6 +94,37 @@ describe('/quests: указатель каталога', () => {
     expect(html).toMatch(/<nav[^>]*data-quests-directory/)
   })
 
+  it('keeps the complete link groups in independent, initially collapsed native disclosures', () => {
+    const Directory = require('@/screens/tabs/QuestsCatalogDirectory.web').default
+    const html = renderToString(createElement(Directory, { countries, cities, quests }))
+    const root = document.createElement('div')
+    root.innerHTML = html
+    const groups = [...root.querySelectorAll('nav > details')]
+
+    expect(groups).toHaveLength(3)
+    for (const group of groups) {
+      expect(group.hasAttribute('open')).toBe(false)
+      expect(group.firstElementChild?.tagName).toBe('SUMMARY')
+      expect(group.querySelector('summary > h2')?.textContent).toBeTruthy()
+      expect(group.querySelector('ul a[href]')).not.toBeNull()
+      expect(group.hasAttribute('name')).toBe(false)
+    }
+    expect(hrefsOf(groups[0].innerHTML)).toEqual(countries.map((link) => link.path))
+    expect(hrefsOf(groups[1].innerHTML)).toEqual(cities.map((link) => link.path))
+    expect(hrefsOf(groups[2].innerHTML)).toHaveLength(24)
+  })
+
+  it('omits empty disclosure headings when only quests are present', () => {
+    const Directory = require('@/screens/tabs/QuestsCatalogDirectory.web').default
+    const html = renderToString(createElement(Directory, { countries: [], cities: [], quests }))
+    const root = document.createElement('div')
+    root.innerHTML = html
+
+    expect(root.querySelectorAll('details')).toHaveLength(1)
+    expect(root.querySelectorAll('summary h2')).toHaveLength(1)
+    expect(hrefsOf(html)).toHaveLength(24)
+  })
+
   // #3360: у языкового хаба нет указателя стран и городов — он ссылается на
   // каждого участника, и на страницу его языка.
   it('links every member of a language hub to its page in the hub language', () => {
