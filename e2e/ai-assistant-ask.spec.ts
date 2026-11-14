@@ -186,11 +186,13 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
       { ...sources[1], group: 'match', cover: null, city: null, country: 'Беларусь', lat: null, lng: null },
       { ...sources[1], source_id: '900', title: 'Музеи Минска за день', url: 'https://metravel.by/travels/minsk-museums-e2e', path: '/travels/minsk-museums-e2e', group: 'nearby', cover: null, city: null, country: 'Беларусь', lat: null, lng: null },
     ];
+    // Ответ называет ссылкой оба материала: квест и статью.
+    const named = `${answer} Подробнее — [${cards[1].title}](${cards[1].url}).`;
     await page.route('**/ai/ask', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'text/event-stream; charset=utf-8',
-        body: sse(['sources', { sources: cards, degraded: false, remaining: 19 }], ['text', { text: answer }], ['done', { status: 'done', removed_links: 0, remaining: 19 }]),
+        body: sse(['sources', { sources: cards, degraded: false, remaining: 19 }], ['text', { text: named }], ['done', { status: 'done', removed_links: 0, remaining: 19 }]),
       });
     });
 
