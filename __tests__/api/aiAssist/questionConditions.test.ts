@@ -210,6 +210,7 @@ describe('условия вопроса (#3353): длина маршрута и 
   it('расстояние от места — не длина маршрута; вопрос без километров условия длины не несёт', () => {
     expect(parseConditions('Что посмотреть в 30 км от Минска?')).toEqual({})
     expect(parseConditions('Is there a hike within 20 km from Krakow?')).toEqual({ route: 'foot' })
+    expect(parseConditions('Is there a hike within 30 km of Krakow?')).toEqual({ route: 'foot' })
     expect(parseConditions('Квест за 20 км від Львова')).toEqual({ kind: 'quest' })
     expect(parseConditions('Какие квесты есть в Гродно?')).toEqual({ kind: 'quest' })
     // «Сто» внутри слова числом не становится.

@@ -293,7 +293,7 @@ const kmOf = (text: string): { maxKm?: number; minKm?: number } => {
     const start = match.index ?? 0
     const before = text.slice(0, start)
     const after = text.slice(start + match[0].length)
-    if (KM_FROM_PLACE_RE.test(after) || (KM_AWAY_BEFORE_RE.test(before) && /^\s*(?:от|ад|від|od|from)(?![\p{L}])/iu.test(after))) continue
+    if (KM_FROM_PLACE_RE.test(after) || (KM_AWAY_BEFORE_RE.test(before) && /^\s*(?:от|ад|від|od|from|of)(?![\p{L}])/iu.test(after))) continue
     const first = kmNumberOf(match[1])
     const second = kmNumberOf(match[2])
     if (first === null) continue

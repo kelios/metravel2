@@ -143,7 +143,9 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
       // экран (`AssistantAnswerText`) узнаёт ссылкой только `[…](https://…)` и показал бы такую разметкой.
       const title = toLinkLabel(card.title)
       const address = isCardAddress(url, card) ? url : card.url
-      if (!title || isSameTitle(label, card.title)) return address === url ? match : `[${label}](${address})`
+      // Ссылка пишется заново и при верных подписи и адресе: угловые скобки («(<https://…>)») и подсказка
+      // в кавычках экран тоже не узнаёт.
+      if (!title || isSameTitle(label, card.title)) return `[${label}](${address})`
       relabeled += 1
       return `[${title}](${address})`
     }

@@ -104,7 +104,7 @@ describe('страж ссылок: подпись равна названию к
   it('адрес ссылки на карточку — полный адрес карточки: путь и адрес без протокола заменяются', () => {
     const [travel, quest] = sources
     const questPath = new URL(quest.url).pathname
-    for (const address of [questPath, quest.url.replace(/^https:\/\//, ''), `www.${quest.url.replace(/^https:\/\//, '')}`, `<${questPath}>`]) {
+    for (const address of [questPath, quest.url.replace(/^https:\/\//, ''), `www.${quest.url.replace(/^https:\/\//, '')}`, `<${questPath}>`, `<${quest.url}>`]) {
       // Подпись выдумана — меняется и она, и адрес.
       expect(enforceSourceLinks(`- [x](${address}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${quest.url}) — 9 точек`, removed: 0, relabeled: 1 })
       // Подпись верная — меняется только адрес, заменой подписи это не считается.
