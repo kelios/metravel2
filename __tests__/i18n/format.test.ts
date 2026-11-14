@@ -264,6 +264,14 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat (#1528)', () => {
   // The goldens above are six strings; this one holds the whole surface. The
   // Jest runtime is required to carry full ICU for every production locale:
   // silently skipping would let the fallback drift from the web formatter.
+  // Cells where CLDR releases disagree: every wording a supported ICU returns.
+  // CLDR 48 turned the Belarusian «у мінулым годзе» and «у гэтым годзе» into
+  // «летась» and «сёлета»; the table follows the newer one, the pin below holds it.
+  const CLDR_REWORDED_PHRASES: Record<string, readonly string[]> = {
+    'be/auto/year/-1': ['летась', 'у мінулым годзе'],
+    'be/auto/year/0': ['сёлета', 'у гэтым годзе'],
+  }
+
   const hasFullIcu = SUPPORTED_LOCALES.every(
     (locale) =>
       new Intl.RelativeTimeFormat(getFormatLocale(locale)).resolvedOptions().locale ===
@@ -299,13 +307,25 @@ describe('formatRelativeTime without Intl.RelativeTimeFormat (#1528)', () => {
         const native = new Intl.RelativeTimeFormat(languageTag, { numeric })
         for (const unit of units) {
           for (const value of values) {
+            const cell = `${locale}/${numeric}/${unit}/${value}`
+            const expected = native.format(value, unit)
+            // A phrase CLDR itself has reworded is pinned below instead of being
+            // compared with whichever ICU this Node happens to carry (#3348).
+            if (CLDR_REWORDED_PHRASES[cell]?.includes(expected)) continue
             expect(
-              `${locale}/${numeric}/${unit}/${value}: ${formatRelativeTimeFallback(value, unit, { numeric }, locale, languageTag)}`,
-            ).toBe(`${locale}/${numeric}/${unit}/${value}: ${native.format(value, unit)}`)
+              `${cell}: ${formatRelativeTimeFallback(value, unit, { numeric }, locale, languageTag)}`,
+            ).toBe(`${cell}: ${expected}`)
           }
         }
       }
     }
+  })
+
+  it('pins the phrases CLDR has reworded, whatever ICU the runtime carries (#3348)', () => {
+    const be = (value: number) =>
+      formatRelativeTimeFallback(value, 'year', { numeric: 'auto' }, 'be', getFormatLocale('be'))
+    expect(be(-1)).toBe('летась')
+    expect(be(0)).toBe('сёлета')
   })
 
   it('accepts the plural unit spelling the Intl type allows', () => {
