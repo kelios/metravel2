@@ -10,6 +10,7 @@ import {
 } from '@/components/travel/stableContent/articleBodyImageUrls'
 import { buildArticleBodyMediaIndex, type ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
+import { projectArticleBodyAddresses } from '@/components/travel/details/travelRouteLoader'
 import { toInertHtml } from '@/utils/inertHtml'
 import { releaseDeferredRichTextImages } from '@/utils/richTextDeferredImages'
 import { buildDeferredRichTextImagesScript } from '@/utils/richTextDeferredImagesShell'
@@ -298,5 +299,56 @@ describe('server island reserves the frame box of the full render (#3414)', () =
   it('a plain deferImages pass adds no reserve (other surfaces)', () => {
     const img = parse(toInertHtml(`<img src="${STORED_DESCRIPTION_IMAGE}" alt="">`, { deferImages: true })).querySelector('img')
     expect(boxOf(img)).toEqual({ width: null, height: null, fallback: null, style: null })
+  })
+})
+
+// #3420: манифест тела в данные loader не входил, и остров адресовал кадр своим
+// построителем (`…webp?w=480`), а полный рендер — манифестом (`…webp?pv=2&w=480`).
+// Прод 14.11.2026: первый кадр статьи 470 качался дважды по разным адресам, а
+// остров перерисовывался целиком, когда манифест приходил фоновым запросом.
+describe('server article-body island addresses images from the loader projection (#3420)', () => {
+  // Адрес ступени — дело бэкенда: версия политики хранения едет в query.
+  const versioned = (value: string | null | undefined) =>
+    typeof value === 'string' ? value.replace(/\?w=/g, '?pv=2&w=') : value
+  const VERSIONED_GROUP: TravelMediaGroup = {
+    gallery: (PROD_ARTICLE_BODY_GROUP.gallery ?? []).map((item) => ({
+      ...item,
+      src: versioned(item.src),
+      srcset: versioned(item.srcset),
+      srcset_contain: versioned(item.srcset_contain),
+    })),
+  }
+  const FULL = buildArticleBodyMediaIndex(VERSIONED_GROUP)
+  const LOADER = buildArticleBodyMediaIndex(projectArticleBodyAddresses(VERSIONED_GROUP))
+  const SOURCES = [ARTICLE_BODY_DESCRIPTION_IMAGE_URL, ARTICLE_BODY_ADDRESS_IMAGE_URL, ARTICLE_BODY_LEGACY_UPLOAD_URL]
+
+  it('the fixture reproduces the production address split', () => {
+    expect(island(ARTICLE_BODY_DESCRIPTION_IMAGE_URL, FULL)).toContain('pv=2&amp;w=480')
+    expect(island(ARTICLE_BODY_DESCRIPTION_IMAGE_URL, null)).not.toContain('pv=2')
+  })
+
+  it.each(SOURCES)('island markup does not change when the full manifest arrives: %s', (src) => {
+    expect(island(src, LOADER)).toBe(island(src, FULL))
+  })
+
+  it.each([390, 768, 1280, 1920])('island and full render request one address per frame at %dpx', (width) => {
+    for (const src of SOURCES) {
+      const expected = fullRender(src, width, FULL)
+      expect(releasedByComponent(src, width, LOADER)).toEqual(expected)
+      expect(releasedByShell(src, width, LOADER)).toEqual(expected)
+    }
+  })
+
+  it('carries addresses only: no geometry, colours or variants', () => {
+    const projected = projectArticleBodyAddresses(VERSIONED_GROUP)
+    const frames = projected?.gallery ?? []
+    // Кадр `uploads/**` ступеней не имеет: остров адресует его своим построителем.
+    expect(frames).toHaveLength((VERSIONED_GROUP.gallery ?? []).filter((item) => item.srcset).length)
+    for (const frame of frames) {
+      expect(Object.keys(frame).sort()).toEqual(['id', 'src', 'srcset'])
+    }
+    expect(JSON.stringify(projected).length).toBeLessThan(JSON.stringify(VERSIONED_GROUP).length / 2)
+    expect(projectArticleBodyAddresses(null)).toBeNull()
+    expect(projectArticleBodyAddresses({ gallery: [{ id: 1, src: 'https://metravel.by/uploads/a.jpg', srcset: null }] })).toBeNull()
   })
 })

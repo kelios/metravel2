@@ -239,10 +239,17 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
 // move it, so the following flow takes the change. Holding a lower visible frame
 // instead would scroll the reading frame away by the full height of the late
 // block — «Похожие статьи» growing under a just-opened «Популярные» (#3396).
-function startsBelowReadingLine(origin: HTMLElement, owner: HTMLElement): boolean {
+//
+// A block that only appends (route elevation profiles under the map, #3419)
+// changes the flow at its previous END, not at its start: its flow height is
+// still unpublished while the anchor is captured, so that end is the node's
+// current bottom. A reader looking at the map keeps it, and the profiles push
+// «Точки маршрута» down; only a reader already past the block has it compensated.
+function startsBelowReadingLine(origin: HTMLElement, owner: HTMLElement, fromEnd = false): boolean {
   const ownerTop = owner.getBoundingClientRect().top
   const readingLine = ownerTop + resolveSectionScrollOffset(owner) + SECTION_READING_LINE_BUFFER_PX
-  return origin.getBoundingClientRect().top > readingLine
+  const rect = origin.getBoundingClientRect()
+  return (fromEnd ? rect.bottom : rect.top) > readingLine
 }
 
 function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = false): ReserveReleaseAnchor | null {
@@ -273,7 +280,10 @@ function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = f
     }
     ancestor = ancestor.parentElement
   }
-  return capture && startsBelowReadingLine(origin, owner) ? null : capture
+  // The first measurement replaces a placeholder wholesale, and an ancestor
+  // payload starts at that ancestor: only this node's own later growth appends.
+  const appends = !initialMeasurement && origin === node && node.dataset.deferredGrowthOrigin === 'end'
+  return capture && startsBelowReadingLine(origin, owner, appends) ? null : capture
 }
 
 function correctMeasuredAnchor(capture: ReserveReleaseAnchor | null, node: HTMLElement): ReserveReleaseState | null {
@@ -301,12 +311,18 @@ type TravelDetailsDeferredTransitionProps = {
   runtimeVisibilityReady?: boolean
   /** Optional sections may measure zero before data arrives or after it clears. */
   allowEmptyRuntime?: boolean
+  /**
+   * Where later growth of the resolved runtime enters the flow. `end` is for a
+   * block that keeps its content and appends below it; the default treats the
+   * whole block as changed from its start.
+   */
+  growthOrigin?: 'end'
   testID: string
 }
 
 type TravelDetailsMeasuredFlowProps = Pick<
   TravelDetailsDeferredTransitionProps,
-  'children' | 'isMobile' | 'testID'
+  'children' | 'growthOrigin' | 'isMobile' | 'testID'
 > & {
   pending?: boolean
   placeholder?: React.ReactNode
@@ -314,6 +330,7 @@ type TravelDetailsMeasuredFlowProps = Pick<
 
 export function TravelDetailsMeasuredFlow({
   children,
+  growthOrigin,
   isMobile,
   testID,
   pending = false,
@@ -325,6 +342,7 @@ export function TravelDetailsMeasuredFlow({
       testID={testID}
       pending={pending}
       placeholder={placeholder}
+      growthOrigin={growthOrigin}
       runtimeFrameReady
       allowEmptyRuntime
     >
@@ -342,6 +360,7 @@ export function TravelDetailsDeferredTransition({
   runtimeFrameReady: controlledRuntimeFrameReady,
   runtimeVisibilityReady,
   allowEmptyRuntime = false,
+  growthOrigin,
   testID,
 }: TravelDetailsDeferredTransitionProps) {
   const [internalRuntimeFrameReady, setInternalRuntimeFrameReady] = useState(false)
@@ -622,6 +641,7 @@ export function TravelDetailsDeferredTransition({
           : 'measuring-runtime',
       deferredTransitionMobile: String(isMobile),
       reserveReleaseState: reserveHeight == null && (!allowEmptyRuntime || reserveReleaseState === 'reserved') ? 'not-reserved' : reserveReleaseState,
+      ...(growthOrigin ? { deferredGrowthOrigin: growthOrigin } : null),
     },
   }
 

@@ -377,3 +377,115 @@ it.each([
     mockViewportWidth = 390
   }
 })
+
+// #3419: прод 14.11.2026, 1280×800, статья с десятью GPX-файлами. Профили высот
+// приходят после показа секции и растят блок карты 692 → 4480 px, когда читатель
+// уже ниже — у «Рядом». Точки маршрута лежали в том же слое и въезжали в экран
+// (`travel-details-points` y0→78) раньше, чем внешний поток получал новую высоту.
+//
+// Читатель, который смотрит на саму карту, остаётся на ней: профили дописываются
+// под карту и сдвигают точки вниз, прокрутка не переписывается.
+it.each([
+  { reader: 'past the map block', mapStart: -2800, natural: false, held: true },
+  { reader: 'past the map block', mapStart: -2800, natural: true, held: true },
+  { reader: 'on the map', mapStart: -344, natural: false, held: false },
+])('isolates late route profile growth from Points until the flow height is published (reader $reader, natural=$natural)', async ({ mapStart: readerMapStart, natural, held }) => {
+  mockEligible = false
+  mockWidgetReady = true
+  const host = document.createElement('div'), owner = document.createElement('div'), mount = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount); host.append(owner); document.body.append(host)
+  const initialTop = 79296, pointsHeight = 1855, slotHeight = 52 + 692 + pointsHeight
+  // Секция монтируется за экраном; читателя ставим на место уже после первого измерения.
+  let top = initialTop, profiles = 0, mapStart = 5000
+  const writes: number[] = []
+  const anchors = { map: { current: null }, points: { current: null }, excursions: { current: null } }
+  const node = (id: string) => mount.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+  const height = (id: string) => Number.parseFloat(node(id)?.style.height || '0')
+  const routeIntrinsic = () => 692 + profiles
+  // Без своего владельца блок карты стоит в общем потоке слоя и двигает точки сразу.
+  const routeFlow = () => node('travel-details-route-map-transition') ? height('travel-details-route-map-transition') : routeIntrinsic()
+  const mapTop = () => mapStart - (owner.scrollTop - initialTop)
+  Object.defineProperties(owner, {
+    clientHeight: { value: 620 }, clientWidth: { value: 390 },
+    scrollHeight: { get: () => 82073 + height('map-slot') - slotHeight },
+    scrollTop: {
+      get: () => natural ? initialTop + Math.max(0, height('map-slot') - slotHeight) : top,
+      set: value => { top = value; writes.push(value) },
+    },
+  })
+  owner.getBoundingClientRect = () => rect(78, 620)
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    switch (this.dataset.testid) {
+      case 'map-slot': return rect(mapTop(), height('map-slot'))
+      case 'map-slot-runtime': return rect(mapTop(), 52 + routeFlow() + pointsHeight)
+      case 'travel-details-excursions-transition':
+      case 'travel-details-excursions-transition-runtime': return rect(mapTop() + 52, 0)
+      case 'travel-details-route-map-transition': return rect(mapTop() + 52, routeFlow())
+      case 'travel-details-route-map-transition-runtime': return rect(mapTop() + 52, routeIntrinsic())
+      case 'travel-details-points': return rect(mapTop() + 52 + routeFlow(), pointsHeight)
+      case 'following-sidebar': return rect(mapTop() + height('map-slot'), 1025)
+      default: return originalRect.call(this)
+    }
+  }
+  const root: Root = createRoot(mount)
+  const notify = (id: string) => {
+    const target = node(`${id}-runtime`)
+    if (!target) return
+    for (const observer of FrameObserver.instances.filter(observer => observer.targets.has(target))) {
+      observer.callback([{ target } as ResizeObserverEntry], observer as unknown as ResizeObserver)
+    }
+  }
+  try {
+    await React.act(async () => {
+      root.render(React.createElement(React.Fragment, null,
+        React.createElement(Flow, {
+          testID: 'map-slot', isMobile: false,
+          children: React.createElement(MapSection, {
+            travel: { id: 1113, countryCode: 'FR', travelAddress: [] } as unknown as Travel,
+            anchors: anchors as never, canRenderHeavy: true, scrollToMapSection: () => undefined,
+          }),
+        }),
+        React.createElement('section', { 'data-testid': 'following-sidebar' }),
+      ))
+      await Promise.resolve()
+    })
+    expect(node('travel-details-route-map-transition')!.contains(anchors.map.current as unknown as HTMLElement)).toBe(true)
+    expect(node('travel-details-route-map-transition')!.dataset.deferredGrowthOrigin).toBe('end')
+    expect(height('travel-details-route-map-transition')).toBe(692)
+    expect(height('map-slot')).toBe(slotHeight)
+    expect(writes).toEqual([])
+    mapStart = readerMapStart
+    const points = () => node('travel-details-points')!.getBoundingClientRect().top
+    const sidebar = () => node('following-sidebar')!.getBoundingClientRect().top
+    const pointsBefore = points(), sidebarBefore = sidebar()
+    expect(pointsBefore).toBe(mapStart + 744)
+    expect(sidebarBefore).toBe(mapStart + slotHeight)
+    // «На карте»: низ блока карты и начало точек в экране (78…698).
+    if (!held) expect(pointsBefore).toBeGreaterThan(78 + 200)
+
+    profiles = 3788
+    // Рост остаётся в слое блока карты: точки и «Рядом» стоят на месте до RO.
+    expect(points()).toBe(pointsBefore)
+    expect(sidebar()).toBe(sidebarBefore)
+
+    React.act(() => { notify('travel-details-route-map-transition'); notify('map-slot') })
+    expect(height('travel-details-route-map-transition')).toBe(4480)
+    expect(height('map-slot')).toBe(slotHeight + 3788)
+    if (held) {
+      expect(owner.scrollTop).toBe(initialTop + 3788)
+      expect(writes).toHaveLength(natural ? 0 : 1)
+      expect(sidebar()).toBe(sidebarBefore)
+      expect(points()).toBe(pointsBefore)
+    } else {
+      expect(owner.scrollTop).toBe(initialTop)
+      expect(writes).toEqual([])
+      expect(points()).toBe(pointsBefore + 3788)
+    }
+  } finally {
+    await React.act(async () => root.unmount())
+    host.remove()
+    HTMLElement.prototype.getBoundingClientRect = originalRect
+  }
+})

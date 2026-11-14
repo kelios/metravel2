@@ -93,7 +93,6 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, fullWidth = fa
 
   useStableContentWebEffects({
     prepared,
-    articleBodyMedia,
     setLightboxGallery,
     webRichTextStyles,
     scrollToHashTarget,

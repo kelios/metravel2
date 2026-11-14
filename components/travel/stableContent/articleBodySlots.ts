@@ -1,18 +1,17 @@
 // Реальные слоты тела статьи: 100vw на мобиле, ~720px на 1280, ~920px на 1920.
 //
-// #1213: это ЕДИНСТВЕННЫЙ источник и для атрибута `sizes`, и для выбора ступени
-// префетча первой картинки. Раньше `sizes` был литералом, а префетч брал
-// фиксированный `RESPONSIVE_FALLBACK_WIDTH`: на десктопе браузер грузил по srcset
-// w=1920, а `<link rel=prefetch>` следом тянул w=800 — один слот двумя ступенями.
-// Замер прода 2026-08-02: 29 252 B и 96 912 B выброшены на двух статьях.
+// #1213: единственный источник атрибута `sizes`. Раньше отсюда же выбиралась
+// ступень префетча первой картинки; префетч убран (#3420): запрос `rel=prefetch`
+// уходит с `Accept` документа, ответ картинки несёт `Vary: Accept`, и `<img>`
+// качал тот же файл заново.
 //
 // #3408: модуль без импортов — порог читают и построитель адресов, и выпуск
 // отложенных картинок серверного острова (скрипт оболочки документа и
 // `utils/richTextDeferredImages.ts`), которым построитель тянуть незачем.
-export const ARTICLE_BODY_SLOTS = [
-  { maxViewport: 768, cssSize: '100vw', slotWidth: (viewportWidth: number) => viewportWidth },
-  { maxViewport: 1439, cssSize: '720px', slotWidth: () => 720 },
-  { maxViewport: Number.POSITIVE_INFINITY, cssSize: '920px', slotWidth: () => 920 },
+const ARTICLE_BODY_SLOTS = [
+  { maxViewport: 768, cssSize: '100vw' },
+  { maxViewport: 1439, cssSize: '720px' },
+  { maxViewport: Number.POSITIVE_INFINITY, cssSize: '920px' },
 ] as const
 
 export const ARTICLE_BODY_MOBILE_VIEWPORT_MAX = ARTICLE_BODY_SLOTS[0].maxViewport

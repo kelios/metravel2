@@ -71,6 +71,7 @@ export const TravelDetailsMapSection: React.FC<{
   })
 
   const colors = useThemedColors()
+  const isMobile = width < METRICS.breakpoints.tablet
   const handleTravelPointCardPress = useCallback((point: any) => {
     handlePointCardPress(point)
   }, [handlePointCardPress])
@@ -81,7 +82,7 @@ export const TravelDetailsMapSection: React.FC<{
 
       <TravelDetailsMeasuredFlow
         testID="travel-details-excursions-transition"
-        isMobile={width < METRICS.breakpoints.tablet}
+        isMobile={isMobile}
       >
         <ExcursionsSection
           travel={travel}
@@ -91,32 +92,44 @@ export const TravelDetailsMapSection: React.FC<{
         />
       </TravelDetailsMeasuredFlow>
 
-      <View
-        ref={setMapSectionRef}
-        {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'map' } } : {})}
+      {/* #3419: профили высот появляются после загрузки GPX и растят блок карты
+          на тысячи пикселей уже после показа секции. Без своего владельца этот
+          рост сдвигал «Точки маршрута» внутри общего слоя раньше, чем внешний
+          поток получал новую высоту: у конца страницы браузерной привязке не
+          хватало запаса прокрутки, и точки въезжали в экран. Профили дописываются
+          под карту, поэтому читателя, который смотрит на карту, рост не уводит. */}
+      <TravelDetailsMeasuredFlow
+        testID="travel-details-route-map-transition"
+        isMobile={isMobile}
+        growthOrigin="end"
       >
-        <TravelRouteMapBlock
-          downloadingRouteId={downloadingRouteId}
-          handleDownloadRoute={handleDownloadRoute}
-          handleMapOpenChange={handleMapOpenChange}
-          hasMapData={hasMapData}
-          highlightedPoint={highlightedPoint}
-          isLoading={isLoading}
-          isRoutePreviewLoading={isRoutePreviewLoading}
-          keyPointLabels={keyPointLabels}
-          mapOpenTrigger={mapOpenTrigger}
-          mapResizeTrigger={mapResizeTrigger}
-          placeHints={placeHints}
-          routeFilePoints={routeFilePoints}
-          routePreviewItems={routePreviewItems}
-          shouldForceRenderMap={shouldForceRenderMap}
-          shouldRender={shouldRender}
-          shouldRenderMapContent={shouldRenderMapContent}
-          styles={styles}
-          transportHints={transportHints}
-          travel={travel}
-        />
-      </View>
+        <View
+          ref={setMapSectionRef}
+          {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'map' } } : {})}
+        >
+          <TravelRouteMapBlock
+            downloadingRouteId={downloadingRouteId}
+            handleDownloadRoute={handleDownloadRoute}
+            handleMapOpenChange={handleMapOpenChange}
+            hasMapData={hasMapData}
+            highlightedPoint={highlightedPoint}
+            isLoading={isLoading}
+            isRoutePreviewLoading={isRoutePreviewLoading}
+            keyPointLabels={keyPointLabels}
+            mapOpenTrigger={mapOpenTrigger}
+            mapResizeTrigger={mapResizeTrigger}
+            placeHints={placeHints}
+            routeFilePoints={routeFilePoints}
+            routePreviewItems={routePreviewItems}
+            shouldForceRenderMap={shouldForceRenderMap}
+            shouldRender={shouldRender}
+            shouldRenderMapContent={shouldRenderMapContent}
+            styles={styles}
+            transportHints={transportHints}
+            travel={travel}
+          />
+        </View>
+      </TravelDetailsMeasuredFlow>
 
       <TravelWeatherBlock
         colors={colors}

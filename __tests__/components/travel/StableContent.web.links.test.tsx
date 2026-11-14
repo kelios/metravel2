@@ -270,16 +270,19 @@ describe('StableContent (web) link styles', () => {
     expect(richText?.innerHTML).toContain('>Example<');
   });
 
-  it('prefetches the first first-party body image through the responsive fallback', async () => {
+  // #3420: `<link rel=prefetch as=image>` уходит с `Accept` документа, а ответ
+  // картинки несёт `Vary: Accept`, поэтому `<img>` качал тот же файл заново
+  // (прод 14.11.2026: 32 410 B дважды на 1280). Кадр запрашивает только `<img>`.
+  it('leaves the first body image to its own <img> and adds no speculative request', async () => {
     const raw = 'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg';
     const originalRequestIdleCallback = (window as any).requestIdleCallback;
-    const prefetchSelector = 'link[rel="prefetch"][as="image"][href*="abc-detail_hd.jpg"]';
-    (window as any).requestIdleCallback = (callback: () => void) => {
+    const idle = jest.fn((callback: () => void) => {
       callback();
       return 1;
-    };
+    });
+    (window as any).requestIdleCallback = idle;
 
-    const { unmount } = render(
+    const { container, unmount } = render(
       <StableContent
         html={`<p><img src="${raw}" alt="Замок" /></p>`}
         contentWidth={700}
@@ -289,16 +292,11 @@ describe('StableContent (web) link styles', () => {
     try {
       window.dispatchEvent(new Event('load'));
       await waitFor(() => {
-        const prefetch = document.querySelector(prefetchSelector) as HTMLLinkElement | null;
-        // #1195: conversion-ключ греется через `legacy_conversion` — family-роут
-        // на голый `?w=` отдаёт мастер с `no-store`.
-        expect(prefetch?.href).toBe(
-          'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg?w=800',
-        );
+        expect(container.querySelector('img')?.getAttribute('src')).toContain('abc-detail_hd.jpg');
       });
+      expect(document.querySelectorAll('link[rel="prefetch"], link[rel="preload"][as="image"]')).toHaveLength(0);
     } finally {
       unmount();
-      document.querySelectorAll(prefetchSelector).forEach((node) => node.remove());
       (window as any).requestIdleCallback = originalRequestIdleCallback;
     }
   });

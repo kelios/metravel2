@@ -35,20 +35,13 @@ import { translate as i18nT } from '@/i18n'
 
 // #3408: адреса картинок тела строит `articleBodyImageUrls.ts` — тот же
 // построитель берёт серверный остров. Публичные имена остаются доступны отсюда.
-export {
-  buildExternalImageUrl,
-  buildStableContentPrefetchUrl,
-  pickArticleBodyWidth,
-} from '@/components/travel/stableContent/articleBodyImageUrls'
+export { buildExternalImageUrl } from '@/components/travel/stableContent/articleBodyImageUrls'
 
 export const hasIframe = (html: string) => /<iframe[\s/>]/i.test(html)
 
 export const isYouTubeEmbedUrl = (src: string) => /youtube\.com|youtu\.be/i.test(src)
 
 export const isInstagramEmbedUrl = (src: string) => /instagram\.com/i.test(src)
-
-export const extractFirstImgSrc = (html: string): string | null =>
-  getAttribute(findFirstStartTag(html, 'img')?.attrs ?? [], 'src') || null
 
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')

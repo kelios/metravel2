@@ -13,11 +13,7 @@ jest.mock('@/components/article/articleEditorConfig', () => ({
 }))
 
 import { buildArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
-import {
-  buildStableContentPrefetchUrl,
-  extractFirstImgSrc,
-  prepareStableContentHtml,
-} from '@/components/travel/stableContent/htmlTransform'
+import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
 import {
   ARTICLE_BODY_ADDRESS_IMAGE,
   ARTICLE_BODY_ADDRESS_IMAGE_URL,
@@ -150,42 +146,6 @@ describe('article body consumes ready-made manifest urls (#1256)', () => {
     // 320 отсеял отбор под слот — он к семействам отношения не имеет. А вот 1600
     // осталась: раньше её срезал бы фронтовой потолок `route_point`.
     expect(emittedWidths(out)).toEqual([960, 1600])
-  })
-
-  describe('prefetch stays inside the emitted candidate set (#1213)', () => {
-    it.each([
-      { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      // Слот 920 CSS @DPR2 просит 1840 и закрывается верхней производной 1600 с
-      // апскейлом ×1.15: ступени выше в shrink-профиле нет (`9136878`), а 1920 —
-      // мастер с `no-store`, греть его нельзя (#1373).
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
-      { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
-      { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
-    ])('$label warms w=$expected', ({ width, dpr, expected }) => {
-      const { prefetch, candidates } = withWebViewport(width, dpr, () => {
-        const prepared = prepare(ARTICLE_BODY_DESCRIPTION_IMAGE_URL)
-        return {
-          prefetch: buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!, MEDIA),
-          candidates: srcSetCandidates(prepared),
-        }
-      })
-
-      expect(prefetch).toBe(`${ARTICLE_BODY_DESCRIPTION_IMAGE_URL}?w=${expected}`)
-      expect(candidates).toContain(prefetch)
-    })
-
-    it('stays inside the emitted set for a foreign-family key', () => {
-      const { prefetch, candidates } = withWebViewport(1920, 2, () => {
-        const prepared = prepare(ARTICLE_BODY_ADDRESS_IMAGE_URL)
-        return {
-          prefetch: buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!, MEDIA),
-          candidates: srcSetCandidates(prepared),
-        }
-      })
-
-      expect(prefetch).toBe(`${ADDRESS_IMAGE_RESOLVED}?w=960`)
-      expect(candidates).toContain(prefetch)
-    })
   })
 
   describe('matching markup to the manifest', () => {

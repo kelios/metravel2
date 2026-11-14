@@ -1,6 +1,6 @@
 import type { ImmutableRequest } from 'expo-server'
 import { normalizeTravelItem } from '@/api/travelsNormalize'
-import type { Travel } from '@/types/types'
+import type { Travel, TravelMediaGroup, TravelMediaImage } from '@/types/types'
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment'
 import { memoizePublicRouteData } from '@/utils/ssr/publicRouteData'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
@@ -53,10 +53,54 @@ async function fetchPublicTravel(request: ImmutableRequest, segment: string): Pr
   return fetchPublicRouteJson(request, `travels/by-slug/${encodeURIComponent(canonical)}/`)
 }
 
-/** Keep the cover manifest and one canonical copy of the article body in loader JSON. */
+const ARTICLE_BODY_SRCSET_FIELDS = ['srcset', 'srcset_cover', 'srcset_contain', 'srcset_print'] as const
+
+/**
+ * #3420: адреса кадров тела статьи для серверного острова — и только они.
+ *
+ * Без манифеста остров адресовал кадр своим построителем (`…webp?w=480`), а
+ * полный рендер после фонового запроса — манифестом (`…webp?pv=2&w=480`). Адрес
+ * файла — дело бэкенда, поэтому один кадр качался дважды, а остров перерисовывался
+ * целиком, как только манифест приходил. Замер прода 14.11.2026, статья 470:
+ * первый кадр — три загрузки по 32 410 B на 1280.
+ *
+ * Берутся ровно те поля, из которых `buildArticleBodyMediaIndex` строит ступени:
+ * `src` (ключ кадра) и `srcset*`. Повтор той же строки `srcset*` ступеней не
+ * добавляет (объединение идёт по ширине, первая побеждает) и опускается. Размеры,
+ * цвет, blurhash и `variants` остаются фоновому запросу: статья с 251 фото несёт
+ * 515 КБ манифеста против 150 КБ адресов.
+ */
+export function projectArticleBodyAddresses(group: TravelMediaGroup | null | undefined): TravelMediaGroup | null {
+  const frames: TravelMediaImage[] = []
+  for (const item of Array.isArray(group?.gallery) ? group.gallery : []) {
+    // Ответ API не доверенный: `buildArticleBodyMediaIndex` пустой элемент
+    // пропускает, и loader из-за него не должен ронять страницу статьи.
+    if (!item || typeof item !== 'object') continue
+    const frame: TravelMediaImage = { id: item.id }
+    const seen = new Set<string>()
+    for (const field of ARTICLE_BODY_SRCSET_FIELDS) {
+      const value = item[field]
+      if (typeof value !== 'string' || !value.trim() || seen.has(value)) continue
+      seen.add(value)
+      frame[field] = value
+    }
+    // Кадр без ступеней индекс пропускает: остров адресует его своим построителем.
+    if (!seen.size) continue
+    if (typeof item.src === 'string' && item.src.trim()) frame.src = item.src
+    frames.push(frame)
+  }
+  return frames.length ? { gallery: frames } : null
+}
+
+/** Keep the cover manifest, body image addresses and one canonical copy of the article body in loader JSON. */
 export function projectTravelLoaderPayload(raw: Record<string, unknown>, routeKey: string): NonNullable<TravelLoaderPayload> {
   const media = raw.media as Travel['media']
-  const normalized = normalizeTravelItem({ ...raw, media: media?.cover ? { cover: media.cover } : null })
+  const articleBody = projectArticleBodyAddresses(media?.article_body)
+  const loaderMedia = {
+    ...(media?.cover ? { cover: media.cover } : null),
+    ...(articleBody ? { article_body: articleBody } : null),
+  }
+  const normalized = normalizeTravelItem({ ...raw, media: Object.keys(loaderMedia).length ? loaderMedia : null })
   const fields: Record<string, unknown> = {}
   for (const key of INITIAL_TRAVEL_FIELDS) {
     const value = (normalized as unknown as Record<string, unknown>)[key]

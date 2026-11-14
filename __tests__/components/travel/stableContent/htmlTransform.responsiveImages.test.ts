@@ -8,11 +8,7 @@ jest.mock('@/components/article/articleEditorConfig', () => ({
   normalizeArticleEditorHtmlForInput: jest.fn((html: string) => html),
 }))
 
-import {
-  buildStableContentPrefetchUrl,
-  extractFirstImgSrc,
-  prepareStableContentHtml,
-} from '@/components/travel/stableContent/htmlTransform'
+import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
 
 // srcset/sizes атрибуты HTML-экранируют `&` -> `&amp;`; сравниваем в этой форме.
 const AMP = '&amp;'
@@ -56,81 +52,6 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     expect(out).toContain(`v=3315`)
     // ниже сгиба всё ещё lazy
     expect(out).toContain('loading="lazy"')
-  })
-
-  it('keeps the first-image prefetch on the responsive fallback instead of the raw origin', () => {
-    const raw = 'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg'
-    const prepared = prepareStableContentHtml(`<p><img src="${raw}" /></p>`)
-    const first = extractFirstImgSrc(prepared)
-
-    expect(first).not.toBeNull()
-    // #1204: conversion-ключ тела статьи остаётся на своём family-роуте и греется
-    // ступенью лестницы. `q`/`fit` туда не уходят: семейство раздаётся готовыми
-    // производными, а лишние параметры плодили бы cache-key на тот же файл.
-    expect(buildStableContentPrefetchUrl(first!)).toBe(
-      'https://metravel.by/gallery/540/conversions/abc-detail_hd.jpg?w=800',
-    )
-    expect(buildStableContentPrefetchUrl(first!)).not.toBe(raw)
-  })
-
-  // #1213: префетч первой картинки тела и `<img>` обязаны попасть в ОДИН URL.
-  // На проде 2026-08-02 они расходились: браузер брал по srcset w=1920, а
-  // `<link rel=prefetch>` тянул фиксированный w=800 — 29 252 B и 96 912 B лишних
-  // на двух статьях. Ступень проверяем через реальную сборку URL, а не мок.
-  describe('first-image prefetch lands on the rung the browser will pick (#1213)', () => {
-    const RAW = 'https://metravel.by/travel-description-image/540/description/abc.JPG'
-
-    const withWebViewport = <T,>(width: number, dpr: number, run: () => T): T => {
-      const originalOs = Platform.OS
-      const originalWidth = window.innerWidth
-      const originalDpr = window.devicePixelRatio
-      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
-      Object.defineProperty(window, 'innerWidth', { value: width, configurable: true })
-      Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true })
-      try {
-        return run()
-      } finally {
-        Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
-        Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
-        Object.defineProperty(window, 'devicePixelRatio', { value: originalDpr, configurable: true })
-      }
-    }
-
-    /** Кандидаты из реально отрендеренного `srcset`, в неэкранированном виде. */
-    const srcSetCandidates = (html: string): string[] =>
-      (html.match(/srcset="([^"]+)"/i)?.[1] ?? '')
-        .split(',')
-        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
-        .filter(Boolean)
-
-    it.each([
-      { label: 'desktop 1280 @2x', width: 1280, dpr: 2, expected: 1600 },
-      { label: 'desktop 1280 @1x', width: 1280, dpr: 1, expected: 800 },
-      { label: 'desktop 1920 @1x', width: 1920, dpr: 1, expected: 960 },
-      // Слот 920 CSS @DPR2 просит 1840 и закрывается верхней производной 1600 с
-      // апскейлом ×1.15: ступени выше в shrink-профиле нет, а 1920 — мастер с
-      // `no-store` (#1373).
-      { label: 'desktop 1920 @2x', width: 1920, dpr: 2, expected: 1600 },
-      { label: 'mobile 390 @3x', width: 390, dpr: 3, expected: 800 },
-    ])('$label prefetches w=$expected, and that URL is a real srcset candidate', ({ width, dpr, expected }) => {
-      const { prefetch, candidates } = withWebViewport(width, dpr, () => {
-        const prepared = prepareStableContentHtml(`<p><img src="${RAW}" /></p>`)
-        const first = extractFirstImgSrc(prepared)!
-        return { prefetch: buildStableContentPrefetchUrl(first), candidates: srcSetCandidates(prepared) }
-      })
-
-      expect(prefetch).toBe(`${RAW}?w=${expected}`)
-      // Главное условие тикета: греется ровно та ступень, что есть в лестнице
-      // этого вьюпорта, — иначе слот скачивается двумя разными URL.
-      expect(candidates).toContain(prefetch)
-    })
-
-    it('falls back to the fixed rung outside web, where there is no prefetch at all', () => {
-      const prepared = prepareStableContentHtml(`<p><img src="${RAW}" /></p>`)
-      expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(
-        `${RAW}?w=800`,
-      )
-    })
   })
 
   it('keeps the mobile viewport on a lower ladder so body images do not blow the network budget', () => {
@@ -244,26 +165,6 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
 
       expect(rungs(out)).toEqual([480, 800, 960, 1600])
     })
-
-    // #1213: префетч обязан попасть в кандидата из `srcset`. Клэмп по семейству
-    // должен применяться в обоих местах, иначе префетч греет 400.
-    it('keeps the prefetch inside the clamped candidate set', () => {
-      const prepared = withViewport(1920, () =>
-        prepareStableContentHtml(
-          '<p><img src="https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp" /></p>',
-        ),
-      )
-      const prefetch = withViewport(1920, () =>
-        buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!),
-      )
-      const candidates = (prepared.match(/srcset="([^"]+)"/i)?.[1] ?? '')
-        .split(',')
-        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
-        .filter(Boolean)
-
-      expect(candidates).toContain(prefetch)
-      expect(prefetch).not.toContain('w=1600')
-    })
   })
 
   // #1163: внешняя картинка отдаётся со своего origin, без стороннего ресайзера.
@@ -370,16 +271,6 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
       }
     })
 
-    // #1213: префетч обязан попасть в тот же URL, что и `<img>`, иначе слот
-    // качается дважды. Без лестницы это значит «ту же единственную ширину», а не
-    // ступень, выбранную по вьюпорту.
-    it('warms the prefetch on exactly the url the img will request', () => {
-      const prepared = prepareStableContentHtml(`<p><img src="${LEGACY}" /></p>`)
-      const src = (prepared.match(/\bsrc="([^"]+)"/i)?.[1] ?? '').replace(/&amp;/g, '&')
-
-      expect(buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)).toBe(src)
-    })
-
     // #1753: карве-аута больше нет — `f` не ставится НИ ОДНОМУ классу, и эти два
     // случая держат границу с другой стороны: попытка вернуть точечный обход не
     // должна расползтись на здоровые роуты. У conversion-ключей производные
@@ -444,39 +335,6 @@ describe('normalizeImgTags responsive delivery for first-party metravel images (
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
       Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
-    }
-  })
-
-  /**
-   * Тот же клэмп обязан работать и на префетче, причём именно на DPR2: `src` в
-   * разметке у conversion-ключа УЖЕ переписан на legacy-роут, семейство по нему не
-   * читается, и без потолка слот 920 CSS @DPR2 (нужно 1840) грел бы ступень,
-   * которой у `route_point` нет, — то есть `<link rel=prefetch>` уходил бы в 400 и
-   * мимо кандидатов `srcset` (#1213 + #1233).
-   */
-  it('keeps the prefetch of a rewritten address-image key inside the candidate set @DPR2', () => {
-    const originalOs = Platform.OS
-    const originalWidth = window.innerWidth
-    const originalDpr = window.devicePixelRatio
-    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
-    Object.defineProperty(window, 'innerWidth', { value: 1920, configurable: true })
-    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true })
-    try {
-      const prepared = prepareStableContentHtml(
-        '<p><img src="https://metravel.by/address-image/15601/conversions/db981e7dac4f45cb840ae19a5722ed22.webp" /></p>',
-      )
-      const prefetch = buildStableContentPrefetchUrl(extractFirstImgSrc(prepared)!)
-      const candidates = (prepared.match(/srcset="([^"]+)"/i)?.[1] ?? '')
-        .split(',')
-        .map((entry) => entry.trim().split(/\s+/)[0]?.replace(/&amp;/g, '&') ?? '')
-        .filter(Boolean)
-
-      expect(new URL(prefetch).searchParams.get('w')).toBe('960')
-      expect(candidates).toContain(prefetch)
-    } finally {
-      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
-      Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
-      Object.defineProperty(window, 'devicePixelRatio', { value: originalDpr, configurable: true })
     }
   })
 

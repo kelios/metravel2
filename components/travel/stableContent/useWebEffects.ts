@@ -3,11 +3,6 @@ import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffec
 import type { RefObject } from 'react'
 import { Platform } from 'react-native'
 
-import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
-import {
-  buildStableContentPrefetchUrl,
-  extractFirstImgSrc,
-} from '@/components/travel/stableContent/htmlTransform'
 import { translate as i18nT } from '@/i18n'
 import { sampleDominantColor, toLetterboxFill } from '@/utils/mediaPlaceholderIndex'
 import { readViewportSize } from '@/utils/viewportMetrics'
@@ -86,9 +81,6 @@ const adoptNaturalImageAspect = (img: HTMLImageElement, frame: HTMLElement | nul
 
 type UseStableContentWebEffectsInput = {
   prepared: string
-  // #1256: тот же индекс, из которого построен `srcset`, — иначе префетч прогреет
-  // другой URL и слот скачается дважды (#1213).
-  articleBodyMedia?: ArticleBodyMediaIndex | null
   setLightboxGallery: Dispatch<SetStateAction<LightboxGallery | null>>
   webRichTextStyles: string
   scrollToHashTarget: (hash: string) => boolean
@@ -97,82 +89,12 @@ type UseStableContentWebEffectsInput = {
 
 export function useStableContentWebEffects({
   prepared,
-  articleBodyMedia = null,
   setLightboxGallery,
   webRichTextStyles,
   scrollToHashTarget,
   rootRef,
 }: UseStableContentWebEffectsInput) {
   const localeRevision = useLocaleRevision()
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
-
-    const connection = (navigator as any)?.connection
-    const effectiveType = String(connection?.effectiveType || '').toLowerCase()
-    const saveData = Boolean(connection?.saveData)
-    const isConstrained = saveData || effectiveType.includes('2g') || effectiveType.includes('slow-2g')
-    if (isConstrained) return
-
-    const first = extractFirstImgSrc(prepared)
-    if (!first) return
-    const safeHref = buildStableContentPrefetchUrl(first, articleBodyMedia)
-    try {
-      const resolved = new URL(safeHref, window.location.origin)
-      if (resolved.origin !== window.location.origin) return
-    } catch {
-      return
-    }
-    const linkId = `prefetch-stable-content-first-img-${encodeURIComponent(safeHref)}`
-    if (document.getElementById(linkId)) return
-
-    let link: HTMLLinkElement | null = null
-    let cancelled = false
-
-    const mount = () => {
-      if (cancelled) return
-      if (document.getElementById(linkId)) return
-      link = document.createElement('link')
-      link.rel = 'prefetch'
-      // `as` ставим атрибутом, а не свойством: для `rel=prefetch` он обязателен, иначе
-      // браузер кэширует ресурс без правильного destination. Присваивание `link.as`
-      // вдобавок не отражается в атрибут в jsdom, из-за чего селектор
-      // `link[rel="prefetch"][as="image"]` не находил узел в тестах.
-      link.setAttribute('as', 'image')
-      link.href = safeHref
-      link.id = linkId
-      document.head.appendChild(link)
-    }
-
-    const schedule = () => {
-      try {
-        if ((window as any).requestIdleCallback) {
-          ;(window as any).requestIdleCallback(mount, { timeout: 1000 })
-        } else {
-          setTimeout(mount, 1000)
-        }
-      } catch {
-        mount()
-      }
-    }
-
-    if (document.readyState === 'complete') {
-      schedule()
-    } else {
-      window.addEventListener('load', schedule, { once: true })
-    }
-
-    return () => {
-      cancelled = true
-      try {
-        window.removeEventListener('load', schedule as any)
-      } catch {
-        void 0
-      }
-      if (link?.parentNode) link.parentNode.removeChild(link)
-    }
-  }, [articleBodyMedia, prepared, rootRef])
-
   // Как только пиксели пришли, слот принимает настоящие пропорции кадра.
   //
   // #1213: раньше этот же обработчик ставил `--travel-rich-image` — URL фотографии

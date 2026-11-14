@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 import { assertTravelMobileCls } from './helpers/travelMobileCls';
 import { assertTravelFullScrollCls } from './helpers/travelFullScrollCls';
+import { assertTravelFastScrollCls } from './helpers/travelFastScrollCls';
 
 type ClsEntry = {
   value: number;
@@ -150,6 +151,13 @@ test('@perf @travel-mobile-cls390 five complete guest traversals stay <=0.1', as
 for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
   test(`@perf @travel-full-scroll-cls${viewport.width} five complete article traversals stay <=0.1`,
     ({ browser, baseURL }, testInfo) => assertTravelFullScrollCls({ browser, baseURL }, testInfo, viewport));
+}
+
+// #3419: хвост статьи на скорости ~1800 px/с. Колесо из прогонов выше даёт
+// секциям хвоста время разрешиться за экраном и поздний рост блока карты не видит.
+for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+  test(`@perf @travel-fast-scroll-cls${viewport.width} a fast run to the article bottom stays <=0.1`,
+    ({ browser, baseURL }, testInfo) => assertTravelFastScrollCls({ browser, baseURL }, testInfo, viewport));
 }
 
 test.describe('@perf CLS audit', () => {

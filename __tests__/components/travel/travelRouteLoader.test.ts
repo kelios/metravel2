@@ -218,6 +218,26 @@ describe('travel route loader', () => {
     expect(raw.media.gallery).toHaveLength(1)
   })
 
+  it('keeps body image addresses for the server island and leaves the rest of the manifest to the background fetch (#3420)', () => {
+    const cover = { id: 1, src: '/gallery/1?w=720' }
+    const ladder = [480, 800].map((w) => `https://metravel.by/travel-description-image/a.webp?pv=2&w=${w} ${w}w`).join(', ')
+    const frame = { id: 0, alt: null, width: 1617, height: 988, blurhash: 'L368BR', dominant_color: '#2d2d2f',
+      variants: { content_480: 'https://metravel.by/travel-description-image/a.webp?pv=2&w=480' },
+      src: 'https://metravel.by/travel-description-image/a.webp?pv=2&w=1600',
+      srcset: ladder, srcset_cover: null, srcset_contain: ladder, srcset_print: null }
+    const raw = { ...article, media: { cover, gallery: [{ id: 2, src: '/gallery/2' }], article_body: { cover: frame, gallery: [frame] } } }
+    const result = projectTravelLoaderPayload(raw, 'demo')
+    expect(result.travel.media).toEqual({ cover, article_body: { gallery: [{ id: 0, src: frame.src, srcset: ladder }] } })
+    // Фоновый запрос по-прежнему добирает галерею, точки и полный манифест тела.
+    expect(result.mediaPartial).toBe(true)
+    expect(projectTravelLoaderPayload({ ...article, media: { article_body: { gallery: [frame] } } }, 'demo').travel.media)
+      .toEqual({ article_body: { gallery: [{ id: 0, src: frame.src, srcset: ladder }] } })
+    expect(projectTravelLoaderPayload({ ...article, media: { article_body: { gallery: [] } } }, 'demo').travel.media).toBeNull()
+    // Пустой элемент манифеста индекс пропускает; loader на нём не падает.
+    expect(projectTravelLoaderPayload({ ...article, media: { article_body: { gallery: [null, frame] } } }, 'demo').travel.media)
+      .toEqual({ article_body: { gallery: [{ id: 0, src: frame.src, srcset: ladder }] } })
+  })
+
   it('preserves source metadata when the canonical sanitized body differs from legacy editorial HTML', () => {
     const raw = { ...article, name: 'Минск', countryName: 'Беларусь',
       description: '<p>Прогулка по набережной.</p>',

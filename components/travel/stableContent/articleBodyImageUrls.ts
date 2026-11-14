@@ -11,9 +11,7 @@ import {
   type ArticleBodyMediaIndex,
 } from '@/components/travel/stableContent/articleBodyMedia'
 import {
-  ARTICLE_BODY_MOBILE_VIEWPORT_MAX,
   ARTICLE_BODY_SIZES,
-  ARTICLE_BODY_SLOTS,
   isArticleBodyMobileViewport,
 } from '@/components/travel/stableContent/articleBodySlots'
 import {
@@ -209,62 +207,9 @@ const currentSlotViewportWidth = (): number => {
 
 const isMobileSlotViewport = (): boolean => isArticleBodyMobileViewport(currentSlotViewportWidth())
 
-/**
- * Набор ширин слота для текущего вьюпорта.
- *
- * Разметка и префетч обязаны спрашивать ОДИН набор: если они разойдутся, префетч
- * прогреет ступень, которой нет в `srcset`, и слот скачается дважды (#1213).
- */
+/** Набор ширин слота для текущего вьюпорта. */
 export const currentSlotWidths = (): readonly number[] =>
   isMobileSlotViewport() ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
-
-const getWebViewportWidth = (): number =>
-  Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth || 0 : 0
-
-const getWebDevicePixelRatio = (): number => {
-  const raw = Platform.OS === 'web' && typeof window !== 'undefined' ? window.devicePixelRatio : 1
-  return Number.isFinite(raw) && raw > 0 ? raw : 1
-}
-
-/**
- * Ступень, которую браузер возьмёт из нашего `srcset` для текущего вьюпорта:
- * минимальный кандидат, покрывающий слот × DPR, иначе самый широкий. Правило то
- * же, что в HTML-спеке, поэтому префетч попадает ровно в тот URL, который потом
- * запросит `<img>`, и слот остаётся с одной сетевой загрузкой (#1213).
- *
- * Без вьюпорта (SSR/native) остаётся прежняя fallback-ступень — там префетча нет.
- */
-export const pickArticleBodyWidth = (
-  viewportWidth: number,
-  dpr: number,
-  familyRoute?: string,
-): number => {
-  const needed = articleBodySlotNeed(viewportWidth, dpr)
-  if (needed === null) {
-    return clampLadderToFamily(familyRoute, [RESPONSIVE_FALLBACK_WIDTH])[0]
-  }
-  const slotWidths =
-    viewportWidth <= ARTICLE_BODY_MOBILE_VIEWPORT_MAX ? RESPONSIVE_WIDTHS_MOBILE : RESPONSIVE_WIDTHS_DESKTOP
-  const widths = clampLadderToFamily(familyRoute, slotWidths)
-  return widths.find((width) => width >= needed) ?? widths[widths.length - 1]
-}
-
-/**
- * Ширина в пикселях, которую слот тела статьи просит на текущем вьюпорте, либо
- * `null` — вьюпорта нет (SSR/native), и просить нечего.
- *
- * Вынесено из `pickArticleBodyWidth`, потому что у картинки из манифеста нет
- * промежуточной «своей» лестницы: ступень выбирается прямо по этой потребности,
- * иначе округление шло бы дважды — сначала к набору слота, потом к ступеням
- * манифеста, — и префетч мог бы промахнуться мимо кандидата из `srcset`.
- */
-const articleBodySlotNeed = (viewportWidth: number, dpr: number): number | null => {
-  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return null
-  const slot =
-    ARTICLE_BODY_SLOTS.find((entry) => viewportWidth <= entry.maxViewport) ??
-    ARTICLE_BODY_SLOTS[ARTICLE_BODY_SLOTS.length - 1]
-  return slot.slotWidth(viewportWidth) * (Number.isFinite(dpr) && dpr > 0 ? dpr : 1)
-}
 
 /**
  * Лестница слота, обрезанная по потолку СЕМЕЙСТВА источника (#1233).
@@ -413,42 +358,6 @@ export const buildArticleBodyResponsiveImage = (
     srcSet,
     sizes: RESPONSIVE_SIZES,
   }
-}
-
-/**
- * URL первой картинки тела для `<link rel=prefetch>`.
- *
- * #1213: это НЕ `src` из разметки. `src` — запасная ступень для движков без
- * `srcset`, а греть надо ровно ту ступень, которую браузер выберет по
- * `srcset`/`sizes`, иначе тот же слот скачивается дважды.
- */
-export const buildStableContentPrefetchUrl = (
-  src: string,
-  media?: ArticleBodyMediaIndex | null,
-): string => {
-  // Кандидаты берутся тем же вызовом, что и для `srcset`, поэтому прогретый URL
-  // гарантированно один из них — даже если ступени манифеста разойдутся с набором
-  // слота. Потребность считается напрямую, без промежуточного округления.
-  const rungs = resolveArticleBodyRungs(src, media ?? null, currentSlotWidths())
-  if (rungs?.length) {
-    const needed = articleBodySlotNeed(getWebViewportWidth(), getWebDevicePixelRatio())
-    const rung = pickWidthCandidate(rungs, needed ?? RESPONSIVE_FALLBACK_WIDTH)
-    if (rung) return rung.url
-  }
-
-  const parsed = parseFirstPartyArticleImage(src)
-  if (!parsed) return buildExternalImageUrl(src) ?? src
-  // Класс без лестницы греется своей единственной шириной: иначе префетч и `<img>`
-  // разошлись бы по разным URL и слот скачался бы дважды — ровно баг #1213.
-  if (isLegacyUploadResizeUrl(parsed.pathname)) {
-    return buildMetravelSizedUrl(parsed, LEGACY_UPLOAD_FIXED_WIDTH)
-  }
-  // Клэмп по семейству обязан быть тем же, что в `srcset`, иначе префетч уходит
-  // на ступень, которой у семейства нет, и греет 400 (#1213 + #1233).
-  return buildMetravelSizedUrl(
-    parsed,
-    pickArticleBodyWidth(getWebViewportWidth(), getWebDevicePixelRatio(), familyRouteOfMediaUrl(src)),
-  )
 }
 
 /**
