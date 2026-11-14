@@ -652,6 +652,7 @@ export function TravelDetailsDeferredTransition({
       style={[
         styles.webTransition,
         !runtimeIsVisible && styles.hiddenMeasuringBounds,
+        growthOrigin === 'end' && styles.appendingBounds,
         reserveHeight == null || (runtimeFrameReady && !pending && reserveReleaseState !== 'reserved')
           ? null
           : ({ minHeight: reserveHeight } as never),
@@ -713,6 +714,16 @@ const styles = StyleSheet.create({
   }),
   hiddenMeasuringBounds: Platform.select({
     web: { overflow: 'hidden' },
+    default: {},
+  }),
+  // Content appended inside the runtime can resize it from a nested
+  // ResizeObserver callback (react-native-web `onLayout`), after this runtime's
+  // own notification for the frame was already delivered: the flow height is
+  // then published one frame late. Until it is, the appended tail must not be
+  // drawn over the following section — on prod the new elevation profiles
+  // covered «Точки маршрута» for a frame (CLS 0.44–0.54, #3419).
+  appendingBounds: Platform.select({
+    web: { overflowY: 'clip' } as never,
     default: {},
   }),
   measuringRuntime: Platform.select({

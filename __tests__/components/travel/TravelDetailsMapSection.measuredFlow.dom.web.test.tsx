@@ -453,6 +453,10 @@ it.each([
     })
     expect(node('travel-details-route-map-transition')!.contains(anchors.map.current as unknown as HTMLElement)).toBe(true)
     expect(node('travel-details-route-map-transition')!.dataset.deferredGrowthOrigin).toBe('end')
+    // Высота слоя публикуется из RO и может отстать на кадр: дописанный хвост
+    // до этого обрезается, а не рисуется поверх точек.
+    expect(getComputedStyle(node('travel-details-route-map-transition')!).overflowY).toBe('clip')
+    expect(getComputedStyle(node('travel-details-excursions-transition')!).overflowY).not.toBe('clip')
     expect(height('travel-details-route-map-transition')).toBe(692)
     expect(height('map-slot')).toBe(slotHeight)
     expect(writes).toEqual([])
