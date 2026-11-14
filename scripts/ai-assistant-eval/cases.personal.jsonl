@@ -1,0 +1,14 @@
+{"id": "pv01", "group": "personal", "lang": "ru", "profile": true, "q": "Куда мне поехать из того, что я сохранила?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv02", "group": "personal", "lang": "ru", "profile": true, "q": "Что у меня в планах на поездки?", "expect": "answer", "expect_sources": {"pattern": "брест", "min": 1}}
+{"id": "pv03", "group": "personal", "lang": "ru", "profile": true, "q": "Куда я хотела поехать? Напомни.", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы", "min": 1}}
+{"id": "pv04", "group": "personal", "lang": "ru", "profile": true, "q": "Что из моего избранного подойдёт на выходные?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv05", "group": "personal", "lang": "be", "profile": true, "q": "Куды мне паехаць з таго, што я захавала?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv06", "group": "personal", "lang": "be", "profile": true, "q": "Што ў мяне запланавана на паездкі?", "expect": "answer", "expect_sources": {"pattern": "брест", "min": 1}}
+{"id": "pv07", "group": "personal", "lang": "uk", "profile": true, "q": "Куди мені поїхати з того, що я зберегла?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv08", "group": "personal", "lang": "uk", "profile": true, "q": "Що в мене заплановано?", "expect": "answer", "expect_sources": {"pattern": "брест", "min": 1}}
+{"id": "pv09", "group": "personal", "lang": "pl", "profile": true, "q": "Dokąd pojechać z moich zapisanych miejsc?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv10", "group": "personal", "lang": "pl", "profile": true, "q": "Co mam zaplanowane?", "expect": "answer", "expect_sources": {"pattern": "брест", "min": 1}}
+{"id": "pv11", "group": "personal", "lang": "en", "profile": true, "q": "Where should I go from my saved places?", "expect": "answer", "expect_sources": {"pattern": "минск за выходные|заброшенные усадьбы|брест", "min": 1}}
+{"id": "pv12", "group": "personal", "lang": "en", "profile": true, "q": "What are my plans for upcoming trips?", "expect": "answer", "expect_sources": {"pattern": "брест", "min": 1}}
+{"id": "pv13", "group": "personal_control", "lang": "ru", "profile": true, "q": "Куда съездить на выходные в Беларуси?", "expect": "answer", "expect_sources": {"pattern": "беларус|минск|брест|гродно|несвиж|мир", "min": 1}}
+{"id": "pv14", "group": "personal_control", "lang": "ru", "q": "Куда мне поехать из того, что я сохранила?", "expect": "any_on_topic"}

@@ -39,6 +39,12 @@ export type AnswerGuardContext = {
    * длина или набор высоты маршрута мира в тексте модели — число без опоры.
    */
   worldSources?: readonly WorldLinkSource[]
+  /**
+   * Названия материалов из строки «О посетителе» (#3354), которых нет среди карточек ответа
+   * (`visitorTitlesOutside`). Модель видела их как сведения о человеке, а не как карточки: предложение или
+   * пункт с таким названием уходит тем же правилом, что материал не из подсказки.
+   */
+  visitorTitles?: readonly string[]
 }
 
 /** Конец фразы: знак, за которым новая фраза с заглавной буквы, ссылка или конец строки. «ok. 180 min» фразу не делит. */
@@ -335,7 +341,7 @@ export const echoesQuestion = (question: string | null | undefined, answer: stri
   return said.startsWith(asked) || (said.includes(asked) && asked.length * 2 >= said.length)
 }
 
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
  * Текст без дословного повтора вопроса посетителя (регистр и пробелы не важны). Вырезается только вопрос

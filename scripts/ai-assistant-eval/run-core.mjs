@@ -82,6 +82,8 @@ export const loadCases = (file) => {
       const bad = !world || typeof world !== 'object' || Object.keys(world).some((key) => !known.includes(key)) || numeric.some((key) => world[key] !== undefined && !(Number.isFinite(world[key]) && world[key] >= 0))
       if (bad || (world.month !== undefined && !(Number.isInteger(world.month) && world.month >= 1 && world.month <= 12))) throw new Error(`${item.id}: expect_world — {min, max, max_km, min_km, month 1–12, max_days, country, title}`)
     }
+    // Личный вопрос (#3354): задаётся от имени тестового аккаунта — токен берётся из окружения прогона.
+    if (item.profile !== undefined && typeof item.profile !== 'boolean') throw new Error(`${item.id}: profile — true или false`)
     seen.add(item.id)
     cases.push({ ...item, turns, expects, locale: item.locale ?? item.lang ?? 'ru', lang: item.lang ?? 'ru' })
   }
@@ -299,6 +301,20 @@ async function openScreenDriver(args) {
   }
 }
 
+/** Переменная окружения с токеном тестового аккаунта для личных вопросов (#3354). Значение нигде не печатается. */
+export const PROFILE_TOKEN_ENV = 'AI_ASSIST_EVAL_PROFILE_TOKEN'
+
+/**
+ * Токен для вопроса набора: личный вопрос (`profile: true`) идёт от имени тестового аккаунта, остальные — как
+ * у гостя, даже когда переменная задана. Личный вопрос без токена — ошибка сборки прогона, а не провал ответа.
+ */
+export const profileTokenFor = (item, env = process.env) => {
+  if (item.profile !== true) return null
+  const token = String(env[PROFILE_TOKEN_ENV] ?? '').trim()
+  if (!token) throw new Error(`${item.id}: личный вопрос — задайте ${PROFILE_TOKEN_ENV} (токен тестового аккаунта; значение не печатается)`)
+  return token
+}
+
 /** Путь службы (#3286): клиент экрана шлёт вопрос в `/ai/ask`, каждый вопрос набора — со своего адреса посетителя. */
 async function openAskDriver(args) {
   const { createAskClient } = await loadAskProvider()
@@ -307,7 +323,7 @@ async function openAskDriver(args) {
   return {
     // Строки экрана на локали хода: ход без текста модели контур видит так же, как посетитель.
     openCase: async (item, sequence) =>
-      createAskSession({ createAskClient, askUrl: args.askUrl, locale: item.locale, source: item.source ?? null, shownTexts: await loadShownTexts(item.locale), visitor: `2001:db8:${run.slice(0, 4)}:${run.slice(4, 8)}:${run.slice(8, 12)}::${sequence.toString(16)}` }),
+      createAskSession({ createAskClient, askUrl: args.askUrl, locale: item.locale, source: item.source ?? null, shownTexts: await loadShownTexts(item.locale), authToken: profileTokenFor(item), visitor: `2001:db8:${run.slice(0, 4)}:${run.slice(4, 8)}:${run.slice(8, 12)}::${sequence.toString(16)}` }),
     close: async () => {},
   }
 }
@@ -316,6 +332,10 @@ async function runCases(args) {
   const viaService = args.provider === 'ask'
   const cases = loadCases(args.cases).filter((item) => (!args.only || args.only.has(item.id)) && (!args.group || args.group.has(item.group)))
   if (!cases.length) throw new Error('нет вопросов под фильтр')
+  // Личные вопросы (#3354) отвечает только служба: экран с провайдером `llamacpp` личного контекста не получает.
+  const personal = cases.filter((item) => item.profile === true)
+  if (personal.length && !viaService) throw new Error(`личные вопросы (${personal[0].id}…) идут только путём службы: --provider ask`)
+  if (personal.length) profileTokenFor(personal[0])
   const tree = path.resolve(ROOT, args.tree ?? '.')
   // Старый Node, служба без события `trace` или на чужой модели — замера нет: отказ до первого вопроса.
   if (viaService) await loadAskProvider()

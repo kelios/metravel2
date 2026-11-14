@@ -12,6 +12,7 @@ import { AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_PROMPT_SOURCES_LIMIT } fr
 import { arrangeSources, isArranged, withoutNearby } from './sourceSelection.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from './retrievalQuery.ts'
 import type { AiChatMessage, AiHistoryItem, AiSource } from './types'
+import { formatVisitorBlock, VISITOR_RULE_RU, type VisitorContext } from './visitorContext.ts'
 
 /** Копия `SYSTEM` из `scripts/ai-train/sets/common.py` — менять синхронно. */
 export const ASSISTANT_SYSTEM_PROMPT =
@@ -112,8 +113,8 @@ export const resolveAnswerLanguage = (locale: string): string =>
 /** Режим страницы (#3290): среди карточек есть страница, с которой открыт ассистент. */
 export const isPageMode = (sources: readonly AiSource[]): boolean => sources.some((source) => source.group === 'page')
 
-export const buildSystemPrompt = (locale: string, options: { page?: boolean; help?: boolean } = {}): string =>
-  `${buildBaseSystemPrompt(locale)}${options.page ? `\n\n${PAGE_MODE_RULE_RU}` : ''}${options.help ? `\n\n${HELP_MODE_RULE_RU}` : ''}`
+export const buildSystemPrompt = (locale: string, options: { page?: boolean; help?: boolean; visitor?: boolean } = {}): string =>
+  `${buildBaseSystemPrompt(locale)}${options.page ? `\n\n${PAGE_MODE_RULE_RU}` : ''}${options.help ? `\n\n${HELP_MODE_RULE_RU}` : ''}${options.visitor ? `\n\n${VISITOR_RULE_RU}` : ''}`
 
 const buildBaseSystemPrompt = (locale: string): string =>
   `${ASSISTANT_SYSTEM_PROMPT}\n\n` +
@@ -146,13 +147,16 @@ export type UserMessageOptions = {
   /** Вопрос называет место, которого нет в карточках (`arrangeSources`). */
   noPlace?: boolean
   hints?: PromptHints
+  /** Готовая строка «О посетителе» (#3354, `formatVisitorBlock`): стоит между карточками и вопросом. Пусто — строки нет. */
+  visitor?: string
 }
 
 export const buildUserMessage = (question: string, sources: readonly AiSource[], options: UserMessageOptions = {}): string => {
   const cleanQuestion = sanitizeFragment(question, MAX_QUESTION_LENGTH)
   if (!sources.length) return `Материалы сайта: ничего не найдено.\n\nВопрос посетителя: ${cleanQuestion}`
   const note = options.noPlace && options.hints?.noPlace !== false ? `${NO_PLACE_NOTE_RU}\n\n` : ''
-  return `Материалы сайта:\n${formatSourcesBlock(sources, options.hints)}\n\n${note}Вопрос посетителя: ${cleanQuestion}`
+  const visitor = options.visitor ? `${options.visitor}\n\n` : ''
+  return `Материалы сайта:\n${formatSourcesBlock(sources, options.hints)}\n\n${note}${visitor}Вопрос посетителя: ${cleanQuestion}`
 }
 
 export type BuildAssistantMessagesInput = {
@@ -174,6 +178,14 @@ export type BuildAssistantMessagesInput = {
   /** Признак «материала о месте нет» от того, кто расставил карточки; без `arranged` считается здесь. */
   noPlace?: boolean
   hints?: PromptHints
+  /**
+   * Личный контекст вошедшего посетителя (#3354): сводку передаёт только служба `/ai/ask`. В подсказку она
+   * идёт строкой «О посетителе» с правилом в системном сообщении; в режиме страницы и в справке строки нет —
+   * там ответ даётся по одной карточке. Гость и выключенный блок — подсказка прежняя до байта.
+   */
+  visitor?: VisitorContext | null
+  /** Текущее время для строки «О посетителе» (прошедшие даты и поездки в неё не идут); по умолчанию — сейчас. */
+  now?: Date
 }
 
 /**
@@ -197,6 +209,13 @@ export const selectPromptSources = (
   return withoutNearby(ordered).slice(0, Math.max(0, limit))
 }
 
+/**
+ * Строка «О посетителе» этого хода (#3354) либо пустая строка: сводки нет, карточек нет, режим страницы или
+ * справка. Одно правило для подсказки и для того, кто проверяет, ушла ли строка модели.
+ */
+export const visitorBlockFor = (visitor: VisitorContext | null | undefined, promptSources: readonly AiSource[], now?: Date): string =>
+  !visitor || !promptSources.length || isPageMode(promptSources) || isHelpMode(promptSources) ? '' : formatVisitorBlock(visitor, now)
+
 /** Сообщения для `/v1/chat/completions`: system → история (≤ 6) → вопрос с карточками подсказки. */
 export function buildAssistantMessages({
   question,
@@ -207,6 +226,8 @@ export function buildAssistantMessages({
   arranged = false,
   noPlace,
   hints,
+  visitor,
+  now,
 }: BuildAssistantMessagesInput): AiChatMessage[] {
   const trimmedHistory = history
     .filter((item) => item && (item.role === 'user' || item.role === 'assistant'))
@@ -220,9 +241,12 @@ export function buildAssistantMessages({
   const arrangement = ready ? { sources, noPlace: noPlace === true } : arrangeSources(placeQuery, sources)
   const promptSources = selectPromptSources(arrangement.sources, AI_PROMPT_SOURCES_LIMIT, null, true)
 
+  const help = isHelpMode(promptSources)
+  const visitorBlock = visitorBlockFor(visitor, promptSources, now)
+
   return [
-    { role: 'system', content: buildSystemPrompt(locale, { page, help: isHelpMode(promptSources) }) },
+    { role: 'system', content: buildSystemPrompt(locale, { page, help, visitor: visitorBlock !== '' }) },
     ...trimmedHistory,
-    { role: 'user', content: buildUserMessage(question, promptSources, { noPlace: !page && arrangement.noPlace, hints }) },
+    { role: 'user', content: buildUserMessage(question, promptSources, { noPlace: !page && arrangement.noPlace, hints, visitor: visitorBlock }) },
   ]
 }

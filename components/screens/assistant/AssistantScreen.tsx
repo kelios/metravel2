@@ -27,6 +27,7 @@ import { webDataSetProps } from '@/utils/webProps'
 
 import { ASSISTANT_SEO } from './assistantSeo'
 import { AssistantComposer } from './AssistantComposer'
+import { AssistantProfileNotice } from './AssistantProfileNotice'
 import { AssistantTurnCard } from './AssistantTurnCard'
 import { createAssistantStyles } from './assistantStyles'
 import { useAssistantChat } from './useAssistantChat'
@@ -174,6 +175,7 @@ export default function AssistantScreen({ sourceParam = null }: AssistantScreenP
           )}
         </ScrollView>
         <View style={{ paddingBottom: bottomInset }}>
+          <AssistantProfileNotice confirmed={chat.profileActive} styles={styles} />
           <AssistantComposer
             styles={styles}
             colors={colors}

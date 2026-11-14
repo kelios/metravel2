@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { resolveAskAuth } from '@/api/aiAssist/askAuth'
 import { createAskClient, isAskError, type AskClient, type AskFeedbackReason, type AskFeedbackVote } from '@/api/aiAssist/askProvider'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
@@ -131,7 +132,9 @@ const resolveProvider = (options: Pick<UseAssistantChatOptions, 'generator' | 'a
   if (options.generator !== undefined) return { kind: 'llamacpp', generator: options.generator }
   const provider: AiAssistantProvider = getAiAssistantProvider()
   if (provider === 'llamacpp') return { kind: 'llamacpp', generator: createGenerator(getAiAssistantBaseUrl()) }
-  return { kind: 'ask', client: createAskClient(getAiPicksBaseUrl()) }
+  // Личный контекст (#3354) получает только провайдер `ask`: `llamacpp` ходит в модель напрямую, без службы.
+  const baseUrl = getAiPicksBaseUrl()
+  return { kind: 'ask', client: createAskClient(baseUrl, { auth: () => resolveAskAuth(baseUrl) }) }
 }
 
 export function useAssistantChat(options: UseAssistantChatOptions) {
@@ -144,6 +147,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
   const sourceLoadRef = useRef<Promise<AiSource | null> | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [offTopicBlocked, setOffTopicBlocked] = useState(false)
+  // #3354: служба подтвердила в последнем ходе, что учла статьи и сохранённое вошедшего посетителя.
+  const [profileActive, setProfileActive] = useState(false)
   const [inputError, setInputError] = useState<AssistantInputError>(null)
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null)
   const turnsRef = useRef<AssistantTurn[]>([])
@@ -324,6 +329,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         })
         const { done } = result
         applyServerRemaining(done.remaining)
+        if (mountedRef.current) setProfileActive(done.profile === true)
         switch (done.status) {
           case 'done':
             patchTurn(id, {
@@ -634,6 +640,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
     sourceCard,
     remaining,
     offTopicBlocked,
+    /** Служба учла личный контекст в последнем ходе (#3354); строку под лентой экран показывает только вошедшему. */
+    profileActive,
     inputError,
     busy: activeTurnId !== null,
     /** У `ask` служба всегда настроена (same-origin); у `llamacpp` — задан ли адрес модели. */

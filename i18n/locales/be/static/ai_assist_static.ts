@@ -67,6 +67,7 @@ export const aiAssistStaticResources = {
   "ask.sourceExample1": "Колькі часу зойме?",
   "ask.sourceExample2": "Ці падыдзе з дзецьмі?",
   "ask.sourceExample3": "Што побач?",
+  "ask.profileNotice": "Асістэнт улічвае вашы артыкулы і захаванае",
   "ask.worldTitle": "Яшчэ ў свеце",
   "ask.worldAttribution": "Маршруты па-за сайтам. Даныя: © удзельнікі OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Даўжыня, набор вышыні і месяцы — разлік па адкрытых даных: перад паходам звярайце іх з крыніцай.",
   "ask.worldAttributionMore": "Пра крыніцы даных",

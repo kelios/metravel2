@@ -7,6 +7,7 @@ import { defaultModelCacheDir } from '../ai-index/models.ts'
 import { DEFAULT_DEMAND_LOG_PATH } from './demandLog.ts'
 import { DEFAULT_DAY_TIME_ZONE } from './limits.ts'
 import { ASK_FRAGMENT_CHARS } from './search.ts'
+import { DEFAULT_AUTH_COOKIE, DEFAULT_PROFILE_CACHE_SIZE, DEFAULT_PROFILE_TIMEOUT_MS, DEFAULT_PROFILE_TTL_SECONDS } from './visitorProfile.ts'
 
 export interface AssistConfig {
   port: number
@@ -76,6 +77,19 @@ export interface AssistConfig {
    * утверждает владелец, модель его искажала), `model` — запись уходит модели карточкой подсказки.
    */
   helpMode: 'direct' | 'model'
+  /**
+   * Личный контекст вошедшего посетителя (#3354): строка «О посетителе» в подсказке `/ai/ask` и подбор по
+   * сохранённому и запланированному. Включён; `AI_ASSIST_PROMPT_PROFILE=0` выключает целиком — служба не
+   * читает токен посетителя и не ходит за сводкой.
+   */
+  promptProfile: boolean
+  /** Общий бюджет сбора сводки посетителя, мс; не уложились — ответ как гостю. */
+  profileTimeoutMs: number
+  /** Сколько сводка живёт в памяти службы, с (3–5 минут), и сколько посетителей в ней помещается. */
+  profileTtlSeconds: number
+  profileCacheSize: number
+  /** Имя cookie сессии сайта — web-клиент заголовка `Authorization` не шлёт (токен в HttpOnly-cookie). */
+  authCookieName: string
 }
 
 function envNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -123,5 +137,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
     },
     promptFocus: env.AI_ASSIST_PROMPT_FOCUS !== '0',
     helpMode: env.AI_ASSIST_HELP_MODE === 'model' ? 'model' : 'direct',
+    promptProfile: env.AI_ASSIST_PROMPT_PROFILE !== '0',
+    profileTimeoutMs: envNumber(env, 'AI_ASSIST_PROFILE_TIMEOUT_MS', DEFAULT_PROFILE_TIMEOUT_MS),
+    profileTtlSeconds: envNumber(env, 'AI_ASSIST_PROFILE_TTL_SECONDS', DEFAULT_PROFILE_TTL_SECONDS),
+    profileCacheSize: Math.max(1, envNumber(env, 'AI_ASSIST_PROFILE_CACHE_SIZE', DEFAULT_PROFILE_CACHE_SIZE)),
+    authCookieName: env.AI_ASSIST_AUTH_COOKIE || DEFAULT_AUTH_COOKIE,
   }
 }

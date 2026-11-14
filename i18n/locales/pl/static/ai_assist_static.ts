@@ -67,6 +67,7 @@ export const aiAssistStaticResources = {
   "ask.sourceExample1": "Ile czasu to zajmie?",
   "ask.sourceExample2": "Czy nadaje się dla dzieci?",
   "ask.sourceExample3": "Co jest w pobliżu?",
+  "ask.profileNotice": "Asystent uwzględnia Twoje artykuły i zapisane miejsca",
   "ask.worldTitle": "Jeszcze na świecie",
   "ask.worldAttribution": "Szlaki spoza serwisu. Dane: © autorzy OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Długość, suma podejść i miesiące to obliczenia na otwartych danych: przed wyjściem sprawdź je w źródle.",
   "ask.worldAttributionMore": "O źródłach danych",

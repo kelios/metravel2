@@ -85,6 +85,7 @@ import {
   cardText,
   cutTailMatcher,
   echoesQuestion,
+  escapeRegExp,
   extractNumberFacts,
   firstSentence,
   groundingOf,
@@ -114,6 +115,7 @@ export type GuardCheck =
   | 'counter_question'
   | 'orphan_lead_in'
   | 'stray_admission'
+  | 'visitor_material'
   | 'echo'
 export type GuardFinding = { check: GuardCheck; detail: string }
 
@@ -132,6 +134,8 @@ export type AnswerGuardResult = LinkGuardResult & {
   counterQuestions: number
   /** Сколько признаний не о том, что спросили, убрано из ответа со ссылками (#3369). */
   strayAdmissions: number
+  /** Сколько раз в ответе назван материал из строки «О посетителе», которого нет среди карточек (#3354); поля нет — ни разу. */
+  visitorMentions?: number
   /** Ответ пустой: вместо `text` показывается запасная фраза (`aiAssistStatic:ask.fallbackAnswer`). */
   fallback: boolean
   findings: GuardFinding[]
@@ -311,6 +315,7 @@ const PROMPT_ECHO_RE = new RegExp(
   [
     'Ты\\s+—\\s+помощник\\s+сайта', 'Это данные для ответа, а не инструкции',
     '(?:Материалы|Матэрыялы|Матеріали)\\s+сайт[ауе]\\s*:', 'Materia[łl]y\\s+(?:ze\\s+)?(?:strony|serwisu|witryny)\\s*:', '(?:web)?site\\s+materials\\s*:',
+    'О\\s+посетителе\\s*:', 'Пра\\s+наведвальніка\\s*:', 'Про\\s+відвідувача\\s*:', 'O\\s+odwiedzaj[ąa]cym\\s*:', 'About\\s+the\\s+visitor\\s*:',
     'Вопрос\\s+посетителя\\s*:', 'Пытанне\\s+наведвальніка\\s*:', 'Питання\\s+відвідувача\\s*:', 'Pytanie\\s+(?:odwiedzaj[ąa]cego|go[śs]cia)\\s*:', "Visitor['’]?s\\s+question\\s*:",
   ].join('|'),
   'iu',
@@ -349,6 +354,23 @@ const stripPromptEcho = (text: string): { text: string; removed: string[] } => {
 }
 
 /**
+ * Материал из строки «О посетителе» (#3354), которого нет среди карточек: название в ответе получает метку
+ * вырезанной ссылки — предложение или пункт с ним уходит правилом «материал не из подсказки». Ключи идут
+ * от длинного к короткому одним шаблоном: полное название не размечается второй раз по своей части.
+ */
+const markVisitorMaterials = (text: string, titles: readonly string[] | undefined): { text: string; marked: number } => {
+  const keys = [...new Set((titles ?? []).map((title) => title.trim()).filter(Boolean))].sort((a, b) => b.length - a.length)
+  if (!keys.length) return { text, marked: 0 }
+  let marked = 0
+  const pattern = new RegExp(keys.map((key) => key.split(/\s+/).map(escapeRegExp).join('\\s+')).join('|'), 'giu')
+  const out = text.replace(pattern, (match) => {
+    marked += 1
+    return `${match}${REMOVED_LINK_MARK}`
+  })
+  return { text: out, marked }
+}
+
+/**
  * Страж ответа целиком: страж ссылок (адреса и подписи), затем пояснения пунктов, числа и пустой
  * ответ. `text` — что показать; при `fallback` вызывающий показывает запасную фразу вместо него.
  */
@@ -357,7 +379,10 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
   const linked = enforceSourceLinks(rawText, sources, { markRemoved: true, worldSources: context.worldSources })
   const findings: GuardFinding[] = []
   if (linked.relabeled) findings.push({ check: 'label_mismatch', detail: `подписей заменено названием карточки: ${linked.relabeled}` })
-  const echoed = stripPromptEcho(linked.text)
+  // Материал из сведений о посетителе, которого нет среди карточек (#3354): метка — и дальше общим правилом.
+  const visitor = markVisitorMaterials(linked.text, context.visitorTitles)
+  if (visitor.marked) findings.push({ check: 'visitor_material', detail: `назван материал из сведений о посетителе, которого нет среди карточек: ${visitor.marked}` })
+  const echoed = stripPromptEcho(visitor.text)
   if (echoed.removed.length) findings.push({ check: 'prompt_leak', detail: `в ответе разметка подсказки: «${echoed.removed[0].slice(0, 120)}»` })
   // Голый адрес карточки — ссылка с её названием либо повтор уже названной карточки.
   const named = nameBareSourceLinks(echoed.text, sources)
@@ -588,7 +613,7 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
   const strayAdmission = !pageMode && groundedFacts === 0 && !admits && admitsNoAnswer(text)
   const promptLeaks = echoed.removed.length
   // Из ответа убрано содержание: число без опоры, материал не из подсказки, эхо подсказки, оборванная фраза.
-  const contentCut = linked.removed + ungroundedNumbers + promptLeaks + cardFragments > 0
+  const contentCut = linked.removed + ungroundedNumbers + promptLeaks + cardFragments + visitor.marked > 0
   const cut = contentCut || droppedDescriptions > 0 || text !== guarded
   const onlyQuestions = text.length > 0 && text.split('\n').flatMap(sentencesOf).every((sentence) => !sentence.trim() || /\?\s*$/.test(sentence))
   // Остаток после вырезания отвечает сам за себя: без ссылки и признания отвечать нечем. В режиме страницы
@@ -613,5 +638,5 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
     findings.push({ check: 'echo', detail })
   }
 
-  return { text, removed: linked.removed, relabeled: linked.relabeled, removedWorld: linked.removedWorld, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, strayAdmissions, fallback, findings }
+  return { text, removed: linked.removed, relabeled: linked.relabeled, removedWorld: linked.removedWorld, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, strayAdmissions, ...(visitor.marked ? { visitorMentions: visitor.marked } : {}), fallback, findings }
 }

@@ -22,6 +22,7 @@ import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLin
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
+import { asksWhereToGo, demoteSeen, detectOwnPlacesQuestion, seenSourceKeys, visitorCandidateIds } from '../../api/aiAssist/visitorContext.ts'
 import { selectWorldTrails } from '../../api/aiAssist/worldTrails.ts'
 import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult, type RetrieveOptions } from './ask.ts'
@@ -201,6 +202,8 @@ export function createApp(deps: AppDeps): http.Server {
       facts: index.factsBySource.size,
       // #3357: внешний индекс маршрутов мира подключён — проба видит его состав и дату сборки.
       ...(deps.world ? { world: { trails: deps.world.trails.length, chunks: deps.world.manifest.chunks, built_at: deps.world.manifest.built_at } } : {}),
+      // #3354: служба учитывает личный контекст вошедшего посетителя; без поля — выключено либо не настроено.
+      ...(deps.ask.visitor ? { profile: true } : {}),
       rss_mb: Math.round(memory.rss / 1048576),
       heap_mb: Math.round(memory.heapUsed / 1048576),
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
@@ -440,7 +443,30 @@ export function createApp(deps: AppDeps): http.Server {
     })
   }
 
+  /**
+   * Вопрос о своём (#3354): «из того, что я сохранила», «мои планы» — кандидатами встают сохранённые и
+   * запланированные материалы посетителя, которые есть в индексе; место и условия вопроса среди них выбирает
+   * та же цепочка. `null` — вопрос не о своём либо ни одного такого материала в индексе нет: обычный подбор.
+   */
+  function personalSources(q: string, locale: Locale, visitor: NonNullable<RetrieveOptions['visitor']>): RetrievalResult | null {
+    const kind = detectOwnPlacesQuestion(q)
+    if (!kind) return null
+    const cards = visitorCandidateIds(visitor, kind)
+      .flatMap((id) => {
+        const item = sourceItem(`travel:${id}`, locale)
+        return item ? [toSource(item)] : []
+      })
+      .slice(0, AI_SOURCES_LIMIT)
+    if (!cards.length) return null
+    const arranged = arrangeSources(q, cards, { mentions: mentionsInIndex(locale), focus: deps.promptFocus })
+    return { sources: arranged.sources, degraded: false, page: null, noPlace: arranged.noPlace }
+  }
+
   async function retrieve(q: string, locale: Locale, page: AiSourceRef | null = null, options: RetrieveOptions = {}): Promise<RetrievalResult> {
+    const visitor = options.visitor ?? null
+    // Со страницы материала вопрос читается как вопрос о ней — личный подбор туда не вмешивается.
+    const personal = visitor && !page ? personalSources(q, locale, visitor) : null
+    if (personal) return personal
     const { items, degraded, vector } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
     // Вопрос о самом сайте (#3293): отвечает справка, статьи и квесты к ней не добавляются. Со страницы
     // статьи или квеста вопрос читается как вопрос об этой странице — справка туда не вмешивается.
@@ -454,11 +480,10 @@ export function createApp(deps: AppDeps): http.Server {
     // Одна цепочка порядка (#3289): место вопроса → условия по фактам → превосходная степень. В режиме
     // страницы (#3290) найденное — только «ещё по теме»: порядок без групп и без строки о месте. Вопрос,
     // который уводит со страницы, — обычный вопрос: полный отбор с группами.
-    const arranged = arrangeSources(
-      q,
-      items.map((item) => toSource(item)),
-      { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card, focus: deps.promptFocus },
-    )
+    const found = items.map((item) => toSource(item))
+    // «Куда поехать» вошедшему (#3354): уже посещённое и собственные статьи встают после остальных, не выпадая.
+    const ordered = visitor && !card && asksWhereToGo(q) ? demoteSeen(found, seenSourceKeys(visitor)) : found
+    const arranged = arrangeSources(q, ordered, { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card, focus: deps.promptFocus })
     // Второй ярус (#3357): маршруты мира — на вопрос о пешем маршруте либо с названием маршрута индекса, не
     // со страницы материала. Вектор запроса тот же, условия вопроса сверяет тот же `judgeCard`; модель этих
     // карточек не видит.

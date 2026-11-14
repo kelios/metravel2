@@ -230,6 +230,12 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       ...typography.scale.caption,
       color: colors.textMuted,
     },
+    profileNotice: {
+      ...typography.scale.caption,
+      color: colors.textMuted,
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.xs,
+    },
   })
 
 export type AssistantStyles = ReturnType<typeof createAssistantStyles>

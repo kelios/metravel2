@@ -23,6 +23,7 @@ import { INTENT_LIMITS_PREFIX } from './intent.ts'
 import { AskLimits, createCounterStore, createDayClock } from './limits.ts'
 import { createRedisClient } from './redis.ts'
 import { createTagCatalog } from './suggestTags.ts'
+import { createVisitorProfile, isPlainPublicBackend } from './visitorProfile.ts'
 import { loadWorldIndex } from './worldIndex.ts'
 
 const log = (line: string) => console.error(`[${new Date().toISOString()}] ${line}`)
@@ -111,6 +112,25 @@ async function main(): Promise<void> {
   }
   if (!config.promptFocus) log('/ai/ask: сокращение подсказки до карточек, выделенных условиями вопроса (#3289), ВЫКЛ')
   if (config.helpMode === 'model') log('/ai/ask: справка о сайте (#3293) идёт через модель — AI_ASSIST_HELP_MODE=model; по умолчанию запись отдаётся без модели')
+  // #3354: личный контекст вошедшего посетителя. Токен уходит только на бэкенд.
+  const visitorProfile = config.promptProfile
+    ? createVisitorProfile({
+        backendUrl: config.backendUrl,
+        timeoutMs: config.profileTimeoutMs,
+        ttlSeconds: config.profileTtlSeconds,
+        capacity: config.profileCacheSize,
+        cookieName: config.authCookieName,
+        log,
+      })
+    : null
+  log(
+    visitorProfile
+      ? `/ai/ask: личный контекст посетителя (#3354) вкл — бюджет ${config.profileTimeoutMs} мс, сводка в памяти ${config.profileTtlSeconds} с, до ${config.profileCacheSize} посетителей`
+      : '/ai/ask: личный контекст посетителя (#3354) ВЫКЛ — AI_ASSIST_PROMPT_PROFILE=0',
+  )
+  if (visitorProfile && isPlainPublicBackend(config.backendUrl)) {
+    log('⚠️ BACKEND_URL без https и не во внутренней сети: токен посетителя пойдёт к API открытым текстом — задайте https-адрес либо AI_ASSIST_PROMPT_PROFILE=0')
+  }
   if (config.evalTrace) log('⚠️ AI_ASSIST_EVAL_TRACE=1: /ai/ask отдаёт карточки подсказки и сырой ответ модели, /ai/health — адрес модели. Только для контура оценки')
 
   const server = createApp({
@@ -131,6 +151,7 @@ async function main(): Promise<void> {
       promptHints: config.promptHints,
       helpMode: config.helpMode,
       worldLayerUrl: config.worldLayerUrl,
+      ...(visitorProfile ? { visitor: visitorProfile.resolve } : {}),
     },
     askFragmentChars: config.askFragmentChars,
     promptFocus: config.promptFocus,

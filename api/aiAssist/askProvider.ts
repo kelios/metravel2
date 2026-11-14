@@ -81,6 +81,11 @@ export type AskDoneEvent = {
   turnId: string | null
   /** Сколько внешних адресов страж вырезал из ответа (#3357); поля нет — ни одного. */
   removedWorldLinks?: number
+  /**
+   * Личный контекст (#3354): служба узнала посетителя по его сессии и учла в этом ходе его статьи и
+   * сохранённое. Поля нет — ход шёл как у гостя (не вошёл, служба не подтвердила сессию или блок выключен).
+   */
+  profile?: true
 }
 
 /** Оценка ответа (#3296): голос посетителя и необязательная причина у «Не помогло». */
@@ -271,6 +276,7 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
         remaining: toInt(payload.remaining),
         turnId: typeof payload.turn_id === 'string' && payload.turn_id ? payload.turn_id : null,
         ...(toInt(payload.removed_world_links) ? { removedWorldLinks: toInt(payload.removed_world_links) ?? 0 } : {}),
+        ...(payload.profile === true ? { profile: true as const } : {}),
       },
     }
   }
@@ -297,21 +303,45 @@ export const askErrorFromResponse = (status: number, body: Record<string, unknow
 /** Голос — необязательное действие: дольше ждать ответ службы незачем. */
 export const FEEDBACK_TIMEOUT_MS = 10_000
 
+/**
+ * Чем вопрос подтверждает личность посетителя (#3354): заголовки (`Authorization` приложения) и режим cookie
+ * (web: токен сессии лежит в HttpOnly-cookie и уходит с запросом того же origin). Идентификатора пользователя
+ * здесь нет и быть не должно — кто спрашивает, служба узнаёт сама у API сайта.
+ */
+export type AskAuth = { headers?: Record<string, string>; credentials?: RequestCredentials }
+
 export type HttpAskClientOptions = {
   fetchImpl?: typeof fetch
   timeoutMs?: number
+  /**
+   * Подтверждение личности для `POST /ai/ask` (#3354); `null` — вопрос уходит как у гостя. Остальные запросы
+   * клиента (оценка ответа) его не получают. Не задано — запрос прежний.
+   */
+  auth?: () => Promise<AskAuth | null> | AskAuth | null
 }
 
 export class HttpAskClient implements AskClient {
   private readonly baseUrl: string
   private readonly fetchImpl: typeof fetch
   private readonly timeoutMs: number
+  private readonly auth: HttpAskClientOptions['auth']
 
   /** `baseUrl` — origin службы без слэша; пустая строка — same-origin (web за Metro/nginx). */
   constructor(baseUrl: string, options: HttpAskClientOptions = {}) {
     this.baseUrl = String(baseUrl ?? '').trim().replace(/\/+$/, '')
     this.fetchImpl = options.fetchImpl ?? ((input, init) => fetch(input, init))
     this.timeoutMs = options.timeoutMs ?? GENERATION_TIMEOUT_MS
+    this.auth = options.auth
+  }
+
+  /** Подтверждение личности для этого вопроса; сбой чтения токена — вопрос гостя, а не ошибка хода. */
+  private async resolveAuth(): Promise<AskAuth | null> {
+    if (!this.auth) return null
+    try {
+      return (await this.auth()) ?? null
+    } catch {
+      return null
+    }
   }
 
   async ask({ question, locale, history, source, signal, onSources, onText }: AskRequest): Promise<AskResult> {
@@ -361,11 +391,16 @@ export class HttpAskClient implements AskClient {
     }
 
     try {
+      // Без подтверждения личности запрос уходит в том же такте, что и раньше.
+      const auth = this.auth ? await this.resolveAuth() : null
+      // Пока читался токен, вопрос могли отменить: запрос не начинается.
+      if (controller.signal.aborted) throw failure(Object.assign(new Error('aborted'), { name: 'AbortError' }), 'ask aborted')
       let response: Response
       try {
         response = await this.fetchImpl(`${this.baseUrl}/ai/ask`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+          headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...auth?.headers },
+          ...(auth?.credentials ? { credentials: auth.credentials } : {}),
           body: JSON.stringify({
             q: question,
             locale,

@@ -167,12 +167,15 @@ const toCards = (promptSources) =>
  * той же форме, что у прогона через экран (`askTurn` в `run.mjs`), чтобы проверки `checks.mjs`
  * считали слой провала одинаково. `shownTexts` — строки экрана для хода без текста модели
  * (`loadShownTexts(locale)`); без них такой ход — ошибка прогона, а не «пустой ответ».
+ *
+ * `authToken` (#3354) — токен тестового аккаунта для личных вопросов: уходит службе заголовком
+ * `Authorization`, как у приложения. В наблюдение хода, результаты и сообщения об ошибках не попадает.
  */
-export function createAskSession({ createAskClient, askUrl, visitor, locale, source = null, fetchImpl = fetch, shownTexts = null }) {
+export function createAskSession({ createAskClient, askUrl, visitor, locale, source = null, fetchImpl = fetch, shownTexts = null, authToken = null }) {
   let trace = null
   const client = createAskClient(askUrl, {
     fetchImpl: async (url, init) => {
-      const response = await fetchImpl(url, { ...init, headers: { ...init?.headers, 'X-Real-IP': visitor } })
+      const response = await fetchImpl(url, { ...init, headers: { ...init?.headers, 'X-Real-IP': visitor, ...(authToken ? { Authorization: `Token ${authToken}` } : {}) } })
       if (!response.ok) return response
       const body = await response.text()
       trace = parseTrace(body)

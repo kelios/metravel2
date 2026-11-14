@@ -67,6 +67,7 @@ export const aiAssistStaticResources = {
   "ask.sourceExample1": "How long will it take?",
   "ask.sourceExample2": "Is it suitable for kids?",
   "ask.sourceExample3": "What is nearby?",
+  "ask.profileNotice": "The assistant takes your articles and saved places into account",
   "ask.worldTitle": "Also around the world",
   "ask.worldAttribution": "Trails outside this site. Data: © OpenStreetMap contributors (ODbL), Wikidata, Copernicus DEM, NASA POWER. Length, ascent and months are calculated from open data: check them against the source before you go.",
   "ask.worldAttributionMore": "About the data sources",

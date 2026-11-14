@@ -75,6 +75,17 @@
  * `sources`. Внешний адрес в тексте модели остаётся только при совпадении с адресом внешней карточки этого
  * ответа; вырезанные внешние адреса считает `removed_world_links` события `done` (только ненулевой).
  * Событие `trace` контура оценки несёт `world` — карточки со строкой фактов; журнал хода — `world_ids`.
+ *
+ * Личный контекст (#3354): вошедший посетитель получает ответ с учётом своих статей, отметок, избранного и
+ * поездок. Кто спрашивает, служба узнаёт только у API сайта по токену самого посетителя (`visitorProfile.ts`);
+ * в теле запроса полей личности нет, и добавленные туда не читаются. Сводка идёт в подсказку строкой «О
+ * посетителе» (не в режиме страницы и не в справке), вопрос о своём («из сохранённого», «мои планы») делает
+ * сохранённые и запланированные материалы карточками, на «куда поехать» посещённое и свои статьи понижаются.
+ * Посетителю уходит только признак: необязательное `profile: true` в событии `done` — служба учла сводку в
+ * этом ходе; экран по нему показывает строку «Ассистент учитывает ваши статьи и сохранённое». Событие
+ * `trace` контура оценки несёт `profile: true|false`. Ни токена, ни сводки нет в событиях потока, журнале
+ * спроса и журнале службы. Сводку не собрать (нет токена, 401, ошибка, таймаут) — ход идёт как у гостя.
+ * Лимиты по-прежнему считаются на IP. `AI_ASSIST_PROMPT_PROFILE=0` выключает всё перечисленное.
  */
 import type http from 'node:http'
 
@@ -84,13 +95,14 @@ import { questionLanguage } from '../../api/aiAssist/language.ts'
 import { admitsNoMaterial } from '../../api/aiAssist/noMaterial.ts'
 import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from '../../api/aiAssist/policy.ts'
-import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources } from '../../api/aiAssist/prompt.ts'
+import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources, visitorBlockFor } from '../../api/aiAssist/prompt.ts'
 import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
 import { type AiWorldTrail, trailFactsLine } from '../../api/aiAssist/trailFacts.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
+import { type VisitorContext, visitorTitlesOutside } from '../../api/aiAssist/visitorContext.ts'
 import type { DemandLog, TurnGuard, TurnStatus } from './demandLog.ts'
 import type { TurnRegistry } from './feedback.ts'
 import { helpPageTitle } from './helpPages.ts'
@@ -131,6 +143,11 @@ export interface RetrieveOptions {
    * перевести её некому. Не задан — язык запроса `locale`.
    */
   helpLocale?: Locale
+  /**
+   * Сводка вошедшего посетителя (#3354): вопрос о своём берёт карточками его сохранённые и запланированные
+   * материалы, на «куда поехать» посещённое и свои статьи понижаются. Нет — подбор как у гостя.
+   */
+  visitor?: VisitorContext | null
 }
 
 /** Режим контура оценки (#3286); адрес модели показывает `/ai/health` — приёмка сверяет, на какую модель смотрит служба. */
@@ -169,6 +186,12 @@ export interface AskDeps {
    * (`turn_id`) и строку в журнале. Не задано — идентификатора и строки хода нет (стенды без оценки).
    */
   turns?: TurnRegistry
+  /**
+   * Личный контекст (#3354): сводка посетителя этого запроса по его токену либо `null` — гость. Личность
+   * определяется только здесь, по заголовкам запроса; тело запроса её не несёт. Не задано — служба личный
+   * контекст не ведёт (`AI_ASSIST_PROMPT_PROFILE=0`, стенды и тесты без него).
+   */
+  visitor?: (request: Pick<http.IncomingMessage, 'headers'>) => Promise<VisitorContext | null>
   log: (line: string) => void
   now?: () => Date
 }
@@ -332,6 +355,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       })
     }
 
+    // Личный контекст (#3354): только после фильтра тем и лимита — чужая тема и исчерпанный лимит к API сайта
+    // не ходят. Сбой сводки — не сбой ответа: посетитель получает ход гостя.
+    const visitor = deps.visitor ? await deps.visitor(request).catch(() => null) : null
+    const profiled = visitor ? { profile: true } : {}
+    const tracedProfile = deps.visitor ? { profile: visitor !== null } : {}
     // Карточка страницы-источника (#2897) — первой в контексте; до первого самостоятельного
     // вопроса её заголовок — опора уточнений («Что рядом?» ищется вместе с названием статьи).
     const pinned = sourceRef ? deps.lookupSource(sourceRef, locale) : null
@@ -343,7 +371,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const helpLocale = questionLanguage(question, locale)
     let retrieved: RetrievalResult
     try {
-      retrieved = await deps.retrieve(retrievalQuery, locale, pinned ? (sourceRef ?? null) : null, { helpLocale })
+      retrieved = await deps.retrieve(retrievalQuery, locale, pinned ? (sourceRef ?? null) : null, { helpLocale, ...(visitor ? { visitor } : {}) })
     } catch (error) {
       await refund()
       throw error
@@ -367,8 +395,8 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       const stream = openStream(response)
       // На сайте материала нет, а маршруты мира есть: статус прежний, блок «Ещё в мире» экран покажет под ним.
       stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
-      if (deps.evalTrace && world.length) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld })
-      stream.done({ status: 'no_sources' })
+      if (deps.evalTrace && world.length) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld, ...tracedProfile })
+      stream.done({ status: 'no_sources', ...profiled })
       return
     }
 
@@ -379,11 +407,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     if (retrieved.help === true && deps.helpMode !== 'model' && promptSources.length) {
       const stream = openStream(response)
       stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
-      if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true })
+      if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true, ...tracedProfile })
       const helpText = helpAnswerText(promptSources, helpLocale)
       stream.event('text', { text: helpText })
       const turn = await openTurn(ip, now, { q: question, locale: helpLocale, status: 'help', sources: promptSources, answerChars: helpText.length })
-      stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining, ...turn })
+      stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining, ...turn, ...profiled })
       return
     }
     // Подсказка пуста (#3345): подбор что-то нашёл, но отбор по месту и условиям вопроса не оставил ни одной
@@ -396,9 +424,9 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)
       stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
-      if (deps.evalTrace) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld })
+      if (deps.evalTrace) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld, ...tracedProfile })
       stream.event('text', { text: '' })
-      stream.done({ status: 'done', removed_links: 0, fallback: true, reason: ASK_NO_MATERIAL_REASON, remaining: quota.remaining })
+      stream.done({ status: 'done', removed_links: 0, fallback: true, reason: ASK_NO_MATERIAL_REASON, remaining: quota.remaining, ...profiled })
       return
     }
 
@@ -419,7 +447,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       arranged: true,
       noPlace: (!pinned || left) && retrieved.noPlace === true,
       hints: deps.promptHints,
+      visitor,
+      now,
     })
+    // Строка «О посетителе» ушла модели — страж не пропустит в ответ материал из неё, которого нет среди карточек.
+    const visitorTitles = visitorBlockFor(visitor, promptSources, now) ? visitorTitlesOutside(visitor, page ? promptSources : sources) : []
     // Контур оценки (#3286) видит их в событии `trace` — вместе со строкой «почему подходит».
     const tracedSources = deps.evalTrace
       ? promptSources.map((source) => ({ ...withoutPlace(source), ...(source.why && deps.promptHints?.whyFits !== false ? { why: source.why } : {}) }))
@@ -471,21 +503,21 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       clearFlush()
       // Числа сверяются с карточками подсказки, ссылки — со всем списком источников (#3345, lv35).
       // Внешний адрес остаётся только из внешней карточки этого ответа (#3357); опорой чисел она не служит.
-      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery, promptSources, worldSources: world })
+      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery, promptSources, worldSources: world, visitorTitles })
       const open = ensureStream()
       // Сырой ответ — до стража ссылок; остановку генератора на цикле и четвёртой рекомендации он уже прошёл.
-      if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text, ...tracedWorld })
+      if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text, ...tracedWorld, ...tracedProfile })
       const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, answerSources))
       if (verdict === 'no_material') {
         // #3216: модель отказала вопросу с признаком поездки — «материала нет» и строка в журнале спроса.
         await demandLog.append({ q: question, locale, reason: 'no_sources' })
-        open.done({ status: 'no_sources' })
+        open.done({ status: 'no_sources', ...profiled })
         return
       }
       if (verdict === 'off_topic') {
         // Второй рубеж: модель узнала чужую тему по правилу промпта. В счётчик не идёт — модель
         // ошибается и на вопросах о поездке (замер #2710), блок за её ошибку получил бы посетитель.
-        open.done({ status: 'off_topic', reason: 'model_refusal' })
+        open.done({ status: 'off_topic', reason: 'model_refusal', ...profiled })
         return
       }
       open.event('text', { text: guarded.fallback ? '' : guarded.text })
@@ -520,6 +552,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         usage: result.usage,
         remaining: quota.remaining,
         ...turn,
+        ...profiled,
       })
     } catch (error) {
       clearFlush()
@@ -548,13 +581,13 @@ export function createAskHandler(deps: AskDeps): AskHandler {
           throw new HttpError(503, 'generator_unavailable', { detail: error.message, retryAfterSec: GENERATOR_RETRY_AFTER_SEC })
         }
         await demandLog.append({ q: question, locale, reason: 'generator_unavailable' })
-        opened.done({ status: 'unavailable' })
+        opened.done({ status: 'unavailable', ...profiled })
         return
       }
       await refund()
       if (!opened) throw error
       log(`POST /ai/ask: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`)
-      opened.done({ status: 'error' })
+      opened.done({ status: 'error', ...profiled })
     }
   }
 }
