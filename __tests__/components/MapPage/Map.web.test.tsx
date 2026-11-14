@@ -473,6 +473,44 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     }
   })
 
+  // #3428 — same ownership for the sheet STATE: a marker tap on the quest map
+  // collapsed /map's sheet behind the user's back.
+  it.each([
+    ['/quests/map', 0],
+    ['/map', 1],
+  ])('collapses the bottom sheet on a marker tap only on its own surface: %s', async (pathname, collapses) => {
+    const router = require('expo-router')
+    const { useBottomSheetStore } = require('@/stores/bottomSheetStore')
+    const { useMapPanelStore } = require('@/stores/mapPanelStore')
+    const { useMap } = require('react-leaflet')
+    const pathnameSpy = jest.spyOn(router, 'usePathname').mockReturnValue(pathname)
+    const sheetBefore = useBottomSheetStore.getState()
+    const requestCollapseBefore = useMapPanelStore.getState().requestCollapse
+    const requestCollapse = jest.fn()
+    useBottomSheetStore.setState({ state: 'seventy', heightPx: 591 })
+    useMapPanelStore.setState({ requestCollapse })
+    useMap.mockReturnValue({
+      fitBounds: jest.fn(), setView: jest.fn(), flyTo: jest.fn(), panTo: jest.fn(), stop: jest.fn(),
+      closePopup: jest.fn(), getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
+      getZoom: jest.fn(() => 11), getMaxZoom: jest.fn(() => 18), on: jest.fn(), off: jest.fn(),
+    })
+    mockMarkerClusterGroupProps.mockClear()
+
+    try {
+      await renderWithProviders(<MapPageComponent {...defaultProps} />)
+      await waitFor(() => expect(mockMarkerClusterGroupProps).toHaveBeenCalled())
+
+      const { onMarkerClick, points } = mockMarkerClusterGroupProps.mock.calls.at(-1)[0]
+      await act(async () => { onMarkerClick(points[0], { lat: 53.9, lng: 27.5667 }) })
+
+      expect(requestCollapse).toHaveBeenCalledTimes(collapses)
+    } finally {
+      useMapPanelStore.setState({ requestCollapse: requestCollapseBefore })
+      useBottomSheetStore.setState({ state: sheetBefore.state, heightPx: sheetBefore.heightPx })
+      pathnameSpy.mockRestore()
+    }
+  })
+
   it('renders map container on web and hides loading overlay', async () => {
     const { getByTestId, queryByTestId } = await renderWithProviders(
       <MapPageComponent {...defaultProps} />

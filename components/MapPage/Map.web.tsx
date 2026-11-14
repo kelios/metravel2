@@ -325,7 +325,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       const focusPlan = getMarkerFocusPlan({
         currentZoom,
         maxZoom,
-        bottomSheetState: useBottomSheetStore.getState().state,
+        // The sheet is /map's alone: a surface without one neither reads nor collapses it (#3428).
+        bottomSheetState: isPrimaryMap ? useBottomSheetStore.getState().state : 'collapsed',
       })
 
       if (focusPlan.shouldCollapseSheet) requestBottomSheetCollapse()
@@ -427,7 +428,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [onMarkerSelect, requestBottomSheetCollapse, suppressLeafletPopupOnSelect],
+    [isPrimaryMap, onMarkerSelect, requestBottomSheetCollapse, suppressLeafletPopupOnSelect],
   )
 
   const applyUserZoom = useCallback((direction: 'in' | 'out') => {
