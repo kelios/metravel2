@@ -277,11 +277,15 @@ export default function QuestsMapScreen() {
                     />
                 </View>
             }>
+                {/* #3397 — карта каталога: свои точки и вид по ним. Без `pointsOnly`
+                    слой мест брал кластеры общего каталога путешествий, а радиус-заглушка
+                    на узкой панели давала z11 в центре масс без единого квеста. */}
                 <LazyMap
                     travel={travel}
                     coordinates={questsCenter}
                     mode="radius"
-                    radius="2000"
+                    pointsOnly
+                    showRadiusCircle={false}
                     routePoints={[]}
                     transportMode="foot"
                     onMapClick={() => {}}

@@ -674,8 +674,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   )
 
   const hintCenterLatLng = useMemo(
-    () => getHintCenterLatLng(mode, circleCenterLatLng, coordinatesLatLng),
-    [mode, circleCenterLatLng, coordinatesLatLng],
+    () => getHintCenterLatLng(mode, circleCenterLatLng, coordinatesLatLng, pointsOnly),
+    [mode, circleCenterLatLng, coordinatesLatLng, pointsOnly],
   )
 
   const normalizeLngLatWithHint = useCallback(

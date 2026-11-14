@@ -6,6 +6,7 @@ import QuestsMapScreen from '@/app/(tabs)/quests/map'
 const mockPush = jest.fn()
 const mockReplace = jest.fn()
 const mockNativeMap = jest.fn()
+const mockWebMap = jest.fn()
 let mockLoading = false
 const mockQuests = [
   { id: 'valid', cityId: '4', title: 'Quest', lat: 53.9, lng: 27.56, cover: 'https://example.test/cover.jpg' },
@@ -55,7 +56,10 @@ jest.mock('@/components/MapPage/Map.web', () => {
   const { View } = require('react-native')
   return {
     __esModule: true,
-    default: ({ travel }: { travel: { data: unknown[] } }) => React.createElement(View, { testID: 'web-map', accessibilityLabel: String(travel.data.length) }),
+    default: (props: { travel: { data: unknown[] } }) => {
+      mockWebMap(props)
+      return React.createElement(View, { testID: 'web-map', accessibilityLabel: String(props.travel.data.length) })
+    },
   }
 })
 
@@ -77,6 +81,18 @@ it('keeps one filtered web map inside the shared section and advertising hosts',
   expect(getAllByTestId('quest-map-viewport')).toHaveLength(1)
   expect(getByTestId('web-map').props.accessibilityLabel).toBe('1')
   expect(queryByTestId('native-map')).toBeNull()
+})
+
+// #3397 — the quest map is a catalog surface: its own points, no radius circle.
+// As a radius search it drew the travel-place clusters of the main catalog and, on
+// a phone, opened at z11 on the centroid of all quests with none of them in frame.
+it('shows the quest catalog as a points-only map without a radius circle', async () => {
+  setPlatform('web')
+  const { getByTestId } = await render(<QuestsMapScreen />)
+  await waitFor(() => expect(getByTestId('web-map')).toBeTruthy())
+  const props = mockWebMap.mock.calls[0][0]
+  expect(props).toMatchObject({ mode: 'radius', pointsOnly: true, showRadiusCircle: false })
+  expect(props.radius).toBeUndefined()
 })
 
 it('retains the section host while the web map finishes loading', async () => {

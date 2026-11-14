@@ -174,7 +174,7 @@ type MapWebLeafletCanvasProps = {
   leafletBaseLayerRef: any
   leafletOverlayLayersRef: any
   leafletControlRef: any
-  hintCenterLatLng: { lat: number; lng: number }
+  hintCenterLatLng: { lat: number; lng: number } | null
   routeLineLatLngObjects: Array<{ lat: number; lng: number }>
   routePoints: any
   routePointsForRouting: [number, number][]

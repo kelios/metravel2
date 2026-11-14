@@ -29,11 +29,20 @@ export function getCircleCenter(
   return [lat, lng]
 }
 
+/**
+ * Anchor that settles the order of a loosely written coordinate pair. Catalog
+ * places arrive as "lat,lng" or "lng,lat", so the reading nearer to the search
+ * anchor wins. A points-only surface (#3397) owns its points and writes canonical
+ * "lat,lng": there is no order to guess, and the centroid of a wide catalog would
+ * flip every pair that lies nearer to it when swapped (Tbilisi 41.7,44.8).
+ */
 export function getHintCenterLatLng(
   mode: string,
   circleCenterLatLng: { lat: number; lng: number } | null,
-  coordinatesLatLng: { lat: number; lng: number }
-) {
+  coordinatesLatLng: { lat: number; lng: number },
+  pointsOnly = false
+): { lat: number; lng: number } | null {
+  if (pointsOnly) return null
   if (mode === 'radius' && circleCenterLatLng) return circleCenterLatLng
   return coordinatesLatLng
 }

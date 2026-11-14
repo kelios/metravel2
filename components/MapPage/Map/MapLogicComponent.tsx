@@ -5,13 +5,13 @@ import {
   DEFAULT_MAP_CENTER,
   DEFAULT_RADIUS_KM,
   MAP_COLLAPSED_SHEET_OFFSET,
-  MAP_COMPACT_MIN_FIT_ZOOM,
   MAP_RADIUS_FIT_AIR,
 } from '@/constants/mapDefaults';
 import { EARTH_RADIUS_M } from '@/utils/geoDistance';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
+import { resolveFitFloor } from './mapFitFloor';
 import {
   beginProgrammaticMapMove,
   clearUserMapGesture,
@@ -129,6 +129,9 @@ interface MapLogicProps {
    * reads as "the map has no idea where I am". On a compact pane the auto-fit is
    * floored to a usable neighbourhood scale instead; the circle is then partly
    * off-screen by design and the user can zoom out to see all of it.
+   *
+   * The floor belongs to the CIRCLE target only (#3397). A surface without a
+   * circle fits its own point set, and that set must stay in the frame.
    */
   compactPane?: boolean;
 }
@@ -170,6 +173,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const hasCompletedAutoFitRef = useRef(false);
   const hasSignaledInitialViewReadyRef = useRef(false);
 
+  const anchorLat = Number(coordinates?.lat);
+  const anchorLng = Number(coordinates?.lng);
   const hasRadiusResults = (travelData ?? []).length > 0;
   const radiusResultsComplete =
     travelsTotal === undefined
@@ -483,9 +488,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     //   but the result is clamped to the circle (never wider).
     // - Otherwise (no circle): fit to whatever valid points we have.
     let targetBounds: any = null;
+    let targetIsCircle = false;
 
     if (hasValidCircle && circleBounds) {
       targetBounds = circleBounds;
+      targetIsCircle = true;
 
       // Tighten only when the loaded points are the WHOLE result set (#2450).
       if (inRadiusPointCoords.length > 0 && radiusResultsComplete && !usesStartupCircle) {
@@ -609,49 +616,52 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // loop). Cover the animated flyTo duration when animating.
           beginProgrammaticMapMove(animate ? 700 : 500);
 
-          // #1348 — a narrow pane cannot show a wide radius circle at a useful scale:
-          // r=50 km in 390 px fits at z8, i.e. half a region, and the user reads that
-          // as "the map has no idea where I am". Rescue ONLY the genuinely regional
-          // case (below MAP_COMPACT_MIN_FIT_ZOOM); small radii still get their exact
-          // circle fit, which is what the fit contract is for.
-          if (mode === 'radius' && compactPane && typeof map.getBoundsZoom === 'function') {
-            const fittedZoom = Number(map.getBoundsZoom(paddedBounds, false));
-            const center =
-              typeof paddedBounds.getCenter === 'function' ? paddedBounds.getCenter() : null;
-            if (Number.isFinite(fittedZoom) && fittedZoom < MAP_COMPACT_MIN_FIT_ZOOM && center) {
-              // fitBounds honours the asymmetric padding that keeps the circle clear of
-              // the bottom sheet; setView does not, so shift the centre up by half the
-              // reserved strip ourselves.
-              const bottomReserve = Number((padding as any)?.paddingBottomRight?.[1] ?? 0);
-              let target = center;
-              if (
-                Number.isFinite(bottomReserve) &&
-                bottomReserve > 0 &&
-                typeof map.project === 'function' &&
-                typeof map.unproject === 'function'
-              ) {
-                try {
-                  const projected = map.project(center, MAP_COMPACT_MIN_FIT_ZOOM);
-                  projected.y += bottomReserve / 2;
-                  target = map.unproject(projected, MAP_COMPACT_MIN_FIT_ZOOM);
-                } catch {
-                  target = center;
-                }
+          // The fit never zooms out past a floor (#1348 for the radius circle, #3397
+          // for a point set — see `resolveFitFloor`); below it the view is set directly.
+          const floor =
+            mode === 'radius'
+              ? resolveFitFloor({
+                  map,
+                  paddedBounds,
+                  targetIsCircle,
+                  compactPane,
+                  padding,
+                  anchor: { lat: anchorLat, lng: anchorLng },
+                })
+              : null;
+          if (floor) {
+            // fitBounds honours the asymmetric padding that keeps the circle clear of
+            // the bottom sheet; setView does not, so shift the centre up by half the
+            // reserved strip ourselves.
+            const bottomReserve = Number((padding as any)?.paddingBottomRight?.[1] ?? 0);
+            let target = floor.center;
+            if (
+              Number.isFinite(bottomReserve) &&
+              bottomReserve > 0 &&
+              typeof map.project === 'function' &&
+              typeof map.unproject === 'function'
+            ) {
+              try {
+                const projected = map.project(floor.center, floor.zoom);
+                projected.y += bottomReserve / 2;
+                target = map.unproject(projected, floor.zoom);
+              } catch {
+                target = floor.center;
               }
-              map.setView(target, MAP_COMPACT_MIN_FIT_ZOOM, {
-                animate,
-                duration: animate ? 0.35 : undefined,
-              } as any);
-              requestAnimationFrame(() => syncZoomFromMap());
-              hasCompletedAutoFitRef.current = true;
-              // #1291 — авто-фит стал единственным, кто применяет стартовый вид в
-              // radius-режиме, поэтому именно он и отмечает «вид применён».
-              // Иначе флаг навсегда остался бы false и вход в route-режим каждый
-              // раз телепортировал бы карту на анкер поиска в z13.
-              hasInitializedRef.current = true;
-              signalInitialViewReady();
-              return;
             }
+            map.setView(target, floor.zoom, {
+              animate,
+              duration: animate ? 0.35 : undefined,
+            } as any);
+            requestAnimationFrame(() => syncZoomFromMap());
+            hasCompletedAutoFitRef.current = true;
+            // #1291 — авто-фит стал единственным, кто применяет стартовый вид в
+            // radius-режиме, поэтому именно он и отмечает «вид применён».
+            // Иначе флаг навсегда остался бы false и вход в route-режим каждый
+            // раз телепортировал бы карту на анкер поиска в z13.
+            hasInitializedRef.current = true;
+            signalInitialViewReady();
+            return;
           }
 
           map.fitBounds(paddedBounds, {
@@ -736,6 +746,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasValidRadiusCircle,
     canAutoFitRadiusView,
     compactPane,
+    anchorLat,
+    anchorLng,
     signalInitialViewReady,
   ]);
 
