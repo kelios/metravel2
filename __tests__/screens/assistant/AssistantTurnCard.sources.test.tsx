@@ -181,12 +181,16 @@ describe('AssistantTurnCard: карточки материалов и дейст
     expect(params.get('sourceTravelUrl')).toBe(quest.url)
   })
 
-  it('гость: «В план поездки» у квеста ведёт на вход, в планировщик не переходит', async () => {
+  it('гость: «В план поездки» у квеста ведёт на вход с возвратом в форму поездки, в планировщик не переходит', async () => {
     authState.isAuthenticated = false
     await render(<Card item={turn()} />)
     await fireEvent.press(screen.getByTestId('assistant-source-plan-quest-7'))
-    expect(mockRequireAuth).toHaveBeenCalledTimes(1)
-    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockPush).toHaveBeenCalledTimes(1)
+    const login = String(mockPush.mock.calls[0][0])
+    expect(login).toMatch(/^\/(login|registration)\?/)
+    const params = new URLSearchParams(login.split('?')[1])
+    expect(params.get('intent')).toBe('plan-trip')
+    expect(String(params.get('redirect')).startsWith('/trips/plan/create?')).toBe(true)
   })
 
   it('источники без полей показа, справка и ответ без названных материалов — прежний список строк, развёрнутый', async () => {
