@@ -195,10 +195,37 @@ export function createMapClusterGroup(
   }
 
   group.on('clusterclick', handleClusterClick)
+
+  // leaflet.markercluster 1.5.x строит дерево кластеров под уровни зума карты
+  // в момент постановки группы (`_generateInitialClusters`), а при отрисовке
+  // обходит его от ТЕКУЩЕГО `getMinZoom() - 1`. Если уровни поменялись позже
+  // (`setMinZoom` по размеру контейнера, слой тайлов со своим minZoom), корень
+  // дерева выпадает из обхода: маркеры, лежащие в нём (одиночная точка), не
+  // рисуются вовсе, хотя `getLayers()` их возвращает. Leaflet сообщает о смене
+  // событием `zoomlevelschange` — перестраиваем дерево под новые уровни.
+  const handleZoomLevelsChange = () => {
+    try {
+      if (!group._map || !group._topClusterLevel) return
+      const expectedMin = Math.floor(map.getMinZoom())
+      const disableAt = group.options?.disableClusteringAtZoom
+      const expectedMax = disableAt != null ? disableAt - 1 : Math.ceil(map.getMaxZoom())
+      // Без конечного потолка `_generateInitialClusters` (его зовёт clearLayers) не завершится.
+      if (!Number.isFinite(expectedMax)) return
+      if (group._topClusterLevel._zoom === expectedMin - 1 && group._maxZoom === expectedMax) return
+      const layers = group.getLayers()
+      group.clearLayers()
+      group.addLayers(layers)
+    } catch {
+      // noop
+    }
+  }
+  map?.on?.('zoomlevelschange', handleZoomLevelsChange)
+
   return {
     group,
     dispose: () => {
       group.off('clusterclick', handleClusterClick)
+      map?.off?.('zoomlevelschange', handleZoomLevelsChange)
     },
   }
 }

@@ -39,7 +39,12 @@
  *   сборки, поэтому группа пересоздаётся; живёт на map (как
  *   __metravelRouteFitLocked/__userCenter), так её видит любой срез HTML.
  * - ensureRoutePointClusterGroup создаёт группу, если payload просит кластеры;
- *   иначе no-op (routeLayer — единственный слой точек).
+ *   иначе no-op (routeLayer — единственный слой точек). Один раз на карту
+ *   вешает rebuildRoutePointClusterTree на zoomlevelschange: markercluster 1.5.x
+ *   строит дерево под minZoom карты при постановке группы, а рисует от текущего
+ *   getMinZoom() - 1, и setMinZoom по размеру WebView (nativeTileBridgeScript)
+ *   иначе оставлял корень дерева вне обхода — точка не рисовалась, а _addLayer
+ *   читал несуществующие уровни. Тот же механизм, что createMapClusterGroup на web.
  * - isRoutePointHeld (#2071 P2-2): брошенный рядом с соседом маркер
  *   markercluster перекластеризует на следующий renderPoints
  *   (_childMarkerDragEnd → _moveChild), и точка «пропадает». Как web
@@ -68,12 +73,26 @@ export const NATIVE_ROUTE_CLUSTER_SCRIPT = `        function buildRoutePointClus
           try { map.removeLayer(map.__metravelRoutePointClusterGroup); } catch (e) {}
           map.__metravelRoutePointClusterGroup = null;
         }
+        function rebuildRoutePointClusterTree() {
+          var group = this.__metravelRoutePointClusterGroup;
+          if (!group || !group._map) return;
+          if (group.options.disableClusteringAtZoom == null && !isFinite(this.getMaxZoom())) return;
+          try {
+            var layers = group.getLayers();
+            group.clearLayers();
+            group.addLayers(layers);
+          } catch (e) {}
+        }
         function ensureRoutePointClusterGroup(map, cluster) {
           if (!cluster) return null;
           var group = buildRoutePointClusterGroup(cluster);
           if (group) {
             map.__metravelRoutePointClusterGroup = group;
             group.addTo(map);
+            if (!map.__metravelRoutePointClusterRebuildBound && typeof map.on === 'function') {
+              map.__metravelRoutePointClusterRebuildBound = true;
+              map.on('zoomlevelschange', rebuildRoutePointClusterTree, map);
+            }
           }
           return group;
         }
