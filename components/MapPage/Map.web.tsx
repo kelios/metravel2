@@ -33,7 +33,7 @@ import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
 import { useMapPlaceRequestMarkers } from './Map/useMapPlaceRequestMarkers.web'
 import { useMapRenderData } from './Map/useMapRenderData'
-import { getMapFitBoundsPadding, useStablePadding } from './Map/mapFitBoundsPadding'
+import { getMapFitBoundsPadding, readMapSheetReserve, useStablePadding } from './Map/mapFitBoundsPadding'
 import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
 import {
   buildRouteLineLatLngObjects,
@@ -90,9 +90,6 @@ function getViewportWidth(): number | null {
   if (typeof window === 'undefined' || !Number.isFinite(window.innerWidth)) return null
   return window.innerWidth
 }
-
-/** Current bottom-sheet reserve, read imperatively (#2451 — no subscription). */
-const readSheetBottomOffset = (): number => useBottomSheetStore.getState().getControlsBottomOffset()
 
 const MapControlsReactive: React.FC<
   Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>
@@ -745,12 +742,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // bottom (`getMapFitBoundsPadding`). The sheet height is read at render time via
   // getState() (#2451 — no subscription) and the object keeps its identity while
   // the numbers are unchanged, so MapLogicComponent effects do not re-run.
-  const isCompactPane =
-    mapPaneWidth > 0
+  // The sheet is /map's alone (`readMapSheetReserve`, #3397).
+  const sheetOverlaysMap =
+    isPrimaryMap &&
+    (mapPaneWidth > 0
       ? mapPaneWidth <= MAP_COMPACT_PANE_MAX_WIDTH
-      : (getViewportWidth() ?? 0) <= MAP_COMPACT_PANE_MAX_WIDTH
+      : (getViewportWidth() ?? 0) <= MAP_COMPACT_PANE_MAX_WIDTH)
+  const readSheetBottomOffset = useCallback(() => readMapSheetReserve(isPrimaryMap), [isPrimaryMap])
   const fitBoundsPadding = useStablePadding(
-    getMapFitBoundsPadding(mode, isCompactPane, readSheetBottomOffset()),
+    getMapFitBoundsPadding(mode, sheetOverlaysMap, readSheetBottomOffset()),
   )
 
   const handleServerClusterZoom = useCallback(
@@ -776,7 +776,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           typeof map.fitBounds === 'function'
         ) {
           // Padding is computed at tap time: the sheet may have moved since render.
-          const padding = getMapFitBoundsPadding(mode, isCompactPane, readSheetBottomOffset())
+          const padding = getMapFitBoundsPadding(mode, sheetOverlaysMap, readSheetBottomOffset())
           map.fitBounds(L.latLngBounds([[south, west], [north, east]]), padding as any)
           return
         }
@@ -792,7 +792,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ignoreOptionalMapRuntimeError()
       }
     },
-    [L, mode, isCompactPane],
+    [L, mode, sheetOverlaysMap, readSheetBottomOffset],
   )
 
   const useCompactPopupLayout = useMemo(() => {

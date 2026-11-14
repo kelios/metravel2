@@ -18,6 +18,7 @@ let mockMapClustersResult: any = {
 }
 const mockClusterLayerProps = jest.fn()
 const mockMarkerClusterGroupProps = jest.fn()
+const mockMapLogicProps = jest.fn()
 
 // Mock leaflet modules
 const mockLeaflet = {
@@ -232,6 +233,7 @@ jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
   const React = require('react')
   const api = {
     MapLogicComponent: (props: any) => {
+      mockMapLogicProps(props)
       const { mapRef, onMapReady } = props
       const useMap = props.useMap ?? (() => null)
       const map = useMap()
@@ -441,6 +443,33 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     } finally {
       pathnameSpy.mockRestore()
       loaderSpy.mockRestore()
+    }
+  })
+
+  // #3397 — the bottom-sheet store is /map's and global. Tab screens stay mounted,
+  // so after /map the quest map inherited a reserve taller than its own pane and
+  // its fit landed on maxZoom.
+  it.each([
+    ['/map', { paddingTopLeft: [24, 72], paddingBottomRight: [24, 631] }],
+    ['/quests/map', { paddingTopLeft: [24, 80], paddingBottomRight: [24, 48] }],
+  ])('reserves the bottom sheet only on its own surface: %s', async (pathname, padding) => {
+    const router = require('expo-router')
+    const { useBottomSheetStore } = require('@/stores/bottomSheetStore')
+    const pathnameSpy = jest.spyOn(router, 'usePathname').mockReturnValue(pathname)
+    const sheetBefore = useBottomSheetStore.getState()
+    useBottomSheetStore.setState({ state: 'seventy', heightPx: 591 })
+    ;(window as any).innerWidth = 390
+    mockMapLogicProps.mockClear()
+
+    try {
+      await renderWithProviders(<MapPageComponent {...defaultProps} />)
+      await waitFor(() => expect(mockMapLogicProps).toHaveBeenCalled())
+
+      const calls = mockMapLogicProps.mock.calls
+      expect(calls[calls.length - 1][0].fitBoundsPadding).toEqual(padding)
+    } finally {
+      useBottomSheetStore.setState({ state: sheetBefore.state, heightPx: sheetBefore.heightPx })
+      pathnameSpy.mockRestore()
     }
   })
 

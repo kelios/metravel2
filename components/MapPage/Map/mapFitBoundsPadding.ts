@@ -1,9 +1,20 @@
 import { useRef } from 'react'
 import { MAP_RADIUS_FIT_AIR } from '@/constants/mapDefaults'
+import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 
 import type { MapMode } from './types'
 
 export type FitPadding = { paddingTopLeft: [number, number]; paddingBottomRight: [number, number] }
+
+/**
+ * Bottom-sheet reserve of a map surface, read imperatively (#2451 — no
+ * subscription). The sheet is /map's (`MapMobileLayout`); its store is global and
+ * outlives the screen, because tab screens stay mounted. A map on any other
+ * surface has no sheet above it: after a visit to /map the quest map inherited a
+ * 607 px reserve — taller than its own pane — and its fit landed on maxZoom (#3397).
+ */
+export const readMapSheetReserve = (ownsSheet: boolean): number =>
+  ownsSheet ? useBottomSheetStore.getState().getControlsBottomOffset() : 0
 
 /**
  * Padding of the /map radius auto-fit and of the server-cluster zoom.
@@ -14,12 +25,12 @@ export type FitPadding = { paddingTopLeft: [number, number]; paddingBottomRight:
  */
 export const getMapFitBoundsPadding = (
   mode: MapMode,
-  isCompact: boolean,
+  sheetOverlaysMap: boolean,
   sheetBottomOffset: number,
 ): FitPadding => {
   if (mode !== 'radius') return { paddingTopLeft: [24, 140], paddingBottomRight: [360, 220] }
   const AIR = MAP_RADIUS_FIT_AIR
-  if (isCompact) {
+  if (sheetOverlaysMap) {
     // The lower arc of the circle clears the sheet; top leaves room for the
     // floating controls row.
     return {
