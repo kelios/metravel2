@@ -167,6 +167,7 @@ export default function AssistantScreen({ sourceParam = null }: AssistantScreenP
                 busy={chat.busy}
                 onRetry={chat.retry}
                 onOpenCatalog={openCatalog}
+                onRate={chat.rate}
               />
             ))
           )}

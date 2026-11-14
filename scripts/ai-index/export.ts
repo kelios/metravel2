@@ -9,7 +9,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { QUEST_LOCALES } from '../../utils/questLocaleRouting.js'
 import { buildQuestChunks, buildTravelChunks, type ChunkOptions, isPublishedTravel, type RawQuest, type RawTravel } from './chunk.ts'
-import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries } from './facts.ts'
+import { routeKindOf } from '../../api/aiAssist/sourceFacts.ts'
+import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, type RawDictionaries, type RawRouteLengths, readDictionaries, readRouteLengths, ROUTES_FILE } from './facts.ts'
 import { type ChunkRecord, type IndexSourceCounts, sha256Hex, type SourceFacts } from './format.ts'
 
 export const DEFAULT_API_BASE = 'https://metravel.by/api'
@@ -367,11 +368,67 @@ export async function runExport(options: ExportOptions): Promise<ExportSummary> 
   } catch (error) {
     log(`dictionaries: словарь каталога не получен, остаётся прежний: ${String(error)}`)
   }
+  // Длины файлов маршрута (#3353) — после словарей: по их названиям видно, какая статья — маршрут.
+  // `--limit` читает только начало списка: прежние длины остальных статей остаются.
+  await exportRouteLengths({ apiBase, rawDir, fetcher, log })
   // `--limit` читает только начало списка: слепок не полон, версия полей не подтверждается.
   if (!options.limit) state.raw_version = RAW_FORMAT_VERSION
   state.exported_at = new Date().toISOString()
   writeState(rawDir, state)
   return summary
+}
+
+/** Длины файлов маршрута из ответа `/api/travels/<id>/routes/`: массив либо обёртка DRF; файл без длины не идёт. */
+export function parseRouteLengths(payload: unknown): number[] {
+  const body = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>
+  const list = Array.isArray(payload) ? payload : ((body.results ?? body.data ?? body.items ?? []) as unknown[])
+  return (Array.isArray(list) ? list : [])
+    .map((file) => Number(((file as { summary?: { distance_km?: unknown } } | null)?.summary ?? {}).distance_km))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.round(value * 10) / 10)
+}
+
+/**
+ * Длины файлов маршрута статей о пеших и веломаршрутах → `<raw>/routes.json` (#3353). Файл маршрута
+ * меняется независимо от статьи (`updated_at` статьи о нём не говорит), поэтому длины перечитываются
+ * каждый экспорт — только у статей-маршрутов (около 150 запросов с той же паузой). Сбой одной статьи
+ * оставляет её прежние длины; без словаря категорий шаг пропускается.
+ */
+export async function exportRouteLengths(options: {
+  apiBase?: string
+  rawDir: string
+  fetcher?: Fetcher
+  pauseMs?: number
+  log?: (line: string) => void
+  dictionaries?: RawDictionaries
+}): Promise<{ routes: number; withLength: number; failed: number }> {
+  const apiBase = options.apiBase ?? DEFAULT_API_BASE
+  const fetcher = options.fetcher ?? createFetcher({ pauseMs: options.pauseMs ?? DEFAULT_PAUSE_MS })
+  const log = options.log ?? ((line: string) => console.error(line))
+  const dictionaries = options.dictionaries ?? readDictionaries(options.rawDir)
+  const nameOf = (ids: unknown, dictionary: Record<string, string>): string[] =>
+    (Array.isArray(ids) ? ids : []).map((id) => dictionary[String(id)]).filter((name): name is string => Boolean(name))
+  const routes = readRawTravels(options.rawDir).filter(
+    (travel) => routeKindOf({ categories: nameOf(travel.categories, dictionaries.categories), transports: nameOf(travel.transports, dictionaries.transports) }) !== null,
+  )
+  const previous = readRouteLengths(options.rawDir)
+  const present = new Set(readRawTravels(options.rawDir).map((travel) => String(travel.id)))
+  // Длины статей, которых в слепке больше нет, не переносятся.
+  const lengths: RawRouteLengths = Object.fromEntries(Object.entries(previous).filter(([id]) => present.has(id)))
+  let failed = 0
+  for (const [index, travel] of routes.entries()) {
+    try {
+      const found = parseRouteLengths(await fetcher(`${apiBase}/travels/${travel.id}/routes/`))
+      if (found.length) lengths[String(travel.id)] = found
+      else delete lengths[String(travel.id)]
+    } catch (error) {
+      failed += 1
+      log(`routes: файлы маршрута статьи ${travel.id} не получены, остаются прежние: ${String(error)}`)
+    }
+    if ((index + 1) % 50 === 0 || index + 1 === routes.length) log(`routes: ${index + 1}/${routes.length}`)
+  }
+  fs.writeFileSync(path.join(options.rawDir, ROUTES_FILE), `${JSON.stringify({ exported_at: new Date().toISOString(), travels: lengths }, null, 2)}\n`)
+  return { routes: routes.length, withLength: Object.keys(lengths).length, failed }
 }
 
 const QUEST_FACT_FIELDS = ['points', 'duration_min', 'difficulty', 'pet_friendly'] as const
@@ -421,5 +478,5 @@ export function chunkRawCorpus(rawDir: string, options: ChunkOptions = {}, local
   const chunks: ChunkRecord[] = []
   for (const travel of travels) chunks.push(...buildTravelChunks(travel, {}, options))
   for (const quest of quests) chunks.push(...buildQuestChunks(quest, options))
-  return { chunks, facts: buildCorpusFacts(travels, quests, readDictionaries(rawDir)), travels: travels.length, quests: quests.length }
+  return { chunks, facts: buildCorpusFacts(travels, quests, readDictionaries(rawDir), readRouteLengths(rawDir)), travels: travels.length, quests: quests.length }
 }

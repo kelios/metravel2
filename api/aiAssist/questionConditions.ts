@@ -26,7 +26,7 @@
 import { asksAboutChildren } from './questAudience.ts'
 import { asksAboutService } from './serviceIntent.ts'
 import { detectIntent } from './retrievalQuery.ts'
-import { MONTHS_RU, type SourceFacts } from './sourceFacts.ts'
+import { formatKm, MONTHS_RU, type RouteKind, routeKindOf, type SourceFacts } from './sourceFacts.ts'
 import type { AiCardType, AiSourceType } from './types'
 
 export type QuestionConditions = {
@@ -46,6 +46,15 @@ export type QuestionConditions = {
   easy?: true
   /** Вопрос о самом сайте, а не о поездке (#3293, `serviceIntent.ts`): отвечает справка, а не материалы. */
   service?: true
+  /**
+   * Длина маршрута, км (#3353): «не более 100 км», «до двадцати километров» — граница строгая, «около 50 км»,
+   * «поход на 20 км» — с запасом 25 %, как у длительности.
+   */
+  maxKm?: number
+  /** Нижняя граница длины, км: «не короче 10 км», «от 15 км», «больше 20 км», «at least 10 km». */
+  minKm?: number
+  /** Вид маршрута: пеший («пешком», «поход», «hiking», «pieszo») или на велосипеде («веломаршрут», «rowerem»). */
+  route?: RouteKind
 }
 
 // `\b` не знает кириллицы: граница слова — по букве и цифре с обеих сторон.
@@ -223,6 +232,106 @@ function scaled(token: string | undefined, unit: number): number | null {
   return value !== null && value > 0 ? value * unit : null
 }
 
+const KM = '(?:км|km|километр\\p{L}*|кіламетр\\p{L}*|кілометр\\p{L}*|kilomet\\p{L}*)'
+/** Числительные длины: десятки и сотни в падежах «до двадцати километров», «na pięćdziesiąt kilometrów». */
+const KM_NUMBER_WORDS: ReadonlyArray<[number, string]> = [
+  ...NUMBER_WORDS,
+  [15, 'пятнадцат[ьи]|пятнаццац[ьі]|п[\'’ʼ]ятнадцят[ьи]|pi[ęe]tna[śs]cie|pi[ęe]tnastu|fifteen'],
+  [20, 'двадцат[ьи]|дваццац[ьі]|двадцят[ьи]|dwadzie[śs]cia|dwudziestu|twenty'],
+  [25, 'двадцат[ьи]\\s+пят[ьи]|twenty[\\s-]five'],
+  [30, 'тридцат[ьи]|трыццац[ьі]|тридцят[ьи]|trzydzie[śs]ci|trzydziestu|thirty'],
+  [40, 'сорок|сорока|сарака|czterdzie[śs]ci|czterdziestu|forty'],
+  [50, 'пят(?:ь|и)десят(?:и)?|пяцьдзесят|пяцідзесяці|п[\'’ʼ]ят(?:и)?десят(?:и)?|pi[ęe][ćc]dziesi[ąa]t|pi[ęe][ćc]dziesi[ęe]ciu|fifty'],
+  [60, 'шест(?:ь|и)десят(?:и)?|шэсцьдзесят|шасцідзесяці|шіст?десят(?:и)?|sze[śs][ćc]dziesi[ąa]t|sze[śs][ćc]dziesi[ęe]ciu|sixty'],
+  [70, 'сем(?:ь|и)десят(?:и)?|семдзесят|сямідзесяці|сімдесят(?:и)?|siedemdziesi[ąa]t|siedemdziesi[ęe]ciu|seventy'],
+  [80, 'восем(?:ь|и)десят(?:и)?|восемдзесят|васьмідзесяці|вісімдесят(?:и)?|osiemdziesi[ąa]t|osiemdziesi[ęe]ciu|eighty'],
+  [90, 'девяност[оа]|дзевяност[аы]|дев[\'’ʼ]яност[оа]|dziewi[ęe][ćc]dziesi[ąa]t|ninety'],
+  [100, 'сто|ста|сотн[июя]|stu|sto|(?:a|one)\\s+hundred|hundred'],
+  [150, 'полутораста|полтораста'],
+  [200, 'двести|двухсот|дзвесце|двісті|двохсот|dwie[śs]cie|dwustu|two\\s+hundred'],
+]
+const KM_NUMBER_WORD_RES: ReadonlyArray<[number, RegExp]> = KM_NUMBER_WORDS.map(([value, pattern]) => [value, new RegExp(`^(?:${pattern})$`, 'iu')])
+// Длинные слова раньше коротких: «двадцать пять» не должно прочитаться как «двадцать».
+const KM_NUM = `(\\d{1,4}(?:[.,]\\d)?|${[...KM_NUMBER_WORDS].reverse().map(([, pattern]) => pattern).join('|')})`
+const kmNumberOf = (token: string | undefined): number | null => {
+  const text = String(token ?? '').trim().replace(/\s+/g, ' ')
+  if (!text) return null
+  if (/^\d/.test(text)) {
+    const value = Number(text.replace(',', '.'))
+    return Number.isFinite(value) && value > 0 ? value : null
+  }
+  return KM_NUMBER_WORD_RES.find(([, pattern]) => pattern.test(text))?.[0] ?? null
+}
+/** «10–15 км», «от 10 до 15 км» — диапазон; число перед единицей — «a 100 km hike», «на 20 км», «20-километровый». */
+const KM_RE = new RegExp(`(?<![\\p{L}\\p{N}.,])${KM_NUM}(?:\\s*(?:[-–—]|до|да|do|to)\\s*${KM_NUM})?[\\s-]*${KM}(?![\\p{L}\\p{N}])`, 'giu')
+const KM_TAIL = '\\s+(?:чем\\s+|за\\s+|ніж\\s+|than\\s+)?$'
+const kmBefore = (...alternatives: string[]): RegExp => new RegExp(`(?<![\\p{L}])(?:${alternatives.join('|')})${KM_TAIL}`, 'iu')
+/** Слова перед числом километров. Порядок проверки — в `kmOf`: отрицание читается раньше голого сравнения. */
+const KM_NOT_SHORTER_RE = kmBefore(
+  'не\\s+(?:короче|меньше|менее|карацей|менш|коротше|менше)', 'от', 'ад', 'від', 'минимум', 'мінімум', 'хотя\\s+бы', 'як\\s+мінімум', 'щонайменше',
+  'od', 'co\\s+najmniej', 'minimum', 'nie\\s+kr[óo]tsz\\p{L}*\\s+ni[żz]', 'nie\\s+mniej\\s+ni[żz]', 'at\\s+least', 'not\\s+shorter\\s+than', 'no\\s+(?:less|shorter)\\s+than', 'from',
+)
+const KM_NOT_LONGER_RE = kmBefore(
+  'не\\s+(?:длиннее|больше|более|дольше|даўжэй|больш|довше|більше)', 'до', 'да', 'максимум', 'в\\s+пределах', 'у\\s+межах',
+  'do', 'maks(?:ymalnie)?', 'max(?:imum)?', 'nie\\s+d[łl]u[żz]sz\\p{L}*\\s+ni[żz]', 'nie\\s+wi[ęe]cej\\s+ni[żz]', 'up\\s+to', 'under', 'within', 'at\\s+most', '(?:no|not)\\s+(?:more|longer)\\s+than',
+)
+const KM_LONGER_RE = kmBefore('больше', 'более', 'длиннее', 'больш', 'даўжэй', 'більше', 'довше', 'ponad', 'powy[żz]ej', 'wi[ęe]cej\\s+ni[żz]', 'd[łl]u[żz]sz\\p{L}*\\s+ni[żz]', 'more\\s+than', 'over', 'longer\\s+than')
+const KM_SHORTER_RE = kmBefore('короче', 'менее', 'меньше', 'карацей', 'менш', 'коротше', 'менше', 'kr[óo]tsz\\p{L}*\\s+ni[żz]', 'mniej\\s+ni[żz]', 'poni[żz]ej', 'shorter\\s+than', 'less\\s+than')
+/** Расстояние от места, а не длина маршрута: «в 30 км от Минска», «30 km from Krakow», «за 20 км від Львова». */
+const KM_FROM_PLACE_RE = /^\s*(?:от|ад|від|od|from)\s+\p{Lu}/u
+const KM_AWAY_BEFORE_RE = /(?<![\p{L}])(?:в|у|ў|за|w|within)\s+$/iu
+
+/**
+ * Границы длины маршрута в вопросе. Число с километрами читается длиной маршрута, если это не расстояние
+ * от места («в 30 км от Минска» — оно в условия не входит). Диапазон «10–15 км» — нижняя и верхняя
+ * граница; «до» и «не больше» — строгая верхняя; «от» и «не короче» — нижняя; одно число без этих слов
+ * («поход на 20 км», «около 50 км») — примерная длина с запасом 25 %, как у длительности.
+ */
+const kmOf = (text: string): { maxKm?: number; minKm?: number } => {
+  const out: { maxKm?: number; minKm?: number } = {}
+  for (const match of text.matchAll(KM_RE)) {
+    const start = match.index ?? 0
+    const before = text.slice(0, start)
+    const after = text.slice(start + match[0].length)
+    if (KM_FROM_PLACE_RE.test(after) || (KM_AWAY_BEFORE_RE.test(before) && /^\s*(?:от|ад|від|od|from)(?![\p{L}])/iu.test(after))) continue
+    const first = kmNumberOf(match[1])
+    const second = kmNumberOf(match[2])
+    if (first === null) continue
+    if (second !== null && second > first) {
+      out.minKm ??= first
+      out.maxKm ??= second
+    } else if (KM_NOT_SHORTER_RE.test(before)) {
+      out.minKm ??= first
+    } else if (KM_NOT_LONGER_RE.test(before)) {
+      out.maxKm ??= first
+    } else if (KM_LONGER_RE.test(before)) {
+      out.minKm ??= first
+    } else if (KM_SHORTER_RE.test(before)) {
+      out.maxKm ??= first
+    } else {
+      out.maxKm ??= Math.round(first * APPROXIMATE_FACTOR * 10) / 10
+    }
+  }
+  return out
+}
+
+const FOOT_RE = word(
+  // RU
+  'пешком', 'пеш(?:ий|ая|ее|ие|его|ей|ую|им|их|ими|ем)', 'поход(?:а|у|е|ы|ов|ом|ах)?', 'хайкинг\\p{L}*', 'трек+инг\\p{L}*',
+  // BE
+  'пешшу', 'пеш(?:ы|ая|ае|ыя|ага|ую)', 'паход\\p{L}*', 'вандро[ўу]к\\p{L}*\\s+пешшу',
+  // UK
+  'пішки', 'піш(?:ий|а|е|і|ого|ої|у|им|их)', 'похід', 'походи', 'поход(?:у|ом|ів|ах)', 'пішохідн\\p{L}+',
+  // PL
+  'pieszo', 'piesz(?:y|a|e|ego|ej|[ąa]|ych|ymi)', 'w[ęe]dr[óo]wk\\p{L}*', 'trekking\\p{L}*',
+  // EN
+  'hik(?:e|es|ing)', 'on\\s+foot', 'walking\\s+(?:route|trail|tour|path)s?', 'trek(?:s|king)?',
+)
+const BIKE_RE = word(
+  'вело\\p{L}+', 'на\\s+велосипед\\p{L}*', 'на\\s+веліку', 'на\\s+ровары', 'на\\s+велосипеді', 'велосипед\\p{L}*', 'ровар\\p{L}*',
+  'rower\\p{L}*', 'na\\s+rowerze', 'cycl(?:e|ing)', 'bik(?:e|es|ing)', 'bicycle\\p{L}*', 'by\\s+bike',
+)
+
 const HALF_DAY_RE = word('пол\\s?-?дня', 'половин[ау]\\s+дня', 'па[ўу]\\s?-?дня', 'палов[ау]\\s+дня', 'пів\\s?-?дня', 'p[óo][łl]\\s+dnia', 'po[łl]ow[ęea]\\s+dnia', 'half(?:\\s+(?:a|of\\s+a|the))?[\\s-]+day')
 const DAYS_RE = word(`${NUM}\\s*(?:дн(?:я|ей|і|ів|ями)|дзён|дні|dni|days?)`, '(\\d{1,2})[-\\s]?(?:дневн\\p{L}+|дз[её]нн\\p{L}+|денн\\p{L}+|dniow\\p{L}+|day)')
 const ONE_DAY_RE = word(
@@ -280,6 +389,10 @@ export const parseConditions = (query: string | null | undefined): QuestionCondi
   const kind = detectIntent(text)
   const ages = agesOf(text)
   const aboutChildren = asksAboutChildren(text) || (ages.length > 0 && AGED_PERSON_RE.test(text))
+  const { maxKm, minKm } = kmOf(text)
+  // Вид маршрута: оба слова сразу («пешком или на велосипеде») вид не называют.
+  const onFoot = FOOT_RE.test(text)
+  const byBike = BIKE_RE.test(text)
   return {
     ...(aboutChildren ? { children: { ages } } : {}),
     ...(DOG_RE.test(text) ? { dog: true as const } : {}),
@@ -290,6 +403,9 @@ export const parseConditions = (query: string | null | undefined): QuestionCondi
     ...(kind ? { kind } : {}),
     ...(EASY_RE.test(text) ? { easy: true as const } : {}),
     ...(asksAboutService(text) ? { service: true as const } : {}),
+    ...(maxKm !== undefined ? { maxKm } : {}),
+    ...(minKm !== undefined ? { minKm } : {}),
+    ...(onFoot !== byBike ? { route: onFoot ? ('foot' as const) : ('bike' as const) } : {}),
   }
 }
 
@@ -315,6 +431,8 @@ const AUDIENCE_RU = { kids: 'детский', family: 'семейный' } as co
 const CAR_TRANSPORTS = new Set(['машина', 'такси'])
 const PUBLIC_TRANSPORTS = new Set(['автобус', 'поезд', 'электричка', 'общественный транспорт'])
 const WEEKEND_CATEGORY = 'тур выходного дня'
+
+const ROUTE_RU: Record<RouteKind, string> = { foot: 'пеший маршрут', bike: 'веломаршрут' }
 
 const daysLabel = (days: number): string => {
   const tail = days % 10
@@ -346,7 +464,15 @@ export const judgeCard = (
   // «Где погулять с собакой недалеко от Варшавы?» получал детский квест, потому что он «можно с собакой».
   // Вопрос без условий («Какие квесты есть в Гродно?») детские квесты по-прежнему показывает.
   const personal =
-    conditions.dog || conditions.noCar || conditions.easy || conditions.months?.length || conditions.maxMinutes !== undefined || conditions.maxDays !== undefined
+    conditions.dog ||
+    conditions.noCar ||
+    conditions.easy ||
+    conditions.months?.length ||
+    conditions.maxMinutes !== undefined ||
+    conditions.maxDays !== undefined ||
+    conditions.maxKm !== undefined ||
+    conditions.minKm !== undefined ||
+    conditions.route !== undefined
   if (!conditions.children && personal && quest?.audience === 'kids') return { reasons: [], score: -1, dropped: true, unfit: true }
 
   if (conditions.kind) score += card.type === conditions.kind ? 1 : -1
@@ -412,6 +538,22 @@ export const judgeCard = (
         match(WEEKEND_CATEGORY)
       }
     }
+  }
+
+  // Вид маршрута (#3353): пеший или вело — по категориям и транспорту статьи; каталог молчит — не нарушено.
+  const kind = travel ? routeKindOf(travel) : null
+  const otherKind = conditions.route !== undefined && kind !== null && kind !== conditions.route
+  if (conditions.route && kind === conditions.route) match(ROUTE_RU[kind])
+  else if (otherKind) score -= 1
+
+  // Длина маршрута (#3353): сверяется только у статьи с фактом длины; длиннее верхней границы или короче
+  // нижней — явное нарушение числового условия. У маршрута другого вида длина не сверяется: веломаршрут на
+  // 15 км — не ответ на «пеший маршрут до 20 км», и нарушением его длина тоже не становится.
+  if (!otherKind && travel?.distance_km !== undefined && (conditions.maxKm !== undefined || conditions.minKm !== undefined)) {
+    const tooLong = conditions.maxKm !== undefined && travel.distance_km > conditions.maxKm
+    const tooShort = conditions.minKm !== undefined && travel.distance_km < conditions.minKm
+    if (tooLong || tooShort) dropped = true
+    else match(`${formatKm(travel.distance_km)} км`)
   }
 
   return { reasons, score, dropped, unfit: false }

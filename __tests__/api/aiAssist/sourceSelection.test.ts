@@ -400,3 +400,59 @@ describe('цепочка порядка карточек (#3289): случаи �
     }
   })
 })
+
+// #3353: условие «длина маршрута». Карточки и длины — из слепка индекса 12.11.2026 с фактом длины.
+describe('цепочка порядка карточек (#3353): длина маршрута', () => {
+  const HIKE = ['Поход', 'Хайкинг']
+  const mnikowska = travel({ id: 559, title: 'Долина Мниковская', country: 'Польша', facts: { number_days: 1, categories: HIKE, distance_km: 9.6 } })
+  const harz = travel({ id: 544, title: 'Тропа ведьм в Гарце: как пройти Hexenstieg', country: 'Германия', facts: { number_days: 6, categories: HIKE, distance_km: 96.6 } })
+  const mullerthal = travel({ id: 761, title: 'Mullerthal Trail: 112 км по Люксембургу за 6 дней', country: 'Люксембург', facts: { number_days: 6, categories: HIKE, distance_km: 112 } })
+  const gr21 = travel({ id: 628, title: 'GR21: пешком по Алебастровому берегу Нормандии', country: 'Франция', facts: { number_days: 9, categories: HIKE, distance_km: 186.3 } })
+  const turbacz = travel({ id: 451, title: 'Гора Турбач (1310 м): поход в Горце, Польша', country: 'Польша', facts: { number_days: 1, categories: HIKE } })
+  const vistula = travel({ id: 483, title: 'Веломаршрут вдоль Вислы: Wiślana Trasa Rowerowa', country: 'Польша', facts: { number_days: 1, categories: ['Веломаршрут'] } })
+  const found = [gr21, mullerthal, turbacz, harz, vistula, mnikowska]
+
+  it('«пеший маршрут не более 100 километров»: длиннее названного — в «рядом», подходящие первыми и названы в «почему подходит»', () => {
+    const { sources, conditions } = arrangeSources('Пеший маршрут не более 100 километров', found)
+    expect(conditions).toMatchObject({ maxKm: 100, route: 'foot' })
+    // 186 и 112 км уходят в «рядом»; веломаршрут без длины опущен видом маршрута, но не убран.
+    expect(groupOf(sources, 'nearby')).toEqual(expect.arrayContaining(['t628', 't761']))
+    expect(groupOf(sources, 'match').slice(0, 2)).toEqual(['t544', 't559'])
+    expect(sources.find((source) => source.source_id === '544')?.why).toBe('пеший маршрут, 97 км')
+    expect(sources.find((source) => source.source_id === '559')?.why).toBe('пеший маршрут, 9,6 км')
+    // Модель видит только подходящие: длинных маршрутов в подсказке нет.
+    const prompt = ids(selectPromptSources(sources, 8, null, true))
+    expect(prompt).not.toContain('t628')
+    expect(prompt).not.toContain('t761')
+    expect(prompt.slice(0, 2)).toEqual(['t544', 't559'])
+  })
+
+  it('«поход около 50 км»: запас 25 % — 60 км допустим, 120 км нет; статья без факта длины условие не нарушает', () => {
+    const sixty = travel({ id: 1, title: 'Поход на 60 км', country: 'Польша', facts: { categories: HIKE, distance_km: 60 } })
+    const far = travel({ id: 2, title: 'Поход на 120 км', country: 'Польша', facts: { categories: HIKE, distance_km: 120 } })
+    const { sources } = arrangeSources('Поход около 50 км', [far, sixty, turbacz])
+    expect(groupOf(sources, 'match')).toEqual(['t1', 't451'])
+    expect(groupOf(sources, 'nearby')).toEqual(['t2'])
+    // Турбач без длины остаётся в подсказке без числа в «почему подходит».
+    expect(sources.find((source) => source.source_id === '451')?.why).toBe('пеший маршрут')
+  })
+
+  it('на польском и английском — тот же отбор', () => {
+    for (const question of ['Szlak pieszy do 100 km', 'A hike of no more than 100 km', 'Піший маршрут до ста кілометрів', 'Пешы маршрут да ста кіламетраў']) {
+      const { sources } = arrangeSources(question, found)
+      expect({ question, nearby: groupOf(sources, 'nearby').filter((id) => id === 't628' || id === 't761').sort() }).toEqual({ question, nearby: ['t628', 't761'] })
+      expect({ question, lead: groupOf(sources, 'match').slice(0, 2) }).toEqual({ question, lead: ['t544', 't559'] })
+    }
+  })
+
+  it('все маршруты длиннее названного — остаются «ближайшим из того, что есть», без строки «почему подходит»', () => {
+    const { sources } = arrangeSources('Маршрут до 5 км', [mullerthal, gr21])
+    expect(ids(sources)).toEqual(['t761', 't628'])
+    expect(sources.every((source) => !source.why && !source.group)).toBe(true)
+  })
+
+  it('вопрос без условия длины порядок не меняет', () => {
+    const quests = [quest({ id: 7, title: 'Квест по Гродно', city: 'Гродно', country: 'Беларусь', facts: { duration_min: 100 } }), quest({ id: 53, title: 'Городница', city: 'Гродно', country: 'Беларусь', facts: { duration_min: 90 } })]
+    expect(ids(arrangeSources('Какие квесты есть в Гродно?', [...quests, mnikowska]).sources)).toEqual(['q7', 'q53', 't559'])
+  })
+})

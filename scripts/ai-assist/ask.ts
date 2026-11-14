@@ -55,6 +55,11 @@
  * Клиент, который причины не знает, видит прежний `fallback` и показывает запасную фразу стража.
  * Событие `trace` несёт пустые `prompt_sources` и `model_called: false`.
  *
+ * Оценка ответа (#3296): ход, дошедший до ответа модели или справки, получает в событии `done` поле
+ * `turn_id` — по нему экран шлёт голос в `POST /ai/feedback` — и строку в журнале спроса: язык, вопрос
+ * (до 300 знаков), статус (`done`, `partial_no_material`, `fallback`, `help`), карточки подсказки, длина
+ * ответа и счётчики стража. IP и текста ответа в журнале нет. Старый клиент поле не читает.
+ *
  * Справка о сайте (#3293): вопрос о самом MeTravel («сколько стоит квест», «нужен ли интернет», «как
  * добавить статью») подбор отдаёт записями справки — карточками вида `help`, без статей и квестов.
  * По умолчанию ответ — текст первой записи дословно и ссылка на её страницу, модель не вызывается:
@@ -67,6 +72,7 @@ import type http from 'node:http'
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { guardAnswer } from '../../api/aiAssist/answerGuard.ts'
 import { questionLanguage } from '../../api/aiAssist/language.ts'
+import { admitsNoMaterial } from '../../api/aiAssist/noMaterial.ts'
 import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources } from '../../api/aiAssist/prompt.ts'
@@ -75,7 +81,8 @@ import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/
 import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
-import type { DemandLog } from './demandLog.ts'
+import type { DemandLog, TurnGuard, TurnStatus } from './demandLog.ts'
+import type { TurnRegistry } from './feedback.ts'
 import { helpPageTitle } from './helpPages.ts'
 import type { AskLimits } from './limits.ts'
 import { HttpError, parseLocale, parseQuery } from './params.ts'
@@ -140,6 +147,11 @@ export interface AskDeps {
   promptHints?: PromptHints
   /** Справка о сайте (#3293): `direct` (по умолчанию) — запись и ссылка без модели; `model` — через модель. */
   helpMode?: 'direct' | 'model'
+  /**
+   * Ходы, которые можно оценить (#3296): ход, дошедший до ответа, получает идентификатор в событии `done`
+   * (`turn_id`) и строку в журнале. Не задано — идентификатора и строки хода нет (стенды без оценки).
+   */
+  turns?: TurnRegistry
   log: (line: string) => void
   now?: () => Date
 }
@@ -238,6 +250,30 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       extra: { retry_after_sec: limits.retryAfterSeconds(now), strikes, strikes_to_block: limits.strikesToBlock },
     })
 
+  /**
+   * Ход дошёл до ответа (#3296): идентификатор для оценки и строка журнала. Без реестра ходов — `{}`.
+   * Журнал заодно чистится от записей старше срока хранения (не чаще раза в сутки).
+   */
+  const openTurn = async (
+    ip: string,
+    now: Date,
+    entry: { q: string; locale: string; status: TurnStatus; sources: readonly AiSource[]; answerChars: number; guard?: TurnGuard },
+  ): Promise<{ turn_id?: string }> => {
+    if (!deps.turns) return {}
+    const turn = deps.turns.open(ip, now)
+    await demandLog.appendTurn({
+      turn,
+      q: entry.q,
+      locale: entry.locale,
+      status: entry.status,
+      source_ids: entry.sources.map((source) => `${source.type}:${source.source_id}`),
+      answer_chars: entry.answerChars,
+      guard: entry.guard ?? {},
+    })
+    void demandLog.prune()
+    return { turn_id: turn }
+  }
+
   return async (request, response, body) => {
     const now = nowFn()
     const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
@@ -317,8 +353,10 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       const stream = openStream(response)
       stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
       if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true })
-      stream.event('text', { text: helpAnswerText(promptSources, helpLocale) })
-      stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining })
+      const helpText = helpAnswerText(promptSources, helpLocale)
+      stream.event('text', { text: helpText })
+      const turn = await openTurn(ip, now, { q: question, locale: helpLocale, status: 'help', sources: promptSources, answerChars: helpText.length })
+      stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining, ...turn })
       return
     }
     // Подсказка пуста (#3345): подбор что-то нашёл, но отбор по месту и условиям вопроса не оставил ни одной
@@ -423,6 +461,24 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         return
       }
       open.event('text', { text: guarded.fallback ? '' : guarded.text })
+      // Ход дошёл до ответа (#3296): строка журнала и идентификатор для оценки. Признание «отдельного
+      // материала нет» рядом с рекомендациями — частичный ответ: тема без своего материала.
+      const turn = await openTurn(ip, now, {
+        q: question,
+        locale,
+        status: guarded.fallback ? 'fallback' : admitsNoMaterial(guarded.text) ? 'partial_no_material' : 'done',
+        sources: promptSources,
+        answerChars: guarded.fallback ? 0 : guarded.text.length,
+        guard: {
+          removed_links: guarded.removed,
+          relabeled: guarded.relabeled,
+          dropped_descriptions: guarded.droppedDescriptions,
+          ungrounded_numbers: guarded.ungroundedNumbers,
+          prompt_leaks: guarded.promptLeaks,
+          counter_questions: guarded.counterQuestions,
+          stray_admissions: guarded.strayAdmissions,
+        },
+      })
       open.done({
         status: 'done',
         removed_links: guarded.removed,
@@ -433,6 +489,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         ...(guarded.fallback ? { fallback: true } : {}),
         usage: result.usage,
         remaining: quota.remaining,
+        ...turn,
       })
     } catch (error) {
       clearFlush()

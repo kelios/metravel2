@@ -226,7 +226,15 @@ const wordNumberFacts = (text: string): Array<{ kind: NumberKind; value: number 
   return facts
 }
 
-type Grounding = { exact: Set<string>; minutes: number[]; points: number[]; years: Array<[number, number]> }
+type Grounding = { exact: Set<string>; minutes: number[]; points: number[]; km: number[]; years: Array<[number, number]> }
+
+/**
+ * Округление длины (#3353): «около 10 км» при «Длина: 9,6 км» в карточке, «175 км» при 174,9 — то же
+ * число, а не выдумка. Допуск — полкилометра либо один процент длины: «97 км» при границе «100 км» из
+ * вопроса и «120 км» при карточке на 86 опоры не имеют.
+ */
+const KM_TOLERANCE = 0.5
+const KM_TOLERANCE_SHARE = 0.01
 
 /** Числительные 1–12 основами: возраст в вопросе называют слитно — «шестилетка», «дев’ятирічним», «ośmiolatkiem», «six-year-old». */
 const AGE_STEMS: ReadonlyArray<[number, string]> = [
@@ -245,16 +253,18 @@ export const groundingOf = (texts: ReadonlyArray<string | null | undefined>, age
   const exact = new Set<string>()
   const minutes: number[] = []
   const points: number[] = []
+  const km: number[] = []
   const years: Array<[number, number]> = ages.map((age) => [age, age])
   for (const text of texts) {
     for (const fact of [...extractNumberFacts(String(text ?? '')), ...wordNumberFacts(String(text ?? ''))]) {
       exact.add(`${fact.kind}:${fact.value}`)
       if (fact.kind === 'minutes') minutes.push(fact.value)
       if (fact.kind === 'points') points.push(fact.value)
+      if (fact.kind === 'km') km.push(fact.value)
       if (fact.kind === 'years') years.push((fact as NumberFact).span ?? [fact.value, fact.value])
     }
   }
-  return { exact, minutes, points, years }
+  return { exact, minutes, points, km, years }
 }
 
 /** Сравнение двух материалов: «на 30 минут короче», «на две точки больше» — на RU/BE/UK/PL/EN. */
@@ -266,7 +276,9 @@ export const isGrounded = (fact: NumberFact, grounding: Grounding): boolean =>
   grounding.exact.has(`${fact.kind}:${fact.value}`) ||
   (fact.approx === true && grounding.minutes.some((value) => Math.abs(value - fact.value) <= HOURS_TOLERANCE_MIN)) ||
   // Возраст внутри диапазона карточки («Возраст: 8–10 лет» — «ребёнку 9 лет») либо названный в вопросе.
-  (fact.kind === 'years' && grounding.years.some(([from, to]) => fact.value >= from && fact.value <= to))
+  (fact.kind === 'years' && grounding.years.some(([from, to]) => fact.value >= from && fact.value <= to)) ||
+  // Длина, округлённая до километра: «около 10 км» при «Длина: 9,6 км» (#3353).
+  (fact.kind === 'km' && grounding.km.some((value) => Math.abs(value - fact.value) <= Math.max(KM_TOLERANCE, value * KM_TOLERANCE_SHARE)))
 
 /**
  * Во фразе сравнения число — разница двух чисел карточек подсказки: «квест про тракт на 30 хв

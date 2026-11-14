@@ -8,6 +8,8 @@
  *   embed    — work/chunks.jsonl → <dist>/{chunks.jsonl,vectors.f16,facts.jsonl,manifest.json}, инкремент по id
  *   facts    — raw → <dist>/facts.jsonl и версия формата в manifest БЕЗ пересчёта векторов:
  *              перевод уже собранного артефакта на формат с фактами
+ *   routes   — длины файлов маршрута статей о пеших и веломаршрутах → <out>/raw/routes.json (#3353)
+ *              без перечитывания статей и квестов; `export` делает это сам. После неё — `facts`
  *   help     — справка о сайте (#3293) в уже собранный артефакт: --from <dist> (по умолчанию сам
  *              <dist>) → <dist>; фрагменты статей и квестов и их векторы переносятся как есть,
  *              считаются только фрагменты справки. `chunk` и `build` добавляют справку сами.
@@ -33,7 +35,7 @@ import { fileURLToPath } from 'node:url'
 import type { ChunkOptions } from './chunk.ts'
 import { createEmbedder, runEmbed } from './embed.ts'
 import { buildHelpChunks, helpDraftsEnabled, readHelpCorpus } from './help.ts'
-import { chunkRawCorpus, countCatalogSources, rawFactsProblem, runExport } from './export.ts'
+import { chunkRawCorpus, countCatalogSources, exportRouteLengths, rawFactsProblem, runExport } from './export.ts'
 import { type ChunkRecord, readIndex, readJsonl, type SourceFacts, verifyIndex, writeFacts, writeJsonl } from './format.ts'
 import { checkFreshness, readFreshnessSubject } from './freshness.ts'
 import { resolveModel } from './models.ts'
@@ -309,6 +311,17 @@ export async function main(argv: string[]): Promise<void> {
       commandFacts(paths)
       commandManifest(paths)
       return
+    case 'routes': {
+      const summary = await exportRouteLengths({
+        apiBase: typeof flags.api === 'string' ? flags.api : undefined,
+        rawDir: paths.rawDir,
+        pauseMs: typeof flags.pause === 'string' ? Number(flags.pause) : undefined,
+        log,
+      })
+      log(`routes: статей-маршрутов ${summary.routes}, с файлом и длиной ${summary.withLength}, не получено ${summary.failed}`)
+      console.log(JSON.stringify(summary))
+      return
+    }
     case 'help':
       await commandHelp(flags, paths)
       commandManifest(paths)

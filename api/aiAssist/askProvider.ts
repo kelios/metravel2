@@ -76,6 +76,19 @@ export type AskDoneEvent = {
   ungroundedNumbers: number
   usage: AiUsage | null
   remaining: number | null
+  /** Идентификатор хода для оценки ответа (#3296); `null` — служба оценку не ведёт либо ход до ответа не дошёл. */
+  turnId: string | null
+}
+
+/** Оценка ответа (#3296): голос посетителя и необязательная причина у «Не помогло». */
+export type AskFeedbackVote = 'up' | 'down'
+export type AskFeedbackReason = 'place' | 'facts' | 'no_answer'
+export const ASK_FEEDBACK_REASONS: readonly AskFeedbackReason[] = ['place', 'facts', 'no_answer']
+
+export type AskFeedback = {
+  turnId: string
+  vote: AskFeedbackVote
+  reason?: AskFeedbackReason | null
 }
 
 export type AskSourcesEvent = {
@@ -106,6 +119,11 @@ export type AskResult = {
 
 export interface AskClient {
   ask(request: AskRequest): Promise<AskResult>
+  /**
+   * Голос за ответ (#3296): `POST /ai/feedback`. `true` — служба приняла голос. Отказ (ход неизвестен,
+   * лимит, сеть) — `false`: оценка необязательна, ошибку посетителю не показываем.
+   */
+  feedback?(feedback: AskFeedback): Promise<boolean>
 }
 
 const toInt = (value: unknown): number | null => {
@@ -210,6 +228,7 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
         ungroundedNumbers: toInt(payload.ungrounded_numbers) ?? 0,
         usage: toUsage(payload.usage),
         remaining: toInt(payload.remaining),
+        turnId: typeof payload.turn_id === 'string' && payload.turn_id ? payload.turn_id : null,
       },
     }
   }
@@ -232,6 +251,9 @@ export const askErrorFromResponse = (status: number, body: Record<string, unknow
   if (status === 503 && code === 'busy') return new AskError('busy', detail, { status, retryAfterSec })
   return new AskError('unavailable', detail, { status, retryAfterSec })
 }
+
+/** Голос — необязательное действие: дольше ждать ответ службы незачем. */
+export const FEEDBACK_TIMEOUT_MS = 10_000
 
 export type HttpAskClientOptions = {
   fetchImpl?: typeof fetch
@@ -337,6 +359,7 @@ export class HttpAskClient implements AskClient {
         ungroundedNumbers: 0,
         usage: null,
         remaining: null,
+        turnId: null,
       }
       return { sources, text, done: finished }
     } catch (error) {
@@ -344,6 +367,25 @@ export class HttpAskClient implements AskClient {
     } finally {
       clearTimeout(timeout)
       signal?.removeEventListener('abort', forwardAbort)
+    }
+  }
+
+  async feedback({ turnId, vote, reason }: AskFeedback): Promise<boolean> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), FEEDBACK_TIMEOUT_MS)
+    try {
+      const response = await this.fetchImpl(`${this.baseUrl}/ai/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Причина есть только у «Не помогло».
+        body: JSON.stringify({ turn_id: turnId, vote, ...(vote === 'down' && reason ? { reason } : {}) }),
+        signal: controller.signal,
+      })
+      return response.ok
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timeout)
     }
   }
 }

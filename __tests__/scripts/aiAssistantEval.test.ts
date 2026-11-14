@@ -170,7 +170,7 @@ describe('off_place_card: чужое место, а не тема', () => {
 
   it('набор живых вопросов: шаблон-тема помечен у вопросов без места и с местом-страной', () => {
     const live = loadCases(path.join(process.cwd(), 'scripts/ai-assistant-eval/cases.live.jsonl')) as { id: string; expect_sources?: { topic?: boolean } }[]
-    expect(live.filter((item) => item.expect_sources?.topic).map((item) => item.id)).toEqual(['lv13', 'lv19', 'lv24', 'lv27', 'lv29'])
+    expect(live.filter((item) => item.expect_sources?.topic).map((item) => item.id)).toEqual(['lv13', 'lv19', 'lv24', 'lv27', 'lv29', 'lv102', 'lv103', 'lv104', 'lv105', 'lv106', 'lv108', 'lv109'])
   })
 })
 

@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
+import { ASK_FEEDBACK_REASONS, type AskFeedbackReason, type AskFeedbackVote } from '@/api/aiAssist/askProvider'
 import type { AiSource } from '@/api/aiAssist/types'
 import UIButton from '@/components/ui/Button'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -49,6 +50,70 @@ const SourceRow = memo(function SourceRow({ source, styles, colors }: SourceRowP
   )
 })
 
+const FEEDBACK_REASON_KEYS: Record<AskFeedbackReason, string> = {
+  place: 'aiAssistStatic:ask.feedbackReasonPlace',
+  facts: 'aiAssistStatic:ask.feedbackReasonFacts',
+  no_answer: 'aiAssistStatic:ask.feedbackReasonNoAnswer',
+}
+
+type FeedbackProps = {
+  turn: AssistantTurn
+  styles: AssistantStyles
+  colors: ThemedColors
+  onRate: (turnId: string, vote: AskFeedbackVote, reason?: AskFeedbackReason | null) => void
+}
+
+/**
+ * Оценка ответа (#3296): «Помогло» и «Не помогло» под завершённым ответом; после «Не помогло» —
+ * необязательная причина. Один голос на ход: после голоса кнопки сменяет благодарность.
+ */
+const TurnFeedback = memo(function TurnFeedback({ turn, styles, colors, onRate }: FeedbackProps) {
+  const up = useCallback(() => onRate(turn.id, 'up'), [onRate, turn.id])
+  const down = useCallback(() => onRate(turn.id, 'down'), [onRate, turn.id])
+  if (!turn.vote) {
+    return (
+      <View style={styles.feedbackRow} testID="assistant-feedback">
+        <Text style={styles.feedbackLabel}>{i18nT('aiAssistStatic:ask.feedbackQuestion')}</Text>
+        <UIButton
+          variant="tonal"
+          size="sm"
+          label={i18nT('aiAssistStatic:ask.feedbackUp')}
+          icon={<Feather name="thumbs-up" size={16} color={colors.primaryText} />}
+          onPress={up}
+          testID="assistant-feedback-up"
+        />
+        <UIButton
+          variant="tonal"
+          size="sm"
+          label={i18nT('aiAssistStatic:ask.feedbackDown')}
+          icon={<Feather name="thumbs-down" size={16} color={colors.primaryText} />}
+          onPress={down}
+          testID="assistant-feedback-down"
+        />
+      </View>
+    )
+  }
+  // «Не помогло» без причины: причину можно назвать один раз, можно и не называть.
+  const askReason = turn.vote === 'down' && !turn.voteReason
+  return (
+    <View style={styles.feedbackRow} testID="assistant-feedback-done" accessibilityLiveRegion="polite">
+      <Text style={styles.feedbackLabel}>{askReason ? i18nT('aiAssistStatic:ask.feedbackReasonTitle') : i18nT('aiAssistStatic:ask.feedbackThanks')}</Text>
+      {askReason
+        ? ASK_FEEDBACK_REASONS.map((reason) => (
+            <UIButton
+              key={reason}
+              variant="tonal"
+              size="sm"
+              label={i18nT(FEEDBACK_REASON_KEYS[reason])}
+              onPress={() => onRate(turn.id, 'down', reason)}
+              testID={`assistant-feedback-reason-${reason}`}
+            />
+          ))
+        : null}
+    </View>
+  )
+})
+
 type AssistantTurnCardProps = {
   turn: AssistantTurn
   styles: AssistantStyles
@@ -56,10 +121,14 @@ type AssistantTurnCardProps = {
   busy: boolean
   onRetry: (turnId: string) => void
   onOpenCatalog: () => void
+  /** Оценка ответа (#3296); нет — кнопок оценки нет. */
+  onRate?: (turnId: string, vote: AskFeedbackVote, reason?: AskFeedbackReason | null) => void
 }
 
-function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpenCatalog }: AssistantTurnCardProps) {
+function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpenCatalog, onRate }: AssistantTurnCardProps) {
   const retry = useCallback(() => onRetry(turn.id), [onRetry, turn.id])
+  // Оценивается ход, который служба довела до ответа (`feedbackId`): ответ модели, запасной ответ, справка.
+  const showFeedback = Boolean(onRate) && turn.status === 'done' && Boolean(turn.feedbackId)
   const isWorking = turn.status === 'searching' || turn.status === 'streaming'
   const showSources = turn.sources.length > 0 && turn.status !== 'searching'
   // Группа «Ещё по теме»: в режиме страницы (#3290) — соседние материалы; в общем подборе (#3289) —
@@ -182,6 +251,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
             {i18nT('aiAssistStatic:ask.linksRemoved')}
           </Text>
         ) : null}
+
+        {showFeedback && onRate ? <TurnFeedback turn={turn} styles={styles} colors={colors} onRate={onRate} /> : null}
 
         {showSources && mainSources.length > 0 ? (
           <>

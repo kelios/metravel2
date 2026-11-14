@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { createAskClient, isAskError, type AskClient } from '@/api/aiAssist/askProvider'
+import { createAskClient, isAskError, type AskClient, type AskFeedbackReason, type AskFeedbackVote } from '@/api/aiAssist/askProvider'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
 import {
@@ -73,6 +73,13 @@ export type AssistantTurn = {
    * Ход тоже `fallback`, но карточка показывает «на сайте пока нет материалов» и найденное рядом.
    */
   noMaterial?: boolean
+  /**
+   * Оценка ответа (#3296). `feedbackId` — идентификатор хода от службы: есть — под ответом стоят кнопки
+   * «Помогло» и «Не помогло». `vote` — отданный голос, `voteReason` — причина у «Не помогло»; один голос на ход.
+   */
+  feedbackId?: string | null
+  vote?: AskFeedbackVote | null
+  voteReason?: AskFeedbackReason | null
 }
 
 export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
@@ -311,7 +318,17 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         applyServerRemaining(done.remaining)
         switch (done.status) {
           case 'done':
-            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage, fallback: done.fallback, noMaterial: done.fallback && done.reason === ASK_NO_MATERIAL_REASON })
+            patchTurn(id, {
+              answer: result.text,
+              sources: result.sources,
+              removedLinks: done.removedLinks,
+              status: 'done',
+              usage: done.usage,
+              fallback: done.fallback,
+              noMaterial: done.fallback && done.reason === ASK_NO_MATERIAL_REASON,
+              // Оценку принимает только клиент, который умеет её отправить.
+              feedbackId: client.feedback ? done.turnId : null,
+            })
             if (__DEV__) {
               console.info('[ai-assist] usage', { ...done.usage, removedLinks: done.removedLinks, sources: result.sources.length })
             }
@@ -581,6 +598,23 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
     [ask, commitTurns, readRemaining, updateRemaining],
   )
 
+  /**
+   * Оценка ответа (#3296): голос уходит службе, кнопки под ответом сменяются благодарностью сразу — оценка
+   * необязательна, отказ службы посетителю не показывается. Один голос на ход; после «Не помогло» причину
+   * можно назвать один раз.
+   */
+  const rate = useCallback(
+    (turnId: string, vote: AskFeedbackVote, reason: AskFeedbackReason | null = null): void => {
+      const turn = turnsRef.current.find((item) => item.id === turnId)
+      if (!turn?.feedbackId || provider.kind !== 'ask' || !provider.client.feedback) return
+      const refines = turn.vote === 'down' && vote === 'down' && !turn.voteReason && reason !== null
+      if (turn.vote && !refines) return
+      patchTurn(turnId, { vote, voteReason: vote === 'down' ? reason : null })
+      void provider.client.feedback({ turnId: turn.feedbackId, vote, reason })
+    },
+    [patchTurn, provider],
+  )
+
   const clearInputError = useCallback(() => setInputError(null), [])
 
   return {
@@ -596,6 +630,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
     ask,
     stop,
     retry,
+    rate,
     clearInputError,
   }
 }

@@ -68,7 +68,7 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(parseAskSseEvent('event: text\ndata: {"text":"Привет"}')).toEqual({ name: 'text', data: { text: 'Привет' } })
     expect(parseAskSseEvent('event: done\ndata: {"status":"off_topic","reason":"offtopic_warning","strikes":2,"strikes_to_block":3}')).toEqual({
       name: 'done',
-      data: { status: 'off_topic', reason: 'offtopic_warning', strikes: 2, strikesToBlock: 3, removedLinks: 0, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: null, remaining: null },
+      data: { status: 'off_topic', reason: 'offtopic_warning', strikes: 2, strikesToBlock: 3, removedLinks: 0, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: null, remaining: null, turnId: null },
     })
     // #3291: счётчики стража содержания и флаг запасного ответа; мусор в них не ломает разбор.
     expect(parseAskSseEvent('event: done\ndata: {"status":"done","removed_links":0,"relabeled":2,"dropped_descriptions":1,"ungrounded_numbers":1,"fallback":true}')).toMatchObject({
@@ -95,6 +95,37 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(parseAskSseEvent('event: ping\ndata: {}')).toBeNull()
     expect(parseAskSseEvent('event: text\ndata: {oops')).toBeNull()
     expect(parseAskSseEvent('data: {"text":"без имени"}')).toBeNull()
+  })
+
+  // #3296: идентификатор хода для оценки и сам голос.
+  it('#3296: `done` несёт идентификатор хода; голос — POST /ai/feedback, причина только у «Не помогло»; отказ службы — false', async () => {
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","turn_id":"0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90"}')).toMatchObject({
+      name: 'done',
+      data: { status: 'done', turnId: '0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90' },
+    })
+    // Старая служба поле не отдаёт; не строка — не идентификатор.
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done"}')).toMatchObject({ data: { turnId: null } })
+    expect(parseAskSseEvent('event: done\ndata: {"status":"done","turn_id":42}')).toMatchObject({ data: { turnId: null } })
+
+    const fetchImpl = jest.fn(async () => makeResponse({ status: 204 }))
+    const client = new HttpAskClient('https://assist.test/', { fetchImpl: fetchImpl as unknown as typeof fetch })
+    expect(await client.feedback({ turnId: 't-1', vote: 'down', reason: 'facts' })).toBe(true)
+    expect(await client.feedback({ turnId: 't-1', vote: 'up', reason: 'place' })).toBe(true)
+    expect(await client.feedback({ turnId: 't-2', vote: 'down' })).toBe(true)
+    const calls = fetchImpl.mock.calls as unknown as Array<[string, { method: string; body: string }]>
+    expect(calls.map(([url, init]) => [url, init.method, JSON.parse(init.body)])).toEqual([
+      ['https://assist.test/ai/feedback', 'POST', { turn_id: 't-1', vote: 'down', reason: 'facts' }],
+      // У «Помогло» причины нет, даже если её передали.
+      ['https://assist.test/ai/feedback', 'POST', { turn_id: 't-1', vote: 'up' }],
+      ['https://assist.test/ai/feedback', 'POST', { turn_id: 't-2', vote: 'down' }],
+    ])
+    // Ход неизвестен, лимит, сеть недоступна — false без исключения.
+    for (const status of [404, 429, 500]) {
+      const failing = new HttpAskClient('', { fetchImpl: (async () => makeResponse({ status })) as unknown as typeof fetch })
+      expect(await failing.feedback({ turnId: 't-1', vote: 'up' })).toBe(false)
+    }
+    const offline = new HttpAskClient('', { fetchImpl: (async () => Promise.reject(new Error('offline'))) as unknown as typeof fetch })
+    expect(await offline.feedback({ turnId: 't-1', vote: 'up' })).toBe(false)
   })
 
   it('один POST /ai/ask с q, locale и history; поток отдаёт источники, накопленный текст и done', async () => {
@@ -128,7 +159,7 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(result).toEqual({
       sources: [{ ...sourcePayload, source_id: '816' }],
       text: 'Загляните в [Ярмарки](https://metravel.by/travels/816)',
-      done: { status: 'done', reason: null, strikes: null, strikesToBlock: null, removedLinks: 1, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: 19 },
+      done: { status: 'done', reason: null, strikes: null, strikesToBlock: null, removedLinks: 1, fallback: false, relabeled: 0, droppedDescriptions: 0, ungroundedNumbers: 0, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: 19, turnId: null },
     })
     expect(cancel).toHaveBeenCalled()
   })

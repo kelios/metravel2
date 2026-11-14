@@ -28,6 +28,7 @@ import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHan
 import type { ResponseCache } from './cache.ts'
 import type { LoadedIndex } from './index.ts'
 import { createIntentHandler, INTENT_LIMITS_PREFIX } from './intent.ts'
+import { createFeedbackHandler, FEEDBACK_LIMITS_PREFIX, FEEDBACK_REQUESTS_PER_QUESTION, TurnRegistry } from './feedback.ts'
 import type { LexicalHit, LexicalSearch } from './lexical.ts'
 import { AskLimits, createDayClock, MemoryCounterStore } from './limits.ts'
 import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nearRoute.ts'
@@ -93,6 +94,12 @@ export interface AppDeps {
    * счётчик на общем хранилище (redis).
    */
   mapIntent?: { limits: AskLimits }
+  /**
+   * `/ai/feedback` (#3296): оценка ответа. Счётчик голосов на IP необязателен для стендов и тестов других
+   * эндпоинтов — тогда он живёт в памяти процесса; `main.ts` передаёт счётчик на общем хранилище (redis).
+   * `false` — оценки нет вовсе: `done` без `turn_id`, строки хода в журнал не пишутся, адрес отвечает 404.
+   */
+  feedback?: { limits?: AskLimits } | false
   /** `/ai/suggest-tags` (#2886): каталог словарных значений с часовым кэшем. */
   suggestTags: { catalog: TagCatalog }
   log?: (line: string) => void
@@ -457,7 +464,26 @@ export function createApp(deps: AppDeps): http.Server {
     return item ? toSource(item) : null
   }
 
-  const ask = createAskHandler({ ...deps.ask, retrieve, lookupSource, llmQueue, log })
+  // #3296: ходы, которые можно оценить, и голос за них. Голос и уточнение причины — два запроса на вопрос.
+  const turns = deps.feedback === false ? null : new TurnRegistry()
+  const feedback = turns
+    ? createFeedbackHandler({
+        turns,
+        demandLog: deps.ask.demandLog,
+        limits:
+          (deps.feedback || undefined)?.limits ??
+          new AskLimits({
+            store: new MemoryCounterStore(),
+            clock: createDayClock(),
+            dailyLimit: deps.ask.limits.dailyLimit * FEEDBACK_REQUESTS_PER_QUESTION,
+            strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+            prefix: FEEDBACK_LIMITS_PREFIX,
+          }),
+        trustProxy: deps.ask.trustProxy,
+        now: deps.ask.now,
+      })
+    : null
+  const ask = createAskHandler({ ...deps.ask, retrieve, lookupSource, llmQueue, log, ...(turns ? { turns } : {}) })
   const authorDraft = createAuthorDraftHandler({
     generator: deps.ask.generator,
     llmQueue,
@@ -538,6 +564,13 @@ export function createApp(deps: AppDeps): http.Server {
       if (url.pathname === '/ai/ask') {
         if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/ask')
         await ask(request, response, await readJsonBody(request))
+        return
+      }
+      if (url.pathname === '/ai/feedback' && feedback) {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/feedback')
+        await feedback(request, await readJsonBody(request))
+        response.writeHead(204, { 'cache-control': 'no-store' })
+        response.end()
         return
       }
       if (url.pathname === '/ai/author-draft') {

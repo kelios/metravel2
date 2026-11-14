@@ -176,6 +176,8 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
 }
 
 function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery; chunks?: Spec[]; facts?: SourceFacts[]; askFragmentChars?: { travel?: number; quest?: number }; evalTrace?: boolean; promptHints?: PromptHints; helpMode?: 'direct' | 'model' } = {}) {
+  // Оценка ответа (#3296) здесь выключена: `done` без `turn_id`, журнал — только записи спроса. Её проверяет
+  // `feedback.test.ts`.
   const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
@@ -205,6 +207,7 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
       helpMode: overrides.helpMode,
     },
     authorDraft: { limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock('Europe/Minsk'), dailyLimit: 5, strikesToBlock: 3 }) },
+    feedback: false,
     suggestTags: { catalog: { dictionary: async () => null, travelTags: async () => null } },
     log: () => {},
   })

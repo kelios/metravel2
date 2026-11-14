@@ -269,3 +269,29 @@ describe('контур оценки: слой модели — превосхо�
     expect(findWrongSuperlative(longest, `Read [${article.title}](${article.url}).`, [article, tyniec])).toBeNull()
   })
 })
+
+// #3353: условие вопроса исключает карточку — `expect_sources.absent` набора вопросов.
+describe('контур оценки: карточка, которую исключает условие вопроса (#3353)', () => {
+  const hike = (n: number, title: string, km: string): Card => ({ n, type: 'travel', title, url: `https://metravel.by/travels/hike-${n}`, snippet: `Польша. Дней: 1. Длина: ${km} км` })
+  const harz = hike(1, 'Тропа ведьм в Гарце: как пройти Hexenstieg', '97')
+  const mullerthal = hike(2, 'Mullerthal Trail: 112 км по Люксембургу за 6 дней', '112')
+  const expectSources = { pattern: 'маршрут|тропа|trail', min: 1, topic: true, absent: 'mullerthal|gr21' }
+  const question = 'Пеший маршрут не более 100 километров'
+  const link = (item: Card) => `[${item.title}](${item.url})`
+
+  it('исключённая карточка в подсказке — провал слоя подбора; названа в ответе — ещё и слоя модели', () => {
+    const inPrompt = evaluateTurn({ expect: 'answer', lang: 'ru', question, expectSources }, observe(`Подойдёт ${link(harz)} — 97 км.`, [harz, mullerthal]))
+    expect(checksOf(inPrompt)).toEqual(['unfit_prompt_card'])
+    expect(inPrompt.failures[0]).toMatchObject({ layer: 'retrieval' })
+    const named = evaluateTurn({ expect: 'answer', lang: 'ru', question, expectSources }, observe(`Подойдёт ${link(mullerthal)} — 112 км.`, [harz, mullerthal]))
+    expect(checksOf(named)).toEqual(['unfit_prompt_card', 'unfit_card_named'])
+    expect(primaryLayer(named.failures)).toBe('retrieval')
+  })
+
+  it('исключённой карточки нет ни в подсказке, ни в ответе — ход проходит; без `absent` проверки нет', () => {
+    const answer = `Подойдёт ${link(harz)} — 97 км.`
+    expect(evaluateTurn({ expect: 'answer', lang: 'ru', question, expectSources }, observe(answer, [harz])).failures).toEqual([])
+    const { absent: _absent, ...plain } = expectSources
+    expect(evaluateTurn({ expect: 'answer', lang: 'ru', question, expectSources: plain }, observe(`Подойдёт ${link(mullerthal)} — 112 км.`, [harz, mullerthal])).failures).toEqual([])
+  })
+})

@@ -4,6 +4,8 @@ import path from 'path'
 import {
   chunkRawCorpus,
   emptyState,
+  exportRouteLengths,
+  parseRouteLengths,
   planTravelExport,
   RAW_FORMAT_VERSION,
   rawFactsProblem,
@@ -13,7 +15,7 @@ import {
   runExport,
   type Fetcher,
 } from '@/scripts/ai-index/export'
-import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries } from '@/scripts/ai-index/facts'
+import { buildCorpusFacts, DICTIONARIES_FILE, parseDictionaries, readDictionaries, readRouteLengths, ROUTES_FILE } from '@/scripts/ai-index/facts'
 
 import { sha256Hex } from '@/scripts/ai-index/format'
 
@@ -349,5 +351,97 @@ describe('ai-index export: факты источников (#3287)', () => {
       { type: 'travel', source_id: 5, months: [2] },
       { type: 'quest', source_id: 9, audience: 'kids', age: [5, 10], adult: true },
     ])
+  })
+})
+
+// #3353: длина маршрута статьи — из файла маршрута (`/api/travels/<id>/routes/`) и из названия.
+describe('ai-index export: длины файлов маршрута (#3353)', () => {
+  let rawDir: string
+  beforeEach(() => {
+    rawDir = makeTempDir('ai-index-export-routes-')
+    fs.mkdirSync(path.join(rawDir, 'travels'), { recursive: true })
+    const write = (travel: Record<string, unknown>) => fs.writeFileSync(path.join(rawDir, 'travels', `${travel.id}.json`), JSON.stringify(travel))
+    write({ id: 559, slug: 'dolina', title: 'Долина Мниковская', categories: [2, 21], transports: [1], number_days: 1, month: [5] })
+    write({ id: 761, slug: 'mullerthal', title: 'Mullerthal Trail: 112 км по Люксембургу за 6 дней', categories: [2], transports: [3], number_days: 6, month: [5] })
+    write({ id: 483, slug: 'vistula', title: 'Веломаршрут вдоль Вислы', categories: [24], transports: [7], number_days: 1, month: [6] })
+    write({ id: 598, slug: 'ojcow', title: 'Ойцовский парк на велосипеде', categories: [6], transports: [7], number_days: 1, month: [6] })
+    write({ id: 816, slug: 'fairs', title: 'Рождественские ярмарки Польши', categories: [6], transports: [1], number_days: 3, month: [12] })
+    fs.writeFileSync(
+      path.join(rawDir, DICTIONARIES_FILE),
+      JSON.stringify({ transports: { 1: 'Машина', 3: 'Поезд', 7: 'Велосипед' }, categories: { 2: 'Поход', 6: 'Автопутешествие', 21: 'Хайкинг', 24: 'Веломаршрут' } }),
+    )
+  })
+  afterEach(() => {
+    fs.rmSync(rawDir, { recursive: true, force: true })
+  })
+
+  const file = (km: unknown) => ({ id: 1, ext: 'gpx', original_name: 'track.gpx', summary: { distance_km: km } })
+  const ROUTES: Record<number, unknown> = {
+    559: [file(9.64)],
+    761: { results: [file(37.4), file(39.3), file(36.5)] },
+    483: [file(234.6)],
+    598: [file(46.7), file(18), file(null), { id: 2, ext: 'kml' }],
+  }
+  const routesApi = (broken: number[] = []) => {
+    const calls: number[] = []
+    const fetcher: Fetcher = async (url: string) => {
+      const id = Number(/\/travels\/(\d+)\/routes\/$/.exec(new URL(url).pathname)?.[1])
+      if (!id) throw new Error(`unexpected ${url}`)
+      calls.push(id)
+      if (broken.includes(id)) throw new Error('HTTP 502')
+      return ROUTES[id] ?? []
+    }
+    return { fetcher, calls }
+  }
+
+  it('длины читаются из массива и из обёртки DRF; файл без длины не идёт', () => {
+    expect(parseRouteLengths(ROUTES[559])).toEqual([9.6])
+    expect(parseRouteLengths(ROUTES[761])).toEqual([37.4, 39.3, 36.5])
+    expect(parseRouteLengths(ROUTES[598])).toEqual([46.7, 18])
+    expect(parseRouteLengths(null)).toEqual([])
+    expect(parseRouteLengths({ results: 'нет' })).toEqual([])
+  })
+
+  it('файлы маршрута запрашиваются только у статей о пеших и веломаршрутах; длины лежат в routes.json и идут в факты', async () => {
+    const api = routesApi()
+    const summary = await exportRouteLengths({ rawDir, apiBase: 'https://example.test/api', fetcher: api.fetcher, log: () => {} })
+    // Статья о ярмарках файлов маршрута не запрашивает; у велосипеда транспортом — вид «вело».
+    expect(api.calls.sort((a, b) => a - b)).toEqual([483, 559, 598, 761])
+    expect(summary).toEqual({ routes: 4, withLength: 4, failed: 0 })
+    expect(readRouteLengths(rawDir)).toEqual({ 483: [234.6], 559: [9.6], 598: [46.7, 18], 761: [37.4, 39.3, 36.5] })
+
+    const facts = chunkRawCorpus(rawDir).facts.filter((item) => item.type === 'travel')
+    expect(facts.map((item) => [item.source_id, (item as { distance_km?: number }).distance_km])).toEqual([
+      // Вся трасса на 235 км у однодневного маршрута — не длина статьи.
+      [483, undefined],
+      [559, 9.6],
+      // Два файла без числа в названии — варианты: длины нет.
+      [598, undefined],
+      // Число в названии — раньше трёх файлов-отрезков.
+      [761, 112],
+      [816, undefined],
+    ])
+  })
+
+  it('сбой одной статьи оставляет её прежние длины; исчезнувший файл и исчезнувшая статья длину теряют', async () => {
+    fs.writeFileSync(path.join(rawDir, ROUTES_FILE), JSON.stringify({ travels: { 559: [9.9], 483: [12], 999: [5] } }))
+    const log: string[] = []
+    const summary = await exportRouteLengths({ rawDir, apiBase: 'https://example.test/api', fetcher: routesApi([559]).fetcher, log: (line) => log.push(line) })
+    expect(summary.failed).toBe(1)
+    expect(log.join('\n')).toMatch(/routes: файлы маршрута статьи 559 не получены/)
+    // 559 — прежнее значение; 999 в слепке нет; 483 перечитан.
+    expect(readRouteLengths(rawDir)).toEqual({ 483: [234.6], 559: [9.9], 598: [46.7, 18], 761: [37.4, 39.3, 36.5] })
+    ROUTES[483] = []
+    await exportRouteLengths({ rawDir, apiBase: 'https://example.test/api', fetcher: routesApi().fetcher, log: () => {} })
+    expect(readRouteLengths(rawDir)).not.toHaveProperty('483')
+    ROUTES[483] = [file(234.6)]
+  })
+
+  it('слепок без routes.json и без словаря категорий факты собирает без длины из файла; название работает и так', () => {
+    const facts = buildCorpusFacts(readRawTravels(rawDir), [], readDictionaries(rawDir))
+    expect(facts.find((item) => item.source_id === 761)).toMatchObject({ distance_km: 112 })
+    expect(facts.find((item) => item.source_id === 559)).not.toHaveProperty('distance_km')
+    // Без словаря вид маршрута неизвестен — длины нет и по названию.
+    expect(buildCorpusFacts(readRawTravels(rawDir), []).find((item) => item.source_id === 761)).not.toHaveProperty('distance_km')
   })
 })

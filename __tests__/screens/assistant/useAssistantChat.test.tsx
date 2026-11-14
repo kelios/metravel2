@@ -481,6 +481,7 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
     ungroundedNumbers: 0,
     usage: null,
     remaining: null,
+    turnId: null,
     ...patch,
   })
   /** Фальшивая служба: отдаёт источники, затем накопленный текст кусками, затем done. */
@@ -547,6 +548,74 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
       { role: 'user', text: 'Jakie questy są w Grodnie?' },
       { role: 'assistant', text: 'Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno' },
     ])
+  })
+
+  // #3296: оценка ответа — идентификатор хода приходит от службы, голос уходит в `POST /ai/feedback`.
+  it('#3296: голос за ответ — один на ход; после «Не помогло» причина уточняется один раз; ход без идентификатора не оценивается', async () => {
+    const feedback = jest.fn(async () => true)
+    const { ask } = scriptedClient(() => ({ sources: [source], remaining: 19, texts: ['Поезжайте под Гродно.'], done: doneEvent({ remaining: 19, turnId: 'turn-1' }) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask, feedback } }))
+    await act(async () => {
+      await result.current.ask('Куда поехать на выходные?')
+    })
+    const [turn] = result.current.turns
+    expect(turn).toMatchObject({ status: 'done', feedbackId: 'turn-1' })
+    expect(turn.vote ?? null).toBeNull()
+
+    await act(async () => {
+      result.current.rate(turn.id, 'down')
+    })
+    expect(feedback).toHaveBeenLastCalledWith({ turnId: 'turn-1', vote: 'down', reason: null })
+    expect(result.current.turns[0]).toMatchObject({ vote: 'down', voteReason: null })
+    // Причина — тот же голос, уточнённый один раз.
+    await act(async () => {
+      result.current.rate(turn.id, 'down', 'place')
+    })
+    expect(feedback).toHaveBeenLastCalledWith({ turnId: 'turn-1', vote: 'down', reason: 'place' })
+    expect(result.current.turns[0]).toMatchObject({ vote: 'down', voteReason: 'place' })
+    // Второй голос и вторая причина не уходят.
+    await act(async () => {
+      result.current.rate(turn.id, 'up')
+      result.current.rate(turn.id, 'down', 'facts')
+    })
+    expect(feedback).toHaveBeenCalledTimes(2)
+    expect(result.current.turns[0]).toMatchObject({ vote: 'down', voteReason: 'place' })
+  })
+
+  it('#3296: «Помогло» — один запрос; служба без идентификатора хода и клиент без оценки кнопок не дают', async () => {
+    const feedback = jest.fn(async () => false)
+    const liked = scriptedClient(() => ({ sources: [source], remaining: 19, texts: ['Ответ.'], done: doneEvent({ remaining: 19, turnId: 'turn-2' }) }))
+    const first = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask: liked.ask, feedback } }))
+    await act(async () => {
+      await first.result.current.ask('Куда поехать на выходные?')
+    })
+    await act(async () => {
+      first.result.current.rate(first.result.current.turns[0].id, 'up')
+      first.result.current.rate(first.result.current.turns[0].id, 'up')
+    })
+    expect(feedback).toHaveBeenCalledTimes(1)
+    // Отказ службы голос на экране не отменяет: оценка необязательна.
+    expect(first.result.current.turns[0]).toMatchObject({ vote: 'up', voteReason: null })
+
+    // Служба без оценки (`turn_id` нет): ход не оценивается.
+    const plain = scriptedClient(() => ({ sources: [source], remaining: 19, texts: ['Ответ.'], done: doneEvent({ remaining: 19 }) }))
+    const second = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask: plain.ask, feedback } }))
+    await act(async () => {
+      await second.result.current.ask('Куда поехать на выходные?')
+    })
+    expect(second.result.current.turns[0].feedbackId ?? null).toBeNull()
+    await act(async () => {
+      second.result.current.rate(second.result.current.turns[0].id, 'up')
+    })
+    expect(feedback).toHaveBeenCalledTimes(1)
+
+    // Клиент без метода оценки идентификатор не сохраняет вовсе.
+    const { client } = scriptedClient(() => ({ sources: [source], remaining: 19, texts: ['Ответ.'], done: doneEvent({ remaining: 19, turnId: 'turn-3' }) }))
+    const third = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client }))
+    await act(async () => {
+      await third.result.current.ask('Куда поехать на выходные?')
+    })
+    expect(third.result.current.turns[0].feedbackId ?? null).toBeNull()
   })
 
   it('#3290: группа карточки из события sources доходит до хода — экран рисует «Ещё по теме» отдельно', async () => {

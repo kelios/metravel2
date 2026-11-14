@@ -103,6 +103,17 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       flexWrap: 'wrap',
       gap: spacing.xs,
     },
+    feedbackRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.xxs,
+    },
+    feedbackLabel: {
+      ...typography.scale.bodySmall,
+      color: colors.textMuted,
+    },
     sourcesTitle: {
       ...typography.scale.label,
       textTransform: 'uppercase',

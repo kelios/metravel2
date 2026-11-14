@@ -370,3 +370,36 @@ describe('страж ответа: признание не о том, что с�
     expect(result).toMatchObject({ fallback: true, strayAdmissions: 0 })
   })
 })
+
+// #3353: число километров в ответе сверяется с фактом длины карточки («Длина: N км» в строке фактов).
+describe('страж ответа: километры сверяются с длиной маршрута карточки (#3353)', () => {
+  const harz = card('travel', 'Тропа ведьм в Гарце: как пройти Hexenstieg', 'https://metravel.by/travels/tropa-vedm-v-gartse', 'Германия. Дней: 6. Длина: 97 км. Месяцы: сентябрь, октябрь. Тропа идёт через весь Гарц')
+  const valley = card('travel', 'Долина Мниковская', 'https://metravel.by/travels/dolina-mnikovskaia', 'Польша. Дней: 1. Длина: 9,6 км. Круговой маршрут по ущелью')
+  const question = 'Пеший маршрут не более 100 километров'
+  const link = (source: AiSource) => `[${source.title}](${source.url})`
+
+  it('длина из карточки остаётся: цифрой, с запятой и точкой, округлённая до километра', () => {
+    for (const text of [
+      `${link(harz)} — около 97 км за шесть дней.`,
+      `${link(valley)} — короткий маршрут, 9,6 км.`,
+      `${link(valley)} — около 10 км по ущелью.`,
+      `${link(valley)} — 9.6 km loop.`,
+    ]) {
+      expect(guardAnswer(text, [harz, valley], { question })).toMatchObject({ text, ungroundedNumbers: 0, droppedDescriptions: 0, fallback: false })
+    }
+  })
+
+  it('длина, которой нет в карточке, убирается: в пояснении — пояснение, в предложении — предложение', () => {
+    const described = guardAnswer(`- ${link(harz)} — маршрут на 120 км по горам\n- ${link(valley)} — 9,6 км`, [harz, valley], { question })
+    expect(described.text).toBe(`- ${link(harz)}\n- ${link(valley)} — 9,6 км`)
+    expect(described.droppedDescriptions).toBe(1)
+    // Длина соседней карточки пояснением чужой не становится своей.
+    expect(guardAnswer(`- ${link(valley)} — 97 км по ущелью`, [harz, valley], { question }).droppedDescriptions).toBe(1)
+    const sentence = guardAnswer(`Посмотрите ${link(harz)}. Вся тропа — 140 км.`, [harz, valley], { question })
+    expect(sentence.text).toBe(`Посмотрите ${link(harz)}.`)
+    expect(sentence.ungroundedNumbers).toBe(1)
+    // Граница из вопроса («100 километров») опоры не требует.
+    const asked = `${link(harz)} укладывается в 100 км.`
+    expect(guardAnswer(asked, [harz, valley], { question }).text).toBe(asked)
+  })
+})

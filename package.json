@@ -31,6 +31,7 @@
     "ai:similar:build": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/build-similar.ts",
     "guard:ai-index-freshness": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-index/build.ts freshness",
     "ai:assist:dev": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/main.ts",
+    "ai:demand:report": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assist/demand-report.ts",
     "ai:assistant:eval": "node --import ./scripts/lib/ts-runtime.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assistant-eval/run.mjs",
     "ai:assistant:accept": "node --import ./scripts/lib/ts-runtime.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assistant-eval/accept.mjs",
     "ai:assistant:quality": "node --import ./scripts/lib/ts-runtime.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ai-assistant-eval/quality.mjs",

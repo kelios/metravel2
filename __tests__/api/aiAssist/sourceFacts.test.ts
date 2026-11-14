@@ -4,9 +4,12 @@ import { questToSource, travelToSource } from '@/api/aiAssist/retrieval'
 import {
   detectSuperlative,
   factsKey,
+  formatKm,
   questFactsLine,
   questFactsOf,
   rankBySuperlative,
+  routeKindOf,
+  routeLengthKm,
   superlativeReason,
   travelFactsLine,
   travelFactsOf,
@@ -246,6 +249,93 @@ describe('факты источника в карточке ассистента
     '',
   ])('«%s» — не превосходная степень', (question) => {
     expect(detectSuperlative(question)).toBeNull()
+  })
+
+  // #3353: длина маршрута статьи — факт карточки и строка «Длина: N км» после числа дней.
+  describe('длина маршрута статьи (#3353)', () => {
+    it('вид маршрута — по категориям и транспорту каталога; статья не о маршруте вида не имеет', () => {
+      expect(routeKindOf({ categories: ['Поход', 'Самостоятельное путешествие'] })).toBe('foot')
+      expect(routeKindOf({ categories: ['Хайкинг'] })).toBe('foot')
+      expect(routeKindOf({ categories: ['Веломаршрут'] })).toBe('bike')
+      expect(routeKindOf({ categories: ['Автопутешествие'], transports: ['Велосипед'] })).toBe('bike')
+      // Обе категории — пешая: пеший маршрут в статье есть.
+      expect(routeKindOf({ categories: ['Велопоход', 'Треккинг'] })).toBe('foot')
+      expect(routeKindOf({ categories: ['Автопутешествие'], transports: ['Машина'] })).toBeNull()
+      expect(routeKindOf({})).toBeNull()
+      expect(routeKindOf(null)).toBeNull()
+    })
+
+    it('длина: число километров в названии либо единственный файл маршрута; ненадёжное число — не длина', () => {
+      // Слова автора в названии — раньше файла (значения — из слепка индекса 12.11.2026).
+      expect(routeLengthKm({ title: 'Mullerthal Trail: 112 км по Люксембургу за 6 дней', kind: 'foot', number_days: 6, routeFilesKm: [37.4, 39.3, 36.5] })).toBe(112)
+      expect(routeLengthKm({ title: 'Tour du Mont Blanc - Вокруг Монблана 170км за 10 дней', kind: 'foot', number_days: 10, routeFilesKm: [174.9] })).toBe(170)
+      expect(routeLengthKm({ title: 'Поход на лесное озеро Гремячее (~10км) и родник Кипячка.', kind: 'foot' })).toBe(10)
+      expect(routeLengthKm({ title: 'Веломаршрут на 1 день ~30 км вдоль реки Вилия.', kind: 'bike' })).toBe(30)
+      // Один файл маршрута — его длина, до десятых.
+      expect(routeLengthKm({ title: 'Долина Мниковская', kind: 'foot', number_days: 1, routeFilesKm: [9.64] })).toBe(9.6)
+      expect(routeLengthKm({ title: 'GR21: пешком по Алебастровому берегу Нормандии', kind: 'foot', number_days: 9, routeFilesKm: [186.3] })).toBe(186.3)
+      // Несколько файлов без числа в названии — отрезки или варианты: длины нет.
+      expect(routeLengthKm({ title: 'Ойцовский парк на велосипеде', kind: 'bike', number_days: 1, routeFilesKm: [46.7, 18] })).toBeUndefined()
+      // Файл длиннее дневного предела — не маршрут статьи: вся трасса на 235 км у однодневного веломаршрута, трек с переездами.
+      expect(routeLengthKm({ title: 'Веломаршрут вдоль Вислы: Wiślana Trasa Rowerowa', kind: 'bike', number_days: 1, routeFilesKm: [234.6] })).toBeUndefined()
+      expect(routeLengthKm({ title: 'Португальский путь вдоль побережья: наш опыт', kind: 'foot', number_days: 14, routeFilesKm: [4893] })).toBeUndefined()
+      // Два разных числа в названии, статья не о маршруте, файла и числа нет.
+      expect(routeLengthKm({ title: 'Кольцо 8 км или 15 км на выбор', kind: 'foot' })).toBeUndefined()
+      expect(routeLengthKm({ title: '78 парков - 78 печатей: 250 км по Кракову', kind: null, routeFilesKm: [250.4] })).toBeUndefined()
+      expect(routeLengthKm({ title: 'Гора Турбач (1310 м): поход в Горце, Польша', kind: 'foot', routeFilesKm: [] })).toBeUndefined()
+      // Высота в метрах и «км/ч» длиной не читаются.
+      expect(routeLengthKm({ title: 'Спуск 2000 м со скоростью 5 км/ч', kind: 'foot' })).toBe(5)
+    })
+
+    it('запись фактов и строка карточки: «Длина: N км» после числа дней, прежние поля на месте', () => {
+      expect(travelFactsOf(761, { number_days: 6, month: [5], distance_km: 112 })).toEqual({ type: 'travel', source_id: 761, number_days: 6, months: [5], distance_km: 112 })
+      // Кривое значение в запись не попадает.
+      for (const bad of [0, -3, Number.NaN, '12', null, undefined]) expect(travelFactsOf(1, { distance_km: bad })).toEqual({ type: 'travel', source_id: 1 })
+      expect(formatKm(112)).toBe('112')
+      expect(formatKm(96.6)).toBe('97')
+      expect(formatKm(9.6)).toBe('9,6')
+      expect(formatKm(8)).toBe('8')
+      expect(formatKm(19.95)).toBe('20')
+      const place = { country: 'Люксембург' }
+      expect(travelFactsLine({ number_days: 6, months: [5], distance_km: 112 }, place)).toBe('Люксембург. Дней: 6. Длина: 112 км. Месяц: май')
+      expect(travelFactsLine({ distance_km: 9.6 }, { country: 'Польша' })).toBe('Польша. Длина: 9,6 км')
+      // Без длины строка прежняя — ни знака.
+      expect(travelFactsLine({ number_days: 6, months: [5] }, place)).toBe('Люксембург. Дней: 6. Месяц: май')
+    })
+
+    it('слепок обучения строит ту же строку с длиной: travel_facts_line(facts=True)', () => {
+      const dir = path.resolve(process.cwd(), 'scripts/ai-train')
+      const items = [
+        { countryName: 'Люксембург', number_days: 6, month: [5], distance_km: 112 },
+        { countryName: 'Польша', number_days: 1, month: [], distance_km: 9.6 },
+        { countryName: 'Германия', number_days: 6, month: [9, 10], distance_km: 96.6 },
+        { countryName: 'Польша', number_days: 1, month: [8], distance_km: 19.95 },
+        { countryName: 'Польша', number_days: 1, month: [8], distance_km: 8 },
+        { countryName: 'Польша', number_days: 2, month: [7], distance_km: 0 },
+        { countryName: 'Польша', number_days: 2, month: [7], distance_km: '12' },
+        { countryName: 'Польша', number_days: 2, month: [7] },
+      ]
+      const script = [
+        'import json, sys',
+        `sys.path.insert(0, ${JSON.stringify(dir)})`,
+        'from sets.rag_answers import travel_facts_line',
+        'print(json.dumps([travel_facts_line(t, facts=True) for t in json.load(sys.stdin)], ensure_ascii=False))',
+      ].join('\n')
+      const run = runCli('python3', ['-I', '-c', script], { input: JSON.stringify(items) })
+      expect(run.stderr).toBe('')
+      const lines = items.map((item) => travelFactsLine(travelFactsOf(1, { number_days: item.number_days, month: item.month, distance_km: item.distance_km }), { country: item.countryName }))
+      expect(JSON.parse(run.stdout)).toEqual(lines)
+      expect(lines).toEqual([
+        'Люксембург. Дней: 6. Длина: 112 км. Месяц: май',
+        'Польша. Дней: 1. Длина: 9,6 км',
+        'Германия. Дней: 6. Длина: 97 км. Месяцы: сентябрь, октябрь',
+        'Польша. Дней: 1. Длина: 20 км. Месяц: август',
+        'Польша. Дней: 1. Длина: 8 км. Месяц: август',
+        'Польша. Дней: 2. Месяц: июль',
+        'Польша. Дней: 2. Месяц: июль',
+        'Польша. Дней: 2. Месяц: июль',
+      ])
+    })
   })
 
   // #3369, f23: карточка-ответ несёт саму превосходную степень строкой «почему подходит».

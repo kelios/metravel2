@@ -134,6 +134,51 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     expect(direct).toEqual([]);
   });
 
+  // #3296: оценка ответа — идентификатор хода из `done`, голос и причина уходят в `POST /ai/feedback`.
+  test('feedback: «Not helpful» with a reason — one vote per turn, two POST /ai/feedback requests', async ({ page }) => {
+    const votes: Array<{ turn_id?: string; vote?: string; reason?: string }> = [];
+    await page.route('**/ai/ask', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream; charset=utf-8',
+        body: sse(
+          ['sources', { sources, degraded: false, remaining: 19 }],
+          ['text', { text: answer }],
+          ['done', { status: 'done', removed_links: 0, remaining: 19, turn_id: '0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90' }],
+        ),
+      });
+    });
+    await page.route('**/ai/feedback', async (route) => {
+      votes.push(route.request().postDataJSON());
+      await route.fulfill({ status: 204, body: '' });
+    });
+
+    await openAssistant(page);
+    await expect(page.getByTestId('assistant-storage-notice')).toBeVisible();
+    await send(page, 'Какие квесты есть в Минске?');
+    await expect(page.getByTestId('assistant-turn-done')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+
+    const up = page.getByTestId('assistant-feedback-up');
+    const down = page.getByTestId('assistant-feedback-down');
+    await expect(up).toBeVisible();
+    // Цель нажатия — не меньше 44 px по высоте на любой ширине.
+    for (const button of [up, down]) expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await down.click();
+    await expect(page.getByTestId('assistant-feedback-reason-place')).toBeVisible();
+    await expect(up).toHaveCount(0);
+    await page.getByTestId('assistant-feedback-reason-place').click();
+    await expect(page.getByTestId('assistant-feedback-done')).toBeVisible();
+    await expect(page.getByTestId('assistant-feedback-reason-place')).toHaveCount(0);
+    await expect.poll(() => votes.length).toBe(2);
+    expect(votes).toEqual([
+      { turn_id: '0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90', vote: 'down' },
+      { turn_id: '0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90', vote: 'down', reason: 'place' },
+    ]);
+    // Оценка не ломает вёрстку: горизонтальной прокрутки страницы нет.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  });
+
   // #3290: вопрос со страницы статьи — служба отдаёт карточку страницы и соседние материалы отдельной группой.
   test('page mode: the page card under «Sources», neighbours under «More on the topic», source in the request', async ({ page }) => {
     const direct = await trackModelRequests(page);

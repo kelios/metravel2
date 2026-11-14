@@ -667,9 +667,20 @@ def positive_int(value) -> int:
     return int(m.group(1)) if m else 0
 
 
+def format_km(value) -> str:
+    """Route length the way formatKm writes it in api/aiAssist/sourceFacts.ts (#3353): a whole number from
+    20 km, one decimal with a comma below («86», «9,6»). Empty for a missing or non-positive value. The
+    length itself is not derived here: `distance_km` comes ready from the index facts (routeLengthKm)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0:
+        return ""
+    rounded = float(int(value + 0.5)) if value >= 20 else int(value * 10 + 0.5) / 10
+    return (str(int(rounded)) if rounded == int(rounded) else str(rounded)).replace(".", ",")
+
+
 def travel_facts_line(t: dict, facts: bool = False) -> str:
     """Facts line of an article card — the string travelFactsLine builds in api/aiAssist/sourceFacts.ts
-    (#3287; a test compares the two): «Польша. Дней: 3. Месяцы: ноябрь, декабрь». The place is the country
+    (#3287; a test compares the two): «Польша. Дней: 3. Месяцы: ноябрь, декабрь»; with a known route length
+    (#3353) — «Люксембург. Дней: 6. Длина: 112 км. Месяц: май». The place is the country
     alone (#3347): `cityName` of the catalog is the label of the first route point, not a city.
     Without `facts` it is «Страна, город» — the place the card editions 1–9 were built with; those sets
     do not change."""
@@ -679,6 +690,9 @@ def travel_facts_line(t: dict, facts: bool = False) -> str:
         days = positive_int(t.get("number_days"))
         if days:
             parts.append(f"Дней: {days}")
+        km = format_km(t.get("distance_km"))
+        if km:
+            parts.append(f"Длина: {km} км")
         raw = t.get("month")
         months = sorted({m for m in map(positive_int, raw) if 1 <= m <= 12}) if isinstance(raw, list) else []
         if len(months) == len(MONTHS_RU):

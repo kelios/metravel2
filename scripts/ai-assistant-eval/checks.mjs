@@ -19,6 +19,7 @@
 import { findUngroundedNumbers, guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
 import { detectLanguage } from '../../api/aiAssist/language.ts'
 import { isSameTitle } from '../../api/aiAssist/linkGuard.ts'
+import { admitsNoMaterial } from '../../api/aiAssist/noMaterial.ts'
 import { detectSuperlative } from '../../api/aiAssist/sourceFacts.ts'
 
 export const LAYERS = ['infra', 'retrieval', 'gate', 'prompt', 'guard', 'model']
@@ -82,18 +83,6 @@ const OFFTOPIC_REFUSAL_RE = new RegExp(
   ].join('|'),
   'iu',
 )
-/** «На сайте такого нет» — честный отказ по теме. */
-const NO_MATERIAL_RE =
-  /(?:пока\s+)?нет\s+(?:(?:отдельн|подходящ|так)\p{L}+\s+)?(?:материал|стат|квест|ничего|информац)|не\s+нашл|не\s+найден|няма\s+(?:матэрыял|артыкул)|немає\s+(?:матеріал|стат)|nie\s+ma(?:my)?\s+(?:jeszcze\s+)?(?:materia|artyku|questów)|brak\s+materia|(?:no|don't\s+have\s+(?:any\s+)?)\s*(?:separate\s+|dedicated\s+)?(?:materials?|articles?|quests?)\s+(?:about|on|for)|no\s+(?:exact|precise|direct)\s+answer\s+in\s+the\s+(?:materials?|articles?|cards?|sources?)/iu
-/**
- * Обратный порядок слов: «материала про Гданьск пока нет» — сам материал отсутствует, в пределах одной
- * фразы. Так же строятся учебные ответы на других языках (`rag_answers.py`: «Асобнага матэрыялу … няма»,
- * «Окремого матеріалу … немає», «Osobnego materiału … nie ma»); раньше шаблон знал только русский и
- * верный ответ на BE/UK/PL получал ложный `no_admission`.
- */
-const NO_MATERIAL_REVERSE_RE =
-  /(?<![\p{L}\p{N}])(?:материал|стат(?:ь|е)|квест|матэрыял|артыкул|квэст|матеріал|статт|materia[łl]|artyku[łl]|quest)\p{L}*\s+[^.!?;,\n]{0,120}?(?<!\p{L})(?:нет|не\s+найден\p{L}*|няма|немає|нема|nie\s+ma)(?!\p{L})/giu
-const MATERIAL_AFFIRMED_RE = /(?<!\p{L})(?:есть|имеется|имеются|но|ёсць|але|є|jest|są|ale)(?!\p{L})/iu
 
 export const normalizeUrl = (value) =>
   String(value ?? '')
@@ -199,10 +188,8 @@ export const hasTemplate = (text) => {
  */
 export { leaksPrompt }
 export const isOfftopicRefusal = (text) => OFFTOPIC_REFUSAL_RE.test(String(text ?? ''))
-export const isNoMaterial = (text) => {
-  const value = String(text ?? '')
-  return NO_MATERIAL_RE.test(value) || [...value.matchAll(NO_MATERIAL_REVERSE_RE)].some((match) => !MATERIAL_AFFIRMED_RE.test(match[0]))
-}
+/** «На сайте такого нет» — общий определитель службы и контура (`api/aiAssist/noMaterial.ts`, #3296). */
+export const isNoMaterial = (text) => admitsNoMaterial(text)
 
 /**
  * «В карточках этого не сказано» (#3277) — честный ответ на вопрос, которого материалы сайта не
@@ -331,6 +318,8 @@ export const checkSources = (sources, expectSources) => {
  * Признание «отдельного материала нет» провал не снимает: проверка срабатывает, только когда карточки
  * места в подсказке были, а значит такое признание ложное и чужой город назван вместо своего.
  * `expect_sources.also` — материалы, которые набор поимённо относит к месту вопроса (см. `splitPlaceCards`).
+ * `expect_sources.absent` (#3353) — шаблон названий карточек, которые условие вопроса исключает: провал
+ * `unfit_prompt_card` (подбор), если такая карточка в подсказке, и `unfit_card_named` (модель), если названа.
  */
 export const findOffPlaceCards = (raw, cards, expectSources) => {
   const split = splitPlaceCards(cards, expectSources)
@@ -522,6 +511,16 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier, n
     fail(failures, 'false_offtopic', status === 'off_topic' ? 'gate' : 'model', 'вопрос по теме получил отказ «не по теме»')
   }
 
+  // Карточки, которые условие вопроса исключает (#3353): `expect_sources.absent` — шаблон названий. В
+  // подсказке такой карточки быть не должно (слой подбора), в ответе её называть нельзя (слой модели):
+  // «пеший маршрут не более 100 км» не должен получить Mullerthal Trail на 112 км.
+  if (expectSources?.absent) {
+    const absent = new RegExp(expectSources.absent, 'iu')
+    const inPrompt = cards.find((card) => absent.test(card.title ?? ''))
+    if (inPrompt) fail(failures, 'unfit_prompt_card', 'retrieval', `в подсказке карточка, которую исключает условие вопроса: «${inPrompt.title}»`)
+    const named = links.find((label) => absent.test(String(label ?? '')))
+    if (named) fail(failures, 'unfit_card_named', 'model', `названа карточка, которую исключает условие вопроса: «${named}»`)
+  }
   const sourcesCheck = checkSources(observed.sources ?? [], expectSources)
   if (sourcesCheck) metrics.relevantSources = sourcesCheck.matched
   if (expect === 'answer') {

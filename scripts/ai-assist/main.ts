@@ -15,6 +15,7 @@ import { createApp } from './app.ts'
 import { ResponseCache } from './cache.ts'
 import { loadConfig } from './config.ts'
 import { createDemandLog } from './demandLog.ts'
+import { FEEDBACK_LIMITS_PREFIX, FEEDBACK_REQUESTS_PER_QUESTION } from './feedback.ts'
 import { IndexModelMismatch, loadIndex } from './index.ts'
 import { createLexicalSearch } from './lexical.ts'
 import { AUTHOR_DRAFT_LIMITS_PREFIX } from './authorDraft.ts'
@@ -76,7 +77,17 @@ async function main(): Promise<void> {
     strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
     prefix: INTENT_LIMITS_PREFIX,
   })
+  // #3296: голоса за ответ — свой суточный счётчик на IP в том же хранилище: голос и уточнение причины на вопрос.
+  const feedbackLimits = new AskLimits({
+    store: counterStore,
+    clock: dayClock,
+    dailyLimit: config.askDailyLimit * FEEDBACK_REQUESTS_PER_QUESTION,
+    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+    prefix: FEEDBACK_LIMITS_PREFIX,
+  })
   const demandLog = createDemandLog({ path: config.demandLogPath, log })
+  // Записи журнала старше срока хранения удаляются при старте и далее раз в сутки (#3296).
+  void demandLog.prune(true)
   const generator = config.llmUrl ? createGenerator(config.llmUrl, { timeoutMs: config.llmTimeoutMs }) : null
   log(
     `/ai/ask: модель ${config.llmUrl ?? 'не задана (AI_LLM_URL)'}, лимит ${config.askDailyLimit}/сутки на IP, ` +
@@ -113,6 +124,7 @@ async function main(): Promise<void> {
     promptFocus: config.promptFocus,
     authorDraft: { limits: authorDraftLimits },
     mapIntent: { limits: mapIntentLimits },
+    feedback: { limits: feedbackLimits },
     suggestTags: { catalog: tagCatalog },
     log,
   })

@@ -8,7 +8,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { questFactsOf, type SourceFacts, travelFactsOf } from '../../api/aiAssist/sourceFacts.ts'
+import { questFactsOf, routeKindOf, routeLengthKm, type SourceFacts, travelFactsOf } from '../../api/aiAssist/sourceFacts.ts'
 import { questTags, type RawQuest, type RawTravel } from './chunk.ts'
 
 /** Словари каталога из `/api/getFiltersTravel/`: id → название (RU). */
@@ -47,12 +47,36 @@ export function readDictionaries(rawDir: string): RawDictionaries {
 const namesOf = (ids: unknown, dictionary: Record<string, string>): string[] =>
   (Array.isArray(ids) ? ids : []).map((id) => dictionary[String(id)]).filter((name): name is string => Boolean(name))
 
-export function buildTravelFacts(raw: RawTravel, dictionaries: RawDictionaries = emptyDictionaries()): SourceFacts {
+/**
+ * Длины файлов маршрута статей (#3353): id статьи → длины её файлов, км (`/api/travels/<id>/routes/`,
+ * `summary.distance_km`). Лежит отдельным файлом raw-слепка: файл маршрута меняется независимо от статьи.
+ */
+export type RawRouteLengths = Record<string, number[]>
+
+export const ROUTES_FILE = 'routes.json'
+
+export function readRouteLengths(rawDir: string): RawRouteLengths {
+  const file = path.join(rawDir, ROUTES_FILE)
+  if (!fs.existsSync(file)) return {}
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as { travels?: RawRouteLengths }
+  return parsed.travels ?? {}
+}
+
+export function buildTravelFacts(raw: RawTravel, dictionaries: RawDictionaries = emptyDictionaries(), routes: RawRouteLengths = {}): SourceFacts {
+  const transports = namesOf(raw.transports, dictionaries.transports)
+  const categories = namesOf(raw.categories, dictionaries.categories)
   return travelFactsOf(raw.id, {
     number_days: raw.number_days,
     month: raw.month,
-    transports: namesOf(raw.transports, dictionaries.transports),
-    categories: namesOf(raw.categories, dictionaries.categories),
+    transports,
+    categories,
+    // Длина маршрута (#3353): число километров в названии либо единственный файл маршрута статьи.
+    distance_km: routeLengthKm({
+      title: raw.title ?? raw.name,
+      kind: routeKindOf({ categories, transports }),
+      number_days: raw.number_days,
+      routeFilesKm: routes[String(raw.id)],
+    }),
   })
 }
 
@@ -67,8 +91,13 @@ export function buildQuestFacts(raw: RawQuest): SourceFacts {
 }
 
 /** Факты корпуса: по записи на статью и на квест (первая локаль квеста в порядке чтения raw). */
-export function buildCorpusFacts(travels: RawTravel[], quests: RawQuest[], dictionaries: RawDictionaries = emptyDictionaries()): SourceFacts[] {
-  const facts: SourceFacts[] = travels.map((travel) => buildTravelFacts(travel, dictionaries))
+export function buildCorpusFacts(
+  travels: RawTravel[],
+  quests: RawQuest[],
+  dictionaries: RawDictionaries = emptyDictionaries(),
+  routes: RawRouteLengths = {},
+): SourceFacts[] {
+  const facts: SourceFacts[] = travels.map((travel) => buildTravelFacts(travel, dictionaries, routes))
   const seen = new Set<number>()
   for (const quest of quests) {
     if (seen.has(quest.id)) continue

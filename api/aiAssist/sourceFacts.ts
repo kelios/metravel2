@@ -49,6 +49,8 @@ export type TravelFacts = {
   /** Названия из словаря каталога. В строку карточки не идут: список статей экрана их не отдаёт. */
   transports?: string[]
   categories?: string[]
+  /** Длина маршрута статьи, км (#3353, `routeLengthKm`): только у статей о пеших и веломаршрутах. */
+  distance_km?: number
 }
 
 export type SourceFacts = QuestFacts | TravelFacts
@@ -103,6 +105,67 @@ export type TravelFactsInput = {
   month?: unknown
   transports?: unknown
   categories?: unknown
+  /** Готовая длина маршрута, км — её считает `routeLengthKm` по названию и файлам маршрута. */
+  distance_km?: unknown
+}
+
+/** Категории каталога, у которых статья — маршрут: пеший или на велосипеде. В нижнем регистре. */
+export const FOOT_ROUTE_CATEGORIES: ReadonlySet<string> = new Set(['поход', 'хайкинг', 'треккинг'])
+export const BIKE_ROUTE_CATEGORIES: ReadonlySet<string> = new Set(['велопоход', 'веломаршрут'])
+const BIKE_TRANSPORT = 'велосипед'
+
+export type RouteKind = 'foot' | 'bike'
+
+const lowerNames = (values: readonly string[] | undefined): string[] => (values ?? []).map((value) => String(value).trim().toLowerCase())
+
+/**
+ * Вид маршрута статьи по категориям и транспорту каталога; `null` — статья не о маршруте либо каталог
+ * этого не говорит. Статья с категориями обоих видов («Озеро Гарда: велодорожка и треккинг») — пешая:
+ * пеший маршрут в ней есть.
+ */
+export const routeKindOf = (facts: Pick<TravelFacts, 'categories' | 'transports'> | null | undefined): RouteKind | null => {
+  const categories = lowerNames(facts?.categories)
+  if (categories.some((name) => FOOT_ROUTE_CATEGORIES.has(name))) return 'foot'
+  if (categories.some((name) => BIKE_ROUTE_CATEGORIES.has(name)) || lowerNames(facts?.transports).includes(BIKE_TRANSPORT)) return 'bike'
+  return null
+}
+
+/** Больше этого за день пешком и на велосипеде не проходят: длиннее — файл не о маршруте статьи. */
+const MAX_KM_PER_DAY: Record<RouteKind, number> = { foot: 45, bike: 200 }
+const TITLE_KM_RE = /(?<![\p{L}\p{N}.,])(\d{1,4}(?:[.,]\d)?)\s*(?:км|km)(?![\p{L}\p{N}])/giu
+
+const roundKm = (value: number): number => Math.round(value * 10) / 10
+
+/**
+ * Длина маршрута статьи, км (#3353) — или `undefined`, когда надёжного числа нет. Замер 14.11.2026 по 434
+ * статьям слепка индекса (`.codex-temp/3353/`): готового поля у статьи в API нет, число в тексте ненадёжно
+ * («Расстояние около 180 км» — дорога из Минска, «длиной около 160 км» — вся сеть троп, несколько отрезков
+ * в одной статье). Надёжных источника два, оба — только у статьи о пешем или веломаршруте (`routeKindOf`):
+ *   1. число километров в названии — слова автора о своём маршруте («Mullerthal Trail: 112 км по Люксембургу»,
+ *      «Паневники: петля от Чёрного Става, 8 км»); два разных числа в названии — числа нет;
+ *   2. файл маршрута статьи (`/api/travels/<id>/routes/`, длину считает бэкенд по треку) — когда файл один.
+ *      Несколько файлов — отрезки одного пути (три файла Mullerthal Trail: 37 + 39 + 37 км) либо варианты
+ *      («46,7 км из Кракова или 18 км по долине»): без числа в названии длины нет. Файл длиннее дневного
+ *      предела на число дней статьи — не её маршрут: «Веломаршрут вдоль Вислы» на день несёт файл всей
+ *      трассы на 235 км, «Португальский путь» — трек на 4893 км с переездами.
+ * На слепке индекса от 12.11.2026 длина находится у 27 из 125 статей о пеших маршрутах (22 %) и у 8 из 28
+ * о веломаршрутах (29 %); у остальных условия длины не нарушены и не совпали.
+ */
+export const routeLengthKm = (input: { title?: string | null; kind: RouteKind | null; number_days?: unknown; routeFilesKm?: readonly unknown[] | null }): number | undefined => {
+  if (!input.kind) return undefined
+  const named = [...new Set(Array.from(String(input.title ?? '').matchAll(TITLE_KM_RE), (match) => Number(match[1].replace(',', '.'))).filter((value) => value > 0))]
+  if (named.length === 1) return roundKm(named[0])
+  if (named.length > 1) return undefined
+  const files = (input.routeFilesKm ?? []).map(Number).filter((value) => Number.isFinite(value) && value > 0)
+  if (files.length !== 1) return undefined
+  const days = positiveInt(input.number_days) ?? 1
+  return files[0] <= MAX_KM_PER_DAY[input.kind] * days ? roundKm(files[0]) : undefined
+}
+
+/** Длина маршрута словами карточки: «86», «9,6» — целое от двадцати километров, иначе до десятых. */
+export const formatKm = (value: number): string => {
+  const rounded = value >= 20 ? Math.round(value) : roundKm(value)
+  return String(rounded).replace('.', ',')
 }
 
 export const travelFactsOf = (sourceId: number, input: TravelFactsInput): TravelFacts => {
@@ -112,6 +175,7 @@ export const travelFactsOf = (sourceId: number, input: TravelFactsInput): Travel
     : []
   const transports = names(input.transports)
   const categories = names(input.categories)
+  const distance = Number(input.distance_km)
   return {
     type: 'travel',
     source_id: sourceId,
@@ -119,6 +183,7 @@ export const travelFactsOf = (sourceId: number, input: TravelFactsInput): Travel
     ...(months.length ? { months } : {}),
     ...(transports ? { transports } : {}),
     ...(categories ? { categories } : {}),
+    ...(typeof input.distance_km === 'number' && Number.isFinite(distance) && distance > 0 ? { distance_km: roundKm(distance) } : {}),
   }
 }
 
@@ -148,7 +213,9 @@ export const questFactsLine = (facts: Omit<QuestFacts, 'type' | 'source_id'> | n
 }
 
 /**
- * Строка фактов карточки статьи: «Польша. Дней: 3. Месяцы: ноябрь, декабрь».
+ * Строка фактов карточки статьи: «Польша. Дней: 3. Месяцы: ноябрь, декабрь»; у статьи о маршруте с известной
+ * длиной (#3353) — «Люксембург. Дней: 6. Длина: 112 км. Месяц: май». Прежние поля стоят теми же словами и в
+ * том же порядке, длина — после числа дней.
  *
  * Место статьи — только страна (#3347). Города у статьи в каталоге нет: поле `cityName` API — подпись
  * первой точки маршрута (бэкенд, `travels/serializers.py` → `get_city_name` → `_first_travel_address`),
@@ -163,6 +230,7 @@ export const travelFactsLine = (facts: Omit<TravelFacts, 'type' | 'source_id'> |
   return joinParts([
     String(place.country ?? '').trim(),
     facts?.number_days ? `Дней: ${facts.number_days}` : '',
+    facts?.distance_km ? `Длина: ${formatKm(facts.distance_km)} км` : '',
     months.length === MONTHS_RU.length ? 'Месяцы: круглый год' : months.length ? `${months.length > 1 ? 'Месяцы' : 'Месяц'}: ${months.join(', ')}` : '',
   ])
 }

@@ -147,6 +147,10 @@ function AssistantComposerComponent({
         )}
       </View>
       <Text style={styles.disclaimer}>{i18nT('aiAssistStatic:ask.disclaimer')}</Text>
+      {/* #3296: вопросы и оценки пишутся в журнал спроса обезличенно — посетитель знает об этом до вопроса. */}
+      <Text style={styles.disclaimer} testID="assistant-storage-notice">
+        {i18nT('aiAssistStatic:ask.storageNotice')}
+      </Text>
     </View>
   )
 }

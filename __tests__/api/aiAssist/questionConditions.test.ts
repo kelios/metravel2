@@ -55,7 +55,7 @@ describe('условия вопроса (#3289): разбор на пяти яз
     ['Лёгкі маршрут для пачаткоўцаў каля Мінска', { easy: true, kind: 'travel' }],
     ['Легка стежка для початківців у Карпатах', { easy: true }],
     ['Łatwy szlak dla początkujących w Tatrach', { easy: true }],
-    ['Is there an easy hike in the Tatras for beginners?', { easy: true }],
+    ['Is there an easy hike in the Tatras for beginners?', { easy: true, route: 'foot' }],
   ])('лёгкий маршрут: %s', (question, expected) => {
     expect(parseConditions(question)).toEqual(expected)
   })
@@ -175,5 +175,97 @@ describe('условия вопроса (#3289): проверка по факт�
     expect(judgeCard(parseConditions('Самый короткий квест в Варшаве'), kids).unfit).toBe(false)
     // Семейный квест — не «только для детей»: остаётся.
     expect(judgeCard(parseConditions('Где погулять с собакой в Варшаве?'), quest({ audience: 'family', pet_friendly: true }))).toMatchObject({ reasons: ['можно с собакой'], unfit: false })
+  })
+})
+
+// #3353: условие «длина маршрута» и вид маршрута. Пример владельца — «пеший маршрут не более 100 километров в ноябре».
+describe('условия вопроса (#3353): длина маршрута и вид маршрута на пяти языках', () => {
+  it.each([
+    // Строгая верхняя граница: «не более», «до», «не длиннее», «короче».
+    ['Пеший маршрут не более 100 километров в ноябре', { months: [11], kind: 'travel', maxKm: 100, route: 'foot' }],
+    ['Пеший маршрут не более 20 км в Беларуси', { kind: 'travel', maxKm: 20, route: 'foot' }],
+    ['поход до двадцати километров', { maxKm: 20, route: 'foot' }],
+    ['Маршрут не длиннее ста километров', { kind: 'travel', maxKm: 100 }],
+    ['Веломаршрут короче 30 км', { maxKm: 30, route: 'bike' }],
+    ['Паход да пяцідзесяці кіламетраў', { maxKm: 50, route: 'foot' }],
+    ['Похід до тридцяти кілометрів у Карпатах', { maxKm: 30, route: 'foot' }],
+    ['Szlak pieszy do 30 km', { maxKm: 30, route: 'foot' }],
+    ['A hike of no more than 15 km', { maxKm: 15, route: 'foot' }],
+    // Примерная длина — с запасом 25 %, как у длительности.
+    ['Поход около 50 км', { maxKm: 62.5, route: 'foot' }],
+    ['a 100 km hike', { maxKm: 125, route: 'foot' }],
+    ['20-километровый поход', { maxKm: 25, route: 'foot' }],
+    ['Wędrówka na pięćdziesiąt kilometrów', { maxKm: 62.5, route: 'foot' }],
+    ['поход на двадцать пять километров', { maxKm: 31.3, route: 'foot' }],
+    // Диапазон и нижняя граница.
+    ['Маршрут на велосипеде от 30 до 50 км', { kind: 'travel', maxKm: 50, minKm: 30, route: 'bike' }],
+    ['Поход 10-15 км на день', { maxDays: 1, maxKm: 15, minKm: 10, route: 'foot' }],
+    ['Хочу поход не короче 15 км', { minKm: 15, route: 'foot' }],
+    ['Trasa piesza co najmniej 10 km', { kind: 'travel', minKm: 10, route: 'foot' }],
+    ['hike longer than 20 km', { minKm: 20, route: 'foot' }],
+  ])('длина: %s', (question, expected) => {
+    expect(parseConditions(question)).toEqual(expected)
+  })
+
+  it('расстояние от места — не длина маршрута; вопрос без километров условия длины не несёт', () => {
+    expect(parseConditions('Что посмотреть в 30 км от Минска?')).toEqual({})
+    expect(parseConditions('Is there a hike within 20 km from Krakow?')).toEqual({ route: 'foot' })
+    expect(parseConditions('Квест за 20 км від Львова')).toEqual({ kind: 'quest' })
+    expect(parseConditions('Какие квесты есть в Гродно?')).toEqual({ kind: 'quest' })
+    // «Сто» внутри слова числом не становится.
+    expect(parseConditions('Сколько стоит квест и где километры считать?')).not.toHaveProperty('maxKm')
+  })
+
+  it('вид маршрута: пеший и вело; оба слова сразу вид не называют; похожие слова — не вид', () => {
+    for (const question of ['Куда сходить пешком под Минском?', 'Хайкинг в Татрах', 'Піший маршрут у Карпатах', 'Pieszo wokół jeziora', 'Easy hiking near Zakopane', 'Вандроўка пешшу'])
+      expect(parseConditions(question).route).toBe('foot')
+    for (const question of ['Веломаршрут на день', 'Куда поехать на велосипеде?', 'Trasa rowerowa pod Krakowem', 'A bike ride near Vilnius', 'Куди поїхати на велосипеді?'])
+      expect(parseConditions(question).route).toBe('bike')
+    expect(parseConditions('Пешком или на велосипеде вокруг озера?').route).toBeUndefined()
+    // «Походить по городу», «похоже» — не поход.
+    expect(parseConditions('Где походить по магазинам в Минске?').route).toBeUndefined()
+    expect(parseConditions('Что похоже на Несвиж?').route).toBeUndefined()
+  })
+})
+
+describe('условия вопроса (#3353): длина и вид маршрута против фактов статьи', () => {
+  const hike = (extra: Partial<TravelFacts> = {}) => travel({ categories: ['Поход', 'Хайкинг'], transports: ['Машина'], ...extra })
+
+  it('длина в пределах — совпало и названо в «почему подходит»; длиннее верхней или короче нижней границы — убрать', () => {
+    expect(judgeCard({ maxKm: 20 }, hike({ distance_km: 9.6 }))).toEqual({ reasons: ['9,6 км'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ maxKm: 100 }, hike({ distance_km: 96.6 }))).toEqual({ reasons: ['97 км'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ maxKm: 100 }, hike({ distance_km: 112 })).dropped).toBe(true)
+    expect(judgeCard({ maxKm: 100 }, hike({ distance_km: 186.3 })).dropped).toBe(true)
+    // «Поход около 50 км»: 60 км допустим, 120 км — нет.
+    const around = parseConditions('Поход около 50 км')
+    expect(judgeCard(around, hike({ distance_km: 60 }))).toMatchObject({ dropped: false, reasons: ['пеший маршрут', '60 км'] })
+    expect(judgeCard(around, hike({ distance_km: 120 })).dropped).toBe(true)
+    // Нижняя граница и диапазон.
+    expect(judgeCard({ minKm: 15 }, hike({ distance_km: 9.6 })).dropped).toBe(true)
+    expect(judgeCard({ minKm: 10, maxKm: 15 }, hike({ distance_km: 12 }))).toMatchObject({ dropped: false, reasons: ['12 км'] })
+  })
+
+  it('неизвестно ≠ нарушено: статья без факта длины и квест условие длины не нарушают и не совпадают', () => {
+    expect(judgeCard({ maxKm: 20 }, hike())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ maxKm: 20 }, travel())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ maxKm: 20, children: { ages: [] } }, quest({ duration_min: 90, audience: 'family' }))).toMatchObject({ dropped: false })
+  })
+
+  it('вид маршрута: по категориям и транспорту каталога; не тот вид опускает, но не убирает; каталог молчит — не нарушено', () => {
+    expect(judgeCard({ route: 'foot' }, hike())).toEqual({ reasons: ['пеший маршрут'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'bike' }, travel({ categories: ['Веломаршрут'] }))).toEqual({ reasons: ['веломаршрут'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'bike' }, travel({ categories: ['Автопутешествие'], transports: ['Велосипед'] }))).toMatchObject({ reasons: ['веломаршрут'] })
+    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Веломаршрут'] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'bike' }, hike())).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    // У маршрута другого вида длина не сверяется: не совпала и не нарушена.
+    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 15 }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 48.7 }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    // Статья не о маршруте («Автопутешествие») и статья без категорий — не совпало и не нарушено.
+    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Автопутешествие'], transports: ['Машина'] }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'foot' }, travel())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+  })
+
+  it('детский квест на вопрос о длине маршрута без детей — карточка другой аудитории', () => {
+    expect(judgeCard(parseConditions('Пеший маршрут не более 20 км'), quest({ audience: 'kids' }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: true })
   })
 })
