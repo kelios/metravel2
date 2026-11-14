@@ -1,6 +1,6 @@
 import { translate as i18nT } from '@/i18n'
 
-import { loadExpoLocation } from './QuestsScreen.helpers'
+import { getQuestLocationQuality, loadExpoLocation } from './QuestsScreen.helpers'
 
 export type QuestCatalogLocationResult =
   | { coords: { lat: number; lng: number; accuracyMeters: number | null } }
@@ -30,4 +30,13 @@ export async function requestQuestCatalogLocation(
     console.warn('Error requesting nearby location', error)
     return { failure: i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827') }
   }
+}
+
+/** Подпись точности позиции «Рядом» (#3379: живёт в этом чанке, а не в стартовом каталоге). */
+export function describeQuestLocationQuality(accuracyMeters: number | null | undefined): string {
+  const quality = getQuestLocationQuality(accuracyMeters)
+  if (quality === 'precise') return i18nT('quests:screens.tabs.QuestsScreen.locationPrecise')
+  return quality === 'approximate'
+    ? i18nT('quests:screens.tabs.QuestsScreen.locationApproximate')
+    : i18nT('quests:screens.tabs.QuestsScreen.locationUnknown')
 }

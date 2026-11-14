@@ -10,6 +10,7 @@
 import { buildCanonicalUrl } from '@/utils/seo';
 import { appendQueryParam, hasQueryParam } from '@/utils/urlParams';
 import { UTM_MEDIUMS } from '@/utils/utm';
+import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 
 /** Единый источник для всех расшаренных результатов квеста (постановка #1472). */
 export const QUEST_RESULT_UTM_SOURCE = 'share';
@@ -71,6 +72,22 @@ export const buildQuestPublicUrl = (
 };
 
 /**
+ * #3379 (г): с языковой страницы квеста приглашение ведёт на ту же языковую
+ * страницу — только если сервер её отдаёт (проекция serving этого квеста в
+ * состоянии `available`, тот же источник, что у `QuestVersionLinks`). Иначе —
+ * русская каноническая.
+ */
+const servedInvitePath = (
+  cityId: string | undefined,
+  questSlug: string | undefined,
+  projection: QuestServingProjection | null | undefined,
+): string | null => {
+  if (projection?.state !== 'available' || !projection.canonical_path) return null;
+  if (String(projection.city_id) !== String(cityId ?? '').trim()) return null;
+  return projection.quest_slug === String(questSlug ?? '').trim() ? projection.canonical_path : null;
+};
+
+/**
  * Приглашение друга пройти квест (#3230): ссылка на сам квест, а не на диплом
  * — другу нужен маршрут. Пара source/medium та же, что у диплома; поверхность
  * по правилу `utils/utm.ts` различается кампанией (`quest_invite_<slug>`), а
@@ -79,8 +96,10 @@ export const buildQuestPublicUrl = (
 export const buildQuestInviteLink = (
   cityId: string | undefined,
   questSlug: string | undefined,
+  projection?: QuestServingProjection | null,
 ): string => {
-  let out = buildQuestPublicUrl(cityId, questSlug);
+  const servedPath = servedInvitePath(cityId, questSlug, projection);
+  let out = servedPath ? buildCanonicalUrl(servedPath) : buildQuestPublicUrl(cityId, questSlug);
   out = appendQueryParam(out, 'utm_source', QUEST_RESULT_UTM_SOURCE);
   out = appendQueryParam(out, 'utm_medium', QUEST_RESULT_UTM_MEDIUM);
   return appendQueryParam(out, 'utm_campaign', `quest_invite_${String(questSlug ?? '').trim() || 'unknown'}`);

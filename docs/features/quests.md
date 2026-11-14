@@ -1225,7 +1225,8 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   прошлые запросы восстановить из новой цели нельзя.
   GA4 (ресурс `362328641`): 09.11.2026 зарегистрированы event-scoped измерения
   `search_term` и `results_count` (#3183). Data API читает их с этой даты,
-  более ранние события отдаются как `(not set)`. Отчёт:
+  более ранние события отдаются как `(not set)`. 14.11.2026 (#3379) — так же
+  `match_mode`, `catalog_order` и `channel` (`quest_invite_click`). Отчёт:
   `node scripts/fetch-ga4-stats.js --quest-search --days 7` печатает фразы
   с числом поисков и отдельно фразы с `results_count = 0` — что искали и не
   нашли (чаще всего города). Строки `(not set)` и свёрнутый GA4 хвост `(other)`

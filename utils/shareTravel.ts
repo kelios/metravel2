@@ -2,10 +2,11 @@
 // AND-23: Native share utility for travel routes.
 // Uses expo-sharing (native) or Web Share API (web) to share a travel link.
 
-import { Platform, Share } from 'react-native';
+import { Platform } from 'react-native';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
 import { buildTravelPath } from '@/utils/routePaths'
+import { shareOrCopy } from '@/utils/shareOrCopy';
 
 
 interface ShareTravelParams {
@@ -33,31 +34,11 @@ export async function shareTravel({ id, title, description }: ShareTravelParams)
     ? `${title}\n\n${description}\n\n${url}`
     : `${title}\n\n${url}`;
 
-  try {
-    if (Platform.OS === 'web') {
-      // Web Share API
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title, text: description || title, url });
-        return true;
-      }
-      // Fallback: copy to clipboard
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        return true;
-      }
-      return false;
-    }
-
-    // Native: React Native Share API
-    const result = await Share.share(
-      Platform.OS === 'ios'
-        ? { message: title, url }
-        : { message, title },
-      { dialogTitle: i18nT('shared:utils.shareTravel.podelitsya_marshrutom_value1_3d1ef4de', { value1: title }) },
-    );
-
-    return result.action === Share.sharedAction;
-  } catch {
-    return false;
-  }
+  const outcome = await shareOrCopy({
+    web: { title, text: description || title, url },
+    native: Platform.OS === 'ios' ? { message: title, url } : { message, title },
+    nativeOptions: { dialogTitle: i18nT('shared:utils.shareTravel.podelitsya_marshrutom_value1_3d1ef4de', { value1: title }) },
+    copyText: url,
+  });
+  return outcome === 'shared' || outcome === 'copied';
 }

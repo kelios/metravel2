@@ -50,27 +50,42 @@ if (typeof window !== 'undefined') loadQuestCatalogRuntime().catch(() => undefin
 
 /**
  * Движки; `null`, пока чанк не пришёл. Чанк, пришедший по чужому запросу,
- * подхватывается на ближайшем рендере; смена `retryKey` после исчерпанного
- * ряда повторов начинает новый.
+ * подхватывается на ближайшем рендере; смена `retryKey` или `retry()` после
+ * исчерпанного ряда повторов начинает новый, а до того `failed` (#3379).
  */
-function useQuestCatalogRuntime(retryKey: unknown): QuestCatalogRuntime | null {
+function useQuestCatalogRuntime(retryKey: unknown) {
     const [runtime, setRuntime] = useState(loadedRuntime);
+    const [attempt, setAttempt] = useState(0);
+    const [failure, setFailure] = useState<[unknown, number] | null>(null);
+    const retry = useCallback(() => setAttempt((value) => value + 1), []);
     useEffect(() => {
         if (runtime) return undefined;
         let active = true;
-        loadQuestCatalogRuntime().then((loaded) => active && setRuntime(loaded), () => undefined);
+        loadQuestCatalogRuntime().then((loaded) => active && setRuntime(loaded), () => active && setFailure([retryKey, attempt]));
         return () => {
             active = false;
         };
-    }, [runtime, retryKey]);
-    return runtime ?? loadedRuntime;
+    }, [runtime, retryKey, attempt]);
+    const current = runtime ?? loadedRuntime;
+    return {
+        runtime: current,
+        failed: !current && failure !== null && failure[0] === retryKey && failure[1] === attempt,
+        retry,
+    };
 }
 
 /** Часовой пояс устройства (IANA) — синхронно, без чанка движков; без `Intl` — `null`. */
 const readDeviceTimeZone = (): string | null => globalThis.Intl?.DateTimeFormat?.().resolvedOptions().timeZone || null;
 
-/** `pending` — движок поиска ещё грузится: выдачи нет, но и «ничего не найдено» нет. */
-export type QuestCatalogSearchView<T extends QuestMeta> = QuestCatalogSearchResult<T> & { pending: boolean };
+/**
+ * `pending` — движок поиска ещё грузится: выдачи нет, но и «ничего не найдено» нет.
+ * `failed` — чанк движка не загрузился после повторов: ошибка с `retry`.
+ */
+export type QuestCatalogSearchView<T extends QuestMeta> = QuestCatalogSearchResult<T> & {
+    pending: boolean;
+    failed: boolean;
+    retry: () => void;
+};
 
 /** Поисковая выдача по всему каталогу (#3239); `null` — поиск не активен. */
 export function useQuestCatalogSearchResult<T extends QuestMeta>(
@@ -79,7 +94,7 @@ export function useQuestCatalogSearchResult<T extends QuestMeta>(
     searchTerm: string,
     ready: boolean,
 ): QuestCatalogSearchView<T> | null {
-    const runtime = useQuestCatalogRuntime(searchTerm);
+    const { runtime, failed, retry } = useQuestCatalogRuntime(searchTerm);
     // Индекс строится один раз на каталог, а не на каждый символ запроса.
     const search = useMemo(
         () => runtime?.createQuestCatalogSearch(quests, canonicalCityIdById),
@@ -87,8 +102,10 @@ export function useQuestCatalogSearchResult<T extends QuestMeta>(
     );
     return useMemo(() => {
         if (!ready || !searchTerm) return null;
-        return search ? { ...search(searchTerm), pending: false } : { quests: [], approximate: false, pending: true };
-    }, [ready, searchTerm, search]);
+        return search
+            ? { ...search(searchTerm), pending: false, failed: false, retry }
+            : { quests: [], approximate: false, pending: !failed, failed, retry };
+    }, [ready, searchTerm, search, failed, retry]);
 }
 
 type SearchAnalyticsOptions = {
@@ -159,7 +176,7 @@ export function useQuestCatalogOrder<T extends QuestMeta>({
     ready,
 }: OrderOptions<T>) {
     // Повтор загрузки движка — при смене выдачи (город, фильтр, сортировка).
-    const runtime = useQuestCatalogRuntime(quests);
+    const { runtime } = useQuestCatalogRuntime(quests);
     // Пояс читается синхронно; сортировка по нему — как только придёт движок.
     const timeZone = useMemo(() => (ready ? readDeviceTimeZone() : null), [ready]);
     const visitor = useMemo(

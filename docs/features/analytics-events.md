@@ -156,5 +156,7 @@
   эмиттера. Зарегистрированы (список на 09.11.2026): `auth_state`,
   `traffic_source`, `quest_id`, `city_id`, `outcome`, `radius_km`,
   `event_category`, `event_label`, `search_term` и `results_count` (#3183);
-  метрика `duration_sec`. Без регистрации
+  метрика `duration_sec`. С 14.11.2026 (#3379): `match_mode` (`quest_search`),
+  `catalog_order` (`quest_catalog_card_click`), `channel`
+  (`quest_invite_click`); данные по ним читаются с этой даты. Без регистрации
   `runReport` отвечает 400 «is not a valid dimension».

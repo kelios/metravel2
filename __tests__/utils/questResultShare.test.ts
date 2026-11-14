@@ -1,6 +1,7 @@
 import {
   QUEST_RESULT_UTM_MEDIUM,
   QUEST_RESULT_UTM_SOURCE,
+  buildQuestInviteLink,
   buildQuestPublicUrl,
   buildQuestResultShareLink,
   buildQuestResultShareUtm,
@@ -71,5 +72,30 @@ describe('utils/questResultShare', () => {
   it('falls back to the quests listing when city or slug is missing', () => {
     expect(buildQuestPublicUrl(undefined, 'x')).toContain('/quests')
     expect(buildQuestPublicUrl('minsk', undefined)).toContain('/quests')
+  })
+})
+
+// #3379 (г): язык ссылки «Позвать друга» — язык страницы, если сервер её отдаёт.
+describe('buildQuestInviteLink language', () => {
+  const utm = '?utm_source=share&utm_medium=referral&utm_campaign=quest_invite_minsk-cmok'
+  const projection = (overrides: Record<string, unknown> = {}) => ({
+    schema_version: 1 as const, release_id: 'r1', city_id: 4, quest_slug: 'minsk-cmok', locale: 'pl' as const,
+    state: 'available' as const, canonical_path: '/pl/quests/4/minsk-cmok', ru_source_path: '/quests/4/minsk-cmok',
+    versions: [{ locale: 'ru' as const, path: '/quests/4/minsk-cmok' }, { locale: 'pl' as const, path: '/pl/quests/4/minsk-cmok' }],
+    ...overrides,
+  })
+
+  it('invites to the served language page the visitor is on', () => {
+    expect(buildQuestInviteLink('4', 'minsk-cmok', projection())).toBe(`https://metravel.by/pl/quests/4/minsk-cmok${utm}`)
+  })
+
+  it.each([
+    ['no projection (RU page, native app)', null],
+    ['a withdrawn translation', projection({ state: 'unavailable', canonical_path: null, versions: [] })],
+    ['a temporary serving failure', projection({ state: 'temporary_failure', canonical_path: null, versions: [] })],
+    ['a projection of another quest', projection({ quest_slug: 'other' })],
+    ['a projection of another city', projection({ city_id: 9 })],
+  ])('falls back to the RU canonical page for %s', (_label, value) => {
+    expect(buildQuestInviteLink('4', 'minsk-cmok', value)).toBe(`https://metravel.by/quests/4/minsk-cmok${utm}`)
   })
 })

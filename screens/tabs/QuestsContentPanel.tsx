@@ -13,7 +13,6 @@ import {
 import type { LayoutChangeEvent, ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import EmptyState from '@/components/ui/EmptyState';
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useQuestPlayersCount } from '@/hooks/useQuestPlayersCount';
 
@@ -32,6 +31,11 @@ import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { webDataSetProps } from '@/utils/webProps'
+import { lazyWithRetry } from '@/utils/chunkReload'
+
+// Отказ чанка после выката лечится общей перезагрузкой (`chunkReloadGuard`), а не
+// корневым ErrorBoundary: в чанке лежит и экран ошибки поиска с «Повторить» (#3379).
+const QuestsCatalogEmptyStates = lazyWithRetry(() => import('./QuestsCatalogEmptyStates'));
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -39,6 +43,8 @@ type QuestsContentPanelProps = {
     styles: any;
     colors: any;
     dataLoaded: boolean;
+    /** #3379: есть только пока чанк движка поиска не загрузился и после повторов. */
+    retrySearch?: () => void;
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
     selectedCityName: string | null;
@@ -106,6 +112,7 @@ function QuestsContentPanel({
     styles,
     colors,
     dataLoaded,
+    retrySearch,
     viewMode,
     selectedCityId,
     selectedCityName,
@@ -471,27 +478,6 @@ function QuestsContentPanel({
     );
     const mobileTitleBlock = isMobile ? titleBlock : null;
 
-    // «Пройденные» — единственный срез, который может оказаться пустым при
-    // живом фильтре: он показывается любому вошедшему игроку, в том числе тому,
-    // кто ещё ничего не прошёл. Пустая сетка без объяснения выглядела бы как
-    // сломанный каталог, поэтому здесь явное состояние с выходом обратно.
-    const completedEmptyState = !searchActive
-        && !isMapAreaActive
-        && selectedCityId === COMPLETED_FILTER_ID
-        && dataLoaded ? (
-            <EmptyState
-                density="compact"
-                icon="check-circle"
-                title={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyTitle')}
-                description={i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyDescription')}
-                variant="empty"
-                action={{
-                    label: i18nT('quests:screens.tabs.QuestsContentPanel.completedEmptyAction'),
-                    onPress: onResetFilters,
-                }}
-            />
-        ) : null;
-
     const geoMessageBlock = geoMessage ? (
         <View style={styles.nearbyCtaBlock}>
             <Text style={styles.geoMessageText} testID="quests-geo-message">
@@ -503,50 +489,33 @@ function QuestsContentPanel({
     // Сетка web и native FlatList используют одни пустые/загрузочные состояния.
     // На native они остаются в ListEmptyComponent: корень списка и поле поиска
     // не перемонтируются, когда поиск сужает выдачу до нуля.
+    // Пустые состояния и сбой поиска — ленивый чанк (#3379): все они клиентские.
+    const emptyStates = retrySearch || (dataLoaded && (questsAll.length === 0 || (!searchActive && !selectedCityId))) ? (
+        <Suspense fallback={null}>
+            <QuestsCatalogEmptyStates
+                styles={styles}
+                retrySearch={retrySearch}
+                searchActive={searchActive}
+                empty={questsAll.length === 0}
+                isMapAreaActive={isMapAreaActive}
+                nearbyWithLocation={selectedCityId === nearbyId && !!userLoc}
+                citySelected={!!selectedCityId}
+                completedSlice={selectedCityId === COMPLETED_FILTER_ID}
+                isMobile={isMobile}
+                onClearSearch={clearSearch}
+                onResetFilters={onResetFilters}
+            />
+        </Suspense>
+    ) : null;
     const listEmptyContent = (
         <>
-            {searchActive && questsAll.length === 0 && dataLoaded && (
-                <EmptyState
-                    density="compact"
-                    icon="search"
-                    title={i18nT('quests:screens.tabs.QuestsContentPanel.nichego_ne_naydeno_21857ccf')}
-                    description={i18nT('quests:screens.tabs.QuestsContentPanel.poprobuyte_drugoe_nazvanie_ili_gorod_980ce716')}
-                    variant="empty"
-                    action={{
-                        label: i18nT('quests:screens.tabs.QuestsContentPanel.ochistit_poisk_c6fc5f29'),
-                        onPress: clearSearch,
-                    }}
-                />
-            )}
-
-            {!searchActive && questsAll.length === 0 && dataLoaded
-                && (isMapAreaActive || (selectedCityId === nearbyId && userLoc)) && (
-                <EmptyState
-                    density="compact"
-                    icon="map-pin"
-                    title={i18nT('quests:screens.tabs.QuestsContentPanel.ryadom_nichego_ne_naydeno_271dd8e7')}
-                    description={i18nT('quests:screens.tabs.QuestsContentPanel.posmotrite_kvesty_v_drugih_gorodah_ili_vyber_720d6ffd')}
-                    variant="empty"
-                />
-            )}
+            {emptyStates}
 
             {!searchActive && !isMapAreaActive && selectedCityId === nearbyId && !userLoc && geoRequesting && dataLoaded && (
                 <View style={styles.mapLoading} testID="quests-nearby-loading">
                     <ActivityIndicator color={colors.primary} />
                 </View>
             )}
-
-            {!searchActive && !selectedCityId && dataLoaded && (
-                <EmptyState
-                    density="compact"
-                    icon="compass"
-                    title={i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_023bdfab')}
-                    description={isMobile ? i18nT('quests:screens.tabs.QuestsContentPanel.nazhmite_gorod_chtoby_vybrat_bdb9cf3e') : i18nT('quests:screens.tabs.QuestsContentPanel.vyberite_gorod_iz_spiska_sleva_3a187f1e')}
-                    variant="empty"
-                />
-            )}
-
-            {questsAll.length === 0 && completedEmptyState}
 
             {!dataLoaded && <QuestsGridSkeleton styles={styles} radius={radiiLg} />}
         </>
@@ -568,13 +537,13 @@ function QuestsContentPanel({
                 {geoMessageBlock}
 
                 <QuestPageColumns>
-                {viewMode === 'map' ? (
+                {viewMode === 'map' ? (retrySearch ? emptyStates : (
                     <View style={styles.mapSection}>
                         <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
                             {mapSlot}
                         </Suspense>
                     </View>
-                ) : (
+                )) : (
                     <>
                         {seoIntroSlot}
 

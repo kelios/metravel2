@@ -473,18 +473,21 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             padding: isMobileW ? spacing.md : spacing.xl,
             paddingBottom: isMobileW ? spacing.md : spacing.xl + spacing.xs,
         },
+        // #3367: метка города стоит выше плотной части градиента, и на светлой
+        // обложке полупрозрачный текст терял контраст. Своя подложка
+        // `mediaCaptionOverlay` держит белую подпись ≥4.5:1 поверх любого кадра.
         questCardCategory: {
-            color: 'rgba(255, 200, 140, 0.9)',
+            alignSelf: 'flex-start',
+            color: colors.textOnDark,
+            backgroundColor: colors.mediaCaptionOverlay,
+            borderRadius: radii.sm,
+            paddingHorizontal: spacing.xs,
+            paddingVertical: 2,
             fontSize: categoryFontSize,
             fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: 1.5,
             marginBottom: spacing.xs,
-            ...Platform.select({
-                web: {
-                    textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-                } as any,
-            }),
         },
         questCardTitle: {
             color: colors.textOnDark,

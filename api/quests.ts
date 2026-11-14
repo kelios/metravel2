@@ -2,16 +2,14 @@
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
 import { LONG_TIMEOUT } from '@/api/apiConfig';
-import { readEnvelopeTotal, unwrapList } from '@/api/clientResponse';
-import type { TravelMediaGroup, TravelMediaImage } from '@/types/types';
+import { unwrapList } from '@/api/clientResponse';
 import { toContentId } from '@/types/contentSafety';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex';
 import { retry } from '@/utils/retry';
 import { isUsableRouteSegment } from '@/utils/routePaths';
-import { resolveTotalPages } from '@/utils/fetchAllPages';
 import { QUEST_POPULARITY_SORT, selectPopularQuests } from '@/utils/questPopularity';
-import { QuestProgressLineageMismatch, type QuestProgressServerPayload } from '@/utils/questProgressMerge';
+import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
     readCachedQuestBundle,
     writeCachedQuestBundle,
@@ -22,259 +20,57 @@ import { getActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
 import { getQuestContentLocale, withQuestLang } from '@/api/questContentLocale';
 import { buildQuestCityLandingGroups, normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
+import {
+    CATALOG_EAGER_PAGES,
+    fetchAllQuestPages,
+    withQuestMetaDefaults,
+    type PaginatedEnvelope,
+} from '@/api/questCatalogPages';
+import type {
+    ApiQuestBundle,
+    ApiQuestMeta,
+    ApiQuestNearLocation,
+    ApiQuestProgress,
+    ApiQuestProgressCreate,
+    ApiQuestReview,
+    ApiQuestStats,
+    ApiQuestStep,
+    NearLocationParams,
+    QuestAnswerAttemptsBulkPayload,
+    QuestAnswerAttemptsBulkResult,
+    QuestGuestHandoffPayload,
+    QuestReview,
+    QuestReviewPhoto,
+} from '@/api/questTypes';
 
-// ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
-
-type ApiQuestCoordinate = number | string;
-
-export type ApiQuestFirstCompleter = {
-    id: number;
-    name: string;
-    avatar: string | null;
-};
-
-type ApiQuestRatingSnapshot = {
-    rating_avg: number | null;
-    rating_count: number;
-    user_rating: 1 | 2 | 3 | 4 | 5 | null;
-    completions_count: number;
-    is_completed_by_me: boolean;
-    first_completer: ApiQuestFirstCompleter | null;
-    /**
-     * Уникальные просмотры квеста. Бэкенд отдаёт поле в списке каталога и
-     * ломает им ничью по прохождениям в `?sort=popular`; на клиенте оно нужно
-     * только правилу популярности, поэтому необязательное.
-     */
-    views_count?: number;
-};
-
-type ApiQuestOptionalRatingSnapshot = Partial<ApiQuestRatingSnapshot>;
-
-export type ApiQuestAnswerPattern = {
-    type: string;
-    value: unknown;
-} | string | null;
-
-/** Город квеста (из бэкенда) */
-export type ApiQuestCity = {
-    id: number;
-    /** Historical city IDs that resolve to this canonical city. Missing on old DTOs. */
-    legacy_ids?: number[];
-    name: string | null;
-    /** Имя на языке запроса независимо от перевода контента (#2392). */
-    name_localized?: string;
-    lat: ApiQuestCoordinate;
-    lng: ApiQuestCoordinate;
-    country_code?: string | null;
-    /** Русское имя города при локализованном `name` (#2197): по нему считается alias. */
-    name_canonical?: string | null;
-};
-
-/** Финал квеста (из бэкенда) */
-export type ApiQuestFinale = {
-    text: string;
-    video_url: string | null;
-    poster_url: string | null;
-};
-
-/** Шаг квеста (из бэкенда) */
-export type ApiQuestStep = {
-    id: number | string;
-    step_id?: string | null;
-    title: string;
-    location: string;
-    story: string;
-    task: string;
-    hint?: string | null;
-    answer_pattern?: ApiQuestAnswerPattern;
-    // Старый формат (для обратной совместимости)
-    answer_type?: string;
-    answer_value?: string;
-    lat: ApiQuestCoordinate;
-    lng: ApiQuestCoordinate;
-    geo_verify?: {
-        enabled?: boolean;
-        radius_m?: number;
-    } | null;
-    maps_url: string;
-    image_url?: string | null;
-    input_type?: 'number' | 'text';
-    order?: number;
-    is_intro?: boolean;
-    /** Canonical point classification for progress/count parity (#1614). */
-    point_role?: 'start' | 'required' | 'optional' | 'final' | null;
-    country_code?: string | null;
-    poi_info?: {
-        is_museum: boolean;
-        opening_hours?: string | null;
-        ticket_price?: string | null;
-        website?: string | null;
-    } | null;
-};
-
-/** Метаданные квеста для каталога */
-export type ApiQuestSquareVariants = {
-    [name: string]: string | null | undefined;
-    square_160?: string | null;
-    square_320?: string | null;
-};
-
-export type ApiQuestCoverMedia = Omit<TravelMediaImage, 'variants'> & {
-    /**
-     * Квадратная производная для фиксированной плитки 132×132 (#1542).
-     * Поля nullable: до backfill #1587 контракт уже присутствует в API, но
-     * значения остаются `null`, поэтому потребитель обязан сохранить fallback.
-     */
-    src_square?: string | null;
-    srcset_square?: string | null;
-    sizes_hint_square?: string | null;
-    variants?: ApiQuestSquareVariants | null;
-};
-
-export type ApiQuestMediaGroup = Omit<TravelMediaGroup, 'cover'> & {
-    cover?: ApiQuestCoverMedia | null;
-};
-
-export type ApiQuestMeta = {
-    /** Client-only: shared offline metadata has no reliable personal status. */
-    personal_status_unavailable?: boolean;
-    id: number;
-    quest_id: string;
-    title: string;
-    points: number | string; // readOnly from backend
-    city_id: string; // readOnly
-    /** Historical city IDs that resolve to city_id. Missing on old DTOs/cache. */
-    city_legacy_ids?: number[];
-    city_name: string; // readOnly
-    /** Имя на языке запроса независимо от перевода контента (#2392). */
-    city_name_localized?: string;
-    /**
-     * Публичный alias города (#2211): единственный источник `/quests/<alias>`.
-     * Пустая строка — у города alias нет; отсутствие поля — старый ответ/кэш,
-     * тогда alias выводит эвристика `utils/questCityAlias.js`.
-     */
-    city_alias?: string; // readOnly
-    /**
-     * #3327: число опубликованных квестов всего города строки (бэк #3282). Приходит
-     * в подборе статьи (`/quests/web/discovery/?view=travel`), где строк не больше
-     * шести; у старого ответа и других выдач поля нет.
-     */
-    city_quest_count?: number;
-    country_id?: string | null;
-    country_name?: string | null;
-    country_code?: string | null;
-    lat: ApiQuestCoordinate;
-    lng: ApiQuestCoordinate;
-    duration_min: number | null;
-    difficulty: 'easy' | 'medium' | 'hard' | '' | null;
-    /**
-     * `Quest.tags` is `JSONField(default=list)`: a slug list or a `{tag: true}` map — read via `@/utils/questTags`.
-     * Audience tags (#3276): `kids`, `family`, `age-<from>-<to>` (`age-5-7`, `age-8-10`, `age-11-14`),
-     * `adult-required` / `adult-recommended` — the assistant card reads them in `api/aiAssist/questAudience.ts`.
-     */
-    tags: string[] | Record<string, unknown> | null;
-    pet_friendly: boolean;
-    cover_url: string | null;
-    /**
-     * Язык контента квеста (#2197): `lang` запроса, если перевод опубликован,
-     * иначе язык источника. Отсутствие поля — `ru` (старый бэкенд, офлайн-кэш).
-     */
-    content_locale?: string;
-    available_locales?: string[];
-    /**
-     * #3349: locales whose page of this quest the server actually serves
-     * (`translated_detail_served`); `[]` without an active publication. Membership
-     * of the locale hubs `/{locale}/quests` (#3217) — never `available_locales`.
-     */
-    served_locales?: string[];
-    /** Русское имя города при локализованном `city_name`: по нему считается alias. */
-    city_name_canonical?: string;
-    /**
-     * Медиа-манифест обложки (#1208): отсюда берётся `dominant_color` для заливки
-     * полей letterbox. В UI не пробрасывается — прогревает общий индекс, см.
-     * `utils/mediaPlaceholderIndex.ts`.
-     */
-    media?: ApiQuestMediaGroup | null;
-} & ApiQuestRatingSnapshot;
-
-/**
- * DEV-only мок прохождений (#363): бэк теперь отдаёт реальные
- * is_completed_by_me/completions_count — мок выключен, чтобы в DEV-сборке
- * на устройстве не показывались фейковые «Пройден»/«N прохождения».
- */
-const QUEST_COMPLETION_MOCK = false;
-
-function withQuestCompletionMock(meta: ApiQuestMeta): ApiQuestMeta {
-    if (!__DEV__ || !QUEST_COMPLETION_MOCK) return meta;
-    if (meta.is_completed_by_me || meta.completions_count > 0) return meta;
-    return {
-        ...meta,
-        is_completed_by_me: meta.id % 2 === 0,
-        completions_count: (meta.id % 7) + 1,
-    };
-}
-
-/**
- * Бэкенд может не отдавать поля рейтинга/прохождений (старая схема) —
- * проставляем безопасные дефолты, чтобы UI и адаптеры не падали.
- */
-export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
-    // Обложка квеста показывается в `contain`, поэтому её поля тоже должна
-    // заливать `dominant_color` из манифеста (#1208). Карточка знает только
-    // `cover_url`, поэтому цвет индексируется и под ним.
-    const coverMedia = meta?.media?.cover;
-    const indexedCoverMedia: TravelMediaImage | null | undefined = coverMedia
-        ? {
-            ...coverMedia,
-            variants: coverMedia.variants
-                ? Object.fromEntries(
-                    Object.entries(coverMedia.variants).filter(
-                        (entry): entry is [string, string] => typeof entry[1] === 'string',
-                    ),
-                )
-                : null,
-        }
-        : coverMedia;
-    indexMediaImage(indexedCoverMedia, [
-        meta?.cover_url,
-        coverMedia?.src_square,
-        coverMedia?.variants?.square_160,
-        coverMedia?.variants?.square_320,
-    ]);
-    return withQuestCompletionMock({
-        ...meta,
-        city_legacy_ids: normalizeQuestCityLegacyIds(meta.city_legacy_ids),
-        rating_avg: meta.rating_avg ?? null,
-        rating_count: meta.rating_count ?? 0,
-        user_rating: meta.user_rating ?? null,
-        completions_count: meta.completions_count ?? 0,
-        personal_status_unavailable: meta.personal_status_unavailable === true
-            || typeof meta.is_completed_by_me !== 'boolean',
-        is_completed_by_me: meta.is_completed_by_me ?? false,
-        first_completer: meta.first_completer ?? null,
-    });
-}
-
-/** Полный бандл квеста */
-export type ApiQuestBundle = {
-    id: number;
-    quest_id: string;
-    title: string;
-    cover_url?: string | null;
-    /** Optional on older detail responses; city metadata supplies classification. */
-    tags?: string[] | Record<string, unknown> | null;
-    steps: ApiQuestStep[] | string;
-    finale: ApiQuestFinale;
-    intro: ApiQuestStep | string | null;
-    storage_key: string;
-    city: ApiQuestCity;
-    /** Язык контента бандла и его шагов (#2197); отсутствие — `ru`. */
-    content_locale?: string;
-    source_locale?: string;
-    available_locales?: string[];
-    /** См. `ApiQuestMeta.media`: манифест обложки для индекса заливки (#1208). */
-    media?: TravelMediaGroup | null;
-} & ApiQuestOptionalRatingSnapshot;
+// Типы (#3367: живут в `api/questTypes.ts`) и маппинг списка
+// (`api/questCatalogPages.ts`) — публичный контракт этого модуля, как и раньше.
+export { withQuestMetaDefaults };
+export type {
+    ApiQuestAnswerPattern,
+    ApiQuestBundle,
+    ApiQuestCity,
+    ApiQuestCoverMedia,
+    ApiQuestFinale,
+    ApiQuestFirstCompleter,
+    ApiQuestMediaGroup,
+    ApiQuestMeta,
+    ApiQuestNearLocation,
+    ApiQuestProgress,
+    ApiQuestProgressCreate,
+    ApiQuestReview,
+    ApiQuestReviewPhoto,
+    ApiQuestSquareVariants,
+    ApiQuestStats,
+    ApiQuestStep,
+    NearLocationParams,
+    QuestAnswerAttemptPayload,
+    QuestAnswerAttemptsBulkPayload,
+    QuestAnswerAttemptsBulkResult,
+    QuestGuestHandoffPayload,
+    QuestReview,
+    QuestReviewPhoto,
+} from '@/api/questTypes';
 
 function normalizeQuestStep(step: ApiQuestStep): ApiQuestStep {
     return {
@@ -323,97 +119,6 @@ function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
             : bundle.finale,
     };
 }
-
-/** Прогресс прохождения квеста */
-export type ApiQuestProgress = {
-    id: number;
-    quest: number;
-    user: number;
-    current_index: number;
-    unlocked_index: number;
-    answers: Record<string, string>;
-    attempts: Record<string, number>;
-    hints: Record<string, boolean>;
-    show_map: boolean;
-    completed: boolean;
-    /**
-     * Точки, которые игрок официально пропустил: `{step_id: true}`. Бэкенд
-     * принимает и отдаёт поле с #1454; до #1632 клиент его не слал, и на проде
-     * оно было пустым во всех 33 строках прогресса.
-     */
-    skipped: Record<string, boolean>;
-    /** Игрок закрыл квест на месте, не дойдя до оставшихся точек (#1454). */
-    early_finish: boolean;
-    completed_at: string | null;
-    created_at: string;
-    updated_at: string;
-};
-
-export type ApiQuestProgressCreate = {
-    quest: number;
-    current_index?: number;
-    unlocked_index?: number;
-    answers?: Record<string, string>;
-    attempts?: Record<string, number>;
-    hints?: Record<string, boolean>;
-    show_map?: boolean;
-    completed?: boolean;
-    skipped?: Record<string, boolean>;
-    early_finish?: boolean;
-};
-
-/**
- * Фото игрока в публичном отзыве (#1575/#1576).
- * `step_id` — числовой PK шага квеста, если снимок привязан к точке.
- */
-export type ApiQuestReviewPhoto = {
-    id: number;
-    url: string | null;
-    step_id?: number | null;
-};
-
-/** Публичный отзыв о квесте (для читалки чужих отзывов) */
-export type ApiQuestReview = {
-    id: number;
-    rating: number;
-    liked: string;
-    disliked: string;
-    author_name: string | null;
-    author_avatar: string | null;
-    /**
-     * #2163: id автора отзыва (nullable, read-only). На бэке до #2163 поля нет —
-     * потребитель не выдумывает id: без него нет блокировки автора и фильтра кэша.
-     */
-    user?: number | null;
-    created_at: string | null;
-    /**
-     * Не больше трёх снимков, непромодерированные сервер уже вырезал
-     * (`quests/serializers.py:727`). Поле может отсутствовать на бэкенде без
-     * #1576 — потребитель обязан переживать это пустым списком, а не пустым
-     * местом на месте галереи.
-     */
-    photos?: ApiQuestReviewPhoto[] | null;
-};
-
-export type QuestReviewPhoto = {
-    id: number;
-    url: string;
-    stepId: number | null;
-};
-
-/** Отзыв для UI (фронтенд формат) */
-export type QuestReview = {
-    id: number;
-    rating: number;
-    liked: string;
-    disliked: string;
-    authorName: string | null;
-    authorAvatar: string | null;
-    /** #2169: id автора (`user` бэка); null — старый бэк или удалённый автор. */
-    authorId: number | null;
-    createdAt: string | null;
-    photos: QuestReviewPhoto[];
-};
 
 function adaptQuestReviewPhotos(raw: ApiQuestReview['photos']): QuestReviewPhoto[] {
     if (!Array.isArray(raw)) return [];
@@ -481,174 +186,6 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
 }
 
 // ===================== API ФУНКЦИИ =====================
-
-type PaginatedEnvelope<T> = {
-    data?: T[];
-    results?: T[];
-    total?: number;
-    count?: number;
-    next_page_url?: string | null;
-    next?: string | null;
-};
-
-/**
- * Списочные эндпоинты отдают по 20 записей на страницу, а `fetchAllQuestPages`
- * дочитывает их до конца: каталог из 139 квестов уходил семью последовательными
- * запросами (~405 КБ) на каждый экран, которому нужен список. Просим максимум,
- * который разрешает пагинация бэкенда (max_page_size = 100, проверено на проде):
- * каталог схлопывается до двух запросов.
- */
-const LIST_PAGE_SIZE = 100;
-
-function buildListPageUrl(path: string, page: number): string {
-    const separator = path.includes('?') ? '&' : '?';
-    const pageParam = page > 1 ? `&page=${page}` : '';
-    return `${path}${separator}page_size=${LIST_PAGE_SIZE}${pageParam}`;
-}
-
-/** Номер следующей страницы из ссылки `next` бэкенда; `null`, если страница последняя. */
-function nextPageNumber<T>(res: PaginatedEnvelope<T>): number | null {
-    const next = res?.next_page_url ?? res?.next ?? null;
-    const match = typeof next === 'string' ? next.match(/[?&]page=(\d+)/) : null;
-    return match ? Number(match[1]) : null;
-}
-
-/**
- * Отказ «такой страницы нет»: у DRF несуществующая страница пагинации — это 404
- * «Invalid page». Для страниц, чьё существование не подтверждено ссылкой `next`,
- * это конец каталога, а не сбой загрузки.
- */
-function isMissingPage(err: unknown): boolean {
-    return err instanceof ApiError && err.status === 404;
-}
-
-/**
- * Сколько страниц просить, не дожидаясь ответа первой.
- *
- * Номер следующей страницы известен только из уже полученного ответа, поэтому
- * одного лишь `count` мало: на каталоге ровно в две страницы (165 квестов при
- * странице в 100 — замер прода 31.08.2026) вторая всё равно уходила бы после
- * первой, и обмены складывались бы как раньше (#1659). Просим вторую сразу.
- * Лишний запрос возможен единственным образом — если каталог усохнет до одной
- * страницы; тогда ответ на несуществующую страницу гасится и результат тот же.
- */
-const CATALOG_EAGER_PAGES = 2;
-
-/**
- * Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы.
- *
- * Первые `eagerPages` страниц уходят ОДНОВРЕМЕННО, не дожидаясь друг друга, а
- * дальше число страниц берётся из размера выборки первого ответа, и остаток
- * тоже читается одним заходом. Ответ без размера выборки читается по-старому,
- * страница за страницей.
- *
- * Почему это не общий `utils/fetchAllPages` (#1710): тот принимает загрузчик
- * страницы и возвращает список, а здесь на ту же ось намотаны три вещи, которых
- * у остальных потребителей нет — спекулятивные страницы до ответа первой,
- * 404-как-конец-каталога вместо отказа и последовательное дочитывание по ссылке
- * `next`, когда размер выборки разошёлся с отданным. Общее у двух обвязок ровно
- * одно — правило «сколько страниц читать», и оно берётся из `resolveTotalPages`
- * общего хелпера, а не считается здесь заново.
- */
-async function fetchAllQuestPages<T>(
-    path: string,
-    maxPages = 20,
-    options?: { signal?: AbortSignal; eagerPages?: number },
-): Promise<T[]> {
-    const getPage = (page: number) => {
-        const url = buildListPageUrl(path, page);
-        return options?.signal
-            ? apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
-            : apiClient.get<T[] | PaginatedEnvelope<T>>(url);
-    };
-
-    // Страница, существование которой ещё не подтверждено ссылкой `next`: у DRF
-    // несуществующая страница — это 404 «Invalid page», и ронять из-за неё весь
-    // каталог нельзя. `null` означает «дальше дочитываем последовательно».
-    const getPageIfExists = async (page: number) => {
-        try {
-            return await getPage(page);
-        } catch (err) {
-            if (!isMissingPage(err)) throw err;
-            return null;
-        }
-    };
-
-    const eager = Math.min(Math.max(options?.eagerPages ?? 1, 1), maxPages);
-    const [first, ...eagerRest] = await Promise.all([
-        getPage(1),
-        ...Array.from({ length: eager - 1 }, (_, index) => getPageIfExists(index + 2)),
-    ]);
-
-    if (Array.isArray(first)) return [...first];
-
-    // Копия обязательна: `unwrapList` отдаёт сам массив из конверта, и `push`
-    // дописывал бы записи следующих страниц в объект ответа первой.
-    const out = [...unwrapList<T>(first)];
-    const pageSize = out.length;
-    // Первая страница оказалась последней — ответы на спекулятивные не нужны.
-    if (nextPageNumber(first) === null) return out;
-
-    // Спекулятивные страницы засчитываем только подряд: пропуск в середине
-    // сломал бы порядок записей, поэтому с первого промаха дочитываем заново.
-    let read = 1;
-    let lastRead: PaginatedEnvelope<T> = first;
-    for (const res of eagerRest) {
-        if (!res || Array.isArray(res)) break;
-        out.push(...unwrapList<T>(res));
-        lastRead = res;
-        read += 1;
-    }
-
-    const total = readEnvelopeTotal(first);
-    // Хвостовые страницы посчитаны из размера выборки, а не анонсированы ссылкой
-    // `next`, — природа у них та же, что у спекулятивных выше. Их 404 означает
-    // конец каталога и обрывает дочитывание целиком: `next` последней прочитанной
-    // страницы ведёт как раз на ту, которой нет, и последовательный проход ниже
-    // запросил бы её повторно.
-    let catalogEnded = false;
-    if (total !== null && pageSize > 0) {
-        // Размер страницы берём фактический, а не запрошенный: бэкенд вправе
-        // урезать `page_size` своим максимумом, и тогда страниц окажется больше.
-        const lastPage = resolveTotalPages({ total, pageSize, maxPages });
-        // Именно `allSettled`: `all` отвергается первым попавшимся отказом, а
-        // решать, конец это каталога или потеря страницы, надо по тому, какая
-        // страница отказала первой ПО ПОРЯДКУ.
-        const rest = await Promise.allSettled(
-            Array.from({ length: Math.max(lastPage - read, 0) }, (_, index) => getPage(read + index + 1)),
-        );
-        // Порядок массива совпадает с порядком страниц, поэтому записи
-        // склеиваются ровно так же, как при последовательном чтении.
-        for (const settled of rest) {
-            if (settled.status === 'rejected') {
-                // Прочие отказы фатальны: транзиентный 500 молча съел бы сотню
-                // записей, и неполный каталог выглядел бы полным.
-                if (!isMissingPage(settled.reason)) throw settled.reason;
-                catalogEnded = true;
-                break;
-            }
-            out.push(...unwrapList<T>(settled.value));
-            if (!Array.isArray(settled.value)) lastRead = settled.value;
-            read += 1;
-        }
-    }
-
-    // Если размер выборки разошёлся с тем, что бэкенд реально отдаёт, хвост
-    // дочитывается по-старому: лишний последовательный запрос дешевле молча
-    // потерянных записей.
-    let page = catalogEnded ? null : nextPageNumber(lastRead);
-    if (page !== null && page <= read) page = null;
-    for (let i = read; i < maxPages && page !== null; i++) {
-        const res = await getPage(page);
-        if (Array.isArray(res)) {
-            out.push(...res);
-            break;
-        }
-        out.push(...unwrapList<T>(res));
-        page = nextPageNumber(res);
-    }
-    return out;
-}
 
 /**
  * Получить список всех квестов (метаданные).
@@ -752,12 +289,6 @@ export async function fetchQuestsCompactCatalog(
     }
 }
 
-/** Публичная статистика квестов (`GET /api/quests/stats/`, #2760). */
-export type ApiQuestStats = {
-    /** Сколько разных людей прошли хотя бы один квест; сотрудники не считаются. */
-    players_count: number;
-};
-
 /**
  * Число игроков считает только бэкенд: `completions_count` — прохождения по
  * квесту, и их сумма учитывает человека столько раз, сколько квестов он
@@ -776,24 +307,6 @@ export async function fetchQuestStats(
         ? { players_count: playersCount }
         : null;
 }
-
-/** Параметры гео-рекомендаций (город/страна и/или координаты). */
-export type NearLocationParams = {
-    city?: string | null;
-    country?: string | null;
-    /** ISO-код страны: сверка бэкенда по имени идёт только с `title_ru`/`title_en`. */
-    country_code?: string | null;
-    lat?: number | null;
-    lng?: number | null;
-    limit?: number | null;
-};
-
-/** Элемент ответа /quests/near-location/ (бэкенд считает score/distance). */
-export type ApiQuestNearLocation = {
-    quest: ApiQuestMeta;
-    score: number;
-    distance_km: number | null;
-};
 
 type NearLocationResponse<T> = {
     results: T[];
@@ -1102,33 +615,6 @@ export async function deleteProgress(id: number): Promise<void> {
 
 // ===================== ТЕЛЕМЕТРИЯ ПОПЫТОК ОТВЕТА (#1275/#1276) =====================
 
-/** Одна попытка ответа. `raw_answer` не отправляется для свободных ответов. */
-export type QuestAnswerAttemptPayload = {
-    client_attempt_id: string;
-    step_id: string;
-    verdict: 'accepted' | 'rejected';
-    raw_answer?: string;
-    answer_length: number;
-    attempt_no: number;
-    hint_shown: boolean;
-    elapsed_ms?: number;
-    platform: string;
-    locale: string;
-    occurred_at: string;
-};
-
-export type QuestAnswerAttemptsBulkPayload = {
-    quest_id: number;
-    session_key: string;
-    attempts: QuestAnswerAttemptPayload[];
-};
-
-export type QuestAnswerAttemptsBulkResult = {
-    accepted: number;
-    duplicates: number;
-    rejected: number;
-};
-
 /**
  * Приём батча попыток ответа. Эндпоинт auth-optional: гостевое прохождение
  * пишется так же, поэтому токен прикладывается, только если он есть.
@@ -1142,19 +628,6 @@ export async function sendQuestAnswerAttempts(
         payload,
     );
 }
-
-export type QuestGuestHandoffPayload = {
-    /** `quest_attempts_session_v1` — тот же ключ, что у телеметрии попыток. */
-    session_key: string;
-    /** Строковый `quest.quest_id`, как в `/quest-progress/quest/<id>/`. */
-    quest_id: string;
-    /** Куда вернуть игрока после подтверждения: `/quests/<city>/<quest>`. */
-    redirect_path: string;
-    progress: QuestProgressServerPayload & {
-        answered_at: Record<string, number>;
-        updated_at: number;
-    };
-};
 
 /** Таймаут снимка: он стоит перед отправкой формы регистрации и не должен её тормозить. */
 const QUEST_GUEST_HANDOFF_TIMEOUT_MS = 5000;

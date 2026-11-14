@@ -62,6 +62,33 @@ describe('quest version language control', () => {
     }
   })
 
+  it('opens the chosen language catalogue from the RU /quests the same way as from a hub (#3367)', async () => {
+    const originalOs = Platform.OS
+    const originalFlag = process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
+    try {
+      mockPathname = '/quests'
+      await render(<LanguageOptionList testIDPrefix="menu-language" />)
+      const { onLocaleSelected } = mockPreferenceOptions.mock.calls[0][0] as { onLocaleSelected: (locale: string) => void }
+      process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'true'
+      onLocaleSelected('ru')
+      for (const locale of ['be', 'uk', 'pl', 'en']) onLocaleSelected(locale)
+      process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = 'false'
+      onLocaleSelected('en')
+      expect(mockPush.mock.calls).toEqual([['/be/quests'], ['/uk/quests'], ['/pl/quests'], ['/en/quests']])
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: originalOs, configurable: true })
+      if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS
+      else process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = originalFlag
+    }
+  })
+
+  it('keeps a plain preference choice on other RU quest addresses', async () => {
+    mockPathname = '/quests/minsk'
+    await render(<LanguageOptionList />)
+    expect(mockPreferenceOptions).toHaveBeenCalledWith({})
+  })
+
   it('keeps a bound pending or unavailable page from exposing preference-only choices', async () => {
     mockNavigation = { bound: true, projection: null, locale: 'pl' }
     await render(<LanguageOptionList />)

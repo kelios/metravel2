@@ -20,6 +20,7 @@ const mockRequestLocation = jest.fn();
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}), useIsFocused: () => true }));
 jest.mock('@expo/vector-icons/Feather', () => 'Feather');
 jest.mock('@/screens/tabs/questCatalogLocation', () => ({
+    ...jest.requireActual('@/screens/tabs/questCatalogLocation'),
     requestQuestCatalogLocation: (...args: unknown[]) => mockRequestLocation(...args),
 }));
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null);

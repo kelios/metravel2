@@ -60,7 +60,7 @@ it.each(shapes)('catalog engine keeps search and cache with %s', async (_name, w
   )
   const quests: never[] = []
   const { result, rerender } = await renderHook(() => useQuestCatalogSearchResult(quests, {}, 'city', true))
-  await waitFor(() => expect(result.current).toEqual({ quests: matches, approximate: false, pending: false }))
+  await waitFor(() => expect(result.current).toEqual({ quests: matches, approximate: false, pending: false, failed: false, retry: expect.any(Function) }))
   await rerender({})
   expect(loadImport).toHaveBeenCalledTimes(1)
   expect(search).toHaveBeenCalledWith('city')

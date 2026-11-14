@@ -192,6 +192,18 @@ function assertDistinctCityLandingMeta(cities, metaInputs) {
 // длинный список статей страны продолжается следующими секциями без заголовка.
 const COUNTRY_TRAVELS_PER_SECTION = 200;
 
+// Бэкенд отклоняет весь выпуск, если хоть одна страница длиннее `MAX_PAGE_BYTES`
+// (`quests/services/web_publication.py`: UTF-8 компактного JSON `page`). Длину
+// JSON сортировка ключей и `ensure_ascii=False` не меняют, поэтому мерим здесь.
+const MAX_PUBLIC_PAGE_BYTES = 256 * 1024;
+
+function assertPublicPageWithinBound(entry) {
+  const bytes = Buffer.byteLength(JSON.stringify(entry.page), 'utf8');
+  if (bytes > MAX_PUBLIC_PAGE_BYTES) {
+    throw new Error(`Quest public page ${entry.locale}:${entry.canonical_path} is ${bytes} bytes, above the ${MAX_PUBLIC_PAGE_BYTES}-byte publication bound`);
+  }
+}
+
 function buildCountryTravelSections(name, links) {
   const sections = [];
   for (let start = 0; start < links.length; start += COUNTRY_TRAVELS_PER_SECTION) {
@@ -249,7 +261,8 @@ function scoreCohort(cohort, kind, locale, countries) {
  * only one locale's private bundles are resident: the corpus never is.
  * `source.bundles(locale)` loads that locale on demand; returns the discovery.
  */
-function projectQuestWeb(source, catalogs, emit) {
+function projectQuestWeb(source, catalogs, emitPage) {
+  const emit = (entry) => { assertPublicPageWithinBound(entry); emitPage(entry); };
   const snapshot = source.header;
   if (!snapshot || snapshot.schema_version !== 2 || !Array.isArray(snapshot.catalog)
       || !snapshot.source_snapshot || !Array.isArray(snapshot.source_snapshot.quests)
@@ -320,4 +333,4 @@ function buildQuestWebProjection(snapshot, catalogs) {
   return { schema_version: 2, pages, discovery };
 }
 
-module.exports = { buildQuestWebProjection, projectQuestWeb, publicPageText, introModel, formatQuestDuration, assertDistinctCityLandingMeta };
+module.exports = { buildQuestWebProjection, projectQuestWeb, publicPageText, introModel, formatQuestDuration, assertDistinctCityLandingMeta, assertPublicPageWithinBound, MAX_PUBLIC_PAGE_BYTES };

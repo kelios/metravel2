@@ -113,7 +113,10 @@ describe('quest SEO metadata', () => {
 
   // #3238: the EN lead reads as a sentence («City Grodno: …» did not), the PL
   // lead carries the searched phrase «gra miejska»; both stay whole sentences.
+  // #3367: BE/UK follow the same pattern instead of «Горад X:» / «Місто X:».
   it.each([
+    ['be', 'Grodno: бясплатны пешы маршрут «The Royal City on the Neman» па славутасцях.'],
+    ['uk', 'Grodno: безкоштовний піший маршрут «The Royal City on the Neman» за пам\'ятками.'],
     ['en', 'Grodno: a free walking route “The Royal City on the Neman” past the sights. Self-guided, any day, no booking.'],
     ['pl', 'Grodno: bezpłatna gra miejska „The Royal City on the Neman” — trasa piesza po zabytkach. Przejdź samodzielnie'],
   ])('builds the %s detail lead from its own catalog', (locale, lead) => {

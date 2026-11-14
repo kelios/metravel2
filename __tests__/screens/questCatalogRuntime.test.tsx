@@ -68,6 +68,7 @@ function mountFresh<R>(useProbe: (engines: Engines) => R, failures = 0) {
         settle,
         attempts: () => attempts,
         rerender: () => React.act(() => root.render(React.createElement(Probe))),
+        act: (fn: () => void) => React.act(fn),
         sendAnalyticsEvent: analytics.sendAnalyticsEvent,
         unmount: () => React.act(() => root.unmount()),
     };
@@ -129,7 +130,7 @@ describe('порядок каталога (#3228)', () => {
 describe('поиск каталога (#3239)', () => {
     it('пока движок грузится — выдача в ожидании, а не «ничего не найдено»', async () => {
         const probe = mountFresh((engines) => engines.useQuestCatalogSearchResult(quests, {}, 'краков', true));
-        expect(probe.seen[0]).toEqual({ quests: [], approximate: false, pending: true });
+        expect(probe.seen[0]).toEqual({ quests: [], approximate: false, pending: true, failed: false, retry: expect.any(Function) });
 
         await probe.settle();
         expect(probe.last()?.pending).toBe(false);
@@ -155,13 +156,31 @@ describe('поиск каталога (#3239)', () => {
         await probe.settle(2000);
         await probe.settle(4000);
         expect(probe.attempts()).toBe(4);
-        expect(probe.last()?.pending).toBe(true);
+        expect(probe.last()).toMatchObject({ pending: false, failed: true, quests: [] });
 
         term = 'минск';
         probe.rerender();
         await probe.settle();
         expect(probe.attempts()).toBe(5);
         expect(ids(probe.last()?.quests)).toEqual(['minsk']);
+        probe.unmount();
+    });
+
+    // #3379 (д): чанк не пришёл и после повторов (404 после выката) — не вечная
+    // загрузка, а ошибка, которую снимает «Повторить» без смены запроса.
+    it('исчерпанный ряд повторов отдаёт failed, а retry() начинает новый', async () => {
+        const probe = mountFresh((engines) => engines.useQuestCatalogSearchResult(quests, {}, 'краков', true), 4);
+        await probe.settle(1000);
+        await probe.settle(2000);
+        await probe.settle(4000);
+        expect(probe.last()).toMatchObject({ pending: false, failed: true });
+
+        probe.act(() => probe.last()!.retry());
+        expect(probe.last()).toMatchObject({ pending: true, failed: false });
+        await probe.settle();
+        expect(probe.attempts()).toBe(5);
+        expect(probe.last()).toMatchObject({ pending: false, failed: false });
+        expect(ids(probe.last()?.quests)).toEqual(['krakow']);
         probe.unmount();
     });
 

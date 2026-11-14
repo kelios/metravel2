@@ -14,16 +14,24 @@ const PreferenceOptions = require('./LanguageOptionList.tsx').default as React.C
 
 // #3217: the hub's URL owns its language, so a choice made there leaves for the
 // catalogue of the chosen language; staying would keep the page suspended.
-const openChosenCatalog = (locale: SupportedLocale) => {
-  router.push(localizeQuestCatalogHref('/quests', locale) as Href)
+// #3367: the RU catalogue `/quests` is one of the same family of addresses, so a
+// choice there opens the chosen language's catalogue too (one behaviour).
+const isQuestCatalogPath = (pathname: string) =>
+  pathname.replace(/\/+$/, '') === '/quests' || Boolean(parseQuestLocaleHubRoute(pathname))
+
+const openChosenCatalog = (pathname: string) => (locale: SupportedLocale) => {
+  const target = String(localizeQuestCatalogHref('/quests', locale))
+  if (target !== pathname.replace(/\/+$/, '')) router.push(target as Href)
 }
 
 export default function LanguageOptionList(props: Props) {
   const navigation = useQuestVersionNavigation()
   const { setLocale } = useLocale()
-  const onHub = Boolean(parseQuestLocaleHubRoute(usePathname()))
+  const pathname = usePathname()
   if (!navigation?.bound) {
-    return onHub ? <PreferenceOptions {...props} onLocaleSelected={openChosenCatalog} /> : <PreferenceOptions {...props} />
+    return isQuestCatalogPath(pathname)
+      ? <PreferenceOptions {...props} onLocaleSelected={openChosenCatalog(pathname)} />
+      : <PreferenceOptions {...props} />
   }
   return (
     <QuestVersionLinks

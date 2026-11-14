@@ -40,6 +40,8 @@ jest.mock('@/utils/externalLinks', () => ({
 jest.mock('@/utils/downloadUrlOnWeb', () => ({ downloadUrlOnWeb: jest.fn().mockReturnValue(true) }))
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn().mockResolvedValue(undefined) }))
 jest.mock('@/utils/toast', () => ({ ...jest.requireActual('@/utils/toast'), showToast: jest.fn() }))
+let mockVersionNavigation: unknown = null
+jest.mock('@/hooks/useQuestVersionNavigation', () => ({ useQuestVersionNavigation: () => mockVersionNavigation }))
 jest.mock('@/utils/gamificationAnalytics', () => ({ trackQuestShareClick: jest.fn(), trackQuestInviteClick: jest.fn() }))
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
@@ -302,6 +304,23 @@ describe('QuestFinaleInviteAction (#3230)', () => {
   const originalPlatform = Platform.OS
   afterEach(() => {
     ;(Platform as { OS: string }).OS = originalPlatform
+    mockVersionNavigation = null
+  })
+
+  // #3379 (г): с языковой страницы, которую сервер отдаёт, — на ту же страницу.
+  it('invites to the served language page from that page', async () => {
+    ;(Platform as { OS: string }).OS = 'web'
+    mockVersionNavigation = { bound: true, locale: 'en', projection: {
+      schema_version: 1, release_id: 'r1', city_id: 4, quest_slug: 'minsk-cipher', locale: 'en', state: 'available',
+      canonical_path: '/en/quests/4/minsk-cipher', ru_source_path: '/quests/4/minsk-cipher',
+      versions: [{ locale: 'ru', path: '/quests/4/minsk-cipher' }, { locale: 'en', path: '/en/quests/4/minsk-cipher' }],
+    } }
+    const { getByTestId } = await renderCompletedFinale()
+
+    await fireEvent.press(getByTestId('quest-finale-invite'))
+
+    await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalledTimes(1))
+    expect(mockСlipboardSet.mock.calls[0][0]).toContain('https://metravel.by/en/quests/4/minsk-cipher?utm_source=share')
   })
 
   it('shares the quest page with an invite campaign through the system sheet', async () => {

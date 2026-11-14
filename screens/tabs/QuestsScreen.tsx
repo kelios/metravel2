@@ -48,7 +48,6 @@ import {
     filterBikeQuests,
     filterKidsQuests,
     filterNearbyQuests,
-    getQuestLocationQuality,
     filterQuestsByMapSearchArea,
     parseThemeSelectionId,
     toThemeSelectionId,
@@ -129,6 +128,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     const [userLoc, setUserLoc] = useState<QuestCatalogLocation | null>(null);
     const [geoRequesting, setGeoRequesting] = useState(false);
     const [geoMessage, setGeoMessage] = useState<string | null>(null);
+    // #3379 (е): тексты точности позиции приходят с чанком запроса позиции.
+    const [describeLocation, setDescribeLocation] = useState<((accuracyMeters: number | null | undefined) => string) | null>(null);
     const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const closeFilterDrawer = useCallback(() => setFilterDrawerOpen(false), []);
@@ -160,12 +161,10 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
     // Личные срезы «Пройденные»/«Не пройденные» (#1791) — один связный концерн
     // со своей авторизационной границей, поэтому он живёт отдельным хуком.
     const personalSlices = useQuestPersonalSlices(ALL_QUESTS);
-    const cityCatalog = useMemo(
-        () => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS),
-        [ALL_QUESTS],
-    );
+    const cityCatalog = useMemo(() => buildQuestCityCatalog<QuestMeta>(ALL_QUESTS), [ALL_QUESTS]);
     const searchResult = useQuestCatalogSearchResult(ALL_QUESTS, cityCatalog.canonicalCityIdById, searchTerm, dataLoaded);
     const searchApproximate = Boolean(searchResult?.approximate);
+    const catalogSettled = dataLoaded && !searchResult?.pending; // #3379: список и карта ждут движок поиска
     const CITIES = cityCatalog.cities;
     const cityQuests = cityCatalog.questsByCityId;
     const {
@@ -320,10 +319,11 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
             let failure: string | null = null;
             try {
                 // Оба чанка — параллельно: expo-location не ждёт загрузки модуля запроса.
-                const [{ requestQuestCatalogLocation }] = await Promise.all([
+                const [{ requestQuestCatalogLocation, describeQuestLocationQuality }] = await Promise.all([
                     import('./questCatalogLocation'),
                     loadExpoLocation(),
                 ]);
+                setDescribeLocation(() => describeQuestLocationQuality);
                 const result = await requestQuestCatalogLocation(() => cancelled);
                 if (!result || cancelled) return;
                 if ('coords' in result) {
@@ -446,7 +446,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
         appliedSearchTerm: searchTerm,
         resultsCount: questsAll.length,
         approximate: searchApproximate,
-        ready: dataLoaded && !questsError && !searchResult?.pending,
+        ready: catalogSettled && !questsError && !searchResult?.failed,
         focused: isFocused,
     });
 
@@ -552,7 +552,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
             colors={colors}
             screenWidth={width}
             screenHeight={height}
-            dataLoaded={dataLoaded}
+            dataLoaded={catalogSettled}
             quests={questsAll}
             cities={CITIES}
             selectedCityId={selectedCityId}
@@ -565,7 +565,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
             onUserLocationChange={handleMapUserLocationChange}
             onMapMove={handleMapMove}
         />
-    ) : null), [viewMode, s.mapLoading, colors, width, height, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, route, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
+    ) : null), [viewMode, s.mapLoading, colors, width, height, catalogSettled, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, route, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
 
     // Фильтр «сужает» каталог: выбран конкретный город, явный «Рядом» с радиусом
     // или область карты. В этих случаях показываем быстрый сброс к «Все квесты».
@@ -750,7 +750,8 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 noticeSlot={reviewPromptSlot}
                 styles={s}
                 colors={colors}
-                dataLoaded={dataLoaded && !searchResult?.pending}
+                dataLoaded={catalogSettled}
+                retrySearch={searchResult?.failed ? searchResult.retry : undefined}
                 viewMode={viewMode}
                 selectedCityId={selectedCityId}
                 selectedCityName={selectedCityName}
@@ -771,12 +772,7 @@ export default function QuestsScreen({ route = null, localeHub = null }: QuestsS
                 userLoc={userLoc}
                 isMapAreaActive={Boolean(activeMapAreaCenter)}
                 geoMessage={geoMessage ?? (selectedCityId === NEARBY_ID && userLoc && !geoRequesting && !searchTerm && !activeMapAreaCenter
-                    ? getQuestLocationQuality(userLoc.accuracyMeters) === 'precise'
-                        ? i18nT('quests:screens.tabs.QuestsScreen.locationPrecise')
-                        : getQuestLocationQuality(userLoc.accuracyMeters) === 'approximate'
-                            ? i18nT('quests:screens.tabs.QuestsScreen.locationApproximate')
-                            : i18nT('quests:screens.tabs.QuestsScreen.locationUnknown')
-                    : null)}
+                    ? describeLocation?.(userLoc.accuracyMeters) ?? null : null)}
                 geoRequesting={geoRequesting}
                 radiiLg={radii.lg}
                 isMobile={isMobile}

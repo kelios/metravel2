@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { router, usePathname, type Href } from 'expo-router'
+import { Link, router, usePathname, type Href } from 'expo-router'
 
 import { DialogMenu } from '@/ui/paper'
 import ThemeToggle from '@/components/layout/ThemeToggle'
@@ -15,6 +15,7 @@ import {
   createMenuStyles,
 } from './headerStyles'
 import NavigationIcon from './NavigationIcon'
+import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -161,29 +162,41 @@ function MessageMenuIcon({
   )
 }
 
+// #3367: на web пункт с внутренним адресом — настоящая `<a href>` (адрес в языке
+// интерфейса, `useLocalizedNavHref`), как ссылки шапки: открывается в новой
+// вкладке и виден в DOM. Обычный клик остаётся переходом меню (`onNavigate`).
 function MenuLink({
   item,
   styles,
   defaultIconColor,
   onNavigate,
+  href,
 }: {
   item: MenuLinkItem
   styles: MenuStyles
   defaultIconColor: string
   onNavigate: (path: string, external?: boolean) => void
+  href?: string
 }) {
-  const onPress =
+  const navigate =
     item.onPress ?? (item.path ? () => onNavigate(item.path!, item.external) : undefined)
-  return (
+  const anchored = Platform.OS === 'web' && href !== undefined
+  const onPress = anchored
+    ? (event?: LinkPressEvent) => {
+        if (event && !shouldHandleLinkClick(event)) return
+        event?.preventDefault()
+        navigate?.()
+      }
+    : navigate
+  const link = (
     <Pressable
       onPress={onPress}
       accessibilityRole={item.path ? 'link' : 'button'}
       accessibilityLabel={item.accessibilityLabel ?? item.title}
-      style={({ pressed }) => [
-        styles.menuItem,
-        wrapperStyles.menuLink,
-        pressed && wrapperStyles.menuLinkPressed,
-      ]}
+      // Slot ссылки сливает стиль спредом: ему — плоский объект, как в `LinkPressable`.
+      style={anchored
+        ? StyleSheet.flatten([styles.menuItem, wrapperStyles.menuLink])
+        : ({ pressed }) => [styles.menuItem, wrapperStyles.menuLink, pressed && wrapperStyles.menuLinkPressed]}
     >
       {item.leadingNode ?? (
           <NavigationIcon
@@ -197,6 +210,7 @@ function MenuLink({
       </Text>
     </Pressable>
   )
+  return anchored ? <Link href={href as Href} asChild>{link}</Link> : link
 }
 
 function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
@@ -348,6 +362,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           styles={menuStyles}
           defaultIconColor={defaultIconColor}
           onNavigate={navigate}
+          href={item.path && !item.external ? String(localizeHref(item.path as Href)) : undefined}
         />
       ))
 

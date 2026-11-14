@@ -1,5 +1,5 @@
 const path = require('node:path');
-const { assertDistinctCityLandingMeta, buildQuestWebProjection, publicPageText } = require('@/scripts/lib/questWebProjection');
+const { assertDistinctCityLandingMeta, assertPublicPageWithinBound, buildQuestWebProjection, MAX_PUBLIC_PAGE_BYTES, publicPageText } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
 const { scoreQuestPageLevel } = require('@/scripts/lib/questPageDepth');
 import { questPrivateSnapshot, questPublicLocales } from '../fixtures/questPublicProjection';
@@ -214,5 +214,27 @@ describe('immutable public quest projection', () => {
     const cities = [entry('/quests/a'), entry('/quests/b')];
     const inputs = new Map(cities.map((city) => [city, { cityName: 'Город', countryName: 'Беларусь', questTitles: ['Квест'] }]));
     expect(() => assertDistinctCityLandingMeta(cities, inputs)).toThrow('Quest city landing title is not unique: "Город, Беларусь: квесты-прогулки с заданиями | Metravel" at /quests/a, /quests/b');
+  });
+
+  // #3379 (в): бэкенд меряет UTF-8 компактного JSON страницы против MAX_PAGE_BYTES = 256 КБ.
+  it('stops a public page above the 256 KiB publication bound before upload, counting UTF-8 bytes', () => {
+    expect(MAX_PUBLIC_PAGE_BYTES).toBe(256 * 1024);
+    const sized = (bytes: number) => {
+      const page = { heading: 'Ж', lead: '' };
+      const base = Buffer.byteLength(JSON.stringify(page), 'utf8');
+      page.lead = 'я'.repeat(Math.floor((bytes - base) / 2)) + 'a'.repeat((bytes - base) % 2);
+      expect(Buffer.byteLength(JSON.stringify(page), 'utf8')).toBe(bytes);
+      return { locale: 'be', canonical_path: '/be/quests/7/big', page };
+    };
+    expect(() => assertPublicPageWithinBound(sized(MAX_PUBLIC_PAGE_BYTES))).not.toThrow();
+    expect(() => assertPublicPageWithinBound(sized(MAX_PUBLIC_PAGE_BYTES + 1)))
+      .toThrow(`Quest public page be:/be/quests/7/big is ${MAX_PUBLIC_PAGE_BYTES + 1} bytes, above the ${MAX_PUBLIC_PAGE_BYTES}-byte publication bound`);
+  });
+
+  it('rejects the whole projection when one emitted page outgrows the bound', () => {
+    const source = questPrivateSnapshot();
+    const bundle = source.bundles.ru['7/fixture-city-walk'];
+    bundle.intro.story = `${bundle.intro.story}\n\n${'Длинный абзац легенды о старом городе. '.repeat(4000)}`;
+    expect(() => buildQuestWebProjection(source, catalogs)).toThrow('above the 262144-byte publication bound');
   });
 });

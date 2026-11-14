@@ -5,7 +5,12 @@ import { router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock dependencies
+const mockLinkHrefs: string[] = [];
 jest.mock('expo-router', () => ({
+  Link: ({ href, children }: { href: string; children: unknown }) => {
+    mockLinkHrefs.push(href);
+    return children;
+  },
   router: {
     push: jest.fn(),
     setParams: jest.fn(),
@@ -406,7 +411,10 @@ describe('AccountMenu', () => {
     try {
       await i18n.changeLanguage(locale);
       const questsLabel = HEADER_NAV_ITEMS.find((item: { path: string }) => item.path === '/quests').label;
+      mockLinkHrefs.length = 0;
       const { getByText } = await renderWithClient(<AccountMenu />);
+      // #3367: на web пункт — `<a href>` на тот же адрес, что и переход.
+      expect(mockLinkHrefs.includes(expected)).toBe(os === 'web');
       await fireEvent.press(getByText(questsLabel));
       await waitFor(() => expect(router.push).toHaveBeenCalledWith(expected));
     } finally {
