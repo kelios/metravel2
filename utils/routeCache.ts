@@ -19,6 +19,12 @@ const RATE_LIMIT_WINDOW = 1000 * 60; // 1 minute
 const MAX_REQUESTS_PER_MINUTE = 30; // Conservative limit for free tier
 const MIN_REQUEST_INTERVAL = 500; // Minimum 500ms between requests
 
+/**
+ * Waits up to this long are a coalescing pause between quick edits, not a quota
+ * problem: callers defer the request silently instead of reporting `rate_limit`.
+ */
+export const ROUTE_MIN_REQUEST_INTERVAL_MS = MIN_REQUEST_INTERVAL;
+
 class RouteCache {
   private cache: Map<string, CacheEntry> = new Map();
   private cachedCoordinates = 0;
@@ -95,6 +101,15 @@ class RouteCache {
       ) break;
       this.evict(oldestKey, entry);
     }
+  }
+
+  /**
+   * The limiter is process-global, so under Jest it is bypassed by default and
+   * unrelated suites do not throttle each other. Limiter regressions opt in by
+   * spying this method to `true`.
+   */
+  isRequestLimiterActive(): boolean {
+    return typeof process === 'undefined' || process.env?.NODE_ENV !== 'test';
   }
 
   canMakeRequest(): boolean {

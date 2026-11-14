@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { routeCache } from '@/utils/routeCache'
+import { routeCache, ROUTE_MIN_REQUEST_INTERVAL_MS } from '@/utils/routeCache'
 import { orsDirections } from '@/api/external/ors'
 import { osrmRoute } from '@/api/external/osrm'
 import { fetchValhallaRouteGeometry, type ValhallaRoutingResult } from '@/api/external/valhallaRouting'
@@ -86,7 +86,6 @@ export const useRouting = (
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
     const isProcessingRef = useRef(false)
-    const rateLimitKeyRef = useRef<string | null>(null)
     const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const activeRequestIdRef = useRef(0)
     // ✅ ИСПРАВЛЕНИЕ: Храним routePoints в ref чтобы избежать бесконечных ререндеров
@@ -463,28 +462,6 @@ export const useRouting = (
         const abortController = new AbortController()
         abortRef.current = abortController
 
-        // Rate limiting (avoid spamming free endpoints)
-        if (!isTestEnv && !routeCache.canMakeRequest()) {
-            const waitTime = routeCache.getTimeUntilNextRequest()
-            const generationKey = `${routeKey}:${rebuildRevision}`
-            if (rateLimitKeyRef.current !== generationKey) {
-                rateLimitKeyRef.current = generationKey
-                const directDistance = calculateDirectDistance(currentPoints)
-                setState((prev) => ({
-                    ...prev,
-                    loading: false,
-                    error: i18nT('map:components.MapPage.useRouting.slishkom_mnogo_zaprosov_podozhdite_value1_s_ef8e6bb3', { value1: Math.ceil(waitTime / 1000) }),
-                    errorCode: 'rate_limit',
-                    distance: cached?.distance ?? directDistance,
-                    duration: cached?.duration || estimateDurationSeconds(directDistance, transportMode),
-                    coords: cached?.coords ?? currentPoints,
-                    routeKey, rebuildRevision, isOptimal: !!cached,
-                }))
-            }
-            return
-        }
-
-        // schedule route build
         if (rateLimitTimerRef.current) {
             clearTimeout(rateLimitTimerRef.current)
             rateLimitTimerRef.current = null
@@ -637,8 +614,47 @@ export const useRouting = (
             }
         }
 
-        // Slight debounce to coalesce quick successive changes (clicks, swap, etc.)
-        rateLimitTimerRef.current = setTimeout(fetchRoute, isTestEnv ? 0 : ROUTE_DEBOUNCE_MS)
+        // The client limiter (MIN_REQUEST_INTERVAL + minute quota) defers the
+        // build, it never ends it (#2481): the effect deps do not change while
+        // waiting, so a dropped request left a terminal straight line until the
+        // user moved a point. Short waits are a silent coalescing pause like the
+        // debounce; only a quota wait is shown as `rate_limit` (degraded,
+        // isOptimal=false, never cached) until the scheduled retry. One timer at
+        // a time in rateLimitTimerRef; cleanup/unmount clear it and abort.
+        const debounceMs = isTestEnv ? 0 : ROUTE_DEBOUNCE_MS
+        const limiterActive = routeCache.isRequestLimiterActive()
+        const deferUntilAllowed = () => {
+            const waitTime = routeCache.getTimeUntilNextRequest()
+            if (waitTime > ROUTE_MIN_REQUEST_INTERVAL_MS) {
+                const directDistance = calculateDirectDistance(currentPoints)
+                setState({
+                    loading: false,
+                    error: i18nT('map:components.MapPage.useRouting.slishkom_mnogo_zaprosov_podozhdite_value1_s_ef8e6bb3', { value1: Math.ceil(waitTime / 1000) }),
+                    errorCode: 'rate_limit',
+                    distance: cached?.distance ?? directDistance,
+                    duration: cached?.duration || estimateDurationSeconds(directDistance, transportMode),
+                    coords: cached?.coords ?? currentPoints,
+                    routeKey, rebuildRevision, isOptimal: !!cached,
+                })
+            }
+            rateLimitTimerRef.current = setTimeout(runWhenAllowed, Math.max(debounceMs, waitTime, 1))
+        }
+        const runWhenAllowed = () => {
+            rateLimitTimerRef.current = null
+            if (abortController.signal.aborted) return
+            if (limiterActive && !routeCache.canMakeRequest()) {
+                deferUntilAllowed()
+                return
+            }
+            void fetchRoute()
+        }
+
+        if (limiterActive && !routeCache.canMakeRequest()) {
+            deferUntilAllowed()
+        } else {
+            // Slight debounce to coalesce quick successive changes (clicks, swap, etc.)
+            rateLimitTimerRef.current = setTimeout(runWhenAllowed, debounceMs)
+        }
 
         return () => {
             if (rateLimitTimerRef.current) {
