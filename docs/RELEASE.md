@@ -48,7 +48,7 @@ It runs:
 - `npm run lint`
 - `npm run typecheck`
 - `./verify-security-fixes.sh`
-- `npm run audit:high`
+- `npm run audit:high` — падает на high/critical и на записи low/moderate, которой нет в `scripts/yarn-audit-accepted.json` (исключение с причиной и датой пересмотра `reviewBy`; просроченная дата тоже роняет проверку)
 - `npm run test:run`
 - `npm run e2e`
 - `npm run build:web:prod`

@@ -1,0 +1,32 @@
+{
+  "accepted": [
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "module": "glob",
+      "severity": "moderate",
+      "reviewBy": "2027-02-14",
+      "reason": "Исправление только в glob 14.0.2. Версии 9/10/13 тянут jest, jest-expo, expo и babel-plugin-module-resolver, рядом живут потребители glob@^7 с другим API, поэтому общий resolutions в yarn 1 невозможен. Пакет работает только при сборке и тестах на наших шаблонах путей, AbortSignal в него не передаётся."
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "module": "minimatch",
+      "severity": "moderate",
+      "reviewBy": "2027-02-14",
+      "reason": "Исправление только в minimatch 11.0.1. Версии 8/9/10 тянут eslint, typescript-eslint, jest и glob; шаблоны задаём мы сами в конфигах сборки и тестов, пользовательский ввод в minimatch не попадает."
+    },
+    {
+      "id": "GHSA-gcqx-w48m-w2h4",
+      "module": "deepmerge",
+      "severity": "low",
+      "reviewBy": "2027-02-14",
+      "reason": "Исправленной версии нет. Пакет приходит только через jest и выполняется в тестах на наших конфигах, в бандл приложения не входит."
+    },
+    {
+      "id": "GHSA-v3m3-f69x-jf25",
+      "module": "quill",
+      "severity": "low",
+      "reviewBy": "2027-02-14",
+      "reason": "Исправленной версии нет. Уязвим только getSemanticHTML(); редактор статей читает quill.root.innerHTML, а вызов getSemanticHTML запрещён правилом quill-html-export в scripts/guard-rich-text-sinks.js."
+    }
+  ]
+}

@@ -34,6 +34,12 @@ const path = require('path')
 // же файле через `serializeForInlineScript`: лексер не видит, чем сериализовал
 // вызывающий. Правило 2 видит и группу имён `(?:id|name)=`.
 
+//
+// #3407: правило 5 (выгрузка HTML из Quill). `getSemanticHTML()` в Quill 2.0.3 отдаёт
+// HTML без экранирования (GHSA-v3m3-f69x-jf25), исправленной версии нет. Редактор
+// читает `quill.root.innerHTML`, который дальше идёт через санитайзер. Имя ищется и в
+// тексте шаблонов: скрипт редактора для WebView собирается строкой.
+
 const OUTPUT_CONTRACT_VERSION = 1
 
 const SINK_SCAN_ROOTS = ['components/', 'app/', 'utils/', 'hooks/']
@@ -59,6 +65,13 @@ const DOM_SINK_ALLOWLIST = new Map([
   [
     'utils/printHtml.web.ts',
     'Тот же печатный документ, что в openBookPreviewWindow, — печать в текущей вкладке; rich-text внутри уже прошёл toInertHtml.',
+  ],
+])
+const QUILL_HTML_EXPORT_RE = /\bgetSemanticHTML\b/g
+const QUILL_HTML_EXPORT_ALLOWLIST = new Map([
+  [
+    'utils/quillInlineAsset.ts',
+    'Вендоренная сборка Quill строкой: здесь метод объявлен, а не вызывается нашим кодом.',
   ],
 ])
 const INLINE_SCRIPT_SIGNAL = /ReactNativeWebView|<!DOCTYPE html|\bbuildLeafletWebViewHtml\s*\(/i
@@ -435,6 +448,28 @@ const findAttributeRewriteViolations = ({ filePath, content }) => {
     }))
 }
 
+const findQuillHtmlExportViolations = ({ filePath, content }) => {
+  const normalizedPath = normalizePath(filePath)
+  if (!SINK_SCAN_ROOTS.some((root) => normalizedPath.startsWith(root))) return []
+  if (QUILL_HTML_EXPORT_ALLOWLIST.has(normalizedPath)) return []
+  const { code } = lexSource(content)
+  const sourceLines = String(content).split('\n')
+  const violations = []
+  let match
+  QUILL_HTML_EXPORT_RE.lastIndex = 0
+  while ((match = QUILL_HTML_EXPORT_RE.exec(code))) {
+    const line = lineOf(code, match.index)
+    violations.push({
+      file: normalizedPath,
+      line,
+      rule: 'quill-html-export',
+      snippet: sourceLines[line - 1].trim(),
+      reason: 'getSemanticHTML(): XSS в Quill 2.0.3 (GHSA-v3m3-f69x-jf25) без исправленной версии — HTML редактора брать из quill.root.innerHTML',
+    })
+  }
+  return violations
+}
+
 const evaluateGuard = ({ sources = [] } = {}) => {
   const violations = []
   for (const source of sources) {
@@ -443,15 +478,16 @@ const evaluateGuard = ({ sources = [] } = {}) => {
       ...findDomSinkViolations(source),
       ...findInlineScriptViolations(source),
       ...findAttributeRewriteViolations(source),
+      ...findQuillHtmlExportViolations(source),
     )
   }
   return violations.length === 0
     ? {
       ok: true,
-      reason: 'HTML sinks go through inertMarkup()/toInertHtml(); inline-script data via serializeForInlineScript(); no attribute regexes in tag rewriters',
+      reason: 'HTML sinks go through inertMarkup()/toInertHtml(); inline-script data via serializeForInlineScript(); no attribute regexes in tag rewriters; no Quill getSemanticHTML()',
       violations,
     }
-    : { ok: false, reason: 'HTML sink, inline-script or attribute-regex violations found', violations }
+    : { ok: false, reason: 'HTML sink, inline-script, attribute-regex or Quill HTML-export violations found', violations }
 }
 
 const shouldScanFile = (relativePath) => {
@@ -519,6 +555,7 @@ module.exports = {
   SINK_SCAN_ROOTS,
   SINK_ALLOWLIST,
   DOM_SINK_ALLOWLIST,
+  QUILL_HTML_EXPORT_ALLOWLIST,
   ATTRIBUTE_REWRITE_FILES,
   ATTRIBUTE_ASSIGNMENT_IN_REGEX,
   INLINE_SCRIPT_FILES,
@@ -529,6 +566,7 @@ module.exports = {
   findDomSinkViolations,
   findInlineScriptViolations,
   findAttributeRewriteViolations,
+  findQuillHtmlExportViolations,
   evaluateGuard,
   buildJsonResult,
 }

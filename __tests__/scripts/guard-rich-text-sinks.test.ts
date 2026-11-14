@@ -1,6 +1,7 @@
 const {
   SINK_ALLOWLIST,
   DOM_SINK_ALLOWLIST,
+  QUILL_HTML_EXPORT_ALLOWLIST,
   ATTRIBUTE_REWRITE_FILES,
   INLINE_SCRIPT_FILES,
   parseArgs,
@@ -10,6 +11,7 @@ const {
   findDomSinkViolations,
   findInlineScriptViolations,
   findAttributeRewriteViolations,
+  findQuillHtmlExportViolations,
   evaluateGuard,
   buildJsonResult,
   OUTPUT_CONTRACT_VERSION,
@@ -167,6 +169,47 @@ describe('guard-rich-text-sinks', () => {
     ].join('\n')
     expect(findAttributeRewriteViolations({ filePath: 'utils/richTextImageLayout.ts', content })).toEqual([])
     expect(findAttributeRewriteViolations({ filePath: 'utils/other.ts', content: 'x.match(/\\bsrc="/)' })).toEqual([])
+  })
+
+  describe('#3407: выгрузка HTML из Quill', () => {
+    it('flags getSemanticHTML in code and inside WebView template text', () => {
+      const direct = findQuillHtmlExportViolations({
+        filePath: 'components/article/ArticleEditor.web.tsx',
+        content: 'const a = 1\nconst html = quill.getSemanticHTML()\n',
+      })
+      expect(direct).toEqual([
+        expect.objectContaining({ line: 2, rule: 'quill-html-export', snippet: 'const html = quill.getSemanticHTML()' }),
+      ])
+      const template = findQuillHtmlExportViolations({
+        filePath: 'components/article/articleEditorNativeHtml.ts',
+        content: 'export const html = `<script>\nvar html = quill.getSemanticHTML(0, 5);\n</script>`\n',
+      })
+      expect(template.map((v: { line: number }) => v.line)).toEqual([2])
+      expect(findQuillHtmlExportViolations({
+        filePath: 'hooks/useEditorExport.ts',
+        content: "const html = quill['getSemanticHTML']()",
+      })).toHaveLength(1)
+    })
+
+    it('accepts root.innerHTML, comments and files outside the scan roots', () => {
+      expect(findQuillHtmlExportViolations({
+        filePath: 'components/article/articleEditorQuillHelpers.ts',
+        content: '// getSemanticHTML is unsafe in Quill 2.0.3\nfireChange(editor.root.innerHTML)\n',
+      })).toEqual([])
+      expect(findQuillHtmlExportViolations({
+        filePath: 'scripts/tool.js',
+        content: 'quill.getSemanticHTML()',
+      })).toEqual([])
+    })
+
+    it('allowlists only the vendored Quill bundle and fails the guard otherwise', () => {
+      expect(Array.from(QUILL_HTML_EXPORT_ALLOWLIST.keys())).toEqual(['utils/quillInlineAsset.ts'])
+      const source = { filePath: 'utils/quillInlineAsset.ts', content: 'export const QUILL_JS = "getSemanticHTML(){}"' }
+      expect(evaluateGuard({ sources: [source] }).ok).toBe(true)
+      const result = evaluateGuard({ sources: [{ ...source, filePath: 'utils/editorExport.ts' }] })
+      expect(result.ok).toBe(false)
+      expect(result.violations[0].rule).toBe('quill-html-export')
+    })
   })
 
   it('lexer keeps line numbers and strips comments', () => {

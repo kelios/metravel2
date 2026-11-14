@@ -3,6 +3,8 @@ import path from 'node:path'
 
 const {
   evaluateAuditResult,
+  loadAcceptedAdvisories,
+  parseAcceptedAdvisories,
   runAudit,
 } = require('../../scripts/yarn-audit-high')
 
@@ -126,6 +128,124 @@ describe('yarn audit high wrapper', () => {
     expect(outcome.exitCode).toBe(1)
     expect(outcome.stdout).toBe('')
     expect(outcome.stderr).toContain('high/critical: 1')
+  })
+
+  describe('#3407: low/moderate advisories need triage', () => {
+    const moderateAudit = (advisories: Array<{ id?: string; module: string; severity: string }>) => {
+      const counts = { info: 0, low: 0, moderate: 0, high: 0, critical: 0 } as Record<string, number>
+      for (const item of advisories) counts[item.severity] += 1
+      const records = [
+        ...advisories.map((item) => ({
+          type: 'auditAdvisory',
+          data: { advisory: { module_name: item.module, severity: item.severity, github_advisory_id: item.id } },
+        })),
+        // Yarn печатает запись на каждый путь: дубль не должен считаться второй уязвимостью.
+        ...advisories.slice(0, 1).map((item) => ({
+          type: 'auditAdvisory',
+          data: { advisory: { module_name: item.module, severity: item.severity, github_advisory_id: item.id } },
+        })),
+        { type: 'auditSummary', data: { vulnerabilities: { ...counts, [advisories[0].severity]: counts[advisories[0].severity] + 1 }, totalDependencies: 505 } },
+      ]
+      const status = (counts.low > 0 ? 2 : 0) + (counts.moderate > 0 ? 4 : 0)
+      return { status, stdout: records.map((record) => JSON.stringify(record)).join('\n'), stderr: '' }
+    }
+    const accepted = (entries: Array<{ id: string; module: string; reviewBy: string }>) => parseAcceptedAdvisories(JSON.stringify({
+      accepted: entries.map((entry) => ({ ...entry, reason: 'Только инструменты сборки, пользовательский ввод не попадает.' })),
+    }))
+    const glob = { id: 'GHSA-3g3m-2fjr-6pw4', module: 'glob', severity: 'moderate' }
+    const quill = { id: 'GHSA-v3m3-f69x-jf25', module: 'quill', severity: 'low' }
+
+    it('fails on an advisory that is not in the accepted list', () => {
+      const outcome = evaluateAuditResult(moderateAudit([glob, quill]), {
+        accepted: accepted([{ id: glob.id, module: 'glob', reviewBy: '2027-02-14' }]),
+        today: '2026-11-14',
+      })
+
+      expect(outcome.exitCode).toBe(1)
+      expect(outcome.stdout).toBe('')
+      expect(outcome.stderr).toContain('untriaged low/moderate advisories')
+      expect(outcome.stderr).toContain('GHSA-V3M3-F69X-JF25 quill (low)')
+      expect(outcome.stderr).not.toContain('glob')
+    })
+
+    it('passes when every reported advisory is accepted, ids compared case-insensitively', () => {
+      const outcome = evaluateAuditResult(moderateAudit([glob, quill]), {
+        accepted: accepted([
+          { id: glob.id.toLowerCase(), module: 'glob', reviewBy: '2027-02-14' },
+          { id: quill.id, module: 'quill', reviewBy: '2026-11-14' },
+        ]),
+        today: '2026-11-14',
+      })
+
+      expect(outcome).toMatchObject({ exitCode: 0, stderr: '' })
+      expect(outcome.stdout).toContain('accepted low/moderate advisories: 2')
+      expect(outcome.stdout).not.toContain('no longer reported')
+    })
+
+    it('does not let an accepted id cover another module', () => {
+      const outcome = evaluateAuditResult(moderateAudit([{ ...glob, module: 'minimatch' }]), {
+        accepted: accepted([{ id: glob.id, module: 'glob', reviewBy: '2027-02-14' }]),
+        today: '2026-11-14',
+      })
+
+      expect(outcome.exitCode).toBe(1)
+      expect(outcome.stderr).toContain('minimatch (moderate)')
+    })
+
+    it('fails when an accepted advisory is past its review date', () => {
+      const outcome = evaluateAuditResult(moderateAudit([glob]), {
+        accepted: accepted([{ id: glob.id, module: 'glob', reviewBy: '2026-11-13' }]),
+        today: '2026-11-14',
+      })
+
+      expect(outcome.exitCode).toBe(1)
+      expect(outcome.stderr).toContain('past their review date')
+      expect(outcome.stderr).toContain('review by 2026-11-13')
+    })
+
+    it('reports accepted entries that are no longer in the audit without failing', () => {
+      const outcome = evaluateAuditResult(moderateAudit([glob]), {
+        accepted: accepted([
+          { id: glob.id, module: 'glob', reviewBy: '2027-02-14' },
+          { id: quill.id, module: 'quill', reviewBy: '2020-01-01' },
+        ]),
+        today: '2026-11-14',
+      })
+
+      expect(outcome.exitCode).toBe(0)
+      expect(outcome.stdout).toContain('no longer reported, remove them')
+      expect(outcome.stdout).toContain('GHSA-V3M3-F69X-JF25 quill')
+    })
+
+    it('fails closed on an advisory without an identifier and on a broken accepted file', () => {
+      const anonymous = evaluateAuditResult(moderateAudit([{ module: 'glob', severity: 'moderate' }]), {
+        accepted: accepted([]),
+        today: '2026-11-14',
+      })
+      expect(anonymous.stderr).toContain('FAILED CLOSED (audit advisory without an identifier)')
+
+      const broken = evaluateAuditResult(moderateAudit([glob]), {
+        accepted: parseAcceptedAdvisories('{"accepted":[{"id":"GHSA-3g3m-2fjr-6pw4","module":"glob","reviewBy":"soon","reason":"x"}]}'),
+        today: '2026-11-14',
+      })
+      expect(broken.exitCode).toBe(1)
+      expect(broken.stderr).toContain('FAILED CLOSED (accepted advisory #1 needs id, module, reviewBy')
+      expect(accepted([{ id: glob.id, module: 'glob', reviewBy: '2027-02-30' }]).error).toContain('needs id, module, reviewBy')
+      expect(parseAcceptedAdvisories('not json').error).toContain('not valid JSON')
+      expect(parseAcceptedAdvisories('{}').error).toContain('no "accepted" array')
+      expect(accepted([
+        { id: glob.id, module: 'glob', reviewBy: '2027-02-14' },
+        { id: glob.id, module: 'glob', reviewBy: '2027-02-14' },
+      ]).error).toContain('listed twice')
+    })
+
+    it('keeps the committed accepted list valid and unexpired entries dated', () => {
+      const committed = loadAcceptedAdvisories()
+
+      expect(committed.error).toBeUndefined()
+      expect(committed.entries.size).toBeGreaterThan(0)
+      expect(loadAcceptedAdvisories('/nonexistent/yarn-audit-accepted.json').error).toContain('missing or unreadable')
+    })
   })
 
   it('rejects a child status that does not match the trustworthy summary bitmask', () => {
