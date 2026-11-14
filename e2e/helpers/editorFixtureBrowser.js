@@ -23,14 +23,29 @@ const selectors = {
   edit: 'components.listTravel.TravelListItem.redaktirovat_2e33442a',
   myTravels: 'components.layout.AccountMenu.moi_puteshestviya_a530e844',
   travels: 'components.layout.AccountMenu.puteshestviya_28956c1f',
+  menu: 'components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3',
 }
 function traceConfig(reg) {
   return { origin: reg.origin, travelIds: reg.fixtures.map(fixture => fixture.id), slugs: reg.fixtures.map(fixture => fixture.slug).filter(Boolean),
     userIds: Object.values(reg.accounts).map(account => account.id) }
 }
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]'])
 function observeReadOnly(context, reg, expected404 = []) {
   const safe = createPathSanitizer(traceConfig(reg))
   const data = { writes: [], errors: [], failedRequests: [], badResponses: [] }
+  // A local stack is a copy of production rows whose old media stays in S3, so
+  // their images fail locally (AGENTS.md, local stack contract): 404, or 503 when
+  // the backend's lookup of the absent file times out under machine load. That
+  // is a limitation of the copy: reported in `localCopyMissingMedia`, not an app
+  // error. Only images qualify; a production origin keeps every status strict.
+  const localCopy = LOOPBACK_HOSTS.has(new URL(reg.origin).hostname)
+  const localCopyMissingMedia = new Set()
+  const pending404Console = []
+  const abortedReads = []
+  const pendingAborts = []
+  const requestPageUrl = new WeakMap()
+  const frameNavigations = []
+  const DEPARTURE_WINDOW_MS = 1000
   const watched = new Map()
   const pending = new Set()
   let lastActivity = Date.now()
@@ -49,14 +64,22 @@ function observeReadOnly(context, reg, expected404 = []) {
         const source = new URL(location.url)
         expectedResource = source.origin === reg.origin && expected404.includes(source.pathname)
       } catch { /* An absent/invalid location cannot establish an expected denial. */ }
-      if (/^Failed to load resource: the server responded with a status of 404\b/.test(message.text()) && expectedResource) return
-      activity(); data.errors.push({ kind: 'console', message: safeText(message.text()), location: safe(location.url).path })
+      const resource404 = /^Failed to load resource: the server responded with a status of 404\b/.test(message.text())
+      const resourceMissing = /^Failed to load resource: the server responded with a status of (?:404|503)\b/.test(message.text())
+      if (resource404 && expectedResource) return
+      const entry = { kind: 'console', message: safeText(message.text()), location: safe(location.url).path }
+      activity()
+      // Matched against image 404 responses in assertClean (event order is not guaranteed).
+      if (resourceMissing && localCopy) pending404Console.push({ entry, url: location.url })
+      else data.errors.push(entry)
     }
-    page.on('pageerror', onError); page.on('console', onConsole)
-    watched.set(page, { onError, onConsole })
+    const onNavigated = frame => { if (frame === page.mainFrame()) frameNavigations.push({ page, url: frame.url(), at: Date.now() }) }
+    page.on('pageerror', onError); page.on('console', onConsole); page.on('framenavigated', onNavigated)
+    watched.set(page, { onError, onConsole, onNavigated })
   }
   context.pages().forEach(watchPage); context.on('page', watchPage)
   const onRequest = request => {
+    try { requestPageUrl.set(request, request.frame().url()) } catch { /* A service-worker request has no frame. */ }
     const url = new URL(request.url())
     if (url.origin !== reg.origin) return
     if (url.pathname.startsWith('/api/')) { pending.add(request); activity() }
@@ -66,14 +89,39 @@ function observeReadOnly(context, reg, expected404 = []) {
   }
   const onResponse = response => {
     const url = new URL(response.url())
+    if (localCopy && url.origin === reg.origin && [404, 503].includes(response.status()) && response.request().resourceType() === 'image') {
+      localCopyMissingMedia.add(url.href)
+      return
+    }
     if (url.origin === reg.origin && response.status() >= 400 && !(response.status() === 404 && expected404.includes(url.pathname))) {
       data.badResponses.push({ status: response.status(), path: safe(response.url()).path })
     }
   }
   const onFinished = request => { if (pending.delete(request)) activity() }
-  const onFailed = request => { pending.delete(request); activity(); data.failedRequests.push({ path: safe(request.url()).path, error: safeText(request.failure()?.errorText || '') }) }
+  const onFailed = request => {
+    pending.delete(request); activity()
+    const error = request.failure()?.errorText || ''
+    // A same-origin read the app cancels because the user left its screen (e.g. the
+    // home «route of the month» on a quick in-app navigation) is a client
+    // cancellation, not a failure. The screen unmounts just before history.pushState,
+    // so a departure is the same page navigating away from the request's URL within
+    // DEPARTURE_WINDOW_MS of the abort; decided in assertClean once events settle.
+    // A read aborted on a screen that stays, aborted writes and other errors stay strict.
+    const failure = { path: safe(request.url()).path, error: safeText(error) }
+    let page = null
+    try { page = request.frame().page() } catch { /* No frame: cannot prove a departure. */ }
+    if (error === 'net::ERR_ABORTED' && ['GET', 'HEAD'].includes(request.method()) && page &&
+        new URL(request.url()).origin === reg.origin && requestPageUrl.has(request)) {
+      pendingAborts.push({ failure, page, startedOn: requestPageUrl.get(request), at: Date.now() })
+      return
+    }
+    data.failedRequests.push(failure)
+  }
   context.on('request', onRequest); context.on('response', onResponse); context.on('requestfailed', onFailed); context.on('requestfinished', onFinished)
   return { data,
+    // Tolerated, not hidden: the raw trace keeps both lists beside `data`.
+    tolerated: () => ({ localCopyMissingMedia: [...localCopyMissingMedia].map(href => safe(href).path), abortedReads: [...abortedReads],
+      unclassifiedAborts: pendingAborts.map(abort => abort.failure.path) }),
     async settle() {
       const deadline = Date.now() + 5000
       while (Date.now() < deadline) {
@@ -82,10 +130,19 @@ function observeReadOnly(context, reg, expected404 = []) {
       }
       throw new Error('Observed read-only request/error lifecycle did not become quiet within5s')
     },
-    assertClean() { for (const [kind, entries] of Object.entries(data)) expect(entries, `read-only ${kind}`).toEqual([]) },
+    assertClean() {
+      for (const { entry, url } of pending404Console.splice(0)) if (!localCopyMissingMedia.has(url)) data.errors.push(entry)
+      for (const abort of pendingAborts.splice(0)) {
+        const departed = frameNavigations.some(nav => nav.page === abort.page && nav.url !== abort.startedOn &&
+          Math.abs(nav.at - abort.at) <= DEPARTURE_WINDOW_MS)
+        if (departed) abortedReads.push(abort.failure.path)
+        else data.failedRequests.push(abort.failure)
+      }
+      for (const [kind, entries] of Object.entries(data)) expect(entries, `read-only ${kind}`).toEqual([])
+    },
     stop() {
       context.off('page', watchPage); context.off('request', onRequest); context.off('response', onResponse); context.off('requestfailed', onFailed); context.off('requestfinished', onFinished)
-      for (const [page, handlers] of watched) { page.off('pageerror', handlers.onError); page.off('console', handlers.onConsole) }
+      for (const [page, handlers] of watched) { page.off('pageerror', handlers.onError); page.off('console', handlers.onConsole); page.off('framenavigated', handlers.onNavigated) }
     },
   }
 }
@@ -114,12 +171,18 @@ async function wizard(page, fixture) {
 }
 async function ownListRow(page, fixture) {
   await expect(page).toHaveURL(url => url.pathname === '/metravel')
-  const card = page.getByTestId(`travel-card-${fixture.slug || fixture.id}`)
+  // The web list also keeps hidden layout copies of each card (zero-size,
+  // display:none); the user sees exactly one, so count only the visible card.
+  const card = page.getByTestId(`travel-card-${fixture.slug || fixture.id}`).filter({ visible: true })
   await expect(card).toHaveCount(1)
   await expect(card.getByText(fixture.name, { exact: true })).toBeVisible()
   return card
 }
-async function actualEdit(page, fixture, reg) {
+// `reusesMountedEditor`: web keeps the visited editor tab mounted and a return to
+// the same address keeps the typed form (UpsertTravelRoute.tsx), so a repeat Edit
+// of the same article must not refetch it. `ownDetail` then snapshots the server
+// state the navigation must leave unchanged.
+async function actualEdit(page, fixture, reg, { reusesMountedEditor = false, ownDetail, settle } = {}) {
   const card = await ownListRow(page, fixture)
   const mobile = page.viewportSize().width === 390
   const unit = card.locator(mobile
@@ -128,7 +191,25 @@ async function actualEdit(page, fixture, reg) {
   await expect(unit).toHaveCount(1)
   const control = unit.getByTestId('admin-actions').getByRole('button', { name: label(selectors.edit), exact: true })
   await expect(control).toHaveCount(1); await expect(control).toBeVisible()
-  const responsePromise = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/travels/${fixture.id}/`)
+  const isDetailGet = request => request.method() === 'GET' && new URL(request.url()).pathname === `/api/travels/${fixture.id}/`
+  if (reusesMountedEditor) {
+    const detailGets = []
+    const onRequest = request => { if (isDetailGet(request)) detailGets.push(request) }
+    page.on('request', onRequest)
+    try {
+      await control.click()
+      await wizard(page, fixture)
+      await expect(page.locator('[data-testid="travel-upsert.root"]:visible').locator('#field-name').getByRole('textbox')).toHaveValue(fixture.name)
+      // Keep listening until the page's API traffic is quiet: a late background
+      // refetch of the mounted form must still count as a refetch.
+      if (settle) await settle()
+    } finally { page.off('request', onRequest) }
+    expect(detailGets, 'repeat Edit reuses the mounted editor without refetching').toEqual([])
+    const dto = await ownDetail()
+    expect(ownsTravel(dto, fixture, reg), 'actual Edit exact owned object').toBe(true)
+    return snapshot(dto)
+  }
+  const responsePromise = page.waitForResponse(response => isDetailGet(response.request()))
   const [response] = await Promise.all([responsePromise, control.click()])
   expect(response.status(), 'actual Edit detail GET').toBe(200)
   const dto = await response.json()
@@ -166,7 +247,9 @@ async function accountDestination(page, destination) {
     if (destination === 'profile') {
       await page.getByTestId('footer-item-favorites').click()
     } else {
-      await page.getByTestId('mobile-menu-open').click()
+      // Every visited tab keeps its own header mounted (#2910); only the focused
+      // screen's copy is in the accessibility tree, so select it by role.
+      await page.getByRole('button', { name: label(selectors.menu), exact: true }).click()
       const sheet = page.getByTestId('footer-more-sheet')
       await expect(sheet).toBeVisible()
       await page.getByTestId('footer-more-item-my-travels').click()
@@ -221,7 +304,11 @@ async function runEditorHistory({ context, page, batch, width, temperature, edit
     }
     const list = await trace.readHistory()
     if (depth === 'nonzero') expect(list.currentIndex, 'genuine prior in-app entries before Edit').toBeGreaterThan(1)
-    const before = await actualEdit(page, fixture, reg)
+    const before = await actualEdit(page, fixture, reg, {
+      reusesMountedEditor: temperature === 'warm',
+      ownDetail: () => batch.ownDetail(context.request, fixture),
+      settle: () => observation.settle(),
+    })
     if (editorState === 'step6') await exerciseReason(page, fixture)
     else {
       await expect(page.getByTestId('info-sheet-body')).toHaveCount(0)
@@ -259,7 +346,7 @@ async function runEditorHistory({ context, page, batch, width, temperature, edit
       }
       let scripts = []
       try { scripts = await trace.sources(write) } catch (error) { collectionFailure ||= error }
-      await emit({ phase: 'history-raw-trace', width, temperature, editorState, depth, entries: trace.entries, scripts, observations: observation.data,
+      await emit({ phase: 'history-raw-trace', width, temperature, editorState, depth, entries: trace.entries, scripts, observations: observation.data, tolerated: observation.tolerated(),
         failed: Boolean(failure), collectionFailed: Boolean(collectionFailure) })
       if (!page.isClosed()) {
         try { await page.screenshot({ path: path.join(batch.directory, `history-${width}-${temperature}-${editorState}-${depth}.png`), fullPage: false }) } catch (error) { collectionFailure ||= error }
@@ -302,7 +389,7 @@ async function runEditorDocument({ context, page, batch, role, width, temperatur
     await observation.settle(); observation.assertClean()
     await expect(page).toHaveURL(`${batch.reg.origin}${target}`)
     await page.screenshot({ path: path.join(batch.directory, `document-${role}-${width}-${temperature}.png`), fullPage: false })
-    await emit({ phase: 'editor-document', role, width, temperature, status: response.status(), observations: observation.data, verdict: 'PASS' })
+    await emit({ phase: 'editor-document', role, width, temperature, status: response.status(), observations: observation.data, tolerated: observation.tolerated(), verdict: 'PASS' })
   } finally { observation.stop() }
 }
 

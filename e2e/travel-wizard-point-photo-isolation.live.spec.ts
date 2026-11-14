@@ -973,11 +973,19 @@ test.describe('#1603 point-photo isolation live local contract', () => {
         )
         expect(expectedFailureHttpErrors).toHaveLength(1)
         expect(expectedFailureHttpErrors[0]).toMatch(/POST .*\/api\/upload\/? .*422$/)
-        expect(expectedFailureConsoleErrors.length).toBeGreaterThan(0)
+        // Chromium logs its own resource line for the intentional 422 response;
+        // exactly one per expected HTTP error, everything else must be the app's
+        // upload error report.
+        const browserResourceErrors = expectedFailureConsoleErrors.filter((entry) =>
+          /^Failed to load resource: the server responded with a status of 422\b/.test(entry),
+        )
+        const appConsoleErrors = expectedFailureConsoleErrors.filter(
+          (entry) => !browserResourceErrors.includes(entry),
+        )
+        expect(browserResourceErrors).toHaveLength(expectedFailureHttpErrors.length)
+        expect(appConsoleErrors.length).toBeGreaterThan(0)
         expect(
-          expectedFailureConsoleErrors.every((entry) =>
-            entry.includes('Ошибка при загрузке'),
-          ),
+          appConsoleErrors.every((entry) => entry.includes('Ошибка при загрузке')),
         ).toBe(true)
         expect(expectedFailureRequestErrors).toEqual([])
         const expectedUploadFailure = {

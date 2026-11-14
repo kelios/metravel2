@@ -5,7 +5,13 @@ import { readRetryTwice } from '@/utils/queryRetryPolicy';
 // До готовности BE работает на мок-фолбэке из api/plannedTrips.ts.
 
 import { useCallback } from 'react';
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import {
   createTrip,
@@ -105,7 +111,7 @@ export function usePlannedTrip(tripId: string | number | null | undefined) {
     },
     [userId],
   );
-  return useQuery<PlannedTrip>({
+  const query = useQuery<PlannedTrip>({
     queryKey: queryKeys.plannedTrip(tripId),
     queryFn: () => fetchPlannedTrip(tripId as string | number),
     enabled: authReady && tripId != null && tripId !== '',
@@ -113,7 +119,40 @@ export function usePlannedTrip(tripId: string | number | null | undefined) {
     retry: readRetryTwice,
     select: selectForCurrentUser,
   });
+  if (authReady) return query;
+  // `enabled: false` does not hide data another reader already put under the
+  // shared key: the breadcrumb (`useBreadcrumbModel`) loads this trip without
+  // waiting for auth. Before `authReady` the identity is unknown, not «guest»:
+  // `isOwner: false` derived from it rendered the read-only planner, and the
+  // owner identity arriving a moment later swapped RouteBuilder's whole tree,
+  // remounting the map with its markers and any popup the owner had opened.
+  // Without cached data the same window rendered «failed to load». Until the
+  // identity is known the trip is pending for every reader of this hook.
+  // A spread would read every field of React Query's tracked result and
+  // subscribe the screen to all of them for the observer's lifetime, so a
+  // proxy masks only the fields the caller actually reads.
+  return new Proxy(query, {
+    get: (target, key) => {
+      const value = Reflect.get(target, key);
+      return Object.prototype.hasOwnProperty.call(AWAITING_IDENTITY_RESULT, key)
+        ? AWAITING_IDENTITY_RESULT[key as keyof typeof AWAITING_IDENTITY_RESULT]
+        : value;
+    },
+  });
 }
+
+const AWAITING_IDENTITY_RESULT = {
+  data: undefined,
+  error: null,
+  status: 'pending',
+  isPending: true,
+  isLoading: true,
+  isSuccess: false,
+  isError: false,
+  isLoadingError: false,
+  isRefetchError: false,
+  isPlaceholderData: false,
+} as const satisfies Partial<UseQueryResult<PlannedTrip>>;
 
 export function useCommunityTrips(filters?: CommunityTripsFilters) {
   const normalized = filters ?? {};

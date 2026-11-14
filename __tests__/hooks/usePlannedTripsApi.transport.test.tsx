@@ -109,6 +109,79 @@ describe('planned trip hooks', () => {
     expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
   })
 
+  it('keeps a trip cached before auth hydration pending instead of rendering it as not owned', async () => {
+    // The breadcrumb loads the same key without waiting for auth. A guess of
+    // `isOwner: false` mounted the read-only planner and then remounted the
+    // owner tree (map, markers, open popup) once the identity arrived.
+    useAuthStore.setState({ authReady: false, isAuthenticated: false, userId: null })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    })
+    queryClient.setQueryData(queryKeys.plannedTrip(42), makeTrip())
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const renderedOwnership: Array<boolean | undefined> = []
+
+    const { result } = await renderHook(() => {
+      const query = usePlannedTrip(42)
+      renderedOwnership.push(query.data?.isOwner)
+      return query
+    }, { wrapper })
+
+    expect(result.current.data).toBeUndefined()
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.isError).toBe(false)
+    expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
+
+    await act(() => {
+      useAuthStore.setState({ authReady: true, isAuthenticated: true, userId: '7' })
+    })
+
+    await waitFor(() => expect(result.current.data?.isOwner).toBe(true))
+    expect(result.current.isLoading).toBe(false)
+    expect(renderedOwnership).not.toContain(false)
+    expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
+  })
+
+  it('does not subscribe the plan screen to every query field while waiting for auth', async () => {
+    // The plan screen reads four fields. Masking the pre-auth result must not
+    // touch the rest of React Query's tracked result, or every later background
+    // refetch re-renders the whole planner on `isFetching`/`dataUpdatedAt`.
+    useAuthStore.setState({ authReady: false, isAuthenticated: false, userId: null })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    })
+    queryClient.setQueryData(queryKeys.plannedTrip(42), makeTrip())
+    mockFetchPlannedTrip.mockImplementation(async () => makeTrip())
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    let renders = 0
+
+    const { result } = await renderHook(() => {
+      renders += 1
+      const { data, isLoading, isError, error } = usePlannedTrip(42)
+      return { data, isLoading, isError, error }
+    }, { wrapper })
+
+    await act(() => {
+      useAuthStore.setState({ authReady: true, isAuthenticated: true, userId: '7' })
+    })
+    await waitFor(() => expect(result.current.data?.isOwner).toBe(true))
+    const rendersBeforeRefetch = renders
+
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.plannedTrip(42) })
+      // React Query batches observer notifications on a macrotask.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(mockFetchPlannedTrip).toHaveBeenCalledTimes(1)
+    expect(result.current.data?.isOwner).toBe(true)
+    expect(renders).toBe(rendersBeforeRefetch)
+  })
+
   it('writes the complete response to detail cache and invalidates all transport consumers', async () => {
     const updatedTrip = makeTrip()
     mockUpdatePlannedTripTransport.mockResolvedValue(updatedTrip)
