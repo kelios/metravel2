@@ -54,28 +54,97 @@ function ownsTravel(dto, fixture, reg) {
     .filter(value => value != null).flatMap(value => String(value).split(',')).map(value => value.trim())
   return Number(dto.id) === fixture.id && dto.name === fixture.name && owners.includes(String(reg.accounts.author.id))
 }
+// Resolve inside the backend interpreter; connection values never cross stdout.
+// Query mode leaves stdin intact for psql's existing private result contract.
+const LOCAL_DB_RESOLVER = String.raw`import hashlib, importlib, json, os, re, sys
+from pathlib import Path
+try:
+    profile = os.environ.get('DJANGO_SETTINGS_MODULE', '')
+    if not re.fullmatch(r'[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*', profile):
+        raise ValueError()
+    from django.conf import settings
+    db = settings.DATABASES['default']
+    engine, host, name = db.get('ENGINE'), db.get('HOST'), db.get('NAME')
+    if engine not in ('django.contrib.gis.db.backends.postgis', 'django.db.backends.postgresql', 'django.db.backends.postgresql_psycopg2'):
+        raise ValueError()
+    if host not in ('localhost', '127.0.0.1', '::1'):
+        raise ValueError()
+    port = str(db.get('PORT', ''))
+    if not re.fullmatch(r'[0-9]{1,5}', port) or not 1 <= int(port) <= 65535:
+        raise ValueError()
+    user, password = db.get('USER'), db.get('PASSWORD') or ''
+    if any(not isinstance(value, str) or not value or any(char in value for char in '\0\r\n') for value in (name, user)):
+        raise ValueError()
+    if not isinstance(password, str) or db.get('OPTIONS'):
+        raise ValueError()
+    profile_file = Path(importlib.import_module(profile).__file__).resolve()
+    binding = dict(profile=profile, profile_file=str(profile_file), profile_sha256=hashlib.sha256(profile_file.read_bytes()).hexdigest(), engine=engine, host=host, port=int(port), name=name, user=user)
+    fingerprint = hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    if sys.argv[1] == 'binding':
+        print(fingerprint)
+    elif sys.argv[1] == 'query' and sys.argv[2] == fingerprint:
+        env = dict(os.environ, PGPASSWORD=password, PGOPTIONS='--default_transaction_read_only=on')
+        os.execvpe('psql', ['psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-h', host, '-p', port, '-U', user, '-d', name], env)
+    else:
+        raise ValueError()
+except Exception:
+    sys.stderr.write('Local fixture database binding unavailable; connection details withheld\n')
+    sys.exit(9)
+`
+const LOCAL_DB_SCRIPT = String.raw`set -euo pipefail
+readonly QAEDITOR_EXPLICIT_PROFILE="$DJANGO_SETTINGS_MODULE"
+readonly QAEDITOR_EXPLICIT_PYTHONPATH="$PYTHONPATH"
+set -a
+source "$1/local_env.sh"
+set +a
+export DJANGO_SETTINGS_MODULE="$QAEDITOR_EXPLICIT_PROFILE" PYTHONPATH="$QAEDITOR_EXPLICIT_PYTHONPATH"
+export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+cd "$1"
+exec "$1/.venv/bin/python" -c "$4" "$2" "$3"
+`
+function localDbCommand(mode, fingerprint = '', sql = '') {
+  assert(process.env.DJANGO_SETTINGS_MODULE?.trim() && process.env.PYTHONPATH?.trim(), 'Local fixtures require an explicit Django profile and search path')
+  try {
+    return execFileSync('bash', ['-c', LOCAL_DB_SCRIPT, 'editor-owned-read',
+      process.env.METRAVEL_LOCAL_BACKEND_ROOT || '/Users/juliasavran/Sites/metravel/metravel', mode, fingerprint, LOCAL_DB_RESOLVER],
+    { cwd: ROOT, env: process.env, input: sql, encoding: 'utf8', timeout: 60_000, stdio: ['pipe', 'pipe', 'pipe'] }).trim()
+  } catch { throw new Error('Local fixture database binding unavailable; subprocess output withheld to protect secrets') }
+}
+function localDbBinding() {
+  const fingerprint = localDbCommand('binding')
+  assert(/^[a-f0-9]{64}$/.test(fingerprint), 'Invalid local fixture database binding')
+  return fingerprint
+}
+function verifyLocalDbBinding(config, fingerprint = config.localDbBinding) {
+  if (config.production) return
+  assert(/^[a-f0-9]{64}$/.test(fingerprint || ''), 'Local fixture registry has no pinned database binding')
+  assert(localDbBinding() === fingerprint, 'Local fixture database binding changed; refusing mutation or cleanup receipt')
+}
 function sqlRead(config, sql) {
   assert(/^SELECT\b/.test(sql.trim()) && !/;\s*\S|\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE|COPY)\b/i.test(sql), 'Only one readonly owned-ID SELECT is allowed')
+  if (!config.production) {
+    assert(/^[a-f0-9]{64}$/.test(config.localDbBinding || ''), 'Local fixture registry has no pinned database binding')
+    return localDbCommand('query', config.localDbBinding, `${sql.trim()}\n`)
+  }
   const productionScript = String.raw`set -euo pipefail
 source scripts/deploy-target.sh
 require_deploy_target
 QAEDITOR_DB_CTR="$(metravel_resolve_container_over_ssh metravel-gis)"
 ssh "$PROD_SSH_TARGET" "docker exec -i $QAEDITOR_DB_CTR sh -c 'PGOPTIONS=--default_transaction_read_only=on psql -X -qAt -v ON_ERROR_STOP=1 -U \$POSTGRES_USER -d \$POSTGRES_DB'"
 `
-  const localScript = String.raw`set -euo pipefail
-set -a
-source "$1/local_env.sh"
-set +a
-case "$APP_DB_HOST" in localhost|127.0.0.1|::1) ;; *) exit 9 ;; esac
-export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
-export PGPASSWORD="$APP_DB_PASS" PGOPTIONS=--default_transaction_read_only=on
-exec psql -X -qAt -v ON_ERROR_STOP=1 -h "$APP_DB_HOST" -p "$APP_DB_PORT" -U "$APP_DB_USER" -d "$APP_DB_NAME"
-`
   try {
-    return execFileSync('bash', ['-c', config.production ? productionScript : localScript, 'editor-owned-read',
+    return execFileSync('bash', ['-c', productionScript, 'editor-owned-read',
       process.env.METRAVEL_LOCAL_BACKEND_ROOT || '/Users/juliasavran/Sites/metravel/metravel'],
     { cwd: ROOT, input: `${sql.trim()}\n`, encoding: 'utf8', timeout: 60_000, stdio: ['pipe', 'pipe', 'pipe'] }).trim()
   } catch { throw new Error('Owned readonly DB lookup failed; subprocess output withheld to protect activation/config secrets') }
+}
+function verifyOrdinaryAccount(config, account) {
+  delete account.ordinaryVerified
+  assert(Number.isSafeInteger(account.id) && positiveId(account.id) && ![1, 104, 120].includes(account.id) &&
+    /^QAEDITOR-[a-zA-Z0-9-]+-(author|other)$/.test(account.name), 'Invalid owned account role proof')
+  const ordinary = sqlRead(config, `SELECT NOT is_staff AND NOT is_superuser FROM users WHERE id=${account.id} AND name='${account.name}';`)
+  assert(ordinary === 't', 'Owned account is not verified ordinary')
+  account.ordinaryVerified = true
 }
 async function json(response, label, validationFields = []) {
   if (!response.ok()) {
@@ -136,6 +205,11 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
     accounts: {}, fixtures: [], pendingCreate: null, ledger: [], cleaned: false }
   validateRegistry(reg, runId)
   assert(reg.origin === config.origin && reg.backendUrl === config.backendUrl, 'Cleanup target differs from registered origin')
+  if (!config.production) {
+    if (!initialRegistry) reg.localDbBinding = localDbBinding()
+    config.localDbBinding = reg.localDbBinding
+    verifyLocalDbBinding(config)
+  }
   const save = () => writePrivate(registryFile, reg)
   const stateFile = role => path.join(directory, `${role}.storage.private.json`)
   save()
@@ -153,6 +227,7 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
       if (api) await api.dispose()
       const retry = await request.newContext({ baseURL: reg.origin })
       try {
+        verifyLocalDbBinding(config, reg.localDbBinding)
         const credentials = readPrivate(path.join(directory, `${role}.credentials.private.json`))
         await json(await retry.post('/api/user/login/', { data: credentials }), 'Reauthenticate only owned disposable account')
         await identity(retry, account.id)
@@ -184,6 +259,7 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
       const terms = await json(await api.get('/api/terms/version/'), 'Current terms')
       const version = String(terms.version ?? terms.current_version ?? terms.current_terms_version ?? '')
       assert(version, 'Terms version missing')
+      verifyLocalDbBinding(config, reg.localDbBinding)
       ledger('setup', 'register-intent', { role })
       const dto = await json(await api.post('/api/user/registration/', { data: { ...credentials, confirmPassword: credentials.password,
         username: reg.accounts[role].name, terms_version: version } }), 'Register disposable account')
@@ -194,7 +270,9 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
       ledger('setup', 'activate-intent', { role, id: Number(dto.id) })
       await json(await api.post('/api/user/confirm-registration/', { data: { hash: token } }), 'Activate own account')
       await identity(api, dto.id)
-      reg.accounts[role].activated = true; save(); await saveState(api, role)
+      reg.accounts[role].activated = true; save()
+      verifyOrdinaryAccount(config, reg.accounts[role]); save()
+      await saveState(api, role)
       ledger('setup', 'account-verified', { role, id: Number(dto.id) })
     } finally { await api.dispose() }
   }
@@ -221,6 +299,7 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
   }
   async function setup() {
     assert(!initialRegistry, 'Cleanup recovery cannot create new fixtures')
+    verifyLocalDbBinding(config, reg.localDbBinding)
     admin = await openProdProbe({ baseUrl: reg.origin, consent: 'necessary' })
     await identity(admin.context.request, 104, true)
     await account('author'); if (needOther) await account('other')
@@ -263,6 +342,7 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
   }
   async function cleanup() {
     validateRegistry(reg, runId)
+    verifyLocalDbBinding(config, reg.localDbBinding)
     // Recover an acknowledged-but-unread registration by its UNIQUE own marker,
     // never by reading a user list or encrypted email. Activation remains an API command.
     for (const [role, entry] of Object.entries(reg.accounts)) {
@@ -373,14 +453,17 @@ async function openOwnedBatch({ baseUrl, backendUrl, runId, needOther = true, in
 // creating a new batch. No setup request is made by the constructor.
 async function resumeCleanup(runId) {
   const filename = path.join(runDirectory(runId), 'registry.private.json'), saved = readPrivate(filename)
-  validateRegistry(saved, runId)
+  const config = validateRegistry(saved, runId)
+  config.localDbBinding = saved.localDbBinding
+  verifyLocalDbBinding(config)
   if (saved.cleaned) return saved
   const batch = await openOwnedBatch({ baseUrl: saved.origin, backendUrl: saved.backendUrl, runId, initialRegistry: saved })
   try { await batch.cleanup(); return batch.reg } finally { await batch.close() }
 }
 
 module.exports = { ROOT, OUT, METADATA, targetConfig, runDirectory, writePrivate, readPrivate, validateRegistry, ownsTravel,
-  fixtureCreatePayload, commandPayload, reasonFor, identity, snapshot, openOwnedBatch, resumeCleanup, assert, unpack, json }
+  fixtureCreatePayload, commandPayload, reasonFor, identity, snapshot, openOwnedBatch, resumeCleanup, assert, unpack, json, csrf,
+  localDbBinding, verifyLocalDbBinding, sqlRead, verifyOrdinaryAccount }
 
 if (require.main === module) {
   const args = process.argv.slice(2), runId = args.find(arg => arg.startsWith('--run-id='))?.slice(9)

@@ -17,6 +17,11 @@ let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMa
 
 import type { RoutePoint } from '@/api/plannedTrips'
 
+type TestMapClick = {
+  latlng: { lat: number; lng: number }
+  originalEvent?: { target?: EventTarget | null; composedPath?: () => EventTarget[] }
+}
+let mockMapClick: ((event: TestMapClick) => void) | undefined
 const markerProps: Array<Record<string, unknown>> = []
 const mockFitBounds = jest.fn()
 const mockSetView = jest.fn()
@@ -38,7 +43,10 @@ jest.mock('@/utils/loadLeafletRuntime', () => ({
       Popup: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
       Polyline: () => null,
       useMap: () => mockMap,
-      useMapEvents: () => null,
+      useMapEvents: (handlers: { click: (event: TestMapClick) => void }) => {
+        mockMapClick = handlers.click
+        return null
+      },
     },
   }),
 }))
@@ -100,9 +108,33 @@ const dragEndAt = async (index: number, lat: number, lng: number) => {
   await act(() => handlers.dragend({ target: { getLatLng: () => ({ lat, lng }) } }))
 }
 
+const mapClickCoordinates = { lat: 53.902, lng: 27.571 }
+
+async function renderClickableMap(readonly = false) {
+  const onAddPointFromMap = jest.fn()
+  const screen = await render(<TripPlanRouteMap route={route} readonly={readonly} onAddPointFromMap={onAddPointFromMap} />)
+  await waitFor(() => expect(mockMapClick).toEqual(expect.any(Function)))
+  return { screen, onAddPointFromMap, root: screen.getByTestId('map-canvas') }
+}
+
+function dispatchNativeMapClick(root: HTMLElement, target: HTMLElement) {
+  const listener = jest.fn((originalEvent: MouseEvent) => {
+    if (!mockMapClick) throw new Error('Actual ClickToAdd handler is not registered')
+    mockMapClick({ latlng: mapClickCoordinates, originalEvent })
+  })
+  root.addEventListener('click', listener)
+  try {
+    target.dispatchEvent(new window.MouseEvent('click', { bubbles: true, composed: true }))
+  } finally {
+    root.removeEventListener('click', listener)
+  }
+  return listener
+}
+
 describe('#1781 TripPlanRouteMap.web — правка точки с карты', () => {
   beforeEach(() => {
     markerProps.length = 0
+    mockMapClick = undefined
     mockMapRootProps = null
     mockFitBounds.mockClear()
     mockSetView.mockClear()
@@ -304,5 +336,79 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
       'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.',
     )
     expect(screen.queryByText(/можно перетащить/)).toBeNull()
+  })
+
+  it('не добавляет точку из клика удаления, если popup удалил своих детей до map listener', async () => {
+    const { root, onAddPointFromMap } = await renderClickableMap()
+    const popup = document.createElement('div')
+    popup.className = 'leaflet-popup'
+    const button = document.createElement('button')
+    popup.appendChild(button)
+    root.appendChild(popup)
+    const onDelete = jest.fn()
+    let livePopupAncestor: Element | null | undefined
+    let dispatchPathStillContainsPopup = false
+    button.addEventListener('click', (event) => {
+      onDelete()
+      popup.replaceChildren()
+      livePopupAncestor = button.closest('.leaflet-popup')
+      dispatchPathStillContainsPopup = event.composedPath().includes(popup)
+    })
+    try {
+      const mapListener = dispatchNativeMapClick(root, button)
+      expect(onDelete).toHaveBeenCalledTimes(1)
+      expect(mapListener).toHaveBeenCalledTimes(1)
+      expect(livePopupAncestor).toBeNull()
+      expect(dispatchPathStillContainsPopup).toBe(true)
+      expect(onAddPointFromMap).not.toHaveBeenCalled()
+    } finally {
+      popup.remove()
+    }
+  })
+
+  it('добавляет ровно одну точку из настоящего пустого участка карты с теми же координатами', async () => {
+    const { root, onAddPointFromMap } = await renderClickableMap()
+    const mapListener = dispatchNativeMapClick(root, root)
+    expect(mapListener).toHaveBeenCalledTimes(1)
+    expect(onAddPointFromMap).toHaveBeenCalledTimes(1)
+    expect(onAddPointFromMap).toHaveBeenCalledWith(mapClickCoordinates)
+  })
+
+  it.each(['leaflet-marker-icon', 'metravel-trip-plan-marker', 'leaflet-popup'])(
+    'не добавляет точку из прикреплённого %s', async (className) => {
+      const { root, onAddPointFromMap } = await renderClickableMap()
+      const interactive = document.createElement('div')
+      interactive.className = className
+      const button = document.createElement('button')
+      interactive.appendChild(button)
+      root.appendChild(interactive)
+      try {
+        expect(dispatchNativeMapClick(root, button)).toHaveBeenCalledTimes(1)
+        expect(onAddPointFromMap).not.toHaveBeenCalled()
+      } finally {
+        interactive.remove()
+      }
+    },
+  )
+
+  it('сохраняет closest fallback для синтетического события без composedPath', async () => {
+    const { root, onAddPointFromMap } = await renderClickableMap()
+    const popup = document.createElement('div')
+    popup.className = 'leaflet-popup'
+    const button = document.createElement('button')
+    popup.appendChild(button)
+    root.appendChild(popup)
+    try {
+      mockMapClick!({ latlng: mapClickCoordinates, originalEvent: { target: button } })
+      expect(onAddPointFromMap).not.toHaveBeenCalled()
+    } finally {
+      popup.remove()
+    }
+  })
+
+  it('не добавляет точку из пустого участка в read-only режиме', async () => {
+    const { root, onAddPointFromMap } = await renderClickableMap(true)
+    expect(dispatchNativeMapClick(root, root)).toHaveBeenCalledTimes(1)
+    expect(onAddPointFromMap).not.toHaveBeenCalled()
   })
 })

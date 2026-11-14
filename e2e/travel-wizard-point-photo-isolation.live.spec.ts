@@ -15,6 +15,8 @@ import { expect, test } from './fixtures'
 import { seedNecessaryConsent } from './helpers/storage'
 import { mobileProfile } from './helpers/mobileProfile'
 
+const { selectStep } = require('./helpers/editorFixtureBrowser')
+
 const EVIDENCE_DIR = resolve('.codex-temp/task-1603/live')
 const GPS_LAT = 50.06143
 const GPS_LNG = 19.93658
@@ -536,13 +538,15 @@ const openWizardRoute = async (
     secureRefreshToken: null,
     secureUserToken: null,
   })
-  await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue(
+  await selectStep(page, { id: travelId }, 1)
+  await expect(page.locator('#field-name').getByRole('textbox')).toHaveValue(
     name,
     {
       timeout: 30_000,
     },
   )
 
+  await selectStep(page, { id: travelId }, 2)
   const desktopCount = page.getByText(/^Точек:\s*2$/)
   const mobileShowPoints = page.getByRole('button', {
     name: /^Показать точки \(2\)$/i,

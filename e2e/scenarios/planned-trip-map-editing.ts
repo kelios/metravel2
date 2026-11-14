@@ -1,7 +1,9 @@
-import { test as base, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { test as base, expect, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import { mobileProfile } from '../helpers/mobileProfile'
 import { apiContextFromEnv, apiRequestContext } from '../helpers/e2eApi'
 import { seedNecessaryConsent } from '../helpers/storage'
+
+const { openOwnedBatch, csrf, identity } = require('../prod-probe/travelEditorFixtures')
 
 // Registered only by public-trips.spec.ts, which already belongs to live-contract.
 // No *.spec.ts entry here: the deterministic regression suite must not create trips.
@@ -84,16 +86,24 @@ async function openPlanner(page: Page, planner: PlannerFixture) {
     new URL(response.url()).pathname === `/api/trips/planned/${planner.id}/` &&
     response.request().method() === 'GET')
   await page.goto(`/trips/plan/${planner.id}`, { waitUntil: 'domcontentloaded' })
-  expect((await loaded).ok(), 'Planner must load the real API trip').toBe(true)
+  const response = await loaded
+  expect(response.ok(), 'Planner must load the real API trip').toBe(true)
+  const trip = await response.json()
+  expect(Number(trip.id), 'Actual browser GET identifies the intended planner').toBe(planner.id)
   await expect(map(page).locator('.leaflet-container')).toBeVisible({ timeout: 30_000 })
   await expect(markers(page)).toHaveCount(3)
+  return trip
 }
 
-async function openPopup(page: Page, index: number) {
+async function openPopup(page: Page, index: number, expectedTitle: string) {
   const marker = markers(page).nth(index)
   await marker.scrollIntoViewIfNeeded()
   await marker.click({ position: { x: 17, y: 8 } })
-  await expect(map(page).locator('.leaflet-popup')).toBeVisible()
+  const visiblePopups = map(page).locator('.leaflet-popup:visible')
+  await expect(visiblePopups, 'Only one popup is visible after the intended marker click').toHaveCount(1)
+  const popup = visiblePopups.filter({ has: page.getByText(expectedTitle, { exact: true }) })
+  await expect(popup, 'Visible popup belongs to the intended route point').toHaveCount(1)
+  return popup
 }
 
 async function saveRoute(page: Page, planner: PlannerFixture) {
@@ -129,8 +139,8 @@ async function expectCoordinates(page: Page, prefix: string, point: { lat: numbe
 }
 
 for (const viewport of [
-  { name: 'desktop', contextOptions: { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false } },
   { name: 'mobile', contextOptions: mobileProfile({ deviceScaleFactor: 1 }) },
+  { name: 'desktop', contextOptions: { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false } },
 ]) {
   test.describe(`Local planner map editing — ${viewport.name}`, () => {
     test.use(viewport.contextOptions)
@@ -218,15 +228,15 @@ for (const viewport of [
       await saveRoute(page, planner)
       expect((await planner.readPoints())[0]).toMatchObject(moved)
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await openPopup(page, 0)
-      await page.getByTestId('trip-plan-map-edit-point-0').click()
+      const editPopup = await openPopup(page, 0, initialPoints[0].title)
+      await editPopup.getByTestId('trip-plan-map-edit-point-0').click()
       await expectCoordinates(page, 'route-builder-edit', moved)
       await page.getByTestId('route-builder-edit-name').fill('E2E изменено с карты')
       await page.getByTestId('route-builder-edit-save').click()
       await saveRoute(page, planner)
       expect((await planner.readPoints())[0].title).toBe('E2E изменено с карты')
-      await openPopup(page, 0)
-      await page.getByTestId('trip-plan-map-delete-point-0').click()
+      const deletePopup = await openPopup(page, 0, 'E2E изменено с карты')
+      await deletePopup.getByTestId('trip-plan-map-delete-point-0').click()
       await expect(markers(page)).toHaveCount(2)
       await expect(page.getByTestId('route-builder-point-0')).toContainText('E2E середина')
       const deletedBody = await saveRoute(page, planner)
@@ -238,27 +248,114 @@ for (const viewport of [
       await page.screenshot({ path: testInfo.outputPath('map-edit-delete.png'), fullPage: true })
     })
 
-    test('guest markers remain read-only and expose no map actions', async ({ browser, baseURL, planner }, testInfo) => {
-      const guest = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] },
-        ...viewport.contextOptions })
+    test('approved ordinary participant markers remain read-only; anonymous planner access is denied', async ({ browser, baseURL, planner }, testInfo) => {
+      const batch = await openOwnedBatch({ baseUrl: baseURL, backendUrl: process.env.E2E_API_URL,
+        runId: `run-map-viewer-${Date.now()}-${process.pid}-${testInfo.retry}`, needOther: false })
+      let viewer: BrowserContext | undefined
+      let applicant: APIRequestContext | undefined
+      const mutations: Array<{ method: string; path: string }> = []
+      const responses: Array<{ method: string; path: string; status: number }> = []
+      const pageErrors: string[] = []
+      const consoleErrors: string[] = []
+      const roleProof: Record<string, unknown> = {}
       try {
-        const page = await guest.newPage()
-        const mutations: string[] = []
-        page.on('request', request => {
-          if (new URL(request.url()).pathname.startsWith(`/api/trips/planned/${planner.id}/`) &&
-              ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) mutations.push(request.method())
+        const anonymous = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] },
+          ...viewport.contextOptions })
+        try {
+          const denied = await anonymous.request.get(`/api/trips/planned/${planner.id}/`)
+          roleProof.anonymousStatus = denied.status()
+          expect(denied.status(), 'Anonymous users cannot read the private planner API').toBe(401)
+        } finally {
+          await anonymous.close()
+        }
+
+        await batch.setup()
+        const account = batch.reg.accounts.author
+        expect(account.ordinaryVerified, 'Owned SQL role proof excludes staff and superuser').toBe(true)
+        const actorApi: APIRequestContext = await batch.authorApi()
+        applicant = actorApi
+        const me = await identity(actorApi, account.id)
+        roleProof.actorId = me.id
+        roleProof.ordinaryVerified = account.ordinaryVerified
+        roleProof.isSuperuser = me.is_superuser
+        const applied = await actorApi.post('/api/trip-applications/', {
+          headers: await csrf(actorApi, batch.reg.origin),
+          data: { trip: planner.id, message: `${batch.reg.marker} read-only map participant` },
         })
-        await openPlanner(page, planner)
-        await openPopup(page, 0)
+        expect(applied.status(), 'Ordinary non-owner applies to the owned public trip').toBe(201)
+        const application = await applied.json()
+        expect(Number.isSafeInteger(application.id) && application.id > 0).toBe(true)
+        expect(Number(application.trip)).toBe(planner.id)
+        expect(Number(application.applicant)).toBe(Number(account.id))
+        const approved = await planner.api.patch(`/api/trip-applications/${application.id}/`, {
+          data: { status: 'approved' },
+        })
+        expect(approved.status(), 'Only the owner approves the exact application').toBe(200)
+        const approval = await approved.json()
+        expect(approval.status).toBe('approved')
+        expect(Number(approval.trip)).toBe(planner.id)
+        expect(Number(approval.applicant)).toBe(Number(account.id))
+        roleProof.applicationId = application.id
+        roleProof.applicationStatus = approval.status
+
+        const admitted = await actorApi.get(`/api/trips/planned/${planner.id}/`)
+        roleProof.participantStatus = admitted.status()
+        expect(admitted.status(), 'Approved ordinary participant can read the planner API').toBe(200)
+        const trip = await admitted.json()
+        expect(Number(trip.id)).toBe(planner.id)
+        expect(Number(trip.owner.id)).not.toBe(Number(account.id))
+        expect(trip.participants).toEqual(expect.arrayContaining([
+          expect.objectContaining({ user: expect.objectContaining({ id: Number(account.id) }), status: 'accepted' }),
+        ]))
+        roleProof.ownerId = trip.owner.id
+
+        viewer = await browser.newContext({ baseURL, storageState: batch.stateFile('author'),
+          ...viewport.contextOptions })
+        viewer.on('request', request => {
+          const url = new URL(request.url())
+          if (url.origin === batch.reg.origin && url.pathname.startsWith('/api/trips/') &&
+              !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {
+            mutations.push({ method: request.method(), path: url.pathname })
+          }
+        })
+        viewer.on('response', response => {
+          const url = new URL(response.url())
+          if (url.origin === batch.reg.origin && url.pathname.startsWith('/api/')) {
+            responses.push({ method: response.request().method(), path: url.pathname, status: response.status() })
+          }
+        })
+        const page = await viewer.newPage()
+        page.on('pageerror', error => pageErrors.push(error.message))
+        page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()) })
+        const browserTrip = await openPlanner(page, planner)
+        expect(Number(browserTrip.owner.id)).toBe(Number(trip.owner.id))
+        expect(Number(browserTrip.owner.id)).not.toBe(Number(account.id))
+        await openPopup(page, 0, initialPoints[0].title)
         await expect(map(page).locator('.leaflet-marker-draggable')).toHaveCount(0)
         await expect(page.getByTestId(/trip-plan-map-(edit|delete)-point-/)).toHaveCount(0)
         await expect(page.getByTestId('route-builder-add-action')).toHaveCount(0)
         await expect(page.getByTestId('route-builder-save')).toHaveCount(0)
         expect(mutations).toEqual([])
+        expect(pageErrors).toEqual([])
         expect(await planner.readPoints()).toEqual(initialPoints.map(point => expect.objectContaining(point)))
-        await page.screenshot({ path: testInfo.outputPath('guest-popup.png'), fullPage: true })
+        await page.screenshot({ path: testInfo.outputPath('participant-popup.png'), fullPage: true })
       } finally {
-        await guest.close()
+        try {
+          await testInfo.attach('planner-read-only-real-role-evidence', { contentType: 'application/json',
+            body: Buffer.from(JSON.stringify({ tripId: planner.id, roleProof, mutations, responses, pageErrors, consoleErrors }, null, 2)) })
+        } finally {
+          const disposed = await Promise.allSettled([viewer?.close(), applicant?.dispose()])
+          try {
+            await batch.cleanup()
+            expect(batch.reg.cleaned, 'Owned actor and incidental travel fixtures are actually cleaned').toBe(true)
+          } finally {
+            await batch.close()
+          }
+          // Soft: a disposal failure fails the test without masking the primary error.
+          for (const result of disposed) {
+            expect.soft(result.status === 'rejected' ? String(result.reason) : '', 'Viewer/applicant disposal').toBe('')
+          }
+        }
       }
     })
   })

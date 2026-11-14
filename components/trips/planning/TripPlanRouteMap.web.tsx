@@ -42,7 +42,7 @@ type LeafletNS = typeof import('leaflet');
 type ReactLeafletNS = typeof import('react-leaflet');
 type MapClickEvent = {
   latlng: { lat: number; lng: number };
-  originalEvent?: { target?: EventTarget | null };
+  originalEvent?: { target?: EventTarget | null; composedPath?: () => EventTarget[] };
 };
 
 interface Props {
@@ -141,13 +141,14 @@ function ClickToAdd({
 }) {
   const handleClick = (event: MapClickEvent) => {
     if (disabled) return;
+    const interactiveSelector = '.leaflet-marker-icon, .metravel-trip-plan-marker, .leaflet-popup';
+    // React can remove popup children before this native click reaches Leaflet.
+    // The dispatch path still identifies the original popup after DOM removal.
+    if (event.originalEvent?.composedPath?.().some(
+      (node) => node instanceof Element && node.matches(interactiveSelector),
+    )) return;
     const target = event.originalEvent?.target;
-    if (
-      target instanceof Element &&
-      target.closest('.leaflet-marker-icon, .metravel-trip-plan-marker, .leaflet-popup')
-    ) {
-      return;
-    }
+    if (target instanceof Element && target.closest(interactiveSelector)) return;
     onAddPointFromMap?.({ lat: event.latlng.lat, lng: event.latlng.lng });
   };
 

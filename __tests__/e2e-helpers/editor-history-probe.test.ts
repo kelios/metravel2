@@ -5,14 +5,183 @@ import path from 'node:path'
 jest.mock('@playwright/test', () => ({ request: {}, expect: {}, devices: { 'Pixel 7': { userAgent: 'unit-mobile-agent' } } }))
 jest.mock('playwright', () => ({ chromium: {}, request: {} }))
 jest.mock('../../scripts/e2e-env-files', () => ({ applyEnvFile: jest.fn() }))
+jest.mock('node:child_process', () => {
+  const actual = jest.requireActual('node:child_process')
+  return { ...actual, execFileSync: jest.fn((...args: unknown[]) => actual.execFileSync(...args)) }
+})
 const { createPathSanitizer, installHistoryObserver, armScopeCapture } = require('../../e2e/helpers/browserHistoryTrace')
-const { targetConfig, validateRegistry, ownsTravel, fixtureCreatePayload, commandPayload, reasonFor, openOwnedBatch, writePrivate, json } = require('../../e2e/prod-probe/travelEditorFixtures')
+const { targetConfig, validateRegistry, ownsTravel, fixtureCreatePayload, commandPayload, reasonFor, openOwnedBatch, writePrivate, json,
+  localDbBinding, verifyLocalDbBinding, sqlRead, verifyOrdinaryAccount, resumeCleanup, csrf } = require('../../e2e/prod-probe/travelEditorFixtures')
 const { parseOptions, cellsFor } = require('../../e2e/prod-probe/editorRegression')
 const { label, openRoleContext } = require('../../e2e/helpers/editorFixtureBrowser')
 const origin = 'https://metravel.by'
 const config = { origin, travelIds: [42], slugs: ['qa-public'], userIds: [900] }
 
+// Execute the real resolver in a hermetic backend. The only execpsql target is
+// intercepted in Python before any database/socket work; all values are fake.
+function localDatabaseHarness(overrides: Record<string, unknown> = {}) {
+  const scratch = path.join(__dirname, '../../.codex-temp')
+  fs.mkdirSync(scratch, { recursive: true })
+  const directory = fs.mkdtempSync(path.join(scratch, 'editor-db-unit-'))
+  const profileDir = path.join(directory, 'profiles'), capture = path.join(directory, 'exec.json')
+  fs.mkdirSync(path.join(profileDir, 'django/conf'), { recursive: true })
+  fs.mkdirSync(path.join(directory, '.venv/bin'), { recursive: true })
+  const actualExec = jest.requireActual('node:child_process').execFileSync
+  const python = actualExec('python3', ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' }).trim()
+  fs.symlinkSync(python, path.join(directory, '.venv/bin/python'))
+  fs.writeFileSync(path.join(directory, 'backend_scope.py'), 'AVAILABLE = True\n')
+  fs.writeFileSync(path.join(profileDir, 'django/__init__.py'), '')
+  fs.writeFileSync(path.join(profileDir, 'django/conf/__init__.py'),
+    'import importlib, os\nsettings = importlib.import_module(os.environ["DJANGO_SETTINGS_MODULE"])\n')
+  fs.writeFileSync(path.join(profileDir, 'sitecustomize.py'), `import json, os, sys
+def capture_exec(program, argv, env):
+    with open(${JSON.stringify(capture)}, 'w') as output:
+        json.dump(dict(program=program, argv=argv, password=env.get('PGPASSWORD'), readonly=env.get('PGOPTIONS'), query=sys.stdin.read()), output)
+    print('unit-result')
+    raise SystemExit(0)
+os.execvpe = capture_exec
+`)
+  // A base environment may attempt to replace both explicit profile variables.
+  fs.writeFileSync(path.join(directory, 'local_env.sh'), 'APP_DB_NAME=wrong_base\nAPP_DB_HOST=192.0.2.9\nAPP_DB_PORT=9999\nAPP_DB_USER=wrong_user\nAPP_DB_PASS=wrong_password\nDJANGO_SETTINGS_MODULE=wrong_base_profile\nPYTHONPATH=/unavailable-base-profile\n')
+  const database = { ENGINE: 'django.contrib.gis.db.backends.postgis', HOST: '127.0.0.1', PORT: '6543',
+    NAME: 'selected_unit_database', USER: 'unit_user', PASSWORD: 'unit-selected-password', ...overrides }
+  const profile = path.join(profileDir, 'effective_profile.py')
+  const writeDatabase = (db: Record<string, unknown>, suffix = '') => fs.writeFileSync(profile,
+    `import json\nfrom backend_scope import AVAILABLE\nDATABASES = json.loads(${JSON.stringify(JSON.stringify({ default: db }))})\n${suffix}\n`)
+  writeDatabase(database)
+  const previous = Object.fromEntries(['DJANGO_SETTINGS_MODULE', 'PYTHONPATH', 'METRAVEL_LOCAL_BACKEND_ROOT', 'PYTHONDONTWRITEBYTECODE']
+    .map(key => [key, process.env[key]]))
+  Object.assign(process.env, { DJANGO_SETTINGS_MODULE: 'effective_profile', PYTHONPATH: profileDir,
+    METRAVEL_LOCAL_BACKEND_ROOT: directory, PYTHONDONTWRITEBYTECODE: '1' })
+  return { directory, profileDir, profile, database, capture, writeDatabase,
+    restore() {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value == null) delete process.env[key]
+        else process.env[key] = value
+      }
+      fs.rmSync(directory, { recursive: true, force: true })
+    } }
+}
+
 describe('editor diagnostic observation and owned-fixture boundaries', () => {
+  it('refuses a local batch without an explicit Django profile before creating an account', async () => {
+    const runId = `run-unit-missing-profile-${process.pid}-${Date.now()}`
+    const previousModule = process.env.DJANGO_SETTINGS_MODULE, previousPath = process.env.PYTHONPATH
+    const request = require('@playwright/test').request
+    request.newContext = jest.fn()
+    delete process.env.DJANGO_SETTINGS_MODULE
+    delete process.env.PYTHONPATH
+    try {
+      await expect(openOwnedBatch({ baseUrl: 'http://127.0.0.1:8085', backendUrl: 'http://127.0.0.1:8000', runId }))
+        .rejects.toThrow(/explicit.*profile/i)
+      expect(request.newContext).not.toHaveBeenCalled()
+    } finally {
+      if (previousModule == null) delete process.env.DJANGO_SETTINGS_MODULE
+      else process.env.DJANGO_SETTINGS_MODULE = previousModule
+      if (previousPath == null) delete process.env.PYTHONPATH
+      else process.env.PYTHONPATH = previousPath
+      fs.rmSync(path.join(__dirname, '../../.codex-temp/editor-regression', runId), { recursive: true, force: true })
+    }
+  })
+
+  it('uses the effective Django target despite base-env overwrite and keeps SQL stdin/private output intact', () => {
+    const harness = localDatabaseHarness()
+    try {
+      const fingerprint = localDbBinding()
+      expect(fingerprint).toMatch(/^[a-f0-9]{64}$/)
+      expect(fs.existsSync(harness.capture)).toBe(false) // resolving a binding does not execute SQL
+      expect(sqlRead({ production: false, localDbBinding: fingerprint }, 'SELECT 17;')).toBe('unit-result')
+      const captured = JSON.parse(fs.readFileSync(harness.capture, 'utf8'))
+      expect(captured).toEqual({ program: 'psql', argv: ['psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-h', '127.0.0.1',
+        '-p', '6543', '-U', 'unit_user', '-d', 'selected_unit_database'], password: 'unit-selected-password',
+        readonly: '--default_transaction_read_only=on', query: 'SELECT 17;\n' })
+      expect(captured.argv).not.toContain('unit-selected-password')
+      expect(fingerprint).not.toContain('selected_unit_database')
+    } finally { harness.restore() }
+  })
+
+  it.each([
+    { HOST: '192.0.2.9' }, { HOST: '127.0.0.1,192.0.2.9' }, { HOST: '' },
+    { PORT: '0' }, { PORT: '5432 --unsafe' }, { ENGINE: 'django.db.backends.sqlite3' },
+    { NAME: '' }, { OPTIONS: { options: '-c search_path=foreign' } },
+  ])('rejects an unsupported effective connection without executing psql: %j', override => {
+    const harness = localDatabaseHarness(override)
+    try {
+      expect(() => localDbBinding()).toThrow(/binding unavailable/)
+      expect(fs.existsSync(harness.capture)).toBe(false)
+    } finally { harness.restore() }
+  })
+
+  it.each(['database', 'database-user', 'profile-content', 'profile-path'])('refuses SQL on a changed pinned %s, even before a false absence can be returned', change => {
+    const harness = localDatabaseHarness()
+    try {
+      const fingerprint = localDbBinding()
+      if (change === 'database') harness.writeDatabase({ ...harness.database, NAME: 'a_different_database' })
+      if (change === 'database-user') harness.writeDatabase({ ...harness.database, USER: 'a_different_role' })
+      if (change === 'profile-content') harness.writeDatabase(harness.database, '# changed profile with the same DB')
+      if (change === 'profile-path') {
+        const other = path.join(harness.directory, 'other-profile')
+        fs.mkdirSync(other); fs.copyFileSync(harness.profile, path.join(other, 'effective_profile.py'))
+        process.env.PYTHONPATH = `${other}${path.delimiter}${harness.profileDir}`
+      }
+      expect(() => verifyLocalDbBinding({ production: false, localDbBinding: fingerprint })).toThrow(/binding changed/)
+      expect(() => sqlRead({ production: false, localDbBinding: fingerprint }, 'SELECT count(*) FROM users WHERE id=900;'))
+        .toThrow(/binding unavailable/)
+      expect(fs.existsSync(harness.capture)).toBe(false)
+    } finally { harness.restore() }
+  })
+
+  it('cannot mark an owned account absent or trust cached cleanup success after local binding drift', async () => {
+    const harness = localDatabaseHarness(), runId = `run-unit-drift-${process.pid}-${Date.now()}`
+    const request = require('@playwright/test').request
+    request.newContext = jest.fn()
+    let batch: any
+    try {
+      batch = await openOwnedBatch({ baseUrl: 'http://127.0.0.1:8085', backendUrl: 'http://127.0.0.1:8000', runId })
+      batch.reg.accounts.author = { id: 900, name: `${batch.reg.marker}-author`, activated: false, deleted: false }
+      batch.reg.cleaned = true
+      writePrivate(batch.registryFile, batch.reg)
+      const before = fs.readFileSync(batch.registryFile, 'utf8')
+      harness.writeDatabase(harness.database, '# profile drift')
+      await expect(batch.cleanup()).rejects.toThrow(/binding changed/)
+      await expect(resumeCleanup(runId)).rejects.toThrow(/binding changed/)
+      expect(batch.reg.accounts.author.deleted).toBe(false)
+      expect(fs.readFileSync(batch.registryFile, 'utf8')).toBe(before)
+      expect(request.newContext).not.toHaveBeenCalled()
+      expect(fs.existsSync(harness.capture)).toBe(false)
+    } finally {
+      if (batch) { await batch.close(); fs.rmSync(batch.directory, { recursive: true, force: true }) }
+      harness.restore()
+    }
+  })
+
+  it.each(['f', '', 't\nt'])('does not claim an ordinary account on false/missing/ambiguous SQL proof: %j', result => {
+    const executor = require('node:child_process').execFileSync
+    const account = { id: 900, name: 'QAEDITOR-unit-author', ordinaryVerified: true }
+    executor.mockReturnValueOnce(result)
+    expect(() => verifyOrdinaryAccount({ production: true }, account)).toThrow(/not verified ordinary/)
+    expect(account).not.toHaveProperty('ordinaryVerified')
+  })
+
+  it('records ordinary proof only for the exact owned ID/marker without relying on absent API fields', () => {
+    const executor = require('node:child_process').execFileSync
+    const account = { id: 900, name: 'QAEDITOR-unit-author' }
+    executor.mockReturnValueOnce('t\n')
+    verifyOrdinaryAccount({ production: true }, account)
+    expect(account).toHaveProperty('ordinaryVerified', true)
+    expect(executor.mock.calls.at(-1)[2].input).toBe("SELECT NOT is_staff AND NOT is_superuser FROM users WHERE id=900 AND name='QAEDITOR-unit-author';\n")
+    const before = executor.mock.calls.length
+    expect(() => verifyOrdinaryAccount({ production: true }, { id: 104, name: 'QAEDITOR-unit-author' })).toThrow(/Invalid owned/)
+    expect(() => verifyOrdinaryAccount({ production: true }, { id: 900, name: "QAEDITOR-unit-author'" })).toThrow(/Invalid owned/)
+    expect(executor).toHaveBeenCalledTimes(before)
+  })
+
+  it('reuses the existing cookie-only CSRF helper for the exact target origin', async () => {
+    const api = { storageState: async () => ({ cookies: [{ name: 'csrftoken', value: 'wrong-origin', domain: 'foreign.example' },
+      { name: 'csrftoken', value: 'unit-csrf', domain: '.metravel.by' }] }) }
+    await expect(csrf(api, origin)).resolves.toEqual({ Origin: origin, Referer: `${origin}/`, 'X-CSRFToken': 'unit-csrf' })
+  })
+
   it.each(['private-long', 'public'])('sends every required TravelUpsert field, including required nullable text, for %s', label => {
     const payload = fixtureCreatePayload({ marker: 'QAEDITOR-unit', label, country: 3, category: 4, pointCategory: 5 })
     // The backend requires these keys even when its text fields allow null.

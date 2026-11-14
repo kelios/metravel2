@@ -10,6 +10,8 @@ import {
 } from './helpers/e2eApi';
 import { liveUploadImage } from './helpers/liveUploadImage';
 
+const { selectStep } = require('./helpers/editorFixtureBrowser');
+
 type AnyRecord = Record<string, unknown>;
 
 type UploadedImage = {
@@ -293,18 +295,14 @@ test.describe('Travel persistence', () => {
     expect(pointCategories).toEqual([Number(pointCategoryId)]);
 
     const editUrl = `/travel/${travelId}`;
+    const wizardFixture = { id: travelId };
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
+    await selectStep(page, wizardFixture, 1);
+    const nameInput = page.locator('#field-name').getByRole('textbox');
     await expect(nameInput, 'Seeded owner must be able to open the edit wizard').toBeVisible({ timeout: 30_000 });
     await expect(nameInput).toHaveValue(travelName, { timeout: 60_000 });
 
-    const step3Milestone = page.getByLabel('Перейти к шагу 3');
-    if (await step3Milestone.first().isVisible().catch(() => false)) {
-      await step3Milestone.first().click();
-    } else {
-      await page.getByLabel('Далее').click();
-      await page.getByLabel('К медиа').click();
-    }
+    await selectStep(page, wizardFixture, 3);
 
     await expect(page.getByText('Галерея путешествия').first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByPlaceholder('Введите ссылку на YouTube')).toHaveValue(youtube, { timeout: 30_000 });
@@ -313,13 +311,9 @@ test.describe('Travel persistence', () => {
     await page.goto('/metravel', { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
+    await selectStep(page, wizardFixture, 1);
     await expect(nameInput).toHaveValue(travelName, { timeout: 60_000 });
-    if (await step3Milestone.first().isVisible().catch(() => false)) {
-      await step3Milestone.first().click();
-    } else {
-      await page.getByLabel('Далее').click();
-      await page.getByLabel('К медиа').click();
-    }
+    await selectStep(page, wizardFixture, 3);
     await expect(page.getByPlaceholder('Введите ссылку на YouTube')).toHaveValue(youtube, { timeout: 30_000 });
     await expect(page.getByTestId('gallery-image')).toHaveCount(2, { timeout: 30_000 });
   });
