@@ -18,7 +18,7 @@
 import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
 import { ASK_NO_MATERIAL_REASON } from './policy'
 import type { AiSourceRef } from './sourceRef'
-import { AI_SOURCE_GROUPS, type AiHistoryItem, type AiSource, type AiSourceGroup, type AiUsage } from './types'
+import { AI_SOURCE_DISPLAY_FIELDS, AI_SOURCE_GROUPS, type AiHistoryItem, type AiSource, type AiSourceGroup, type AiUsage } from './types'
 
 const DEFAULT_RETRY_AFTER_SEC = 30
 /**
@@ -174,6 +174,30 @@ const toSource = (value: unknown): AiSource | null => {
     score: typeof raw.score === 'number' ? raw.score : 0,
     // Группа карточки (#3290, #3289): страница, «ещё по теме»; незнакомое значение — обычная карточка.
     ...(AI_SOURCE_GROUPS.includes(raw.group as AiSourceGroup) ? { group: raw.group as AiSourceGroup } : {}),
+    ...toDisplayFields(raw),
+  }
+}
+
+const textOrNull = (value: unknown): string | null => (typeof value === 'string' && value.trim() ? value.trim() : null)
+const coordOrNull = (value: unknown, limit: number): number | null => (typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= limit ? value : null)
+
+/**
+ * Поля показа карточки (#3295): обложка, место, координаты. Старая служба их не отдаёт — тогда полей нет
+ * вовсе, и экран рисует источник прежней строкой. Обложка — только абсолютный http(s)-адрес; координаты —
+ * только парой.
+ */
+const toDisplayFields = (raw: Record<string, unknown>): Pick<AiSource, 'cover' | 'city' | 'country' | 'lat' | 'lng'> | Record<string, never> => {
+  if (!AI_SOURCE_DISPLAY_FIELDS.some((field) => field in raw)) return {}
+  const cover = textOrNull(raw.cover)
+  const lat = coordOrNull(raw.lat, 90)
+  const lng = coordOrNull(raw.lng, 180)
+  const located = lat !== null && lng !== null
+  return {
+    cover: cover && /^https?:\/\//i.test(cover) ? cover : null,
+    city: textOrNull(raw.city),
+    country: textOrNull(raw.country),
+    lat: located ? lat : null,
+    lng: located ? lng : null,
   }
 }
 

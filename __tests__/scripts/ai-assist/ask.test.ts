@@ -294,6 +294,13 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(fair).toMatchObject({ type: 'travel', source_id: '816', title: 'Ярмарки Польши', url: 'https://metravel.by/travels/816', path: '/travels/816' })
       expect(typeof fair.snippet).toBe('string')
       expect(typeof fair.score).toBe('number')
+      // #3295: поля показа карточки — обложка, страна и координаты из индекса; города у статьи нет (#3347).
+      expect(fair).toMatchObject({ country: expect.any(String), city: null, lat: expect.any(Number), lng: expect.any(Number) })
+      expect(fair).toHaveProperty('cover')
+      const questCard = sources.data.sources.find((source: { type: string }) => source.type === 'quest')
+      if (questCard) expect(Object.keys(questCard)).toEqual(expect.arrayContaining(['cover', 'city', 'country', 'lat', 'lng']))
+      // Служебные поля отбора посетителю по-прежнему не уходят.
+      for (const source of sources.data.sources) expect(Object.keys(source)).toEqual(expect.not.arrayContaining(['place', 'facts', 'why']))
       const texts = rest.filter((e) => e.event === 'text')
       expect(texts.length).toBeGreaterThan(0)
       // Чужой адрес вырезан, ссылка карточки осталась — и в стриме, и в финале.

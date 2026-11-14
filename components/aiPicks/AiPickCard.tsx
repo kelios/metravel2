@@ -12,6 +12,10 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 
 /** Запасная высота обложки для кадров без пропорций; геометрию слота задаёт `CARD_MEDIA_SLOT_RATIO` (#1674). */
 export const AI_PICK_CARD_IMAGE_HEIGHT = 170
+/** Компактный вид (#3295, карточка под ответом ассистента): обложка ниже, раскладка та же. */
+export const AI_PICK_CARD_COMPACT_IMAGE_HEIGHT = 120
+/** Пропорция обложки компактной карточки: шире кадра ленты, чтобы карточка с действиями помещалась в экран телефона. */
+export const AI_PICK_CARD_COMPACT_MEDIA_RATIO = 16 / 10
 /** Две строки `snippet` под карточкой поиска: тот же резерв у текста и скелета. */
 export const AI_PICK_CARD_SNIPPET_HEIGHT = 40
 
@@ -31,10 +35,14 @@ type Props = {
   actionSlot?: React.ReactNode
   /** Блок, в котором стоит карточка (#3292): с ним клик уходит событием `AiPick_Click` — доля переходов из блока. */
   analyticsBlock?: string
+  /** Компактный вид (#3295): обложка ниже — карточка стоит под ответом ассистента, а не в ленте. */
+  compact?: boolean
+  /** Отметка в углу обложки (#3295: «Из ответа» у карточки, которую ассистент назвал в тексте). */
+  markerLabel?: string
   testID?: string
 }
 
-export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, analyticsBlock, testID }: Props) {
+export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, analyticsBlock, compact = false, markerLabel, testID }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -50,11 +58,20 @@ export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, a
           if (analyticsBlock) void sendAnalyticsEvent('AiPick_Click', { block: analyticsBlock, type: item.type, id: item.source_id })
           router.push(item.path as never)
         }}
-        imageHeight={AI_PICK_CARD_IMAGE_HEIGHT}
-        mediaAspectRatio={CARD_MEDIA_SLOT_RATIO}
+        imageHeight={compact ? AI_PICK_CARD_COMPACT_IMAGE_HEIGHT : AI_PICK_CARD_IMAGE_HEIGHT}
+        mediaAspectRatio={compact ? AI_PICK_CARD_COMPACT_MEDIA_RATIO : CARD_MEDIA_SLOT_RATIO}
         mediaSlotWidth={slotWidth}
-        mediaFit="contain"
+        mediaFit={compact ? 'cover' : 'contain'}
         mediaProps={{ blurBackground: true, allowCriticalWebBlur: true }}
+        leftTopSlot={
+          markerLabel ? (
+            <View style={styles.marker} testID="ai-pick-card-marker">
+              <Text style={styles.markerText} numberOfLines={1}>
+                {markerLabel}
+              </Text>
+            </View>
+          ) : undefined
+        }
         style={styles.card}
       />
       {snippet ? (
@@ -95,6 +112,18 @@ function createStyles(colors: ThemedColors) {
       lineHeight: 18,
       color: colors.textMuted,
       minHeight: AI_PICK_CARD_SNIPPET_HEIGHT,
+    },
+    marker: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      backgroundColor: colors.primary,
+    },
+    markerText: {
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '600',
+      color: colors.textOnPrimary,
     },
     skeletonLine: {
       marginTop: 4,

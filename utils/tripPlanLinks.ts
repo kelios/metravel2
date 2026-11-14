@@ -89,8 +89,36 @@ export function buildTripPlanCreateHref(travel: TravelPlanSource): string {
   return `/trips/plan/create?${params.toString()}`;
 }
 
+/** Материал сайта, по которому посетитель собирает поездку вне страницы статьи (#3295: квест из ответа ассистента). */
+export interface TripPlanMaterialSource {
+  title: string;
+  /** Абсолютный адрес материала на сайте. */
+  url: string;
+  description?: string | null;
+}
+
+/**
+ * Ссылка на форму новой поездки по квесту — те же параметры подстановки, что у статьи
+ * (`buildTripPlanCreateHref`): название, адрес и описание материала. Идентификатора статьи нет:
+ * квест в домене поездки — не статья.
+ */
+export function buildTripPlanCreateHrefFromQuest(quest: TripPlanMaterialSource): string {
+  const params = new URLSearchParams();
+  const title = clip(stripHtmlForSeo(quest.title), TITLE_MAX);
+  const description = clip(stripHtmlForSeo(quest.description ?? ''), DESCRIPTION_MAX);
+
+  params.set('source', 'quest');
+  if (title) params.set('sourceTravelTitle', title);
+  if (/^https?:\/\//i.test(quest.url)) params.set('sourceTravelUrl', quest.url);
+  if (description) params.set('sourceTravelDescription', description);
+
+  return `/trips/plan/create?${params.toString()}`;
+}
+
+const TRIP_PLAN_SOURCES = ['travel', 'quest'];
+
 export function buildTripPlanPrefill(params: TripPlanSourceParams): TripPlanPrefill {
-  if (firstParam(params.source) !== 'travel') return {};
+  if (!TRIP_PLAN_SOURCES.includes(firstParam(params.source))) return {};
 
   const sourceTitle = firstParam(params.sourceTravelTitle);
   const sourceUrl = firstParam(params.sourceTravelUrl);

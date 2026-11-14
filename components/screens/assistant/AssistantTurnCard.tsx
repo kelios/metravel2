@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
@@ -10,7 +10,9 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/limits'
 import { translate as i18nT } from '@/i18n'
 
+import { hasDisplayFields, splitAnswerSources } from './answerSources'
 import { AssistantAnswerText } from './AssistantAnswerText'
+import { AssistantSourceCards } from './AssistantSourceCards'
 import type { AssistantStyles } from './assistantStyles'
 import type { AssistantTurn } from './useAssistantChat'
 
@@ -123,9 +125,11 @@ type AssistantTurnCardProps = {
   onOpenCatalog: () => void
   /** Оценка ответа (#3296); нет — кнопок оценки нет. */
   onRate?: (turnId: string, vote: AskFeedbackVote, reason?: AskFeedbackReason | null) => void
+  /** Узкая раскладка (#3295): карточки названных материалов уже. */
+  narrow?: boolean
 }
 
-function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpenCatalog, onRate }: AssistantTurnCardProps) {
+function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpenCatalog, onRate, narrow = false }: AssistantTurnCardProps) {
   const retry = useCallback(() => onRetry(turn.id), [onRetry, turn.id])
   // Оценивается ход, который служба довела до ответа (`feedbackId`): ответ модели, запасной ответ, справка.
   const showFeedback = Boolean(onRate) && turn.status === 'done' && Boolean(turn.feedbackId)
@@ -133,8 +137,20 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
   const showSources = turn.sources.length > 0 && turn.status !== 'searching'
   // Группа «Ещё по теме»: в режиме страницы (#3290) — соседние материалы; в общем подборе (#3289) —
   // карточки, не прошедшие отбор по месту и условиям вопроса. Модель их не видела.
-  const mainSources = turn.sources.filter((source) => source.group !== 'nearby')
-  const nearbySources = turn.sources.filter((source) => source.group === 'nearby')
+  // Названные в ответе карточки — первыми, с обложкой и действиями (#3295); остальное свёрнуто под «Ещё
+  // материалы». Карточкой рисуется источник с полями показа; без них (старая служба, `llamacpp`, справка)
+  // и когда в ответе не названо ничего — прежний список строк, развёрнутый.
+  const cards = useMemo(
+    () => (turn.status === 'done' ? splitAnswerSources(turn.answer, turn.sources).recommended.filter(hasDisplayFields) : []),
+    [turn.answer, turn.sources, turn.status],
+  )
+  const listed = cards.length ? turn.sources.filter((source) => !cards.includes(source)) : turn.sources
+  const mainSources = listed.filter((source) => source.group !== 'nearby')
+  const nearbySources = listed.filter((source) => source.group === 'nearby')
+  const [moreOpen, setMoreOpen] = useState(false)
+  const toggleMore = useCallback(() => setMoreOpen((open) => !open), [])
+  const collapsible = cards.length > 0 && listed.length > 0
+  const showList = showSources && (!collapsible || moreOpen)
   // Пустой ответ модели (#3291): вместо повтора вопроса — честная фраза; источники остаются ниже.
   // Пустая подсказка (#3345): модель не вызывалась — «на сайте пока нет материалов», найденное рядом ниже.
   const noMaterial = turn.status === 'done' && turn.fallback === true && turn.noMaterial === true
@@ -254,16 +270,37 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
 
         {showFeedback && onRate ? <TurnFeedback turn={turn} styles={styles} colors={colors} onRate={onRate} /> : null}
 
-        {showSources && mainSources.length > 0 ? (
+        {showSources && cards.length > 0 ? (
           <>
             <Text style={styles.sourcesTitle}>{i18nT('aiAssistStatic:ask.sourcesTitle')}</Text>
+            <AssistantSourceCards sources={cards} colors={colors} narrow={narrow} />
+          </>
+        ) : null}
+
+        {showSources && collapsible ? (
+          <View style={styles.noticeActions}>
+            <UIButton
+              variant="ghost"
+              size="sm"
+              label={moreOpen ? i18nT('aiAssistStatic:ask.moreMaterialsCollapse') : `${i18nT('aiAssistStatic:ask.moreMaterials')} (${listed.length})`}
+              icon={<Feather name={moreOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primaryText} />}
+              onPress={toggleMore}
+              testID="assistant-sources-more"
+            />
+          </View>
+        ) : null}
+
+        {showList && mainSources.length > 0 ? (
+          <>
+            {/* Заголовок «Источники» уже стоит над карточками; без карточек список — он и есть источники. */}
+            {cards.length === 0 ? <Text style={styles.sourcesTitle}>{i18nT('aiAssistStatic:ask.sourcesTitle')}</Text> : null}
             {mainSources.map((source) => (
               <SourceRow key={`${source.type}-${source.source_id}`} source={source} styles={styles} colors={colors} />
             ))}
           </>
         ) : null}
 
-        {showSources && nearbySources.length > 0 ? (
+        {showList && nearbySources.length > 0 ? (
           <>
             <Text style={styles.sourcesTitle} testID="assistant-sources-nearby">
               {i18nT('aiAssistStatic:ask.nearbyTitle')}

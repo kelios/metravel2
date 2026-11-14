@@ -57,7 +57,22 @@ export type AiSource = {
    * карточки подсказки (#3289). Ставит `arrangeSources`; посетителю не уходит.
    */
   why?: string
+  /**
+   * Поля показа карточки под ответом (#3295) — та же форма, что у карточки блоков подбора
+   * (`AiPickItem`, `api/aiPicks.ts`): обложка, место и координаты из индекса службы. Приходят в событии
+   * `sources` потока `/ai/ask`; в подсказку модели не идут. Нет ни одного поля (старая служба, провайдер
+   * `llamacpp`) — экран показывает источник прежней строкой. `city` есть только у квеста: у статьи
+   * каталог хранит подпись первой точки маршрута, а не город (#3347).
+   */
+  cover?: string | null
+  city?: string | null
+  country?: string | null
+  lat?: number | null
+  lng?: number | null
 }
+
+/** Имена полей показа карточки (#3295): по ним экран узнаёт карточку, которую можно нарисовать с обложкой. */
+export const AI_SOURCE_DISPLAY_FIELDS = ['cover', 'city', 'country', 'lat', 'lng'] as const
 
 export type AiSourcePlace = {
   cities?: ReadonlyArray<string | null | undefined>

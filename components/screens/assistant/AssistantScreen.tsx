@@ -168,6 +168,7 @@ export default function AssistantScreen({ sourceParam = null }: AssistantScreenP
                 onRetry={chat.retry}
                 onOpenCatalog={openCatalog}
                 onRate={chat.rate}
+                narrow={isMobile}
               />
             ))
           )}

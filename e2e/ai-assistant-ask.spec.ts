@@ -179,6 +179,47 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
 
+  // #3295: под ответом — карточки названных материалов с обложкой и действиями; остальное под «Ещё материалы».
+  test('answer actions: cards of the named materials with «On the map», the rest under «More materials»', async ({ page }) => {
+    const cards = [
+      { ...sources[0], group: 'match', cover: null, city: 'Минск', country: 'Беларусь', lat: 53.9045, lng: 27.5615 },
+      { ...sources[1], group: 'match', cover: null, city: null, country: 'Беларусь', lat: null, lng: null },
+      { ...sources[1], source_id: '900', title: 'Музеи Минска за день', url: 'https://metravel.by/travels/minsk-museums-e2e', path: '/travels/minsk-museums-e2e', group: 'nearby', cover: null, city: null, country: 'Беларусь', lat: null, lng: null },
+    ];
+    await page.route('**/ai/ask', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream; charset=utf-8',
+        body: sse(['sources', { sources: cards, degraded: false, remaining: 19 }], ['text', { text: answer }], ['done', { status: 'done', removed_links: 0, remaining: 19 }]),
+      });
+    });
+
+    await openAssistant(page);
+    await send(page, 'Какие квесты есть в Минске?');
+    await expect(page.getByTestId('assistant-turn-done')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+
+    // Обе карточки названы в ответе: обложка, отметка и действия; неназванный материал свёрнут.
+    await expect(page.getByTestId('assistant-source-card-quest-7')).toBeVisible();
+    await expect(page.getByTestId('assistant-source-card-travel-816')).toBeVisible();
+    await expect(page.getByTestId('ai-pick-card-marker')).toHaveCount(2);
+    await expect(page.getByTestId('assistant-source-plan-quest-7')).toBeVisible();
+    await expect(page.getByTestId('assistant-source-travel-900')).toHaveCount(0);
+    // У карточки без координат «На карте» нет.
+    await expect(page.getByTestId('assistant-source-map-travel-816')).toHaveCount(0);
+    // Цели нажатия не меньше 44 px; страница вбок не едет ни на 390, ни на 1280.
+    for (const id of ['assistant-source-plan-quest-7', 'assistant-source-map-quest-7', 'assistant-sources-more']) {
+      expect((await page.getByTestId(id).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+
+    await page.getByTestId('assistant-sources-more').click();
+    await expect(page.getByTestId('assistant-source-travel-900')).toBeVisible();
+
+    // «На карте» — карта с центром в месте материала.
+    await page.getByTestId('assistant-source-map-quest-7').click();
+    await expect(page).toHaveURL(/\/map\?.*lat=53\.9045.*lng=27\.5615/);
+  });
+
   // #3290: вопрос со страницы статьи — служба отдаёт карточку страницы и соседние материалы отдельной группой.
   test('page mode: the page card under «Sources», neighbours under «More on the topic», source in the request', async ({ page }) => {
     const direct = await trackModelRequests(page);

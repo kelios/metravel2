@@ -1,5 +1,6 @@
 import {
   buildTripPlanCreateHref,
+  buildTripPlanCreateHrefFromQuest,
   buildTripPlanPath,
   buildTripPlanPrefill,
   buildTripPlanUrl,
@@ -38,6 +39,29 @@ describe('tripPlanLinks', () => {
     expect(prefill.title).toBe('Поездка по маршруту "Нарочь"')
     expect(prefill.description).toContain('Хочу организовать поездку')
     expect(prefill.description).toContain('https://metravel.by/travels/naroch-route')
+  })
+
+  // #3295: квест из ответа ассистента — та же подстановка, что у статьи.
+  it('builds a create link and a prefill for a quest source', () => {
+    const href = buildTripPlanCreateHrefFromQuest({
+      title: 'Квест по Гродно: королевский город над Неманом',
+      url: 'https://metravel.by/quests/11/grodno-royal',
+      description: 'Городской квест по городу Гродно (Беларусь). Точек: 10',
+    })
+    expect(href.startsWith('/trips/plan/create?')).toBe(true)
+    const params = Object.fromEntries(new URLSearchParams(href.split('?')[1]))
+    expect(params).toEqual({
+      source: 'quest',
+      sourceTravelTitle: 'Квест по Гродно: королевский город над Неманом',
+      sourceTravelUrl: 'https://metravel.by/quests/11/grodno-royal',
+      sourceTravelDescription: 'Городской квест по городу Гродно (Беларусь). Точек: 10',
+    })
+    const prefill = buildTripPlanPrefill(params)
+    expect(prefill.title).toContain('Квест по Гродно')
+    expect(prefill.description).toContain('https://metravel.by/quests/11/grodno-royal')
+    // Не адрес сайта в ссылку не идёт; неизвестный источник подстановки не даёт.
+    expect(buildTripPlanCreateHrefFromQuest({ title: 'Квест', url: 'javascript:alert(1)' })).not.toContain('sourceTravelUrl')
+    expect(buildTripPlanPrefill({ source: 'other', sourceTravelTitle: 'Квест' })).toEqual({})
   })
 
   it('builds a canonical planned-trip URL from numeric id only', () => {

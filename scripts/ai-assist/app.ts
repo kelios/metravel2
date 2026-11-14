@@ -307,6 +307,13 @@ export function createApp(deps: AppDeps): http.Server {
       place: { cities: quest ? quest.cities : [], countries: [item.country] },
       // Запись фактов — для проверки условий вопроса (#3289); посетителю не уходит.
       facts: ownQuestFacts ?? travelFacts,
+      // Поля показа карточки под ответом (#3295): обложка, место и координаты — как у карточки блоков
+      // подбора. Город — только у квеста: у статьи индекс хранит подпись первой точки маршрута (#3347).
+      cover: item.cover ?? null,
+      city: item.type === 'quest' ? (item.city ?? null) : null,
+      country: item.country ?? null,
+      lat: item.lat ?? null,
+      lng: item.lng ?? null,
     }
   }
 

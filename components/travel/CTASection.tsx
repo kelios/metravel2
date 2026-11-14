@@ -17,6 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import AskAssistantButton from '@/components/assistant/AskAssistantButton';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { usePlanTripFromSource } from '@/hooks/usePlanTripFromSource';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 import { translate as i18nT } from '@/i18n'
 import { buildTravelPath } from '@/utils/travelSeo'
@@ -53,13 +54,11 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
     if (outcome === 'success') onFavoriteToggle?.();
   }, [travel, toggle, onFavoriteToggle]);
 
+  // Одно действие со страницей ассистента (#3295): гость — на вход, вошедший — в форму новой поездки.
+  const { planTrip } = usePlanTripFromSource();
   const handlePlanTripFromRoute = useCallback(() => {
-    if (!isAuthenticated) {
-      requireAuth();
-      return;
-    }
-    router.push(buildTripPlanCreateHref(travel) as never);
-  }, [isAuthenticated, requireAuth, router, travel]);
+    planTrip(buildTripPlanCreateHref(travel));
+  }, [planTrip, travel]);
 
   const handleCreateTravel = useCallback(() => {
     if (!isAuthenticated) {

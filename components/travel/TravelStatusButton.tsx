@@ -78,6 +78,8 @@ type Props = {
    */
   size?: 'md' | 'sm'
   style?: StyleProp<ViewStyle>
+  /** Нажатие на кнопку — до входа и до выбора статуса: вызывающий учитывает действие (#3295, аналитика). */
+  onActivate?: () => void
 }
 
 /** Валидация ISO-даты YYYY-MM-DD */
@@ -129,6 +131,7 @@ export default function TravelStatusButton({
   idleLabel,
   size = 'md',
   style,
+  onActivate,
 }: Props) {
   const colors = useThemedColors()
   const isWeb = Platform.OS === 'web'
@@ -151,6 +154,7 @@ export default function TravelStatusButton({
 
   const handleMainPress = useCallback((e?: any) => {
     stopWebCardEvent(e)
+    onActivate?.()
     if (!isAuthenticated) {
       // #2898: намерение «в план» переживает вход — после него маршрут
       // добавится в план автоматически (useGuestPlanIntentCompletion). Пока
@@ -175,7 +179,7 @@ export default function TravelStatusButton({
     setDateInput(current?.plannedDate ?? '')
     setDateError('')
     setModalOpen(true)
-  }, [isAuthenticated, authReady, requireAuth, current?.plannedDate, travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName])
+  }, [isAuthenticated, authReady, requireAuth, current?.plannedDate, travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName, onActivate])
 
   const handleSelectStatus = useCallback(async (status: TravelStatus) => {
     if (status === 'planned') {

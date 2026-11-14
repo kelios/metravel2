@@ -97,6 +97,25 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(parseAskSseEvent('data: {"text":"без имени"}')).toBeNull()
   })
 
+  // #3295: поля показа карточки под ответом — обложка, место, координаты.
+  it('#3295: поля показа карточки приходят в событии sources; старая служба их не шлёт — полей нет вовсе', () => {
+    const parse = (source: Record<string, unknown>) =>
+      (parseAskSseEvent(`event: sources\ndata: ${JSON.stringify({ sources: [source], degraded: false, remaining: 1 })}`) as { data: { sources: Record<string, unknown>[] } }).data.sources[0]
+    expect(parse({ ...sourcePayload, cover: 'https://metravel.by/travel-image/816.webp', city: null, country: ' Польша ', lat: 50.06, lng: 19.94 })).toMatchObject({
+      cover: 'https://metravel.by/travel-image/816.webp',
+      city: null,
+      country: 'Польша',
+      lat: 50.06,
+      lng: 19.94,
+    })
+    // Обложка — только абсолютный http(s)-адрес; координаты — только парой и в пределах карты.
+    expect(parse({ ...sourcePayload, cover: '/relative.webp', city: 'Гродно', country: '', lat: 53.6, lng: null })).toMatchObject({ cover: null, city: 'Гродно', country: null, lat: null, lng: null })
+    expect(parse({ ...sourcePayload, cover: 'javascript:alert(1)', lat: 153.6, lng: 23.8 })).toMatchObject({ cover: null, lat: null, lng: null })
+    // Старая служба: ни одного поля показа — экран рисует источник прежней строкой.
+    const plain = parse(sourcePayload)
+    for (const field of ['cover', 'city', 'country', 'lat', 'lng']) expect(plain).not.toHaveProperty(field)
+  })
+
   // #3296: идентификатор хода для оценки и сам голос.
   it('#3296: `done` несёт идентификатор хода; голос — POST /ai/feedback, причина только у «Не помогло»; отказ службы — false', async () => {
     expect(parseAskSseEvent('event: done\ndata: {"status":"done","turn_id":"0b6f3c1e-8a55-4f6e-9a3e-2f1d6c7b8a90"}')).toMatchObject({

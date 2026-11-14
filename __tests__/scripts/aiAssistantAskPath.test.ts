@@ -322,7 +322,9 @@ describe('путь службы /ai/ask в контуре оценки (#3286)',
     expect(live.filter((item) => item.group === 'site_help')).toHaveLength(17)
     expect([...new Set(help.map((item) => item.lang))].sort()).toEqual(['be', 'en', 'pl', 'ru', 'uk'])
     const control = live.filter((item) => item.group === 'site_help_control')
-    expect(control.map((item) => [item.expects[0], item.no_help])).toEqual([['answer', true], ['answer', true], ['answer', true]])
+    // lv112 (#3369): «Какое приложение взять для навигации в горах?» — слово сервиса в вопросе о поездке,
+    // близость к справке 0,468 при пороге 0,48: справку не получает.
+    expect(control.map((item) => [item.expects[0], item.no_help])).toEqual([['answer', true], ['answer', true], ['answer', true], ['any_on_topic', true]])
   })
 
   it('событие trace читается из тела потока; без него и на битых данных — null', () => {
