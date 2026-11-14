@@ -2,7 +2,7 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 
 const { openOwnedBatch, writePrivate, targetConfig } = require('./prod-probe/travelEditorFixtures')
-const { openRoleContext, runEditorHistory } = require('./helpers/editorFixtureBrowser')
+const { openRoleContext, runEditorDiscard, runEditorHistory } = require('./helpers/editorFixtureBrowser')
 
 // Uses the same assertion-bearing scenario as the explicit production probe.
 // Local real backend only; no production document/auth/activation substitute.
@@ -43,6 +43,21 @@ test.describe('Owned editor single browser Back (live-contract #2702)', () => {
           write: (filename: string, source: string) => writePrivate(path.join(batch.directory, 'scripts', filename), source) })
       } finally {
         await info.attach('editor-history-business-and-causal-evidence', { body: Buffer.from(JSON.stringify(entries, null, 2)), contentType: 'application/json' })
+        await context.close()
+      }
+    })
+  }
+
+  for (const width of [390, 1440]) {
+    test(`${width}: «Выйти без сохранения» forgets the edits; a repeat Edit reads the server article (#3400)`, async ({ browser }, info) => {
+      test.setTimeout(90_000)
+      expect(batch?.reg.setupComplete, 'real owned fixture setup completed').toBe(true)
+      const { context, page } = await openRoleContext(browser, batch, 'author', width)
+      const entries: unknown[] = []
+      try {
+        await runEditorDiscard({ context, page, batch, width, emit: async (entry: unknown) => { entries.push(entry) } })
+      } finally {
+        await info.attach('editor-discard-business-evidence', { body: Buffer.from(JSON.stringify(entries, null, 2)), contentType: 'application/json' })
         await context.close()
       }
     })

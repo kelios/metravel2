@@ -29,6 +29,7 @@ import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { FULL_WIZARD_ISSUE_STEPS, getNoteModerationIssues, resolveTravelPublicationFormat } from '@/utils/travelNote';
 import { translate as i18nT } from '@/i18n';
+import { useEndEditorSession } from '@/components/travel/upsert/EditorSession';
 
 type ChecklistItem = { ok: boolean };
 
@@ -64,6 +65,14 @@ export function useTravelPublishModeration({
     checklist,
 }: UseTravelPublishModerationArgs) {
     const router = useRouter();
+    const endEditorSession = useEndEditorSession();
+    // Подтверждённая команда уже на сервере. Экран вкладки на web остаётся
+    // смонтированным и после replace, поэтому мастер закрывает сессия редактора
+    // (#3400): следующий вход читает статью заново — со статусом и решением модератора.
+    const leaveToMyTravels = useCallback(() => {
+        endEditorSession();
+        router.replace('/metravel');
+    }, [endEditorSession, router]);
     const actionPendingRef = useRef(false);
 
     const startAction = useCallback(() => {
@@ -208,7 +217,7 @@ export function useTravelPublishModeration({
             hapticNotification('success');
 
             // The final step returns to the user-owned list after a confirmed save.
-            router.replace('/metravel');
+            leaveToMyTravels();
         } catch (error) {
             if (publicationStatus === 'draft') trackRouteCreateDraftFailed({
                 mode: isNote ? 'note' : 'full',
@@ -337,8 +346,7 @@ export function useTravelPublishModeration({
             hapticNotification('success');
 
             // The confirmed command is already saved; leaving must not submit it again.
-            // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
-            router.replace('/metravel');
+            leaveToMyTravels();
         } catch (error) {
             trackRouteCreatePublishFailed({
                 mode: isNote ? 'note' : 'full',
@@ -401,7 +409,7 @@ export function useTravelPublishModeration({
                 text2: i18nT('travel:components.travel.TravelWizardStepPublish.marshrut_opublikovan_i_dostupen_vsem_polzova_bccaf03e'),
             });
 
-            router.replace('/metravel');
+            leaveToMyTravels();
         } catch (error) {
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {
@@ -478,7 +486,7 @@ export function useTravelPublishModeration({
             });
 
             setRejectionComment('');
-            router.replace('/metravel');
+            leaveToMyTravels();
         } catch (error) {
             hapticNotification('error');
             if (!hasToastBeenShown(error)) {

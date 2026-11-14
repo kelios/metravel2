@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { LocationSearchResult } from '@/api/geoQueries';
 import type { GalleryValueItem } from '@/components/travel/gallery/types';
+import { useEndEditorSession } from '@/components/travel/upsert/EditorSession';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import type { MarkerData, TravelFormData } from '@/types/types';
 import { translate as i18nT } from '@/i18n';
@@ -154,6 +155,7 @@ export function useTravelNoteFlow(controller: UpsertTravelController) {
 
   const [issues, setIssues] = useState<ModerationIssue[]>([]);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const endEditorSession = useEndEditorSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitPendingRef = useRef(false);
 
@@ -214,6 +216,9 @@ export function useTravelNoteFlow(controller: UpsertTravelController) {
       hapticNotification('success');
       await wizard.clearPersistedStep();
       setSubmittedId(String(savedId));
+      // Заметка отправлена: экран «Отправлено» виден, пока вкладка в фокусе, а
+      // следующий вход открывает редактор заново, а не этот экран (#3400).
+      endEditorSession();
     } catch (error) {
       trackRouteCreatePublishFailed({ mode: 'note', travelId: current.id, step, errorType: 'save_failed' });
       hapticNotification('error');
@@ -230,7 +235,7 @@ export function useTravelNoteFlow(controller: UpsertTravelController) {
       setIsSubmitting(false);
       submitPendingRef.current = false;
     }
-  }, [handleManualSave, step, wizard]);
+  }, [endEditorSession, handleManualSave, step, wizard]);
 
   return {
     step,

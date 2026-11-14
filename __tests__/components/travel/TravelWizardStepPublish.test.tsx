@@ -13,6 +13,11 @@ jest.mock('expo-router', () => ({
   useFocusEffect: require('react').useEffect,
 }));
 
+const mockEndEditorSession = jest.fn();
+jest.mock('@/components/travel/upsert/EditorSession', () => ({
+  useEndEditorSession: () => mockEndEditorSession,
+}));
+
 jest.mock('@/api/messages', () => ({ sendMessage: jest.fn().mockResolvedValue({}) }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -222,6 +227,35 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     expect(setFormData).not.toHaveBeenCalled();
     expect(onManualSave).toHaveBeenCalledWith(baseFormData, { intent: 'submit' });
+  }, 15000);
+
+  it('ends the editor session before leaving after a confirmed submit (#3400)', async () => {
+    const onManualSave = jest.fn().mockResolvedValue({ ...baseFormData, id: 77, publication_status: 'pending_review' });
+
+    const { getByText, getByTestId } = await render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const moderationRow = getByText('Отправить на модерацию').parent?.parent;
+    if (!moderationRow) throw new Error('Moderation option row not found');
+    await act(async () => { await fireEvent.press(moderationRow); });
+    await act(async () => { await fireEvent.press(getByTestId('primary-button')); });
+
+    // The tab screen stays mounted after replace: without the session end the
+    // next Edit reopened this form instead of the moderated server record.
+    expect(mockRouterReplace).toHaveBeenCalledWith('/metravel');
+    expect(mockEndEditorSession).toHaveBeenCalledTimes(1);
+    expect(mockEndEditorSession.mock.invocationCallOrder[0])
+      .toBeLessThan(mockRouterReplace.mock.invocationCallOrder[0]);
   }, 15000);
 
   it('admin approve uses its own command without an optimistic state change', async () => {

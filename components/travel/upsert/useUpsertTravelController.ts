@@ -8,10 +8,11 @@ import type { TravelFormData, TravelPublicationFormat } from '@/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { useTravelFilters } from '@/hooks/useTravelFilters';
 import { useTravelFormData } from '@/hooks/useTravelFormData';
-import { useTravelWizard } from '@/hooks/useTravelWizard';
+import { useTravelWizard, type WizardExitOutcome } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 import { usePendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession';
+import { useEndEditorSession } from '@/components/travel/upsert/EditorSession';
 import { hasPendingPointPhotos, releasePendingImageFile } from '@/utils/pendingImageFiles';
 import { checkTravelEditAccess, normalizeTravelId } from '@/utils/travelFormUtils';
 import { readTravelModerationMetadata, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
@@ -326,12 +327,27 @@ export function useUpsertTravelController(placeRequestContext?: PlaceRequestEdit
     }
   }, [form.formData.gallery, form.formData.travel_image_thumb_url, form.markers, isAuthenticated,
     placeRequestContext, placeRequestPrefill, publicationMode]);
+  // Явный выход из мастера завершает сессию редактора (#3400). Экран вкладки
+  // остаётся смонтированным, поэтому без этого отброшенные правки жили бы дальше:
+  // автосохранение скрытой формы отправило бы их на сервер через свой debounce, а
+  // локальный черновик предложил бы восстановить их при следующем входе.
+  const endEditorSession = useEndEditorSession();
+  const cancelPendingAutosave = form.autosave.cancelPending;
+  const handleWizardLeave = useCallback((outcome: WizardExitOutcome) => {
+    photoSession?.dispose();
+    if (outcome === 'discard') {
+      cancelPendingAutosave();
+      void clearDraft();
+    }
+    endEditorSession();
+  }, [cancelPendingAutosave, clearDraft, endEditorSession, photoSession]);
+
   const wizard = useTravelWizard({
     totalSteps: publicationMode === 'note' ? NOTE_TOTAL_STEPS : FULL_TOTAL_STEPS,
     hasUnsavedChanges: form.autosave.hasUnsavedChanges || hasPendingPointPhotos(form.markers),
     canSave: form.autosave.canSave,
     onSave: handleWizardSave,
-    onLeave: photoSession?.dispose,
+    onLeave: handleWizardLeave,
     getFormData,
     stepStorageKey,
   });

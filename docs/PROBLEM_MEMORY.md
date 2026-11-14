@@ -2407,9 +2407,19 @@ guard, падающий в CI на попытке обойти этот конт
   содержал владельца — на общем устройстве другой аккаунт видел и стирал чужой
   черновик. Контроль: владелец в ключе (`buildTravelDraftKey`), отложенная
   запись помнит свой ключ, удаление старого ключа — только если id формы равен
-  новому id, снимок чужой статьи не пишется.
+  новому id, снимок чужой статьи не пишется. `#3400` (2026-11-14): явный выход
+  из мастера не завершал жизнь формы. Экран вкладки на web остаётся
+  смонтированным (`#2910`), поэтому после «Выйти без сохранения» скрытая форма
+  через debounce автосохранения отправляла отброшенные правки (`PATCH
+  /travels/{id}/content/`, подтверждено live e2e на прежней сборке), а
+  повторное «Редактировать» открывало её без `GET`. Контроль: у жизни
+  редактора один владелец, `EditorSession` — явный выход размонтирует
+  поддерево формы, уход на другую вкладку его сохраняет. Браузерное «Назад»
+  размонтирует экран само, набранное уходит в локальный черновик (проба
+  14.11) (`docs/features/travel.md` → «Сессия редактора»).
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
-  recovery flow, paired mobile-web/Android background/offline evidence.
+  recovery flow, paired mobile-web/Android background/offline evidence;
+  `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).
 - **Решение для новой жалобы:** data-loss/phantom draft within documented state
   machine — `reopen #1043`; different backend upsert contract — `create-linked`.
 - **Последняя проверка:** `#1043 done`, 2026-07-23.

@@ -10,7 +10,9 @@ const mockPush = jest.fn()
 const mockUsePlaceRequest = jest.fn()
 const requestId = 'c79916ab-35d9-44e5-ad02-c9fb67979c14'
 
+let mockIsFocused = true
 jest.mock('expo-router', () => ({
+  useIsFocused: () => mockIsFocused,
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
 }))
@@ -27,13 +29,21 @@ jest.mock('@/utils/placeRequestsConfig', () => ({
 
 jest.mock('@/components/travel/UpsertTravel', () => {
   const React = require('react')
-  const { Text, TextInput, View } = require('react-native')
+  const { Pressable, Text, TextInput, View } = require('react-native')
+  const { useEndEditorSession } = require('@/components/travel/upsert/EditorSession')
   return {
     __esModule: true,
     default: function MockUpsertTravel() {
       const [draft, setDraft] = React.useState('')
+      const endSession = useEndEditorSession()
       React.useEffect(() => { mockMount() }, [])
-      return <View><Text>wizard</Text><TextInput testID="draft" value={draft} onChangeText={setDraft} /></View>
+      return (
+        <View>
+          <Text>wizard</Text>
+          <TextInput testID="draft" value={draft} onChangeText={setDraft} />
+          <Pressable testID="finish" onPress={endSession} />
+        </View>
+      )
     },
   }
 })
@@ -43,12 +53,32 @@ jest.mock('@/components/travel/UpsertTravel', () => {
 describe('UpsertTravelRoute entry key', () => {
   beforeEach(() => {
     mockParams = {}
+    mockIsFocused = true
     mockUserId = null
     mockPilotEnabled = true
     mockMount.mockClear()
     mockPush.mockClear()
     mockUsePlaceRequest.mockReset()
     mockUsePlaceRequest.mockReturnValue({ isSuccess: true, data: { status: 'open' } })
+  })
+
+  it('starts another entry as a new session: a finished one does not end it (#3400)', async () => {
+    const view = await render(<UpsertTravelRoute />)
+    // Отправленная заметка завершила сессию, экран «Отправлено» ещё в фокусе.
+    await fireEvent.press(view.getByTestId('finish'))
+
+    mockParams = { mode: 'note' }
+    await view.rerender(<UpsertTravelRoute />)
+    expect(mockMount).toHaveBeenCalledTimes(2)
+    await fireEvent.changeText(view.getByTestId('draft'), 'new note')
+
+    // Уход на другую вкладку и возврат: из новой записи никто не выходил.
+    mockIsFocused = false
+    await view.rerender(<UpsertTravelRoute />)
+    mockIsFocused = true
+    await view.rerender(<UpsertTravelRoute />)
+    expect(mockMount).toHaveBeenCalledTimes(2)
+    expect(view.getByTestId('draft').props.value).toBe('new note')
   })
 
   it('remounts the wizard when another create entry opens the same tab screen', async () => {

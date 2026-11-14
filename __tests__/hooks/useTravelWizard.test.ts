@@ -362,6 +362,7 @@ describe('useTravelWizard origin-aware exit', () => {
     });
     expect(mockRouter.replace).toHaveBeenCalledWith('/search');
     expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onLeave).toHaveBeenCalledWith('discard');
     expect(onLeave.mock.invocationCallOrder[0]).toBeLessThan(mockRouter.replace.mock.invocationCallOrder[0]);
 
     // Prop hasUnsavedChanges is still true, so the router blocks the replace it just got.
@@ -391,6 +392,42 @@ describe('useTravelWizard origin-aware exit', () => {
 
     expect(mockRouter.replace).toHaveBeenCalledWith('/search');
     expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('tells the owner how the explicit exit ended: nothing to lose, or saved (#3400)', async () => {
+    mockLocalSearchParams = { returnTo: '/search' };
+    const onLeave = jest.fn();
+    const clean = await renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+        onLeave,
+      }),
+    );
+
+    await act(() => clean.result.current.handleExit());
+    expect(clean.result.current.exitPrompt).toBeNull();
+    expect(onLeave).toHaveBeenCalledWith('clean');
+
+    onLeave.mockClear();
+    mockRouter.replace.mockClear();
+    const saved = await renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: true,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+        onLeave,
+      }),
+    );
+
+    await act(() => saved.result.current.handleExit());
+    await act(async () => saved.result.current.handleExitSaveAndLeave());
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onLeave).toHaveBeenCalledWith('saved');
+    expect(onLeave.mock.invocationCallOrder[0]).toBeLessThan(mockRouter.replace.mock.invocationCallOrder[0]);
   });
 
   it('keeps the editor and pending resources when the save was declined', async () => {

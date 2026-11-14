@@ -80,12 +80,19 @@ export const STEP_CONFIG: StepMeta[] = [
   },
 ];
 
+/**
+ * Чем закончился явный выход из мастера: правок не было, автор отказался от них
+ * или сохранил. Отказ обязывает владельца формы забыть правки (#3400).
+ */
+export type WizardExitOutcome = 'clean' | 'discard' | 'saved';
+
 interface UseTravelWizardOptions {
   totalSteps?: number;
   hasUnsavedChanges: boolean;
   canSave: boolean;
   onSave: () => Promise<WizardSaveResult>;
-  onLeave?: () => void;
+  /** Мастер покидает экран по решению пользователя; вызывается до перехода. */
+  onLeave?: (outcome: WizardExitOutcome) => void;
   getFormData?: () => TravelFormData | null | undefined;
   stepStorageKey?: string;
   stepStorageTtlMs?: number;
@@ -189,7 +196,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   // (UpsertTravelView → WizardExitDialog).
   const [exitPrompt, setExitPrompt] = useState<{ canSave: boolean } | null>(null);
   const [isExitSaving, setIsExitSaving] = useState(false);
-  const pendingExitRef = useRef<{ onDiscard: () => void; onSavedAndLeave?: () => void } | null>(null);
+  const pendingExitRef = useRef<((outcome: WizardExitOutcome) => void) | null>(null);
 
   const normalizeStep = useCallback(
     (value: unknown) => {
@@ -353,18 +360,18 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   }, []);
 
   const confirmLeaveWizard = useCallback(
-    async (onDiscard: () => void, onSavedAndLeave?: () => void) => {
+    async (leave: (outcome: WizardExitOutcome) => void) => {
       if (exitGuardPromptVisibleRef.current) return;
 
       if (!hasUnsavedChanges) {
         void clearPersistedStep();
-        onDiscard();
+        leave('clean');
         return;
       }
 
       // Есть несохранённые изменения — открываем кроссплатформенный диалог.
       exitGuardPromptVisibleRef.current = true;
-      pendingExitRef.current = { onDiscard, onSavedAndLeave };
+      pendingExitRef.current = leave;
       setExitPrompt({ canSave });
     },
     [hasUnsavedChanges, canSave, clearPersistedStep]
@@ -377,16 +384,16 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
   // «Выйти без сохранения» — сбросить черновик шага и покинуть мастер.
   const handleExitDiscard = useCallback(() => {
-    const pending = pendingExitRef.current;
+    const leave = pendingExitRef.current;
     closeExitPrompt();
     void clearPersistedStep();
-    pending?.onDiscard();
+    leave?.('discard');
   }, [closeExitPrompt, clearPersistedStep]);
 
   // «Сохранить и выйти» — сохранить, затем покинуть; при ошибке оставить диалог.
   const handleExitSaveAndLeave = useCallback(async () => {
-    const pending = pendingExitRef.current;
-    if (!pending) return;
+    const leave = pendingExitRef.current;
+    if (!leave) return;
     setIsExitSaving(true);
     try {
       const saved = await onSave();
@@ -395,7 +402,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
         return;
       }
       closeExitPrompt();
-      pending.onSavedAndLeave?.();
+      leave('saved');
     } catch (e: unknown) {
       setIsExitSaving(false);
       await showToastMessage({
@@ -410,16 +417,15 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   // Used by the visible back/close control on step 1 and by Android hardware back.
   // Robust against a missing nav history (wizard opened via deep link from search).
   const handleExit = useCallback(() => {
-    const leave = () => {
+    void confirmLeaveWizard((outcome) => {
       isLeavingRef.current = true;
-      onLeave?.();
+      onLeave?.(outcome);
       if (exitReturnTo) {
         router.replace(exitReturnTo as Parameters<typeof router.replace>[0]);
       } else {
         goBackOrReplace(router, '/metravel');
       }
-    };
-    void confirmLeaveWizard(leave, leave);
+    });
   }, [confirmLeaveWizard, exitReturnTo, onLeave, router]);
 
   // ✅ REFACTORED: Use safe beforeunload hook to prevent Permissions Policy violations
@@ -443,13 +449,11 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       return;
     }
 
-    const leave = () => {
+    void confirmLeaveWizard((outcome) => {
       isLeavingRef.current = true;
-      onLeave?.();
+      onLeave?.(outcome);
       repeat();
-    };
-
-    void confirmLeaveWizard(leave, leave);
+    });
   });
 
   useEffect(() => {

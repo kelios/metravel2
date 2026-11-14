@@ -35,6 +35,11 @@ jest.mock('@/hooks/useTravelFilters', () => ({
   useTravelFilters: jest.fn(),
 }));
 
+const mockEndEditorSession = jest.fn();
+jest.mock('@/components/travel/upsert/EditorSession', () => ({
+  useEndEditorSession: () => mockEndEditorSession,
+}));
+
 jest.mock('@/hooks/useDraftRecovery', () => ({
   ...jest.requireActual('@/hooks/useDraftRecovery'),
   useDraftRecovery: jest.fn(),
@@ -760,6 +765,38 @@ describe('useUpsertTravelController', () => {
     expect(handleManualSave).toHaveBeenCalledTimes(1);
     expect(clearDraft).not.toHaveBeenCalled();
     expect(flushDraft).not.toHaveBeenCalled();
+  });
+
+  describe('explicit wizard exit ends the editor session (#3400)', () => {
+    const leaveWizardWith = async (outcome: 'clean' | 'discard' | 'saved') => {
+      const clearDraft = jest.fn(async () => undefined);
+      const cancelPending = jest.fn();
+      mockUseDraftRecovery.mockReturnValue(draftMock({ clearDraft }));
+      mockUseTravelFormData.mockReturnValue({
+        ...baseForm,
+        autosave: { ...baseForm.autosave, hasUnsavedChanges: outcome !== 'clean', cancelPending },
+      });
+      await renderHook(() => useUpsertTravelController());
+      const { onLeave } = mockUseTravelWizard.mock.calls.at(-1)![0];
+      await act(async () => { onLeave(outcome); });
+      return { clearDraft, cancelPending };
+    };
+
+    it('forgets discarded edits: no autosave from the hidden screen, no draft to recover', async () => {
+      const { clearDraft, cancelPending } = await leaveWizardWith('discard');
+
+      expect(cancelPending).toHaveBeenCalledTimes(1);
+      expect(clearDraft).toHaveBeenCalledTimes(1);
+      expect(mockEndEditorSession).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['clean', 'saved'] as const)('ends the session on a %s exit without touching autosave or a recoverable draft', async (outcome) => {
+      const { clearDraft, cancelPending } = await leaveWizardWith(outcome);
+
+      expect(cancelPending).not.toHaveBeenCalled();
+      expect(clearDraft).not.toHaveBeenCalled();
+      expect(mockEndEditorSession).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('recovers a new-travel draft without a stale server id and restores route points', async () => {

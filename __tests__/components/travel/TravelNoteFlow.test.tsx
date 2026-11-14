@@ -39,6 +39,11 @@ jest.mock('@/components/travel/GallerySection', () => {
   );
 });
 
+const mockEndEditorSession = jest.fn();
+jest.mock('@/components/travel/upsert/EditorSession', () => ({
+  useEndEditorSession: () => mockEndEditorSession,
+}));
+
 const POLAND = { lat: '50.06', lon: '19.94', place_id: '1', display_name: 'Rynek, Kraków, Polska', name: 'Rynek',
   address: { country: 'Polska', country_code: 'pl', city: 'Kraków' } };
 const NOWHERE = { lat: '0', lon: '0', place_id: '2', display_name: 'Ocean', address: {} };
@@ -114,6 +119,8 @@ describe('TravelNoteFlow (#2666)', () => {
     await fireEvent.press(screen.getByTestId('pick-poland'));
     expect(screen.getByText('Страна: Польша')).toBeTruthy();
     expect(screen.getByTestId('travel-note.name').props.value).toBeTruthy();
+    // Черновик с первым фото — ещё не выход: сессию завершает только отправка (#3400).
+    expect(mockEndEditorSession).not.toHaveBeenCalled();
 
     await fireEvent.changeText(screen.getByTestId('travel-note.story'), STORY);
     expect(screen.getByTestId('travel-note.footer-submit')).toHaveTextContent('Отправить');
@@ -131,6 +138,7 @@ describe('TravelNoteFlow (#2666)', () => {
     }));
     await waitFor(() => expect(screen.getByTestId('travel-note.submitted')).toBeTruthy());
     expect(harness.clearPersistedStep).toHaveBeenCalled();
+    expect(mockEndEditorSession).toHaveBeenCalledTimes(1);
   });
 
   it('shows a story restored from the local draft and keeps it on the next keystroke', async () => {

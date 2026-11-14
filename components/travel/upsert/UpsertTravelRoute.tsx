@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import TravelFormErrorBoundary from '@/components/travel/TravelFormErrorBoundary';
 import UpsertTravel from '@/components/travel/UpsertTravel';
+import { EditorSession } from '@/components/travel/upsert/EditorSession';
 import PlaceRequestEditorEntry, { PlaceRequestEditorUnavailable } from '@/components/travel/upsert/PlaceRequestEditorEntry';
 import { buildPlaceRequestCreateHref, parsePlaceRequestCreateIntent } from '@/utils/placeRequestCreateIntent';
 import { isPlaceRequestsPilotEnabled } from '@/utils/placeRequestsConfig';
@@ -36,6 +37,11 @@ export function resolveUpsertTravelEntryKey(params: Record<string, unknown>): st
 // переиспользуется при переходе на тот же маршрут с другими параметрами. Поэтому
 // другой вход («Короткая заметка» после полного мастера, CTA другой статьи, #2829)
 // пересоздаёт форму, а возврат на тот же адрес сохраняет набранное.
+//
+// Явный выход из мастера завершает сессию редактора (`EditorSession`, #3400):
+// следующий вход монтирует форму заново и читает статью с сервера. Ключ входа
+// стоит на самой сессии: другой вход начинает новую, а не наследует завершение
+// прежней — иначе первый же уход на другую вкладку снял бы свежую форму.
 export default function UpsertTravelRoute() {
   const [retryKey, setRetryKey] = useState(0);
   const params = useLocalSearchParams();
@@ -63,12 +69,14 @@ export default function UpsertTravelRoute() {
   }, []);
 
   return (
-    <TravelFormErrorBoundary key={`${retryKey}:${entry.revision}:${entryKey}`} onRetry={handleRetry}>
-      {isCampaignEntry && (pilotEnabled || !hasSavedId)
-        ? campaignIntent && pilotEnabled
-          ? <PlaceRequestEditorEntry intent={campaignIntent} hasId={hasSavedId} />
-          : <PlaceRequestEditorUnavailable />
-        : <UpsertTravel />}
-    </TravelFormErrorBoundary>
+    <EditorSession key={`${retryKey}:${entry.revision}:${entryKey}`}>
+      <TravelFormErrorBoundary onRetry={handleRetry}>
+        {isCampaignEntry && (pilotEnabled || !hasSavedId)
+          ? campaignIntent && pilotEnabled
+            ? <PlaceRequestEditorEntry intent={campaignIntent} hasId={hasSavedId} />
+            : <PlaceRequestEditorUnavailable />
+          : <UpsertTravel />}
+      </TravelFormErrorBoundary>
+    </EditorSession>
   );
 }

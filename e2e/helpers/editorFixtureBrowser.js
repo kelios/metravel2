@@ -24,6 +24,7 @@ const selectors = {
   myTravels: 'components.layout.AccountMenu.moi_puteshestviya_a530e844',
   travels: 'components.layout.AccountMenu.puteshestviya_28956c1f',
   menu: 'components.layout.CustomHeaderMobileAccountSection.otkryt_menyu_e43b6ae3',
+  draftFound: 'components.travel.DraftRecoveryDialog.nayden_lokalnyy_chernovik_0dd4d86c',
 }
 function traceConfig(reg) {
   return { origin: reg.origin, travelIds: reg.fixtures.map(fixture => fixture.id), slugs: reg.fixtures.map(fixture => fixture.slug).filter(Boolean),
@@ -178,11 +179,10 @@ async function ownListRow(page, fixture) {
   await expect(card.getByText(fixture.name, { exact: true })).toBeVisible()
   return card
 }
-// `reusesMountedEditor`: web keeps the visited editor tab mounted and a return to
-// the same address keeps the typed form (UpsertTravelRoute.tsx), so a repeat Edit
-// of the same article must not refetch it. `ownDetail` then snapshots the server
-// state the navigation must leave unchanged.
-async function actualEdit(page, fixture, reg, { reusesMountedEditor = false, ownDetail, settle } = {}) {
+const isDetailGet = fixture => request => request.method() === 'GET' && new URL(request.url()).pathname === `/api/travels/${fixture.id}/`
+// Every Edit from the list opens a new editor session and reads the article: the
+// first visit, and a repeat one after the wizard was left by its own exit (#3400).
+async function actualEdit(page, fixture, reg) {
   const card = await ownListRow(page, fixture)
   const mobile = page.viewportSize().width === 390
   const unit = card.locator(mobile
@@ -191,25 +191,8 @@ async function actualEdit(page, fixture, reg, { reusesMountedEditor = false, own
   await expect(unit).toHaveCount(1)
   const control = unit.getByTestId('admin-actions').getByRole('button', { name: label(selectors.edit), exact: true })
   await expect(control).toHaveCount(1); await expect(control).toBeVisible()
-  const isDetailGet = request => request.method() === 'GET' && new URL(request.url()).pathname === `/api/travels/${fixture.id}/`
-  if (reusesMountedEditor) {
-    const detailGets = []
-    const onRequest = request => { if (isDetailGet(request)) detailGets.push(request) }
-    page.on('request', onRequest)
-    try {
-      await control.click()
-      await wizard(page, fixture)
-      await expect(page.locator('[data-testid="travel-upsert.root"]:visible').locator('#field-name').getByRole('textbox')).toHaveValue(fixture.name)
-      // Keep listening until the page's API traffic is quiet: a late background
-      // refetch of the mounted form must still count as a refetch.
-      if (settle) await settle()
-    } finally { page.off('request', onRequest) }
-    expect(detailGets, 'repeat Edit reuses the mounted editor without refetching').toEqual([])
-    const dto = await ownDetail()
-    expect(ownsTravel(dto, fixture, reg), 'actual Edit exact owned object').toBe(true)
-    return snapshot(dto)
-  }
-  const responsePromise = page.waitForResponse(response => isDetailGet(response.request()))
+  const detailGet = isDetailGet(fixture)
+  const responsePromise = page.waitForResponse(response => detailGet(response.request()))
   const [response] = await Promise.all([responsePromise, control.click()])
   expect(response.status(), 'actual Edit detail GET').toBe(200)
   const dto = await response.json()
@@ -304,11 +287,7 @@ async function runEditorHistory({ context, page, batch, width, temperature, edit
     }
     const list = await trace.readHistory()
     if (depth === 'nonzero') expect(list.currentIndex, 'genuine prior in-app entries before Edit').toBeGreaterThan(1)
-    const before = await actualEdit(page, fixture, reg, {
-      reusesMountedEditor: temperature === 'warm',
-      ownDetail: () => batch.ownDetail(context.request, fixture),
-      settle: () => observation.settle(),
-    })
+    const before = await actualEdit(page, fixture, reg)
     if (editorState === 'step6') await exerciseReason(page, fixture)
     else {
       await expect(page.getByTestId('info-sheet-body')).toHaveCount(0)
@@ -358,6 +337,51 @@ async function runEditorHistory({ context, page, batch, width, temperature, edit
   if (collectionFailure) throw collectionFailure
 }
 
+// #3400: «Выйти без сохранения» ends the editor session. The tab screen stays
+// mounted on web, so the discarded form used to live on behind the list: its
+// autosave sent the edits one debounce later, and a repeat Edit reopened them
+// without reading the article.
+const AUTOSAVE_DEBOUNCE_MS = 5000
+async function runEditorDiscard({ context, page, batch, width, emit }) {
+  const reg = batch.reg, fixture = reg.fixtures.find(item => item.label === 'private-long')
+  expect(fixture, 'real private-long fixture exists').toBeTruthy()
+  const observation = observeReadOnly(context, reg)
+  const nameField = async () => (await wizard(page, fixture)).locator('#field-name').getByRole('textbox')
+  const exit = () => page.getByTestId('travel-wizard-back').filter({ visible: true }).click()
+  try {
+    await enterList(page, reg.origin, 'zero')
+    const before = await actualEdit(page, fixture, reg)
+    await expect(await nameField()).toHaveValue(fixture.name)
+    await (await nameField()).fill(`${fixture.name} — отброшено`)
+    await exit()
+    await page.getByTestId('travel-wizard.exit.discard').click()
+    await ownListRow(page, fixture)
+    // A bounded window past the autosave debounce: the absence of a write is the
+    // assertion, and only elapsed time can show it.
+    await new Promise(resolve => setTimeout(resolve, AUTOSAVE_DEBOUNCE_MS + 1500))
+    await observation.settle()
+    expect(observation.data.writes, 'discarded edits never reach the server').toEqual([])
+
+    expect(await actualEdit(page, fixture, reg), 'repeat Edit reads the unchanged server article').toEqual(before)
+    await expect(await nameField()).toHaveValue(fixture.name)
+    // The draft lookup is asynchronous: its dialog is judged only once the page is quiet.
+    await observation.settle()
+    await expect(page.getByLabel(label(selectors.draftFound), { exact: true }), 'no draft of the discarded edits is offered').toHaveCount(0)
+    // Nothing is unsaved in the new session: its exit asks no question.
+    await exit()
+    await ownListRow(page, fixture)
+    await expect(page.getByTestId('travel-wizard.exit.discard')).toHaveCount(0)
+    expect(snapshot(await batch.ownDetail(context.request, fixture)), 'the article is unchanged').toEqual(before)
+    await observation.settle(); observation.assertClean()
+    await emit({ phase: 'discard-business-assertions', width, verdict: 'PASS' })
+  } finally {
+    try {
+      await emit({ phase: 'discard-raw-trace', width, observations: observation.data, tolerated: observation.tolerated() })
+      if (!page.isClosed()) await page.screenshot({ path: path.join(batch.directory, `discard-${width}.png`), fullPage: false })
+    } finally { observation.stop() }
+  }
+}
+
 // Shared real-document acceptance for #2701. Fixture setup and teardown remain
 // outside this read-only phase; the actual server chooses404/200/301.
 async function runEditorDocument({ context, page, batch, role, width, temperature, emit }) {
@@ -394,4 +418,4 @@ async function runEditorDocument({ context, page, batch, role, width, temperatur
 }
 
 module.exports = { label, traceConfig, observeReadOnly, openRoleContext, actualEdit, selectStep, exerciseReason, enterList,
-  runEditorHistory, runEditorDocument }
+  runEditorHistory, runEditorDiscard, runEditorDocument }
