@@ -117,6 +117,67 @@ describe('toInertHtml({ deferImages: true })', () => {
   })
 })
 
+/**
+ * #3414: заглушка снимается до выдачи адресов. Пока она стоит, `sizes` заново
+ * выбирает уже загруженную картинку, Chrome снимает с элемента ленивый режим и
+ * следующий `srcset` запрашивает сразу: 251 фото статьи уходили в сеть разом.
+ */
+describe('release order: the placeholder goes before any address returns (#3414)', () => {
+  const html = toInertHtml(BODY, { deferImages: true })
+
+  /** Порядок правок `src`/`srcset`/`sizes` у картинок: `<alt>:<действие> <атрибут>`. */
+  const recordSourceMutations = (run: () => void) => {
+    const calls: string[] = []
+    const watched = new Set(['src', 'srcset', 'sizes'])
+    const originalSet = Element.prototype.setAttribute
+    const originalRemove = Element.prototype.removeAttribute
+    const note = (el: Element, action: string, name: string) => {
+      if (el.tagName === 'IMG' && watched.has(name)) calls.push(`${el.getAttribute('alt')}:${action} ${name}`)
+    }
+    const set = jest.spyOn(Element.prototype, 'setAttribute').mockImplementation(function (this: Element, name: string, value: string) {
+      note(this, 'set', name)
+      return originalSet.call(this, name, value)
+    })
+    const remove = jest.spyOn(Element.prototype, 'removeAttribute').mockImplementation(function (this: Element, name: string) {
+      note(this, 'remove', name)
+      return originalRemove.call(this, name)
+    })
+    try {
+      run()
+    } finally {
+      set.mockRestore()
+      remove.mockRestore()
+    }
+    return calls
+  }
+
+  const EXPECTED = [
+    'Указатель:remove src',
+    'Указатель:set src',
+    ':remove src',
+    ':set sizes',
+    ':set srcset',
+    ':set src',
+    ':remove src',
+    ':set src',
+  ]
+
+  it('the mounted island drops the placeholder first, then gives sizes, srcset and src', () => {
+    const root = island(html)
+    expect(recordSourceMutations(() => releaseDeferredRichTextImages(root))).toEqual(EXPECTED)
+  })
+
+  it('the document shell does the same', () => {
+    document.documentElement.className = ''
+    document.body.innerHTML = `<div data-ssr-html-island="description">${html}</div>`
+    try {
+      expect(recordSourceMutations(() => new Function(buildDeferredRichTextImagesScript())())).toEqual(EXPECTED)
+    } finally {
+      document.body.innerHTML = ''
+    }
+  })
+})
+
 describe('buildDeferredRichTextImagesScript', () => {
   const html = toInertHtml(BODY, { deferImages: true })
 

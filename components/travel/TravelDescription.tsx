@@ -15,7 +15,7 @@ import DeferredStableContent from '@/components/travel/DeferredStableContent';
 import TravelDescriptionHtml from '@/components/travel/TravelDescriptionHtml';
 import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
-import { buildArticleBodyIslandImageSources } from '@/components/travel/stableContent/articleBodyImageUrls';
+import { articleBodyIslandDeferredImages } from '@/components/travel/stableContent/articleBodyImageUrls';
 import { translate as i18nT } from '@/i18n'
 import { useResponsive } from '@/hooks/useResponsive';
 import { toInertHtml } from '@/utils/inertHtml';
@@ -117,8 +117,9 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
             // #3237: серверный HTML несёт `alt` у каждой картинки — подпись автора или пустой.
             // #3316: адреса картинок отложены до LCP-фото первого экрана.
             // #3408: адреса — те же ступени, что у полного рендера, а не оригинал без `w`.
+            // #3414: и тот же резерв места — подмена острова не двигает текст.
             ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)), {
-                deferImages: { sources: (src) => buildArticleBodyIslandImageSources(src, articleBodyMedia) },
+                deferImages: articleBodyIslandDeferredImages(articleBodyMedia),
             })
             : null,
         [articleBodyMedia, hasLoaderTravel, htmlContent, serverSanitized],

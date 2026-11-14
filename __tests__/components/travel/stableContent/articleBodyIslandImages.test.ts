@@ -4,7 +4,10 @@
 // реализации выпуска и сам полный рендер — без подмены ни одного из них.
 import { Platform } from 'react-native'
 
-import { buildArticleBodyIslandImageSources } from '@/components/travel/stableContent/articleBodyImageUrls'
+import {
+  articleBodyIslandDeferredImages,
+  buildArticleBodyIslandImageSources,
+} from '@/components/travel/stableContent/articleBodyImageUrls'
 import { buildArticleBodyMediaIndex, type ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
 import { prepareStableContentHtml } from '@/components/travel/stableContent/htmlTransform'
 import { toInertHtml } from '@/utils/inertHtml'
@@ -54,10 +57,12 @@ const attrsOf = (img: Element | null | undefined): ImageAttrs => ({
   sizes: img?.getAttribute('sizes') ?? null,
 })
 
+// Тот же набор, что берёт `TravelDescription`: адреса ступеней и резерв места.
+const islandOf = (html: string, media: ArticleBodyMediaIndex | null = MEDIA) =>
+  toInertHtml(html, { deferImages: articleBodyIslandDeferredImages(media) })
+
 const island = (src: string, media: ArticleBodyMediaIndex | null = MEDIA) =>
-  toInertHtml(`<p>Текст</p><p><img src="${src}" alt=""></p>`, {
-    deferImages: { sources: (value) => buildArticleBodyIslandImageSources(value, media) },
-  })
+  islandOf(`<p>Текст</p><p><img src="${src}" alt=""></p>`, media)
 
 const fullRender = (src: string, width: number, media: ArticleBodyMediaIndex | null = MEDIA): ImageAttrs =>
   withViewport(width, 'web', () =>
@@ -200,5 +205,98 @@ describe('server island addresses body photos like the full render (#3408)', () 
     const deferred = parse(toInertHtml(`<img src="${STORED_DESCRIPTION_IMAGE}" alt="">`, { deferImages: true })).querySelector('img')
     expect(deferred?.getAttribute('data-deferred-src')).toBe(STORED_DESCRIPTION_IMAGE)
     expect(deferred?.hasAttribute('data-deferred-srcset-mobile')).toBe(false)
+  })
+})
+
+// #3414: от выпуска адреса до загрузки файла коробку кадра держит только резерв.
+// Он обязан совпасть с резервом полного рендера, который подменяет остров.
+describe('server island reserves the frame box of the full render (#3414)', () => {
+  const SIZED_FILE = 'https://metravel.by/travel-description-image/7351/description/pano-1600x900.webp'
+  const BOXES = [
+    ['no declared size: fallback reserve', `<img src="${STORED_DESCRIPTION_IMAGE}" alt="">`, { width: '800', height: '450', fallback: true }],
+    ['declared portrait', `<img src="${STORED_DESCRIPTION_IMAGE}" width="1200" height="1600" alt="">`, { width: '1200', height: '1600', fallback: false }],
+    ['size in the file name', `<img src="${SIZED_FILE}" alt="">`, { width: '1600', height: '900', fallback: false }],
+    ['one declared side: still a fallback', `<img src="${STORED_DESCRIPTION_IMAGE}" width="640" alt="">`, { width: '640', height: '450', fallback: true }],
+    ['authored style is kept', `<img src="${STORED_DESCRIPTION_IMAGE}" style="border-radius:8px" alt="">`, { width: '800', height: '450', fallback: true }],
+    ['authored fallback marker on a declared size', `<img src="${STORED_DESCRIPTION_IMAGE}" data-aspect-fallback="1" width="900" height="600" alt="">`, { width: '900', height: '600', fallback: false }],
+    ['external image', `<img src="${EXTERNAL_IMAGE}" alt="">`, { width: '800', height: '450', fallback: true }],
+  ] as const
+
+  const boxOf = (img: Element | null | undefined) => ({
+    width: img?.getAttribute('width') ?? null,
+    height: img?.getAttribute('height') ?? null,
+    fallback: img?.getAttribute('data-aspect-fallback') ?? null,
+    style: img?.getAttribute('style') ?? null,
+  })
+  const fullRenderImage = (html: string, width: number) =>
+    withViewport(width, 'web', () =>
+      parse(prepareStableContentHtml(`<p>${html}</p>`, { serverSanitized: true, articleBodyMedia: MEDIA })).querySelector('img'))
+  const mountIsland = (html: string) => parse(`<div data-ssr-html-island="description">${islandOf(`<p>${html}</p>`)}</div>`)
+
+  it.each(BOXES)('%s: same width, height and marker as the full render', (_, html, expected) => {
+    const deferred = mountIsland(html).querySelector('img')
+    expect(boxOf(deferred)).toMatchObject({
+      width: expected.width,
+      height: expected.height,
+      fallback: expected.fallback ? '1' : null,
+    })
+    for (const viewport of [390, 1280]) {
+      const full = boxOf(fullRenderImage(html, viewport))
+      expect({ viewport, ...boxOf(deferred), style: undefined }).toEqual({ viewport, ...full, style: undefined })
+      // Запасной резерв уступает пропорции файла через CSS — полный рендер делает
+      // то же скриптом после загрузки. Объявленные размеры совпадают дословно.
+      const ratio = `aspect-ratio:${expected.width}/${expected.height}`
+      expect(full.style).toContain(ratio)
+      expect(boxOf(deferred).style).toBe(
+        expected.fallback ? full.style?.replace(ratio, `aspect-ratio:auto ${expected.width}/${expected.height}`) : full.style,
+      )
+    }
+  })
+
+  it.each(BOXES)('%s: the placeholder and the noscript twin carry the same box', (_, html, expected) => {
+    const markup = islandOf(`<p>${html}</p>`)
+    const deferred = parse(markup).querySelector('img')
+    expect(deferred?.getAttribute('src')).toBe(
+      `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${expected.width} ${expected.height}'%2F%3E`,
+    )
+    const twin = new DOMParser().parseFromString(markup, 'text/html').body.querySelector('noscript img')
+    expect(twin?.getAttribute('width')).toBe(expected.width)
+    expect(twin?.getAttribute('height')).toBe(expected.height)
+    expect(twin?.getAttribute('loading')).toBe('lazy')
+  })
+
+  it('the released photo keeps the box and stays lazy in both release implementations', () => {
+    for (const [, html, expected] of BOXES) {
+      const before = boxOf(mountIsland(html).querySelector('img'))
+
+      const byComponent = mountIsland(html)
+      releaseDeferredRichTextImages(byComponent)
+      expect(boxOf(byComponent.querySelector('img'))).toEqual(before)
+      expect(byComponent.querySelector('img')?.getAttribute('loading')).toBe('lazy')
+      expect(byComponent.querySelector('img')?.getAttribute('src')).not.toMatch(/^data:/)
+
+      document.documentElement.className = ''
+      document.body.innerHTML = mountIsland(html).innerHTML
+      try {
+        new Function(buildDeferredRichTextImagesScript())()
+        const released = document.querySelector('[data-ssr-html-island] img')
+        expect(boxOf(released)).toEqual(before)
+        expect(released?.getAttribute('loading')).toBe('lazy')
+        expect(released?.getAttribute('width')).toBe(expected.width)
+      } finally {
+        document.body.innerHTML = ''
+      }
+    }
+  })
+
+  it('an image the pass does not defer still gets the reserve', () => {
+    const img = parse(islandOf('<p><img alt=""></p>')).querySelector('img')
+    expect(boxOf(img)).toMatchObject({ width: '800', height: '450', fallback: '1' })
+    expect(img?.hasAttribute('src')).toBe(false)
+  })
+
+  it('a plain deferImages pass adds no reserve (other surfaces)', () => {
+    const img = parse(toInertHtml(`<img src="${STORED_DESCRIPTION_IMAGE}" alt="">`, { deferImages: true })).querySelector('img')
+    expect(boxOf(img)).toEqual({ width: null, height: null, fallback: null, style: null })
   })
 })

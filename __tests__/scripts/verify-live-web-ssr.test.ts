@@ -45,13 +45,15 @@ describe('paired renderer publication readiness', () => {
     expect(() => verifyRuntimeResponse(response(), html.replace('"mainEntityOfPage":"https://metravel.by/travels/example"', '"mainEntityOfPage":"https://metravel.by/travels/other"'), { sha, canonical })).toThrow('Article/Breadcrumb')
   })
 
+  const photo = 'https://metravel.by/travel-description-image/1/description/a.webp'
+  const withIsland = (images: string) => html.replace('<p>Actual article body.</p>', `<p>Actual article body.</p>${images}`)
+  const RESERVE = 'width="800" height="450" style="display:block;height:auto;margin:0 auto;aspect-ratio:auto 800/450"'
+
   it('refuses a description island that requests a first-party photo without a width (#3408)', () => {
-    const photo = 'https://metravel.by/travel-description-image/1/description/a.webp'
-    const withIsland = (images: string) => html.replace('<p>Actual article body.</p>', `<p>Actual article body.</p>${images}`)
-    const sized = `<img src="data:image/svg+xml,x" data-deferred-src="${photo}?w=800" `
+    const sized = `<img src="data:image/svg+xml,x" ${RESERVE} data-deferred-src="${photo}?w=800" `
       + `data-deferred-srcset="${photo}?w=480 480w, ${photo}?w=800 800w" data-deferred-srcset-mobile="${photo}?w=480 480w">`
       + `<noscript><img src="${photo}?w=800" srcset="${photo}?w=480 480w, ${photo}?w=800 800w"></noscript>`
-      + '<img data-deferred-src="https://example.com/external.jpg">'
+      + `<img ${RESERVE} data-deferred-src="https://example.com/external.jpg">`
     expect(() => verifyRuntimeResponse(response(), withIsland(sized), { sha, canonical })).not.toThrow()
     expect(() => verifyRuntimeResponse(response(), withIsland(`<img data-deferred-src="${photo}">`), { sha, canonical }))
       .toThrow('without a width')
@@ -59,6 +61,26 @@ describe('paired renderer publication readiness', () => {
       .toThrow('without a width')
     expect(() => verifyRuntimeResponse(response(), withIsland(`<img data-deferred-srcset="${photo}?w=480 480w, ${photo} 800w">`), { sha, canonical }))
       .toThrow('without a width')
+  })
+
+  it('refuses a deferred island photo without a reserved box (#3414)', () => {
+    const deferred = (attrs: string) => withIsland(`<img src="data:image/svg+xml,x" ${attrs} data-deferred-src="${photo}?w=800">`
+      + `<noscript><img src="${photo}?w=800" loading="lazy"></noscript>`)
+    expect(() => verifyRuntimeResponse(response(), deferred(RESERVE), { sha, canonical })).not.toThrow()
+    expect(() => verifyRuntimeResponse(response(), deferred('width="1200" height="1600" style="aspect-ratio:1200/1600"'), { sha, canonical }))
+      .not.toThrow()
+    // Declared by the author and kept as the full render keeps it: content, not a renderer fault.
+    expect(() => verifyRuntimeResponse(response(), deferred('width="800" height="0" style="aspect-ratio:800/0"'), { sha, canonical }))
+      .not.toThrow()
+    for (const attrs of [
+      '',
+      'width="800" height="450"',
+      'style="aspect-ratio:800/450"',
+      'width="800" height="auto" style="aspect-ratio:800/450"',
+      'width="800" height="450" style="display:block"',
+    ]) {
+      expect(() => verifyRuntimeResponse(response(), deferred(attrs), { sha, canonical })).toThrow('without a reserved box')
+    }
   })
 
   it('selects a currently published control and requires a real rendered response followed by HIT', async () => {

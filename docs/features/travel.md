@@ -283,6 +283,21 @@ QueryClient cache становятся видимыми после гидрат�
   уходит: бэкенд отдаёт на него мастер с `no-store`, а полный рендер потом
   перекачивал тот же кадр ступенью. Внешние картинки остаются как есть. Сторож —
   `scripts/verify-live-web-ssr.js` (#3408).
+- Картинка острова несёт резерв места полного рендера: `width`/`height`
+  (объявленные редактором, из имени файла либо запасные 800×450 с
+  `data-aspect-fallback`) и `aspect-ratio` в `style`. Расчёт один —
+  `utils/richTextImageReserve.ts`, его берут и `normalizeImgTags`, и остров
+  (`articleBodyIslandDeferredImages` → `toInertHtml(…, { deferImages })`). У
+  запасного резерва остров пишет `aspect-ratio:auto 800/450`: после загрузки кадр
+  принимает пропорцию файла средствами CSS, как полный рендер делает скриптом.
+  Выпуск адресов сначала снимает заглушку (`src`), затем выдаёт `sizes`,
+  `srcset`, `src`. Со стоящей заглушкой `sizes` заново выбирает уже загруженную
+  картинку, Chrome снимает с элемента ленивый режим и следующий `srcset`
+  запрашивает сразу — статья с 251 фото уходила в сеть 251 запросом. Между
+  выпуском и загрузкой файла коробку держит только резерв (#3414). Сторожа —
+  `articleBodyIslandImages.test.ts`, порядок правок в
+  `richTextDeferredImages.test.ts`, отказ `scripts/verify-live-web-ssr.js` на
+  отложенном кадре без резерва.
 - Изменения slider/details/media обязаны проходить обе стороны bilateral
   contract: `npm run verify:slider` и `npm run verify:slider-perf`, с запуском
   через общий quality-gate lock по `docs/RULES.md`.

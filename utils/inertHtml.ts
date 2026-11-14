@@ -4,7 +4,11 @@ import {
   tokenizeHtml,
   type HtmlAttribute,
 } from '@/utils/htmlTokens'
-import { serializeDeferredImage, type DeferredImageSourcesResolver } from '@/utils/inertHtmlDeferredImages'
+import {
+  serializeDeferredImage,
+  type DeferredImageReserve,
+  type DeferredImageSourcesResolver,
+} from '@/utils/inertHtmlDeferredImages'
 
 /**
  * #3202: последний рубеж перед web-стоком rich-text.
@@ -152,8 +156,10 @@ export type InertHtmlOptions = {
    * #3316: `<img>` откладываются до LCP-фото с `noscript`-двойником (`utils/inertHtmlDeferredImages.ts`).
    * #3408: `sources` подменяет адреса картинки нашими (`src`/`srcset`/`sizes` и мобильная
    * лестница) — по санитизированному `src`; `null` от него оставляет картинку как есть.
+   * #3414: `reserve` ставит картинке резерв места по атрибутам из разметки автора;
+   * его результат проходит общий санитайз.
    */
-  deferImages?: boolean | { sources: DeferredImageSourcesResolver }
+  deferImages?: boolean | { sources: DeferredImageSourcesResolver; reserve?: DeferredImageReserve }
 }
 
 // Значение атрибута в разметке: `&` в URL построителя — ссылкой, как у полного рендера.
@@ -188,7 +194,9 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
   let dropName: string | null = null
   let dropDepth = 0
   const deferImages = Boolean(options?.deferImages)
-  const resolveSources = typeof options?.deferImages === 'object' ? options.deferImages.sources : null
+  const ownImages = typeof options?.deferImages === 'object' ? options.deferImages : null
+  const resolveSources = ownImages?.sources ?? null
+  const reserveImage = ownImages?.reserve ?? null
 
   for (const token of tokenizeHtml(source)) {
     if (dropName !== null) {
@@ -212,7 +220,7 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
           break
         }
         if (!VALID_TAG_NAME_RE.test(name) || DROP_TAG_ONLY.has(name)) break
-        const attrs = sanitizeAttributes(name, token.attrs)
+        const attrs = sanitizeAttributes(name, name === 'img' && reserveImage ? reserveImage(token.attrs) : token.attrs)
         if (name === 'iframe') {
           if (isAllowedIframe(attrs)) out += `${serializeStartTag(name, attrs)}</iframe>`
           break

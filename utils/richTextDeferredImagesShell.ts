@@ -25,6 +25,7 @@ export function buildDeferredRichTextImagesScript(): string {
   const pairs = JSON.stringify(DEFERRED_IMAGE_ATTRIBUTES)
   const mobileAttr = JSON.stringify(DEFERRED_MOBILE_SRCSET_ATTRIBUTE)
   // #3408: то же правило, что `applyMobileSrcset` в `richTextDeferredImages.ts`.
+  // #3414: заглушка (`src`) снимается до выдачи адресов — там же.
   return (
     '(function(){' +
     `var d=document,h=d.documentElement,s=${selector},p=${pairs},ma=${mobileAttr},done=false,o=null;` +
@@ -33,6 +34,7 @@ export function buildDeferredRichTextImagesScript(): string {
     'var list=d.querySelectorAll(s);for(var i=0;i<list.length;i++){var img=list[i];' +
     "var m=img.getAttribute(ma);if(m!==null){img.removeAttribute(ma);if(mob){if(m)img.setAttribute('data-deferred-srcset',m);" +
     "else{img.removeAttribute('data-deferred-srcset');img.removeAttribute('data-deferred-sizes')}}}" +
+    "img.removeAttribute('src');" +
     'for(var j=0;j<p.length;j++){var v=img.getAttribute(p[j][1]);if(v===null)continue;img.removeAttribute(p[j][1]);img.setAttribute(p[j][0],v)}}}' +
     'try{if(!d.querySelector(s))return;' +
     `var img=d.querySelector(${lcpSelector});` +

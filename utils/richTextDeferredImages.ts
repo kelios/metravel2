@@ -37,6 +37,8 @@ export function releaseDeferredRichTextImages(root: ParentNode): void {
   const mobile = typeof window !== 'undefined' && isArticleBodyMobileViewport(window.innerWidth || 0)
   root.querySelectorAll<HTMLImageElement>(DEFERRED_IMAGE_SELECTOR).forEach((img) => {
     applyMobileSrcset(img, mobile)
+    // #3414: заглушка снимается до выдачи адресов — см. `DEFERRED_IMAGE_ATTRIBUTES`.
+    img.removeAttribute('src')
     for (const [live, deferred] of DEFERRED_IMAGE_ATTRIBUTES) {
       const value = img.getAttribute(deferred)
       if (value === null) continue

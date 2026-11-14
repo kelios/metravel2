@@ -30,7 +30,8 @@ import {
   isPrivateOrLocalHost,
   toLegacyResizePath,
 } from '@/utils/mediaUrl'
-import type { DeferredImageSources } from '@/utils/inertHtmlDeferredImages'
+import type { DeferredImageReserve, DeferredImageSources, DeferredImageSourcesResolver } from '@/utils/inertHtmlDeferredImages'
+import { reserveRichTextIslandImage } from '@/utils/richTextImageReserve'
 import { pickWidthCandidate } from '@/utils/travelMediaVariants'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { isMetravelMediaHostname } from '@/utils/webResourceHints'
@@ -475,3 +476,14 @@ export const buildArticleBodyIslandImageSources = (
   const mobileSrcSet = buildArticleBodyResponsiveImage(src, media, RESPONSIVE_WIDTHS_MOBILE)?.srcSet ?? ''
   return { ...desktop, mobileSrcSet: mobileSrcSet === desktop.srcSet ? null : mobileSrcSet }
 }
+
+/**
+ * #3414: всё, что серверный остров тела статьи берёт у полного рендера, — адреса
+ * ступеней и резерв места. Передаётся в `toInertHtml(html, { deferImages })`.
+ */
+export const articleBodyIslandDeferredImages = (
+  media: ArticleBodyMediaIndex | null,
+): { sources: DeferredImageSourcesResolver; reserve: DeferredImageReserve } => ({
+  sources: (src) => buildArticleBodyIslandImageSources(src, media),
+  reserve: reserveRichTextIslandImage,
+})

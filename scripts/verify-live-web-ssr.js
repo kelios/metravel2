@@ -62,6 +62,23 @@ function unsizedIslandImageUrls(island, canonical) {
     })
 }
 
+// #3414: a deferred island photo holds its box by the reserve alone between the
+// release of its address and the arrival of the file. Without `width`/`height`
+// and `aspect-ratio` the article collapses under the reader and the island no
+// longer matches the full render that replaces it. Dimensions are checked for
+// presence only: the reserve keeps any digits the author declared (even `0`),
+// as the full render does, and the controls are whatever articles are newest.
+const DEFERRED_ISLAND_IMAGE_ATTRIBUTES = ['data-deferred-src', 'data-deferred-srcset']
+const DIMENSION_RE = /^\d+$/
+
+function unreservedIslandImages(island) {
+  return DomUtils.findAll((node) => node.name === 'img'
+    && DEFERRED_ISLAND_IMAGE_ATTRIBUTES.some((name) => node.attribs?.[name]), [island])
+    .filter(({ attribs }) => !DIMENSION_RE.test(attribs.width || '')
+      || !DIMENSION_RE.test(attribs.height || '')
+      || !/(?:^|;)\s*aspect-ratio\s*:/.test(attribs.style || ''))
+}
+
 function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = false, mode = 'strict', codeProof }) {
   assertReadinessMode(mode)
   const { find } = assertSsrDocument(response, html, { sha, canonical })
@@ -69,6 +86,11 @@ function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = fa
   if (islands.length !== 1 || !DomUtils.textContent(islands[0]).trim()) throw new Error('Renderer description is empty')
   const unsized = unsizedIslandImageUrls(islands[0], canonical)
   if (unsized.length) throw new Error(`Renderer description requests first-party photos without a width: ${unsized[0]}`)
+  const unreserved = unreservedIslandImages(islands[0])
+  if (unreserved.length) {
+    throw new Error(`Renderer description defers ${unreserved.length} photo(s) without a reserved box: `
+      + `${unreserved[0].attribs['data-deferred-src'] || unreserved[0].attribs['data-deferred-srcset']}`)
+  }
   if (find((node) => node.attribs?.id === 'ssg-travel-article' || node.attribs?.class?.split(/\s+/).includes('ssg-travel-article')).length) {
     throw new Error('Legacy generated article still owns the document')
   }

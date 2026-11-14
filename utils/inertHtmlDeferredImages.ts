@@ -18,7 +18,16 @@
 
 import { getAttribute, serializeStartTag, type HtmlAttribute } from '@/utils/htmlTokens'
 
-/** Живой атрибут → отложенный. Порядок выдачи: `sizes`, `srcset`, затем `src`. */
+/**
+ * Живой атрибут → отложенный. Порядок выдачи: `sizes`, `srcset`, затем `src` —
+ * первый же выбор источника идёт по готовому набору.
+ *
+ * #3414: перед выдачей выпуск снимает заглушку (`src`). Иначе `sizes` заново
+ * выбирает уже загруженную заглушку, Chrome считает ленивую картинку показанной
+ * и следующий `srcset` запрашивает сразу, мимо `loading="lazy"`: статья с 251
+ * фото уходила в сеть 251 запросом (прод 14.11.2026). Без заглушки коробку
+ * держит резерв места (`DeferredImageReserve`).
+ */
 export const DEFERRED_IMAGE_ATTRIBUTES = [
   ['sizes', 'data-deferred-sizes'],
   ['srcset', 'data-deferred-srcset'],
@@ -41,6 +50,14 @@ export const DEFERRED_MOBILE_SRCSET_ATTRIBUTE = 'data-deferred-srcset-mobile'
  */
 export type DeferredImageSources = { src: string; srcSet: string; sizes: string; mobileSrcSet: string | null }
 export type DeferredImageSourcesResolver = (src: string) => DeferredImageSources | null
+
+/**
+ * #3414: резерв места картинки — `width`/`height` и `aspect-ratio` по атрибутам
+ * из разметки автора (тело статьи — `reserveRichTextIslandImage`). От выпуска
+ * адреса до загрузки файла у картинки нет ни заглушки, ни пикселей: коробку
+ * держит только он.
+ */
+export type DeferredImageReserve = (attrs: readonly HtmlAttribute[]) => HtmlAttribute[]
 
 const NOSCRIPT_IMAGE_ATTRIBUTES = ['src', 'srcset', 'sizes', 'alt', 'width', 'height'] as const
 

@@ -70,8 +70,14 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
   expect(island?.querySelector('img')?.getAttribute('data-deferred-srcset-mobile')).toBe(MOBILE_SRCSET)
   expect(island?.querySelectorAll('noscript')).toHaveLength(1)
   expect(island?.querySelector('noscript')?.textContent).toBe(
-    `<img src="${PHOTO}?w=800" srcset="${DESKTOP_SRCSET}" sizes="${SIZES}" alt="" loading="lazy">`,
+    `<img src="${PHOTO}?w=800" srcset="${DESKTOP_SRCSET}" sizes="${SIZES}" alt="" width="800" height="450" loading="lazy">`,
   )
+  // #3414: резерв места полного рендера — коробку кадра держит он, а не заглушка.
+  expect(island?.querySelector('img')?.getAttribute('src')).toContain("viewBox='0 0 800 450'")
+  expect(island?.querySelector('img')?.getAttribute('width')).toBe('800')
+  expect(island?.querySelector('img')?.getAttribute('height')).toBe('450')
+  expect(island?.querySelector('img')?.getAttribute('data-aspect-fallback')).toBe('1')
+  expect(island?.querySelector('img')?.getAttribute('style')).toBe('display:block;height:auto;margin:0 auto;aspect-ratio:auto 800/450')
   expect(island?.querySelector('h1')).toBeNull()
   expect(island?.querySelector('h2#authored-heading')?.textContent).toBe('Раздел статьи')
   const errors: unknown[] = []
@@ -86,6 +92,8 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
     expect(island?.querySelector('img')?.getAttribute('srcset')).toBe(width <= 768 ? MOBILE_SRCSET : DESKTOP_SRCSET)
     expect(island?.querySelector('img')?.getAttribute('sizes')).toBe(SIZES)
     expect(island?.querySelector('img')?.hasAttribute('data-deferred-srcset-mobile')).toBe(false)
+    expect(island?.querySelector('img')?.getAttribute('width')).toBe('800')
+    expect(island?.querySelector('img')?.getAttribute('style')).toBe('display:block;height:auto;margin:0 auto;aspect-ratio:auto 800/450')
     expect(island?.querySelectorAll('img')).toHaveLength(1)
     expect(island?.querySelectorAll('noscript')).toHaveLength(1)
   } finally {

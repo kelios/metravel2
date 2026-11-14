@@ -26,6 +26,11 @@ import { decorateRichImageFrames } from '@/components/travel/stableContent/richI
 import { extractYouTubeFacadeVideoId } from '@/components/travel/stableContent/youtubeFacadeId'
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings'
 import { applyRichTextImageAlt } from '@/utils/richTextImageAlt'
+import {
+  applyRichTextImageReserveSize,
+  applyRichTextImageReserveStyle,
+  resolveRichTextImageReserve,
+} from '@/utils/richTextImageReserve'
 import { translate as i18nT } from '@/i18n'
 
 // #3408: адреса картинок тела строит `articleBodyImageUrls.ts` — тот же
@@ -56,9 +61,6 @@ const escapeHtmlAttr = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const DIGITS_RE = /^\d+$/
-const declaredDimension = (value: string | null | undefined) => (value && DIGITS_RE.test(value) ? value : undefined)
-
 // #3202: атрибуты читаются и меняются по разобранному тегу. Раньше здесь стояли
 // регулярки по строке тега, и `src="` в хвосте значения `alt` принимался за `src`:
 // замена сдвигала кавычки, и текст из `class` становился атрибутом `onerror`.
@@ -67,35 +69,12 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
     const src = getAttribute(attrs, 'src') ?? ''
     const responsive = src ? buildArticleBodyResponsiveImage(src, media, currentSlotWidths()) : null
     const optimizedSrc = responsive?.src ?? (src ? buildExternalImageUrl(src) || src : src)
-    let width = declaredDimension(getAttribute(attrs, 'width'))
-    let height = declaredDimension(getAttribute(attrs, 'height'))
-
-    if (!width || !height) {
-      const wh = src.match(/[-_](\d{2,5})x(\d{2,5})\.(?:jpe?g|png|webp|avif)(?:\?|$)/i)
-      if (wh) {
-        width = width || wh[1]
-        height = height || wh[2]
-      }
-    }
-
-    // #1188: 800×450 — это РЕЗЕРВ места до загрузки, а не пропорции кадра. Редакторская
-    // разметка почти никогда не несёт width/height, и без пометки оба рендерера считали
-    // выдуманные 16:9 настоящими: на web фото вставало в чужой слот (портрет 374×499 в
-    // 354×195 — 59% площади пусто), а на native `attrAR` вообще отменял измерение файла.
-    // Маркер отличает резерв от объявленных редактором размеров: их трогать нельзя.
-    const hasDeclaredSize = Boolean(width && height)
-    const finalW = width || 800
-    const finalH = height || 450
-
-    const style = getAttribute(attrs, 'style') ?? ''
-    const ensured = ['display:block', 'height:auto', 'margin:0 auto', `aspect-ratio:${finalW}/${finalH}`]
-      .reduce((acc, rule) => (acc.includes(rule) ? acc : acc ? `${acc};${rule}` : rule), style)
-
-    removeAttribute(attrs, 'style')
-    attrs.push({ name: 'style', value: ensured })
+    // #3414: резерв места считает общий модуль — его же берёт серверный остров.
+    const reserve = resolveRichTextImageReserve(attrs)
+    applyRichTextImageReserveStyle(attrs, reserve)
     if (optimizedSrc) setAttribute(attrs, 'src', escapeHtmlAttr(optimizedSrc))
     else removeAttribute(attrs, 'src')
-    for (const name of ['srcset', 'sizes', 'width', 'height', 'data-aspect-fallback']) removeAttribute(attrs, name)
+    for (const name of ['srcset', 'sizes']) removeAttribute(attrs, name)
 
     // Пустой `srcSet` — это не «забыли построить», а класс без лестницы (#1233).
     // Атрибуты в таком случае не выводим: `srcset=""` браузер трактует как
@@ -104,8 +83,7 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
       attrs.push({ name: 'srcset', value: escapeHtmlAttr(responsive.srcSet) })
       attrs.push({ name: 'sizes', value: escapeHtmlAttr(responsive.sizes) })
     }
-    attrs.push({ name: 'width', value: String(finalW) }, { name: 'height', value: String(finalH) })
-    if (!hasDeclaredSize) attrs.push({ name: 'data-aspect-fallback', value: '1' })
+    applyRichTextImageReserveSize(attrs, reserve)
     for (const name of ['decoding', 'fetchpriority', 'loading']) removeAttribute(attrs, name)
 
     // #3237: подпись автора или пустой `alt` — тот же контракт, что у серверного HTML.
