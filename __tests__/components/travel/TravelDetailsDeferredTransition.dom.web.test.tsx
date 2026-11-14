@@ -752,6 +752,35 @@ it('still preserves the reading frame once the reader has left the owner top', (
   f.cleanup()
 })
 
+// #3396: a menu jump parks «Популярные» at the reading line (owner top 54, header
+// bottom 72, line 96). «Похожие статьи» then grows below it, above the still
+// visible «Комментарии». Holding «Комментарии» scrolled the chosen section away
+// by the whole block: 758px on desktop, 1393px on a phone.
+it.each([758, 1393])('lets a late block that starts below the reading line push the following frame down by %ipx', height => {
+  const f = fixture({ optional: true, initialTop: 600, anchorTop: 606 })
+  f.transition().getBoundingClientRect = () => rect(605, Number.parseFloat(f.transition().style.height || '0'))
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height } }))
+  expect(f.transition().style.height).toBe(`${height}px`)
+  expect(f.owner.scrollTop).toBe(600)
+  expect(f.writes).toHaveLength(0)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before + height)
+  f.render(true, false, null)
+  expect(f.writes).toHaveLength(0)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  f.cleanup()
+})
+
+it.each([72, 96])('still holds the frame under the reading line when a block is inserted at %ipx, not below the line', top => {
+  const f = fixture({ optional: true, initialTop: 600, anchorTop: top })
+  f.transition().getBoundingClientRect = () => rect(top, 0)
+  const before = f.anchor.getBoundingClientRect().top
+  f.render(true, false, createElement('div', { style: { height: 224 } }))
+  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.writes).toEqual([824])
+  f.cleanup()
+})
+
 it.each([{ anchorTop: 900 }, { differentOwner: true }, { noScrollOwner: true }])('does not scroll for an optional frame without a visible same-owner anchor: %j', options => {
   const f = fixture({ optional: true, initialTop: 600, ...options })
   f.render(true, false, createElement('div', { style: { height: 256 } }))
@@ -1492,5 +1521,23 @@ it.each([32, 157])('preserves later growth after the same aggregate first publis
     f.publish()
     expect(f.node('comments').getBoundingClientRect().top).toBe(before)
     expect(f.writes).toEqual([f.initialTop + growth + 157])
+  } finally { f.cleanup() }
+})
+
+// #3396 in the production topology: the leaf with «Похожие»/arrows sits after
+// «Популярные» inside the sidebar aggregate, whose own start is far above the
+// viewport. The change enters the flow at the leaf, so its position decides.
+it.each(['observer', 'layout-commit'] as const)('lets Comments take late leaf growth that starts below the reading line (delivery=%s)', delivery => {
+  const f = aggregateSidebarFixture(822, 740.96875, false, delivery)
+  try {
+    f.node('navigation').getBoundingClientRect = () => rect(500, f.height('navigation'))
+    const before = f.node('comments').getBoundingClientRect().top
+    f.navigation(758)
+    expect(f.height('navigation')).toBe(758)
+    expect(f.writes).toEqual([])
+    expect(f.owner.scrollTop).toBe(f.initialTop)
+    expect(f.node('comments').getBoundingClientRect().top).toBe(before + 758)
+    f.repeat()
+    expect(f.writes).toEqual([])
   } finally { f.cleanup() }
 })

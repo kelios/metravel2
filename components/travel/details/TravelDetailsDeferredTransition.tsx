@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type ViewInstance, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 
+import { SECTION_READING_LINE_BUFFER_PX, resolveSectionScrollOffset } from '@/utils/sectionScrollOffset'
+
 // Shared by every reserved deferred section (footer #1604, sidebar and comments
 // #1642). Resolving a short frame can still move a visible following section
 // when the user has reached the bottom. Release uses its measured viewport
@@ -232,11 +234,25 @@ function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | nul
   return { anchor, owner, beforeTop: rect.top }
 }
 
+// The frame under the scrollspy reading line is the one the reader is on: a menu
+// jump parks its section there. A mutation that starts below that line cannot
+// move it, so the following flow takes the change. Holding a lower visible frame
+// instead would scroll the reading frame away by the full height of the late
+// block — «Похожие статьи» growing under a just-opened «Популярные» (#3396).
+function startsBelowReadingLine(origin: HTMLElement, owner: HTMLElement): boolean {
+  const ownerTop = owner.getBoundingClientRect().top
+  const readingLine = ownerTop + resolveSectionScrollOffset(owner) + SECTION_READING_LINE_BUFFER_PX
+  return origin.getBoundingClientRect().top > readingLine
+}
+
 function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = false): ReserveReleaseAnchor | null {
   const owner = findMeasuredScrollOwner(node)
   if (!owner) return null
   if (measuredTransitions.get(node)?.hasResponsiveWidthChange()) return null
   let capture = findReserveReleaseAnchor(node)
+  // Where the height change enters the flow. A fresh ancestor payload inserts
+  // siblings anywhere inside that ancestor, so its start bounds the change.
+  let origin = node
   let ancestor = node.parentElement
   while (ancestor && ancestor !== owner) {
     const transition = measuredTransitions.get(ancestor)
@@ -246,15 +262,18 @@ function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = f
       // A first measurement cannot treat new payload siblings as prior anchors.
       // Later measurements have a published reading frame; ancestor differences
       // can then be existing nested flow/reserve changes, not a fresh payload.
-      if ((initialMeasurement && transition.payloadState() !== 'settled') || following) capture = following
+      const freshPayload = initialMeasurement && transition.payloadState() !== 'settled'
+      if (freshPayload || following) capture = following
+      if (freshPayload) origin = ancestor
     } else if (initialMeasurement && ancestor.hasAttribute('data-deferred-transition-state')) {
       // React commits child layout effects before a new parent's refs/registry.
       // Publish sizes normally, but let that parent own its first correction.
       capture = findReserveReleaseAnchor(ancestor)
+      origin = ancestor
     }
     ancestor = ancestor.parentElement
   }
-  return capture
+  return capture && startsBelowReadingLine(origin, owner) ? null : capture
 }
 
 function correctMeasuredAnchor(capture: ReserveReleaseAnchor | null, node: HTMLElement): ReserveReleaseState | null {

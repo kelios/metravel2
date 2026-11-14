@@ -1147,6 +1147,16 @@
       "port": 8171
     },
     {
+      "name": "Travel Similar Static 3396 Web 8096",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-3396\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-3396\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_SIMILAR_SOURCE=static npx expo start --web --port 8096"
+      ],
+      "port": 8096,
+      "autoPort": false
+    },
+    {
       "name": "Expo Web Heap12 8088",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
