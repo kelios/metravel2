@@ -4,7 +4,7 @@
 The article SHALL preserve the viewport position of already-visible following sections when an earlier deferred section changes height at the same responsive width. When that change starts below the reading line, the section under the reading line SHALL keep its viewport position instead and the following content SHALL take the change. The article SHALL preserve the user's scrolling and SHALL NOT leave a permanent guessed-height empty tail.
 
 #### Scenario: Nearby resolves empty
-- **WHEN** the nearby loading frame resolves to its compact empty state while popular or related articles are visible
+- **WHEN** the nearby loading frame starts at or above the reading line and resolves to its compact empty state while popular or related articles are visible
 - **THEN** the visible following section retains its viewport position and the empty message remains accessible without a permanent loading-height gap
 
 #### Scenario: Loaded upstream slot changes height
