@@ -16,7 +16,17 @@ const SAMPLES = 3;
 // Высота блока карты без профилей — 692 px на проде; выше этого порога блок
 // вырос уже после показа, то есть прогон действительно прошёл поздний рост.
 const ROUTE_BLOCK_GROWN_MIN_PX = 2000;
-const FORBIDDEN_SOURCES = ['travel-details-points', 'travel-details-comments-transition'];
+// Источники этого механизма: точки маршрута, въезжающие в экран, и профили высот,
+// нарисованные поверх них до публикации высоты блока.
+const FORBIDDEN_SOURCES = ['travel-details-points', 'route-elevation-profile'];
+// #3430: у самого конца страницы «Рядом», комментарии и футер ещё сдвигаются сами
+// (прод 14.11.2026: `travel-details-footer-resolved-frame` 0,12 в 1 прогоне из 10).
+// Это другая причина; её сдвиги пишутся в отчёт, но в бюджет этого контроля не
+// входят, пока #3430 не закрыта, — иначе контроль блока карты краснел бы случайно.
+const TAIL_SECTION_SOURCES = [
+  'travel-details-sidebar-transition', 'travel-details-comments-transition', 'travel-details-footer-transition',
+  'travel-details-footer-resolved-frame', 'travel-details-share', 'travel-details-telegram', 'travel-details-email-subscribe',
+];
 
 type Rect = { y: number; height: number };
 type Shift = { value: number; time: number; hadRecentInput: boolean; sources: { testID: string | null; previousRect: Rect; currentRect: Rect }[] };
@@ -119,9 +129,12 @@ export async function assertTravelFastScrollCls(
     }
     const valid = observation?.supported === true && observation.installed === true && observation.error === null;
     const shifts = valid ? observation!.entries.filter(entry => !entry.hadRecentInput) : [];
-    const cumulative = valid ? shifts.reduce((sum, entry) => sum + entry.value, 0) : null;
+    const isTailShift = (entry: Shift) => entry.sources.length > 0 &&
+      entry.sources.every(source => source.testID !== null && TAIL_SECTION_SOURCES.includes(source.testID));
+    const tailShifts = shifts.filter(isTailShift);
+    const cumulative = valid ? shifts.filter(entry => !isTailShift(entry)).reduce((sum, entry) => sum + entry.value, 0) : null;
     const forbidden = shifts.flatMap(entry => entry.sources.map(source => source.testID)).filter(testID => testID !== null && FORBIDDEN_SOURCES.includes(testID));
-    results.push({ sample, viewport, first, final, steps, cumulative, forbidden, shifts, errors, writes, failure,
+    results.push({ sample, viewport, first, final, steps, cumulative, forbidden, shifts, tailShifts, errors, writes, failure,
       pass: !failure && valid && cumulative !== null && cumulative <= 0.1 && forbidden.length === 0 &&
         final !== null && final.top + final.viewport >= final.height - 2 &&
         (final.routeBlockHeight ?? 0) >= ROUTE_BLOCK_GROWN_MIN_PX && errors.length === 0 && writes.length === 0 });
