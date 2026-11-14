@@ -45,6 +45,22 @@ describe('paired renderer publication readiness', () => {
     expect(() => verifyRuntimeResponse(response(), html.replace('"mainEntityOfPage":"https://metravel.by/travels/example"', '"mainEntityOfPage":"https://metravel.by/travels/other"'), { sha, canonical })).toThrow('Article/Breadcrumb')
   })
 
+  it('refuses a description island that requests a first-party photo without a width (#3408)', () => {
+    const photo = 'https://metravel.by/travel-description-image/1/description/a.webp'
+    const withIsland = (images: string) => html.replace('<p>Actual article body.</p>', `<p>Actual article body.</p>${images}`)
+    const sized = `<img src="data:image/svg+xml,x" data-deferred-src="${photo}?w=800" `
+      + `data-deferred-srcset="${photo}?w=480 480w, ${photo}?w=800 800w" data-deferred-srcset-mobile="${photo}?w=480 480w">`
+      + `<noscript><img src="${photo}?w=800" srcset="${photo}?w=480 480w, ${photo}?w=800 800w"></noscript>`
+      + '<img data-deferred-src="https://example.com/external.jpg">'
+    expect(() => verifyRuntimeResponse(response(), withIsland(sized), { sha, canonical })).not.toThrow()
+    expect(() => verifyRuntimeResponse(response(), withIsland(`<img data-deferred-src="${photo}">`), { sha, canonical }))
+      .toThrow('without a width')
+    expect(() => verifyRuntimeResponse(response(), withIsland(`<noscript><img src="/travel-description-image/1/a.webp"></noscript>`), { sha, canonical }))
+      .toThrow('without a width')
+    expect(() => verifyRuntimeResponse(response(), withIsland(`<img data-deferred-srcset="${photo}?w=480 480w, ${photo} 800w">`), { sha, canonical }))
+      .toThrow('without a width')
+  })
+
   it('selects a currently published control and requires a real rendered response followed by HIT', async () => {
     const fetchImpl = jest.fn()
       .mockResolvedValueOnce(Response.json({ results: [{ slug: 'example' }] }))

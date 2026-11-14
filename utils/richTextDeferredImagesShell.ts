@@ -7,8 +7,13 @@
  * LCP-картинка к этому моменту уже в DOM.
  */
 
+import { ARTICLE_BODY_MOBILE_VIEWPORT_MAX } from '@/components/travel/stableContent/articleBodySlots'
 import { ICON_FONT_LCP_IMAGE_SELECTOR } from '@/utils/iconFontShell'
-import { DEFERRED_IMAGE_ATTRIBUTES, DEFERRED_IMAGE_SELECTOR } from '@/utils/inertHtmlDeferredImages'
+import {
+  DEFERRED_IMAGE_ATTRIBUTES,
+  DEFERRED_IMAGE_SELECTOR,
+  DEFERRED_MOBILE_SRCSET_ATTRIBUTE,
+} from '@/utils/inertHtmlDeferredImages'
 
 const ISLAND_IMAGE_SELECTOR = DEFERRED_IMAGE_SELECTOR.split(',')
   .map((selector) => `[data-ssr-html-island] ${selector}`)
@@ -18,11 +23,16 @@ export function buildDeferredRichTextImagesScript(): string {
   const selector = JSON.stringify(ISLAND_IMAGE_SELECTOR)
   const lcpSelector = JSON.stringify(ICON_FONT_LCP_IMAGE_SELECTOR)
   const pairs = JSON.stringify(DEFERRED_IMAGE_ATTRIBUTES)
+  const mobileAttr = JSON.stringify(DEFERRED_MOBILE_SRCSET_ATTRIBUTE)
+  // #3408: то же правило, что `applyMobileSrcset` в `richTextDeferredImages.ts`.
   return (
     '(function(){' +
-    `var d=document,h=d.documentElement,s=${selector},p=${pairs},done=false,o=null;` +
+    `var d=document,h=d.documentElement,s=${selector},p=${pairs},ma=${mobileAttr},done=false,o=null;` +
     'function release(){if(done)return;done=true;if(o){try{o.disconnect()}catch(_){}o=null}' +
+    `var vw=window.innerWidth||0,mob=vw>0&&vw<=${ARTICLE_BODY_MOBILE_VIEWPORT_MAX};` +
     'var list=d.querySelectorAll(s);for(var i=0;i<list.length;i++){var img=list[i];' +
+    "var m=img.getAttribute(ma);if(m!==null){img.removeAttribute(ma);if(mob){if(m)img.setAttribute('data-deferred-srcset',m);" +
+    "else{img.removeAttribute('data-deferred-srcset');img.removeAttribute('data-deferred-sizes')}}}" +
     'for(var j=0;j<p.length;j++){var v=img.getAttribute(p[j][1]);if(v===null)continue;img.removeAttribute(p[j][1]);img.setAttribute(p[j][0],v)}}}' +
     'try{if(!d.querySelector(s))return;' +
     `var img=d.querySelector(${lcpSelector});` +

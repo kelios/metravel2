@@ -15,6 +15,7 @@ import DeferredStableContent from '@/components/travel/DeferredStableContent';
 import TravelDescriptionHtml from '@/components/travel/TravelDescriptionHtml';
 import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
+import { buildArticleBodyIslandImageSources } from '@/components/travel/stableContent/articleBodyImageUrls';
 import { translate as i18nT } from '@/i18n'
 import { useResponsive } from '@/hooks/useResponsive';
 import { toInertHtml } from '@/utils/inertHtml';
@@ -115,9 +116,12 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
         () => Platform.OS === 'web' && serverSanitized && hasLoaderTravel
             // #3237: серверный HTML несёт `alt` у каждой картинки — подпись автора или пустой.
             // #3316: адреса картинок отложены до LCP-фото первого экрана.
-            ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)), { deferImages: true })
+            // #3408: адреса — те же ступени, что у полного рендера, а не оригинал без `w`.
+            ? toInertHtml(ensureRichTextImageAlt(demoteRichTextPageHeadings(htmlContent)), {
+                deferImages: { sources: (src) => buildArticleBodyIslandImageSources(src, articleBodyMedia) },
+            })
             : null,
-        [hasLoaderTravel, htmlContent, serverSanitized],
+        [articleBodyMedia, hasLoaderTravel, htmlContent, serverSanitized],
     );
     const hasInitialDescription = initialDescriptionHtml !== null;
 

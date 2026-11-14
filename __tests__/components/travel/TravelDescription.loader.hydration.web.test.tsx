@@ -28,6 +28,12 @@ beforeAll(() => {
   Provider = require('@/components/travel/details/travelLoaderData').TravelLoaderDataContext.Provider
 })
 
+const PHOTO = 'https://metravel.by/travel-description-image/42/description/photo.webp'
+const ladder = (widths: number[]) => widths.map((w) => `${PHOTO}?w=${w} ${w}w`).join(', ')
+const DESKTOP_SRCSET = ladder([480, 800, 960, 1600])
+const MOBILE_SRCSET = ladder([480, 800])
+const SIZES = '(max-width: 768px) 100vw, (max-width: 1439px) 720px, 920px'
+
 it.each([390, 768, 1440])('hydrates the actual RNW description island at width %s without replacing its body', async (width) => {
   const originalObserver = window.IntersectionObserver
   const originalWidth = window.innerWidth
@@ -39,7 +45,7 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
     disconnect() {}
   } as unknown as typeof IntersectionObserver
   const html = '<h1 id="authored-heading">Раздел статьи</h1>'
-    + '<p>Канонический текст статьи.</p>'.repeat(400) + '<script>bad()</script><img src="/photo.jpg" onerror="bad()">'
+    + '<p>Канонический текст статьи.</p>'.repeat(400) + `<script>bad()</script><img src="${PHOTO}" onerror="bad()">`
   const tree = createElement(Provider, { value: { travel: { id: 42 } } },
     createElement(Description, { htmlContent: html, serverSanitized: true, noBox: true }))
   const container = document.createElement('div')
@@ -57,9 +63,15 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
   expect(island?.querySelector('img')?.hasAttribute('onerror')).toBe(false)
   // #3316: серверное тело не запрашивает картинки до LCP-фото первого экрана.
   expect(island?.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml,/)
-  expect(island?.querySelector('img')?.getAttribute('data-deferred-src')).toBe('/photo.jpg')
+  // #3408: остров адресует фото ступенями полного рендера, вьюпорт не читает —
+  // разметка одна на всех ширинах, мобильная лестница едет отдельным атрибутом.
+  expect(island?.querySelector('img')?.getAttribute('data-deferred-src')).toBe(`${PHOTO}?w=800`)
+  expect(island?.querySelector('img')?.getAttribute('data-deferred-srcset')).toBe(DESKTOP_SRCSET)
+  expect(island?.querySelector('img')?.getAttribute('data-deferred-srcset-mobile')).toBe(MOBILE_SRCSET)
   expect(island?.querySelectorAll('noscript')).toHaveLength(1)
-  expect(island?.querySelector('noscript')?.textContent).toBe('<img src="/photo.jpg" alt="" loading="lazy">')
+  expect(island?.querySelector('noscript')?.textContent).toBe(
+    `<img src="${PHOTO}?w=800" srcset="${DESKTOP_SRCSET}" sizes="${SIZES}" alt="" loading="lazy">`,
+  )
   expect(island?.querySelector('h1')).toBeNull()
   expect(island?.querySelector('h2#authored-heading')?.textContent).toBe('Раздел статьи')
   const errors: unknown[] = []
@@ -70,7 +82,10 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
     })
     expect(errors).toEqual([])
     expect(container.querySelector('[data-ssr-html-island="description"]')).toBe(island)
-    expect(island?.querySelector('img')?.getAttribute('src')).toBe('/photo.jpg')
+    expect(island?.querySelector('img')?.getAttribute('src')).toBe(`${PHOTO}?w=800`)
+    expect(island?.querySelector('img')?.getAttribute('srcset')).toBe(width <= 768 ? MOBILE_SRCSET : DESKTOP_SRCSET)
+    expect(island?.querySelector('img')?.getAttribute('sizes')).toBe(SIZES)
+    expect(island?.querySelector('img')?.hasAttribute('data-deferred-srcset-mobile')).toBe(false)
     expect(island?.querySelectorAll('img')).toHaveLength(1)
     expect(island?.querySelectorAll('noscript')).toHaveLength(1)
   } finally {

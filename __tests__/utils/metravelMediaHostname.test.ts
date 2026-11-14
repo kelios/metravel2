@@ -16,7 +16,8 @@ const source = (html: string) => new URL(html.match(/<img\b[^>]*src="([^"]+)"/i)
 const consumerFiles = [
   'utils/printImageUrl.ts',
   'utils/sanitizeRichText.ts',
-  'components/travel/stableContent/htmlTransform.ts',
+  // #3408: построитель адресов тела статьи вынесен из htmlTransform.ts.
+  'components/travel/stableContent/articleBodyImageUrls.ts',
 ]
 
 // Parse imported symbols, not source substrings: aliases cannot hide raw policy access.

@@ -272,7 +272,7 @@ export function familyDerivativeCeiling(route: string | null | undefined): numbe
  * битое фото, и защита читателя не должна держаться на том, каким набор слота
  * случайно оказался сегодня.
  *
- * Область — лестница тела статьи (`components/travel/stableContent/htmlTransform.ts`),
+ * Область — лестница тела статьи (`components/travel/stableContent/articleBodyImageUrls.ts`),
  * то есть единственное место, где набор слота встречается с непроверяемым адресом.
  * `optimizeImageUrl` этот потолок не применяет: его вызывающие передают ширины из
  * собственных контрактных наборов, включая осознанный запрос мастера для печати

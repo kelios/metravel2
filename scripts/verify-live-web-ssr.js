@@ -37,11 +37,38 @@ async function verifyLegacyArticleLoaders(request, origin, sha) {
   console.log(`[web-ssr-readiness] ${LEGACY_ARTICLE_CONTROLS.length} legacy article loaders match ${sha}`)
 }
 
+// #3408: the description island addresses first-party body photos with the full
+// render's rungs. A stored address without `w` is served as the uncached master
+// and blocks a backend worker per photo, so a renderer emitting one is refused.
+const ISLAND_IMAGE_SRC_ATTRIBUTES = ['src', 'data-deferred-src']
+const ISLAND_IMAGE_SRCSET_ATTRIBUTES = ['srcset', 'data-deferred-srcset', 'data-deferred-srcset-mobile']
+
+function unsizedIslandImageUrls(island, canonical) {
+  const { hostname } = new URL(canonical)
+  return DomUtils.findAll((node) => node.name === 'img', [island])
+    .flatMap((img) => [
+      ...ISLAND_IMAGE_SRC_ATTRIBUTES.map((name) => String(img.attribs?.[name] || '').trim()),
+      ...ISLAND_IMAGE_SRCSET_ATTRIBUTES.flatMap((name) => String(img.attribs?.[name] || '').split(','))
+        .map((candidate) => candidate.trim().split(/\s+/)[0]),
+    ])
+    .filter((url) => {
+      if (!url || url.startsWith('data:')) return false
+      try {
+        const parsed = new URL(url, canonical)
+        return parsed.hostname === hostname && !parsed.searchParams.has('w')
+      } catch {
+        return false
+      }
+    })
+}
+
 function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = false, mode = 'strict', codeProof }) {
   assertReadinessMode(mode)
   const { find } = assertSsrDocument(response, html, { sha, canonical })
   const islands = find((node) => node.attribs?.['data-ssr-html-island'] === 'description')
   if (islands.length !== 1 || !DomUtils.textContent(islands[0]).trim()) throw new Error('Renderer description is empty')
+  const unsized = unsizedIslandImageUrls(islands[0], canonical)
+  if (unsized.length) throw new Error(`Renderer description requests first-party photos without a width: ${unsized[0]}`)
   if (find((node) => node.attribs?.id === 'ssg-travel-article' || node.attribs?.class?.split(/\s+/).includes('ssg-travel-article')).length) {
     throw new Error('Legacy generated article still owns the document')
   }

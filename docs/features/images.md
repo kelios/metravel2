@@ -271,7 +271,8 @@ fail-closed, и на 2026-08-04 **каждая** ступень отвечала
 `missing_derivative: v1_then_master_no_transform`: любая ступень отдаёт мастер
 целиком с `cache-control: no-store` (замер того же дня: w=320…1600 → 200, 190 060 B
 на каждой). Картинка видна, но ширина на вес не влияет и кэш её не держит. Точек,
-которые обязаны совпадать, по-прежнему три: `htmlTransform` (тело статьи),
+которые обязаны совпадать, по-прежнему три: `articleBodyImageUrls` (тело статьи —
+полный рендер `htmlTransform` и серверный остров, #3408),
 `imageProxy.optimizeImageUrl` (остальные потребители) и гейт
 `scripts/post-deploy-media-check.js` — у последнего класс вынесен в
 `DECLARED_MASTER_FALLBACK_FAMILIES`, чтобы объявленный фолбэк не считался поломкой,

@@ -266,13 +266,23 @@ QueryClient cache становятся видимыми после гидрат�
   канал с LCP-фото. Это часть самого инертного прохода:
   `toInertHtml(html, { deferImages: true })` (`utils/inertHtmlDeferredImages.ts`)
   кладёт адреса `<img>` в `data-deferred-*`, в `src` — прозрачная заглушка той же
-  пропорции, а сразу за картинкой — свой `<noscript>` с ней же по исходному
-  адресу (`src/srcset/sizes/alt/width/height`) для читателя без JS; браузер с JS
+  пропорции, а сразу за картинкой — свой `<noscript>` с ней же
+  (`src/srcset/sizes/alt/width/height`) для читателя без JS; браузер с JS
   его не загружает. Авторские `noscript` и `data-deferred-*` проход по-прежнему
   выбрасывает, `toInertHtml` остаётся последним шагом стока. Адреса возвращает
   оболочка документа по `load`/`error` LCP-картинки либо по гидратации (правило
   шрифта иконок), клиентский остров — при монтаже
   (`utils/richTextDeferredImages.ts`); дальше `loading="lazy"` (#3316).
+- Первопартийные фото острова адресуются тем же построителем, что и полный
+  рендер (`components/travel/stableContent/articleBodyImageUrls.ts`): `src` —
+  запасная ступень, `srcset`/`sizes` — десктопная лестница (её же получает
+  `noscript`), мобильная — в `data-deferred-srcset-mobile`. Вьюпорт при
+  построении не читается, поэтому разметка сервера и первого клиентского прохода
+  совпадает; лестницу по вьюпорту (`articleBodySlots.ts`, порог мобильного слота)
+  выбирают обе реализации выпуска. Адрес оригинала без `w` из острова в сеть не
+  уходит: бэкенд отдаёт на него мастер с `no-store`, а полный рендер потом
+  перекачивал тот же кадр ступенью. Внешние картинки остаются как есть. Сторож —
+  `scripts/verify-live-web-ssr.js` (#3408).
 - Изменения slider/details/media обязаны проходить обе стороны bilateral
   contract: `npm run verify:slider` и `npm run verify:slider-perf`, с запуском
   через общий quality-gate lock по `docs/RULES.md`.

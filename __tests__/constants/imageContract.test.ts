@@ -165,6 +165,8 @@ describe('constants/imageContract — набор размеров исполня
     const root = resolve(__dirname, '..', '..')
     const sources = [
       'components/travel/stableContent/htmlTransform.ts',
+      'components/travel/stableContent/articleBodyImageUrls.ts',
+      'components/travel/stableContent/articleBodySlots.ts',
       'components/travel/details/TravelDetailsOptimizedLCPHero.tsx',
       'screens/tabs/QuestCard.tsx',
       'utils/printImageUrl.ts',

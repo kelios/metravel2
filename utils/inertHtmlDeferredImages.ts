@@ -27,6 +27,21 @@ export const DEFERRED_IMAGE_ATTRIBUTES = [
 
 export const DEFERRED_IMAGE_SELECTOR = 'img[data-deferred-src],img[data-deferred-srcset]'
 
+/**
+ * #3408: мобильная лестница слота. Выпуск ставит её вместо `data-deferred-srcset`
+ * на мобильном вьюпорте; пустое значение — на мобиле лестницы нет, картинка
+ * остаётся на `src`. Пишет атрибут только инертный проход по `DeferredImageSources`.
+ */
+export const DEFERRED_MOBILE_SRCSET_ATTRIBUTE = 'data-deferred-srcset-mobile'
+
+/**
+ * #3408: адреса картинки, построенные нашим построителем (тело статьи —
+ * `buildArticleBodyIslandImageSources`), а не взятые из разметки автора.
+ * `mobileSrcSet: null` — мобильный набор совпал с десктопным.
+ */
+export type DeferredImageSources = { src: string; srcSet: string; sizes: string; mobileSrcSet: string | null }
+export type DeferredImageSourcesResolver = (src: string) => DeferredImageSources | null
+
 const NOSCRIPT_IMAGE_ATTRIBUTES = ['src', 'srcset', 'sizes', 'alt', 'width', 'height'] as const
 
 const DIGITS_RE = /^\d+$/
@@ -38,16 +53,23 @@ const placeholderSrc = (width: string | null, height: string | null) =>
     width && height ? `viewBox='0 0 ${width} ${height}'` : "width='1' height='1'"
   }%2F%3E`
 
-const isDeferredName = (name: string) => DEFERRED_IMAGE_ATTRIBUTES.some(([, deferred]) => deferred === name)
+const isDeferredName = (name: string) =>
+  name === DEFERRED_MOBILE_SRCSET_ATTRIBUTE || DEFERRED_IMAGE_ATTRIBUTES.some(([, deferred]) => deferred === name)
 const nonEmpty = (value: string | null | undefined): value is string => typeof value === 'string' && value.trim() !== ''
 
-/** Разметка `<img>` с санитизированными атрибутами: отложенная картинка и её `noscript`-двойник. */
-export function serializeDeferredImage(sanitized: readonly HtmlAttribute[]): string {
+/**
+ * Разметка `<img>` с санитизированными атрибутами: отложенная картинка и её `noscript`-двойник.
+ * `mobileSrcset` — санитизированная мобильная лестница из `DeferredImageSources`.
+ */
+export function serializeDeferredImage(sanitized: readonly HtmlAttribute[], mobileSrcset: string | null = null): string {
   const attrs = sanitized.filter(({ name }) => !isDeferredName(name))
   const moved: HtmlAttribute[] = []
   for (const [live, deferred] of DEFERRED_IMAGE_ATTRIBUTES) {
     const value = getAttribute(attrs, live)
     if (nonEmpty(value)) moved.push({ name: deferred, value })
+  }
+  if (mobileSrcset !== null && moved.some(({ name }) => name === 'data-deferred-srcset')) {
+    moved.push({ name: DEFERRED_MOBILE_SRCSET_ATTRIBUTE, value: mobileSrcset })
   }
   if (!moved.some(({ name }) => name !== 'data-deferred-sizes')) return serializeStartTag('img', attrs)
 

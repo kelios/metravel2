@@ -4,7 +4,7 @@ import {
   tokenizeHtml,
   type HtmlAttribute,
 } from '@/utils/htmlTokens'
-import { serializeDeferredImage } from '@/utils/inertHtmlDeferredImages'
+import { serializeDeferredImage, type DeferredImageSourcesResolver } from '@/utils/inertHtmlDeferredImages'
 
 /**
  * #3202: последний рубеж перед web-стоком rich-text.
@@ -148,8 +148,36 @@ const isAllowedIframe = (attrs: readonly HtmlAttribute[]): boolean => {
 }
 
 export type InertHtmlOptions = {
-  /** #3316: `<img>` откладываются до LCP-фото с `noscript`-двойником (`utils/inertHtmlDeferredImages.ts`). */
-  deferImages?: boolean
+  /**
+   * #3316: `<img>` откладываются до LCP-фото с `noscript`-двойником (`utils/inertHtmlDeferredImages.ts`).
+   * #3408: `sources` подменяет адреса картинки нашими (`src`/`srcset`/`sizes` и мобильная
+   * лестница) — по санитизированному `src`; `null` от него оставляет картинку как есть.
+   */
+  deferImages?: boolean | { sources: DeferredImageSourcesResolver }
+}
+
+// Значение атрибута в разметке: `&` в URL построителя — ссылкой, как у полного рендера.
+const toAttributeValue = (value: string): string => value.replace(/&/g, '&amp;')
+
+/** Атрибуты `<img>` с адресами построителя и санитизированная мобильная лестница. */
+const withOwnImageSources = (
+  attrs: HtmlAttribute[],
+  resolve: DeferredImageSourcesResolver | null,
+): { attrs: HtmlAttribute[]; mobileSrcset: string | null } => {
+  const src = resolve ? attrs.find((attr) => attr.name === 'src')?.value : null
+  const own = src && resolve ? resolve(src) : null
+  if (!own) return { attrs, mobileSrcset: null }
+  const sources: HtmlAttribute[] = [{ name: 'src', value: toAttributeValue(own.src) }]
+  if (own.srcSet) {
+    sources.push({ name: 'srcset', value: toAttributeValue(own.srcSet) }, { name: 'sizes', value: toAttributeValue(own.sizes) })
+  }
+  // Свои адреса проходят тот же санитайз, что и авторские.
+  const next = sanitizeAttributes('img', [
+    ...attrs.filter(({ name }) => name !== 'src' && name !== 'srcset' && name !== 'sizes'),
+    ...sources,
+  ])
+  const mobileSrcset = own.mobileSrcSet === null ? null : own.mobileSrcSet && filterSrcset(toAttributeValue(own.mobileSrcSet))
+  return { attrs: next, mobileSrcset: mobileSrcset ?? null }
 }
 
 export function toInertHtml(html: string | null | undefined, options?: InertHtmlOptions): InertHtml {
@@ -159,6 +187,8 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
   // Глубина выбрасываемого элемента (по одноимённым тегам): пока она > 0, вывода нет.
   let dropName: string | null = null
   let dropDepth = 0
+  const deferImages = Boolean(options?.deferImages)
+  const resolveSources = typeof options?.deferImages === 'object' ? options.deferImages.sources : null
 
   for (const token of tokenizeHtml(source)) {
     if (dropName !== null) {
@@ -187,7 +217,12 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
           if (isAllowedIframe(attrs)) out += `${serializeStartTag(name, attrs)}</iframe>`
           break
         }
-        out += name === 'img' && options?.deferImages ? serializeDeferredImage(attrs) : serializeStartTag(name, attrs)
+        if (name === 'img' && deferImages) {
+          const own = withOwnImageSources(attrs, resolveSources)
+          out += serializeDeferredImage(own.attrs, own.mobileSrcset)
+        } else {
+          out += serializeStartTag(name, attrs)
+        }
         break
       }
       case 'end':
