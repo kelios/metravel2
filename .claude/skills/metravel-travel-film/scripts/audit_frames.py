@@ -93,6 +93,17 @@ if fdir:
 
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
+# распознавание лиц на черновике 360p путает авторов с чужими — к ЛИЦО/ВОЗВРАТ/ВСПЫШКА лист кадров для проверки глазами
+pick = [f for f in F if f[1] in ("ЛИЦО", "ВОЗВРАТ", "ВСПЫШКА")]
+if out and pick:
+    tiles = []
+    for t0, k, n, _ in pick:
+        r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0 + 0.3:.2f}", "-i", film, "-frames:v", "1", "-vf", "scale=480:270", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+        if len(r.stdout) < 480 * 270 * 3: continue
+        im = np.frombuffer(r.stdout[:480 * 270 * 3], np.uint8).reshape(270, 480, 3).copy()
+        cv2.putText(im, f"{tc(t0)} {k}", (6, 22), 0, 0.6, (0, 255, 255), 2); tiles.append(im)
+    rows = [np.hstack(tiles[i:i + 4] + [np.zeros((270, 480, 3), np.uint8)] * (4 - len(tiles[i:i + 4]))) for i in range(0, len(tiles), 4)]
+    cv2.imwrite(os.path.splitext(out)[0] + "_кадры.jpg", np.vstack(rows))
 lines = [f"# Проверка глазами: {os.path.basename(film)}, находок {len(F)}", ""]
 for kk in ["ВСПЫШКА", "МЕЛЬК", "ВОЗВРАТ", "ЛИЦО", "РАЗМЫТ"]:
     rows = [f for f in F if f[1] == kk]
