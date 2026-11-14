@@ -27,7 +27,7 @@ export default function PrivacyScreen() {
       seoTitle={i18nT('legal:app.tabs.privacy.politika_konfidentsialnosti_i_obrabotka_dann_92a2b75f')}
       seoDescription={i18nT('legal:app.tabs.privacy.podrobnaya_politika_konfidentsialnosti_metra_8843276e')}
       pageTitle={i18nT('legal:app.tabs.privacy.politika_konfidentsialnosti_695191e7')}
-      effectiveDate="21.07.2026"
+      effectiveDate="14.11.2026"
       sections={[
         {
           heading: i18nT('legal:app.tabs.privacy.1_kto_my_3a41f887'),
@@ -43,6 +43,7 @@ export default function PrivacyScreen() {
             i18nT('legal:app.tabs.privacy.dopolnitelno_obrabatyvayutsya_dannye_autenti_9127f1c1'),
             i18nT('legal:app.tabs.privacy.communicationsData'),
             i18nT('legal:app.tabs.privacy.pushTokenData'),
+            i18nT('legal:app.tabs.privacy.assistantQuestionsData'),
           ],
         },
         {
