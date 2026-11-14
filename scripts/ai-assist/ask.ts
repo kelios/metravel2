@@ -66,6 +66,15 @@
  * `sources → text → done {status: done}`; `trace` несёт карточку записи, `model_called: false` и
  * `help: true`. `AI_ASSIST_HELP_MODE=model` отдаёт запись модели карточкой подсказки с правилом справки
  * (`HELP_MODE_RULE_RU`) — для сравнения на стенде.
+ *
+ * Маршруты мира (#3357): на вопрос о пешем маршруте подбор отдаёт вторым ярусом до трёх карточек внешнего
+ * индекса (`world`). Они уходят в то же событие `sources` после карточек сайта — вида `trail`, с
+ * `group: 'world'` — и в подсказку модели не идут: блок «Ещё в мире» экран рисует по фактам карточки.
+ * Сборка приложения, не знающая этого вида, такие карточки отбрасывает. Нет материалов сайта — ход
+ * закрывается прежним статусом (`no_sources` либо `fallback` с `no_material`), а внешние карточки остаются в
+ * `sources`. Внешний адрес в тексте модели остаётся только при совпадении с адресом внешней карточки этого
+ * ответа; вырезанные внешние адреса считает `removed_world_links` события `done` (только ненулевой).
+ * Событие `trace` контура оценки несёт `world` — карточки со строкой фактов; журнал хода — `world_ids`.
  */
 import type http from 'node:http'
 
@@ -80,6 +89,7 @@ import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
+import { type AiWorldTrail, trailFactsLine } from '../../api/aiAssist/trailFacts.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog, TurnGuard, TurnStatus } from './demandLog.ts'
 import type { TurnRegistry } from './feedback.ts'
@@ -108,6 +118,11 @@ export interface RetrievalResult {
   noPlace?: boolean
   /** Вопрос о самом сайте (#3293): `sources` — записи справки, первая — ответ; материалов среди них нет. */
   help?: boolean
+  /**
+   * Маршруты мира (#3357) — второй ярус: до трёх карточек внешнего индекса на вопрос о пешем маршруте.
+   * В подсказку модели не идут; в событии `sources` стоят после карточек сайта.
+   */
+  world?: AiWorldTrail[]
 }
 
 export interface RetrieveOptions {
@@ -147,6 +162,8 @@ export interface AskDeps {
   promptHints?: PromptHints
   /** Справка о сайте (#3293): `direct` (по умолчанию) — запись и ссылка без модели; `model` — через модель. */
   helpMode?: 'direct' | 'model'
+  /** Адрес опубликованного файла слоя OpenStreetMap (ODbL) внешнего индекса (#3357); уходит в `sources` вместе с маршрутами мира. */
+  worldLayerUrl?: string | null
   /**
    * Ходы, которые можно оценить (#3296): ход, дошедший до ответа, получает идентификатор в событии `done`
    * (`turn_id`) и строку в журнале. Не задано — идентификатора и строки хода нет (стенды без оценки).
@@ -257,7 +274,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
   const openTurn = async (
     ip: string,
     now: Date,
-    entry: { q: string; locale: string; status: TurnStatus; sources: readonly AiSource[]; answerChars: number; guard?: TurnGuard },
+    entry: { q: string; locale: string; status: TurnStatus; sources: readonly AiSource[]; answerChars: number; guard?: TurnGuard; world?: readonly AiWorldTrail[] },
   ): Promise<{ turn_id?: string }> => {
     if (!deps.turns) return {}
     const turn = deps.turns.open(ip, now)
@@ -269,6 +286,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       source_ids: entry.sources.map((source) => `${source.type}:${source.source_id}`),
       answer_chars: entry.answerChars,
       guard: entry.guard ?? {},
+      ...(entry.world?.length ? { world_ids: entry.world.map((trail) => trail.source_id) } : {}),
     })
     void demandLog.prune()
     return { turn_id: turn }
@@ -337,10 +355,19 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     // в списке источников группой `nearby`, в подсказку не идёт.
     const left = pinned !== null && page === null
     const sources = page ? pageSources(page, retrieved.sources) : pinned ? leftPageSources(pinned, retrieved.sources) : retrieved.sources
+    // Маршруты мира (#3357): второй ярус. В подсказку не идут; посетителю уходят в том же событии `sources`
+    // после карточек сайта. Справка и режим страницы их не получают (подбор их не отдаёт).
+    const world = retrieved.help === true || page ? [] : (retrieved.world ?? [])
+    const listed = (): unknown[] => [...sources.map(withoutPlace), ...world]
+    // Ссылка на файл слоя ODbL нужна только рядом с блоком «Ещё в мире».
+    const layer = world.length && deps.worldLayerUrl ? { world_layer_url: deps.worldLayerUrl } : {}
+    const tracedWorld = deps.evalTrace && world.length ? { world: world.map((trail) => ({ ...trail, facts: trailFactsLine(trail) })) } : {}
     if (!sources.length) {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)
-      stream.event('sources', { sources: [], degraded, remaining: quota.remaining })
+      // На сайте материала нет, а маршруты мира есть: статус прежний, блок «Ещё в мире» экран покажет под ним.
+      stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
+      if (deps.evalTrace && world.length) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld })
       stream.done({ status: 'no_sources' })
       return
     }
@@ -351,7 +378,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     // читает посетитель и утверждает владелец; модель его пересказывала с искажениями (замер 12.11.2026).
     if (retrieved.help === true && deps.helpMode !== 'model' && promptSources.length) {
       const stream = openStream(response)
-      stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
+      stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
       if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true })
       const helpText = helpAnswerText(promptSources, helpLocale)
       stream.event('text', { text: helpText })
@@ -368,8 +395,8 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     if (!promptSources.length) {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)
-      stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
-      if (deps.evalTrace) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false })
+      stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
+      if (deps.evalTrace) stream.event('trace', { prompt_sources: [], raw_text: '', model_called: false, ...tracedWorld })
       stream.event('text', { text: '' })
       stream.done({ status: 'done', removed_links: 0, fallback: true, reason: ASK_NO_MATERIAL_REASON, remaining: quota.remaining })
       return
@@ -419,13 +446,13 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const ensureStream = (): Stream => {
       if (!stream) {
         stream = openStream(response)
-        stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
+        stream.event('sources', { sources: listed(), degraded, remaining: quota.remaining, ...layer })
       }
       return stream
     }
     const flush = () => {
       flushTimer = null
-      ensureStream().event('text', { text: guardStreamingText(pendingText, answerSources).text })
+      ensureStream().event('text', { text: guardStreamingText(pendingText, answerSources, world).text })
     }
 
     try {
@@ -443,10 +470,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       )
       clearFlush()
       // Числа сверяются с карточками подсказки, ссылки — со всем списком источников (#3345, lv35).
-      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery, promptSources })
+      // Внешний адрес остаётся только из внешней карточки этого ответа (#3357); опорой чисел она не служит.
+      const guarded = guardAnswer(result.text, answerSources, { question, retrievalQuery, promptSources, worldSources: world })
       const open = ensureStream()
       // Сырой ответ — до стража ссылок; остановку генератора на цикле и четвёртой рекомендации он уже прошёл.
-      if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text })
+      if (tracedSources) open.event('trace', { prompt_sources: tracedSources, raw_text: result.text, ...tracedWorld })
       const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, answerSources))
       if (verdict === 'no_material') {
         // #3216: модель отказала вопросу с признаком поездки — «материала нет» и строка в журнале спроса.
@@ -478,6 +506,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
           counter_questions: guarded.counterQuestions,
           stray_admissions: guarded.strayAdmissions,
         },
+        world,
       })
       open.done({
         status: 'done',
@@ -486,6 +515,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         ...(guarded.droppedDescriptions ? { dropped_descriptions: guarded.droppedDescriptions } : {}),
         ...(guarded.ungroundedNumbers ? { ungrounded_numbers: guarded.ungroundedNumbers } : {}),
         ...(guarded.promptLeaks ? { prompt_leaks: guarded.promptLeaks } : {}),
+        ...(guarded.removedWorld ? { removed_world_links: guarded.removedWorld } : {}),
         ...(guarded.fallback ? { fallback: true } : {}),
         usage: result.usage,
         remaining: quota.remaining,

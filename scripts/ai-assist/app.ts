@@ -22,6 +22,7 @@ import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLin
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
+import { asksForWorldTrails, selectWorldTrails } from '../../api/aiAssist/worldTrails.ts'
 import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult, type RetrieveOptions } from './ask.ts'
 import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHandler } from './authorDraft.ts'
@@ -37,6 +38,7 @@ import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQu
 import { BusyError, SingleFlight } from './queue.ts'
 import { ASK_FRAGMENT_CHARS, helpHits, type Locale, type ResultItem, ROW_TYPE, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, similarHits, snippet, vectorSources } from './search.ts'
 import { createSuggestTagsHandler, SUGGEST_TAGS_MAX_BODY_BYTES, type TagCatalog } from './suggestTags.ts'
+import { worldCandidates, type WorldIndex } from './worldIndex.ts'
 
 export { MAX_LIMIT, MAX_QUERY_CHARS }
 
@@ -77,6 +79,8 @@ export type AuthorDraftAppDeps = Pick<AuthorDraftDeps, 'limits'>
 
 export interface AppDeps {
   index: LoadedIndex
+  /** Внешний индекс маршрутов мира (#3357); нет — второго яруса ответа `/ai/ask` нет. */
+  world?: WorldIndex | null
   modelKey: string
   embedQuery: (q: string) => Promise<ArrayLike<number>>
   lexical: LexicalSearch
@@ -195,6 +199,8 @@ export function createApp(deps: AppDeps): http.Server {
       // #3287: версия формата артефакта и число записей фактов — проба видит службу на индексе без фактов.
       index_format_version: manifest.format_version ?? 1,
       facts: index.factsBySource.size,
+      // #3357: внешний индекс маршрутов мира подключён — проба видит его состав и дату сборки.
+      ...(deps.world ? { world: { trails: deps.world.trails.length, chunks: deps.world.manifest.chunks, built_at: deps.world.manifest.built_at } } : {}),
       rss_mb: Math.round(memory.rss / 1048576),
       heap_mb: Math.round(memory.heapUsed / 1048576),
       uptime_s: Math.round((Date.now() - startedAt) / 1000),
@@ -453,11 +459,15 @@ export function createApp(deps: AppDeps): http.Server {
       items.map((item) => toSource(item)),
       { pool: questPool(locale), mentions: mentionsInIndex(locale), groups: !card, focus: deps.promptFocus },
     )
+    // Второй ярус (#3357): маршруты мира — только на вопрос о пешем маршруте и не со страницы материала.
+    // Вектор запроса тот же, условия вопроса сверяет тот же `judgeCard`; модель этих карточек не видит.
+    const world = deps.world && !page && asksForWorldTrails(parseConditions(q)) ? selectWorldTrails(q, worldCandidates(deps.world, vector, locale)) : []
     return {
       sources: arranged.sources.slice(0, AI_SOURCES_LIMIT),
       degraded,
       page: card,
       noPlace: !card && arranged.noPlace,
+      ...(world.length ? { world } : {}),
     }
   }
 

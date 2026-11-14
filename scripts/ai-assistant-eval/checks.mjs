@@ -295,6 +295,38 @@ export const ownProse = (answer, linkLabels, cards) => {
   return withoutLabels.replace(/[\p{L}’'ʼ]+/gu, (word) => (quoted.has(word.toLowerCase()) ? ' ' : word)).replace(/[ \t]+/g, ' ')
 }
 
+/**
+ * Маршруты мира (#3357) — второй ярус ответа службы, блок «Ещё в мире». Ожидание хода `expect_world`:
+ *   - `max: 0` — вопрос не о пешем маршруте: блока быть не должно (`world_unexpected`);
+ *   - `min` — сколько маршрутов должно быть в блоке (`world_missing`);
+ *   - `max_km`, `min_km`, `month`, `max_days`, `country` — условие вопроса: каждый маршрут блока обязан
+ *     его не нарушать (`world_condition`). Сверка — по фактам карточки, тем же смыслом, что у службы:
+ *     маршрут без факта о месяцах условие не нарушает, оценочные дни нарушают его с запасом в полтора раза.
+ * Блок собирает код службы, поэтому все три провала — слой подбора. Больше трёх маршрутов — тоже провал.
+ */
+export const WORLD_ESTIMATE_SLACK = 1.5
+export const checkWorld = (world, expectWorld) => {
+  if (!expectWorld) return []
+  const list = Array.isArray(world) ? world : []
+  const problems = []
+  const max = expectWorld.max ?? MAX_RECOMMENDATIONS
+  if (list.length > max) problems.push({ check: 'world_unexpected', detail: `маршрутов мира в ответе ${list.length} при допустимых ${max}: ${list.map((trail) => trail.title).join('; ')}` })
+  if (list.length < (expectWorld.min ?? 0)) problems.push({ check: 'world_missing', detail: `маршрутов мира ${list.length} из ${expectWorld.min} нужных` })
+  const country = expectWorld.country ? new RegExp(expectWorld.country, 'iu') : null
+  for (const trail of list) {
+    const broken = []
+    if (expectWorld.max_km !== undefined && !(trail.distance_km <= expectWorld.max_km)) broken.push(`длина ${trail.distance_km ?? '—'} км при границе до ${expectWorld.max_km}`)
+    if (expectWorld.min_km !== undefined && !(trail.distance_km >= expectWorld.min_km)) broken.push(`длина ${trail.distance_km ?? '—'} км при границе от ${expectWorld.min_km}`)
+    if (expectWorld.month !== undefined && trail.months?.length && !trail.months.includes(expectWorld.month)) broken.push(`месяц ${expectWorld.month} вне расчётного сезона ${trail.months.join(',')}`)
+    if (expectWorld.max_days !== undefined && trail.days !== undefined && (trail.days_estimated ? trail.days >= expectWorld.max_days * WORLD_ESTIMATE_SLACK : trail.days > expectWorld.max_days)) {
+      broken.push(`дней ${trail.days}${trail.days_estimated ? ' (оценка)' : ''} при границе ${expectWorld.max_days}`)
+    }
+    if (country && !country.test(String(trail.country ?? ''))) broken.push(`страна «${trail.country ?? '—'}» не та`)
+    if (broken.length) problems.push({ check: 'world_condition', detail: `«${trail.title}»: ${broken.join('; ')}` })
+  }
+  return problems
+}
+
 /** Нужные карточки: `{pattern, min, type}` — сколько источников хода подходят по названию. */
 export const checkSources = (sources, expectSources) => {
   if (!expectSources) return null
@@ -435,7 +467,7 @@ export const findGuardDefects = ({ question, earlier = '' }, observed) => {
  * `earlier` — прошлые вопросы диалога) включает слой стража содержания (#3291); без вопроса он не
  * считается: числа из вопроса нельзя было бы отличить от выдуманных.
  */
-export function evaluateTurn({ expect, lang, expectSources, question, earlier, noHelp = false }, observed) {
+export function evaluateTurn({ expect, lang, expectSources, question, earlier, noHelp = false, expectWorld = null }, observed) {
   const failures = []
   const warnings = []
   const call = observed.modelCall ?? null
@@ -510,6 +542,11 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier, n
   } else if (refusedOfftopic) {
     fail(failures, 'false_offtopic', status === 'off_topic' ? 'gate' : 'model', 'вопрос по теме получил отказ «не по теме»')
   }
+
+  // Маршруты мира (#3357): блок собирает код службы — провалы идут в слой подбора.
+  const world = observed.world ?? []
+  if (world.length) metrics.world = world.length
+  for (const problem of checkWorld(world, expectWorld)) fail(failures, problem.check, 'retrieval', problem.detail)
 
   // Карточки, которые условие вопроса исключает (#3353): `expect_sources.absent` — шаблон названий. В
   // подсказке такой карточки быть не должно (слой подбора), в ответе её называть нельзя (слой модели):

@@ -36,6 +36,7 @@ import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/
 import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
 import { arrangeSources } from '@/api/aiAssist/sourceSelection'
 import { classifyQuestion, judgeModelReply } from '@/api/aiAssist/topicGate'
+import type { AiWorldTrail } from '@/api/aiAssist/trailFacts'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
 import { getAiAssistantBaseUrl, getAiAssistantProvider, type AiAssistantProvider } from '@/utils/aiAssistantConfig'
 import { getAiPicksBaseUrl } from '@/utils/aiPicksConfig'
@@ -80,6 +81,13 @@ export type AssistantTurn = {
   feedbackId?: string | null
   vote?: AskFeedbackVote | null
   voteReason?: AskFeedbackReason | null
+  /**
+   * Маршруты мира (#3357) — второй ярус ответа службы: блок «Ещё в мире» под материалами сайта. Приходят
+   * только от провайдера `ask`; в подсказку модели и в историю диалога не идут.
+   */
+  world?: AiWorldTrail[]
+  /** Адрес файла слоя OpenStreetMap под ODbL — ссылка под блоком «Ещё в мире»; служба отдаёт его, когда файл выложен. */
+  worldLayerUrl?: string | null
 }
 
 export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
@@ -310,7 +318,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           signal: controller.signal,
           onSources: (event) => {
             applyServerRemaining(event.remaining)
-            if (event.sources.length) patchTurn(id, { sources: event.sources, status: 'streaming' })
+            if (event.sources.length) patchTurn(id, { sources: event.sources, status: 'streaming', world: event.world ?? [], worldLayerUrl: event.worldLayerUrl ?? null })
           },
           onText: (text) => patchTurn(id, { answer: text }),
         })
@@ -328,6 +336,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
               noMaterial: done.fallback && done.reason === ASK_NO_MATERIAL_REASON,
               // Оценку принимает только клиент, который умеет её отправить.
               feedbackId: client.feedback ? done.turnId : null,
+              world: result.world ?? [],
+              worldLayerUrl: result.worldLayerUrl ?? null,
             })
             if (__DEV__) {
               console.info('[ai-assist] usage', { ...done.usage, removedLinks: done.removedLinks, sources: result.sources.length })
@@ -344,7 +354,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
             })
             return
           case 'no_sources':
-            patchTurn(id, { status: 'no_sources', answer: '', sources: [] })
+            // На сайте материала нет, а маршруты мира служба нашла (#3357): блок «Ещё в мире» остаётся.
+            patchTurn(id, { status: 'no_sources', answer: '', sources: [], world: result.world ?? [], worldLayerUrl: result.worldLayerUrl ?? null })
             return
           case 'unavailable':
             patchTurn(id, { status: 'unavailable' })

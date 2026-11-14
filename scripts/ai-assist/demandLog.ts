@@ -13,7 +13,8 @@
  *     признание «отдельного материала нет»), `fallback` (страж заменил ответ запасной фразой), `help`
  *     (ответила справка); `source_ids` — карточки подсказки (`quest:13`); `guard` — что вырезал страж
  *     (счётчики больше нуля). Ход без ответа — пустой подбор, пустая подсказка, недоступная модель —
- *     по-прежнему пишется записью спроса, а не хода: строка на ход одна;
+ *     по-прежнему пишется записью спроса, а не хода: строка на ход одна. Ход с блоком «Ещё в мире»
+ *     (#3357) несёт ещё `world_ids` — показанные маршруты мира идентификаторами Wikidata;
  *   - **голос** `{ts, turn, vote, reason?}` — оценка хода посетителем (`POST /ai/feedback`): `up` или
  *     `down`, причина — `place`, `facts`, `no_answer`. С ходом голос связывает `turn`.
  *
@@ -57,6 +58,11 @@ export interface TurnEntry {
   source_ids: string[]
   answer_chars: number
   guard: TurnGuard
+  /**
+   * Маршруты мира, показанные блоком «Ещё в мире» (#3357), идентификаторами Wikidata: `Q24777`. Отдельно от
+   * `source_ids`: это не карточки подсказки. Поля нет, когда блока не было, — прежние записи не меняются.
+   */
+  world_ids?: string[]
 }
 
 export type FeedbackVote = 'up' | 'down'
@@ -159,6 +165,7 @@ export function createDemandLog(options: DemandLogOptions = {}): DemandLog {
         source_ids: [...entry.source_ids],
         answer_chars: Math.max(0, Math.round(entry.answer_chars)),
         guard,
+        ...(entry.world_ids?.length ? { world_ids: [...entry.world_ids] } : {}),
       })
     },
     async appendVote(entry) {

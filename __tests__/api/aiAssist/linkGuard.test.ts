@@ -67,24 +67,24 @@ describe('aiAssist linkGuard (#2460)', () => {
 
   it('название сайта без пути остаётся текстом: фраза отказа «не по теме» не ломается (#2711)', () => {
     const refusal = 'Я ассистент metravel.by по путешествиям, а www.metravel.by/travels/pridumano — нет.'
-    expect(enforceSourceLinks(refusal, sources)).toEqual({ text: 'Я ассистент metravel.by по путешествиям, а — нет.', removed: 1, relabeled: 0 })
+    expect(enforceSourceLinks(refusal, sources)).toEqual({ text: 'Я ассистент metravel.by по путешествиям, а — нет.', removed: 1, relabeled: 0, removedWorld: 0 })
   })
 
   it('после вырезания не остаётся висящего тире и заглушек модели (#2710)', () => {
     const raw = 'Стартуйте с истории — https://evil.example/x\nОтель в Кракове — https://booking.com/h.\nСм. __draft_placeholder__ путеводитель.'
-    expect(enforceSourceLinks(raw, sources)).toEqual({ text: 'Стартуйте с истории\nОтель в Кракове\nСм. путеводитель.', removed: 2, relabeled: 0 })
+    expect(enforceSourceLinks(raw, sources)).toEqual({ text: 'Стартуйте с истории\nОтель в Кракове\nСм. путеводитель.', removed: 2, relabeled: 0, removedWorld: 2 })
   })
 
   it('ссылка с искажённым адресом, но точным названием карточки получает адрес карточки (#2710)', () => {
     const title = sources[0].title
     const raw = `Начните с [${title}](https://metravel.by/travels/iskazhennyi-adres) и [чужого](https://metravel.by/travels/net)`
-    expect(enforceSourceLinks(raw, sources)).toEqual({ text: `Начните с [${title}](${sources[0].url}) и чужого`, removed: 1, relabeled: 0 })
+    expect(enforceSourceLinks(raw, sources)).toEqual({ text: `Начните с [${title}](${sources[0].url}) и чужого`, removed: 1, relabeled: 0, removedWorld: 0 })
   })
 
   it('служебные <think> блоки снимаются, незакрытый — целиком', () => {
     expect(stripThinking('<think>размышляю</think>Ответ')).toBe('Ответ')
     expect(stripThinking('<think>ещё думаю')).toBe('')
-    expect(enforceSourceLinks('<think>https://evil.example</think>Готово', sources)).toEqual({ text: 'Готово', removed: 0, relabeled: 0 })
+    expect(enforceSourceLinks('<think>https://evil.example</think>Готово', sources)).toEqual({ text: 'Готово', removed: 0, relabeled: 0, removedWorld: 0 })
   })
 })
 
@@ -93,7 +93,7 @@ describe('страж ссылок: подпись равна названию к
   it('выдуманная, искажённая, сокращённая и пустая подпись заменяются названием; счётчик растёт', () => {
     const url = sources[1].url
     for (const label of ['Городной квест по Гродно', 'Семейный городской квест по Гродно', 'Квест', 'здесь', '']) {
-      expect(enforceSourceLinks(`- [${label}](${url}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${url}) — 9 точек`, removed: 0, relabeled: 1 })
+      expect(enforceSourceLinks(`- [${label}](${url}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${url}) — 9 точек`, removed: 0, relabeled: 1, removedWorld: 0 })
     }
     // Относительный адрес карточки — та же карточка; адрес ссылки — адрес карточки (#3369).
     expect(enforceSourceLinks('[маршрут](/travels/vyhodnye-pod-grodno)', sources).text).toBe(`[Выходные под Гродно](${sources[0].url})`)
@@ -106,14 +106,14 @@ describe('страж ссылок: подпись равна названию к
     const questPath = new URL(quest.url).pathname
     for (const address of [questPath, quest.url.replace(/^https:\/\//, ''), `www.${quest.url.replace(/^https:\/\//, '')}`, `<${questPath}>`, `<${quest.url}>`]) {
       // Подпись выдумана — меняется и она, и адрес.
-      expect(enforceSourceLinks(`- [x](${address}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${quest.url}) — 9 точек`, removed: 0, relabeled: 1 })
+      expect(enforceSourceLinks(`- [x](${address}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${quest.url}) — 9 точек`, removed: 0, relabeled: 1, removedWorld: 0 })
       // Подпись верная — меняется только адрес, заменой подписи это не считается.
-      expect(enforceSourceLinks(`Пройдите [Квест по Гродно](${address}).`, sources)).toEqual({ text: `Пройдите [Квест по Гродно](${quest.url}).`, removed: 0, relabeled: 0 })
+      expect(enforceSourceLinks(`Пройдите [Квест по Гродно](${address}).`, sources)).toEqual({ text: `Пройдите [Квест по Гродно](${quest.url}).`, removed: 0, relabeled: 0, removedWorld: 0 })
     }
     // Полный адрес карточки остаётся как написан: с якорем, хвостом запроса и косой чертой в конце.
     for (const address of [`${travel.url}#route`, `${travel.url}/`, `${travel.url}?utm=1`]) {
       const text = `[Выходные под Гродно](${address})`
-      expect(enforceSourceLinks(text, sources)).toEqual({ text, removed: 0, relabeled: 0 })
+      expect(enforceSourceLinks(text, sources)).toEqual({ text, removed: 0, relabeled: 0, removedWorld: 0 })
     }
     // Страж ответа целиком: показанная ссылка — с протоколом, карточка считается названной.
     const guarded = guardAnswer(`Начните с [x](${questPath}) — городской квест.`, sources, { question: 'Какие квесты есть в Гродно?' })
@@ -125,7 +125,7 @@ describe('страж ссылок: подпись равна названию к
     const url = sources[1].url
     for (const label of ['Квест по Гродно', 'квест по гродно', '«Квест по Гродно»', '**Квест по Гродно**', 'Квест по Гродно.']) {
       const text = `Пройдите [${label}](${url}) вечером`
-      expect(enforceSourceLinks(text, sources)).toEqual({ text, removed: 0, relabeled: 0 })
+      expect(enforceSourceLinks(text, sources)).toEqual({ text, removed: 0, relabeled: 0, removedWorld: 0 })
     }
     expect(isSameTitle('Несвижский замок Радзивиллов.', 'Несвижский замок Радзивиллов')).toBe(true)
     expect(isSameTitle('Квест по Тракторному посёлку', 'Квест по Тракторному посёлку в Минске')).toBe(false)
@@ -138,6 +138,7 @@ describe('страж ссылок: подпись равна названию к
       text: `Смотрите [Выходные под Гродно](${sources[0].url}) и`,
       removed: 0,
       relabeled: 1,
+      removedWorld: 0,
     })
   })
 })
@@ -449,5 +450,79 @@ describe('страж содержания ответа (#3291)', () => {
     // Год постройки, число без единицы и адрес числом с единицей не считаются; километры и годы — считаются (#3345).
     expect(numbers('Замок 1590 года, 13 поездок, https://metravel.by/travels/krakow-za-90-minut и 11 > 9')).toEqual([])
     expect(numbers('Идти 2,5 км, детям 8–10 лет, 9-летнему — в самый раз; маршрут 30–50 km')).toEqual(['km:2.5', 'years:8', 'years:10', 'years:9', 'km:30', 'km:50'])
+  })
+})
+
+describe('страж ссылок: маршруты мира (#3357)', () => {
+  const site: AiSource[] = [card('quest', '4', 'Квест по Гродно', 'grodno', 'Городской квест по городу Гродно. Точек: 9. Длительность: 120 мин')]
+  const world = [
+    { title: 'West Highland Way', url: 'https://en.wikipedia.org/wiki/West_Highland_Way' },
+    { title: 'Тропа Фикстура', url: 'https://ru.wikivoyage.org/wiki/%D0%A2%D1%80%D0%BE%D0%BF%D0%B0' },
+  ]
+
+  it('внешняя ссылка вне внешних карточек вырезается и считается отдельно', () => {
+    const raw = `Пройдите [Квест по Гродно](${site[0].url}) или [Tour du Mont Blanc](https://en.wikipedia.org/wiki/Tour_du_Mont_Blanc). Ещё: https://www.alltrails.com/trail/x`
+    expect(enforceSourceLinks(raw, site, { worldSources: world })).toEqual({
+      text: `Пройдите [Квест по Гродно](${site[0].url}) или Tour du Mont Blanc. Ещё:`,
+      removed: 2,
+      relabeled: 0,
+      removedWorld: 2,
+    })
+  })
+
+  it('без внешних карточек любой внешний адрес вырезается, как раньше', () => {
+    const raw = 'См. [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way) и https://en.wikipedia.org/wiki/West_Highland_Way'
+    expect(enforceSourceLinks(raw, site)).toEqual({ text: 'См. West Highland Way и', removed: 2, relabeled: 0, removedWorld: 2 })
+  })
+
+  it('ссылка на внешнюю карточку этого ответа остаётся с её названием и адресом', () => {
+    const raw = 'Вариант — [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way).'
+    expect(enforceSourceLinks(raw, site, { worldSources: world })).toEqual({ text: raw, removed: 0, relabeled: 0, removedWorld: 0 })
+    // Выдуманная подпись заменяется названием маршрута; хвост запроса и `www` адрес не меняют.
+    expect(enforceSourceLinks('См. [лучший трек Шотландии](https://www.en.wikipedia.org/wiki/West_Highland_Way?utm=1)', site, { worldSources: world })).toEqual({
+      text: 'См. [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)',
+      removed: 0,
+      relabeled: 1,
+      removedWorld: 0,
+    })
+  })
+
+  it('голый адрес внешней карточки становится ссылкой с названием; адрес буквами равен кодированному', () => {
+    expect(enforceSourceLinks('Подробнее: https://en.wikipedia.org/wiki/West_Highland_Way.', site, { worldSources: world }).text).toBe(
+      'Подробнее: [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way).',
+    )
+    expect(enforceSourceLinks('[Тропа](https://ru.wikivoyage.org/wiki/Тропа)', site, { worldSources: world }).text).toBe(`[Тропа Фикстура](${world[1].url})`)
+  })
+
+  it('похожий, но другой адрес — не карточка: другая статья, другой язык, путь без хоста', () => {
+    for (const url of ['https://en.wikipedia.org/wiki/West_Highland_Way_Race', 'https://de.wikipedia.org/wiki/West_Highland_Way', 'https://en.wikipedia.org.evil.example/wiki/West_Highland_Way']) {
+      expect(enforceSourceLinks(`[West Highland Way](${url})`, site, { worldSources: world })).toMatchObject({ text: 'West Highland Way', removed: 1, removedWorld: 1 })
+    }
+    expect(enforceSourceLinks('[x](/wiki/West_Highland_Way)', site, { worldSources: world })).toMatchObject({ text: 'x', removed: 1, removedWorld: 0 })
+  })
+
+  it('карточка с адресом сайта или без https внешней не считается', () => {
+    const fake = [{ title: 'Подделка', url: 'https://metravel.by/travels/net' }]
+    expect(enforceSourceLinks('[Подделка](https://metravel.by/travels/net)', site, { worldSources: fake })).toMatchObject({ text: 'Подделка', removed: 1, removedWorld: 0 })
+  })
+
+  it('скобки в адресе карточки кодируются: ссылка не обрывается на первой «)»', () => {
+    const e1 = [{ title: 'E1', url: 'https://en.wikipedia.org/wiki/E1_(European_long_distance_path)' }]
+    const guarded = enforceSourceLinks('Подробнее: https://en.wikipedia.org/wiki/E1_%28European_long_distance_path%29', site, { worldSources: e1 })
+    expect(guarded).toMatchObject({ text: 'Подробнее: [E1](https://en.wikipedia.org/wiki/E1_%28European_long_distance_path%29)', removed: 0 })
+  })
+
+  it('знаки заглушек в тексте модели не превращаются в ссылку', () => {
+    const raw = 'См. 0 и [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)'
+    expect(enforceSourceLinks(raw, site, { worldSources: world }).text).toBe('См. 0 и [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)')
+  })
+
+  it('во время стрима внешний адрес проверяется тем же правилом', () => {
+    expect(guardStreamingText('См. [x](https://en.wikipedia.org/wiki/West_Highland_Way) и https://evil.example/y далее ', site, world)).toEqual({
+      text: 'См. [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way) и далее',
+      removed: 1,
+      relabeled: 1,
+      removedWorld: 1,
+    })
   })
 })

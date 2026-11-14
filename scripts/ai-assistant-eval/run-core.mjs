@@ -74,6 +74,14 @@ export const loadCases = (file) => {
     if (expects.length !== turns.length || expects.some((value) => !EXPECTS.includes(value))) throw new Error(`${item.id}: expect по ходам — одно из ${EXPECTS.join('/')}`)
     // Страница, с которой задан вопрос (#2897): в пути службы уходит в запрос полем `source`.
     if (item.source !== undefined && !(['travel', 'quest'].includes(item.source?.type) && Number.isInteger(item.source?.id) && item.source.id > 0)) throw new Error(`${item.id}: source — {type: travel|quest, id: положительное целое}`)
+    // Маршруты мира (#3357): ожидание блока «Ещё в мире» — числа и шаблон страны.
+    if (item.expect_world !== undefined) {
+      const world = item.expect_world
+      const numeric = ['min', 'max', 'max_km', 'min_km', 'month', 'max_days']
+      const known = [...numeric, 'country']
+      const bad = !world || typeof world !== 'object' || Object.keys(world).some((key) => !known.includes(key)) || numeric.some((key) => world[key] !== undefined && !(Number.isFinite(world[key]) && world[key] >= 0))
+      if (bad || (world.month !== undefined && !(Number.isInteger(world.month) && world.month >= 1 && world.month <= 12))) throw new Error(`${item.id}: expect_world — {min, max, max_km, min_km, month 1–12, max_days, country}`)
+    }
     seen.add(item.id)
     cases.push({ ...item, turns, expects, locale: item.locale ?? item.lang ?? 'ru', lang: item.lang ?? 'ru' })
   }
@@ -235,6 +243,8 @@ const turnExpectation = (item, index) => ({
   expectSources: index === item.turns.length - 1 ? item.expect_sources ?? null : null,
   // Контрольный вопрос о поездке (#3293): справочных карточек среди источников быть не должно.
   ...(item.no_help === true ? { noHelp: true } : {}),
+  // Маршруты мира (#3357): блок «Ещё в мире» проверяется на последнем ходе диалога.
+  ...(index === item.turns.length - 1 && item.expect_world ? { expectWorld: item.expect_world } : {}),
 })
 
 const scoreTurn = (expectation, observed) => {

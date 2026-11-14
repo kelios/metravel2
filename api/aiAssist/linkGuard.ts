@@ -11,8 +11,14 @@
  * названием («Минск в кадре: город, который играл Москву» у статьи о Смолевуде, проба
  * 11.11.2026, p14). Подпись разрешённого адреса заменяется названием его карточки, если они
  * расходятся. Пояснение пункта, числа и пустой ответ проверяет `answerGuard.ts`.
+ *
+ * Маршруты мира (#3357): у ответа появились внешние карточки — статьи Википедии и Wikivoyage. Внешний
+ * адрес в тексте модели остаётся только при полном совпадении с адресом внешней карточки ЭТОГО ответа и
+ * получает её название; любой другой внешний адрес вырезается, как раньше, и считается отдельно
+ * (`removedWorld`). Адреса карточек сайта проверяются прежними правилами.
  */
 
+import type { AiWorldTrail } from './trailFacts.ts'
 import type { AiSource } from './types'
 
 // Адрес в угловых скобках («[x](</quests/4>)») — тот же адрес: скобки в него не входят.
@@ -114,7 +120,41 @@ export type LinkGuardResult = {
   removed: number
   /** Сколько подписей ссылок заменено названием карточки (#3291). */
   relabeled: number
+  /** Сколько из вырезанных адресов — внешние, не из внешних карточек ответа (#3357); входит в `removed`. */
+  removedWorld: number
 }
+
+/** Внешняя карточка для стража: адрес статьи и название маршрута. */
+export type WorldLinkSource = Pick<AiWorldTrail, 'url' | 'title'>
+
+export type LinkGuardOptions = {
+  markRemoved?: boolean
+  /** Внешние карточки этого ответа (#3357); не заданы — любой внешний адрес вырезается. */
+  worldSources?: readonly WorldLinkSource[]
+}
+
+/** Абсолютный адрес не на сайте. */
+const isExternalUrl = (url: string): boolean => /^https?:\/\//i.test(url) && !/^https?:\/\/(?:www\.)?metravel\.by(?:[/:?#]|$)/i.test(url)
+
+/**
+ * Ключ внешнего адреса: полный адрес без протокола, `www`, запроса, якоря и знака в конце. Адрес статьи в
+ * карточке записан с процентным кодированием («…/wiki/%D0%A2…»), модель пишет его буквами — сверяется
+ * раскодированная форма.
+ */
+const worldLinkKey = (url: string): string => {
+  // Сначала раскодирование, потом ключ: регистр приводится к раскодированной букве («%D0%A2» — заглавная), а
+  // знак в конце срезается одинаково у «…_(path)» карточки и «…_%28path%29» в тексте.
+  try {
+    return normalizeLinkKey(decodeURI(url))
+  } catch {
+    return normalizeLinkKey(url)
+  }
+}
+
+/** Заглушки сохранённых внешних ссылок: правила для голых адресов ниже их не трогают. */
+const WORLD_LINK_OPEN = '\uE002'
+const WORLD_LINK_CLOSE = '\uE003'
+const WORLD_LINK_TOKEN_CHARS_RE = /[\uE002\uE003]/g
 
 /**
  * Оставляет в тексте только адреса найденных карточек. Markdown-ссылка с чужим
@@ -123,10 +163,27 @@ export type LinkGuardResult = {
  * («doehat» вместо «doekhat», замер #2710), а название копирует точно, поэтому
  * такая ссылка получает адрес своей карточки и не считается вырезанной.
  */
-export function enforceSourceLinks(rawText: string, sources: readonly AiSource[], options: { markRemoved?: boolean } = {}): LinkGuardResult {
+export function enforceSourceLinks(rawText: string, sources: readonly AiSource[], options: LinkGuardOptions = {}): LinkGuardResult {
   const sourceByKey = buildSourceByLinkKey(sources)
   let removed = 0
   let relabeled = 0
+  let removedWorld = 0
+  // Внешняя карточка узнаётся только по полному адресу: путь без хоста («/wiki/…») её не называет.
+  const worldByKey = new Map((options.worldSources ?? []).filter((card) => isExternalUrl(card.url)).map((card) => [worldLinkKey(card.url), card]))
+  const worldOf = (url: string): WorldLinkSource | null => (isExternalUrl(url) ? (worldByKey.get(worldLinkKey(url)) ?? null) : null)
+  const keptWorld: string[] = []
+  const keepWorld = (card: WorldLinkSource): string => {
+    // Скобки в адресе статьи («…/wiki/E1_(European_long_distance_path)») закрыли бы markdown-ссылку раньше
+    // времени: экран (`AssistantAnswerText`) и страж содержания показали бы обрезанный адрес. Кодированная
+    // скобка — тот же адрес статьи.
+    const url = card.url.replace(/\(/g, '%28').replace(/\)/g, '%29')
+    keptWorld.push(`[${toLinkLabel(card.title) || url}](${url})`)
+    return `${WORLD_LINK_OPEN}${keptWorld.length - 1}${WORLD_LINK_CLOSE}`
+  }
+  const countRemoved = (url: string): void => {
+    removed += 1
+    if (isExternalUrl(url)) removedWorld += 1
+  }
   const isAllowed = (candidate: string): boolean => {
     const key = normalizeLinkKey(candidate)
     return key.length > 0 && sourceByKey.has(key)
@@ -134,7 +191,8 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
 
   const urlByTitle = new Map(sources.map((source) => [normalizeTitleKey(source.title), source.url]))
 
-  let text = stripThinking(rawText)
+  // Знаки заглушек в тексте модели снимаются: заглушку ставит только страж.
+  let text = stripThinking(rawText).replace(WORLD_LINK_TOKEN_CHARS_RE, '')
   text = text.replace(MARKDOWN_LINK_RE, (match, label: string, url: string) => {
     const card = sourceByKey.get(normalizeLinkKey(url))
     if (card) {
@@ -151,21 +209,32 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
     }
     const cardUrl = urlByTitle.get(normalizeTitleKey(label))
     if (cardUrl) return `[${label}](${cardUrl})`
-    removed += 1
+    // Внешняя карточка этого ответа (#3357): ссылка остаётся с названием маршрута и адресом карточки.
+    const world = worldOf(url)
+    if (world) {
+      if (!isSameTitle(label, world.title)) relabeled += 1
+      return keepWorld(world)
+    }
+    countRemoved(url)
     return options.markRemoved ? `${label}${REMOVED_LINK_MARK}` : label
   })
   // Голый адрес сайта, которого нет в карточках, — выдуманный материал («Выезд в Польшу… — metravel.by/travels/…»):
   // он тоже оставляет метку. Внешний адрес (не metravel.by) исчезает без неё, как раньше.
   const dropUnlessAllowed = (onSite: (match: string) => boolean) => (match: string): string => {
     if (isAllowed(match)) return match
-    removed += 1
+    // Голый адрес внешней карточки становится ссылкой с её названием; знак за адресом остаётся в тексте.
+    const url = match.replace(TRAILING_PUNCTUATION_RE, '')
+    const world = worldOf(url)
+    if (world) return `${keepWorld(world)}${match.slice(url.length)}`
+    countRemoved(match)
     return options.markRemoved && onSite(match) ? REMOVED_LINK_MARK : ''
   }
   text = text.replace(ABSOLUTE_URL_RE, dropUnlessAllowed((match) => /^https?:\/\/(?:www\.)?metravel\.by(?:\/|$)/i.test(match)))
   text = text.replace(BARE_SITE_URL_RE, dropUnlessAllowed(() => true))
   text = text.replace(SITE_PATH_RE, dropUnlessAllowed(() => true))
 
-  return { text: tidyText(text), removed, relabeled }
+  const tidy = tidyText(text).replace(new RegExp(`${WORLD_LINK_OPEN}(\\d+)${WORLD_LINK_CLOSE}`, 'g'), (_token, index: string) => keptWorld[Number(index)] ?? '')
+  return { text: tidy, removed, relabeled, removedWorld }
 }
 
 const BARE_LINK_RE = new RegExp(`${ABSOLUTE_URL_RE.source}|${BARE_SITE_URL_RE.source}|${SITE_PATH_RE.source}`, 'gi')
@@ -251,10 +320,10 @@ export const countKeptSourceLinks = (text: string, sources: readonly AiSource[])
  * допустимая ссылка мигает, пока модель её дописывает. Общий для экрана
  * `/assistant` и сервера `/ai/ask` (#2713).
  */
-export const guardStreamingText = (full: string, sources: readonly AiSource[]): LinkGuardResult => {
+export const guardStreamingText = (full: string, sources: readonly AiSource[], worldSources?: readonly WorldLinkSource[]): LinkGuardResult => {
   const cut = Math.max(full.lastIndexOf(' '), full.lastIndexOf('\n'))
   const head = cut >= 0 ? full.slice(0, cut + 1) : ''
   const tail = cut >= 0 ? full.slice(cut + 1) : full
   const tailLooksLikeLink = /^(?:https?:|\/|www\.|metravel|\[|\()/i.test(tail)
-  return enforceSourceLinks(tailLooksLikeLink ? head : full, sources)
+  return enforceSourceLinks(tailLooksLikeLink ? head : full, sources, { worldSources })
 }

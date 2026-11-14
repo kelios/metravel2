@@ -109,3 +109,20 @@
 {"id": "lv109", "group": "length", "lang": "be", "q": "Пешы маршрут да дваццаці кіламетраў у Польшчы", "expect": "answer", "expect_sources": {"pattern": "польш|polsk|бескид|татр|горы", "min": 1, "topic": true, "absent": "mullerthal|gr21|монблан|ścieżka nad reglami"}}
 {"id": "lv110", "group": "length", "lang": "ru", "q": "Веломаршрут до 30 км под Краковом", "expect": "answer", "expect_sources": {"pattern": "краков|krak|забежув", "min": 1, "absent": "сарочанск|greenvelo"}}
 {"id": "lv112", "group": "site_help_control", "lang": "ru", "q": "Какое приложение взять для навигации в горах?", "expect": "any_on_topic", "no_help": true}
+{"id": "lv113", "group": "world", "lang": "ru", "q": "Какой пеший маршрут до 90 км пройти в декабре?", "expect": "any_on_topic", "expect_world": {"min": 1, "max_km": 90, "month": 12}}
+{"id": "lv114", "group": "world", "lang": "ru", "q": "Посоветуй известный многодневный поход длиннее 150 км", "expect": "any_on_topic", "expect_world": {"min": 1, "min_km": 150}}
+{"id": "lv115", "group": "world", "lang": "ru", "q": "Хочу в поход на 5 дней в августе, что выбрать?", "expect": "any_on_topic", "expect_world": {"min": 1, "max_days": 5, "month": 8}}
+{"id": "lv116", "group": "world", "lang": "ru", "q": "Пеший маршрут в Испании длиннее 500 км", "expect": "any_on_topic", "expect_world": {"min": 1, "min_km": 500, "country": "испан"}}
+{"id": "lv117", "group": "world", "lang": "be", "q": "Пешы маршрут да 70 км у кастрычніку", "expect": "any_on_topic", "expect_world": {"min": 1, "max_km": 70, "month": 10}}
+{"id": "lv118", "group": "world", "lang": "be", "q": "Параіце доўгі паход, больш за 200 км", "expect": "any_on_topic", "expect_world": {"min": 1, "min_km": 200}}
+{"id": "lv119", "group": "world", "lang": "uk", "q": "Піший маршрут до 60 км у квітні", "expect": "any_on_topic", "expect_world": {"min": 1, "max_km": 60, "month": 4}}
+{"id": "lv120", "group": "world", "lang": "uk", "q": "Порадьте похід на тиждень у липні", "expect": "any_on_topic", "expect_world": {"min": 1, "max_days": 7, "month": 7}}
+{"id": "lv121", "group": "world", "lang": "pl", "q": "Szlak pieszy do 100 km w marcu", "expect": "any_on_topic", "expect_world": {"min": 1, "max_km": 100, "month": 3}}
+{"id": "lv122", "group": "world", "lang": "pl", "q": "Jaki długi szlak pieszy powyżej 300 km polecacie?", "expect": "any_on_topic", "expect_world": {"min": 1, "min_km": 300}}
+{"id": "lv123", "group": "world", "lang": "en", "q": "A hiking trail under 80 km for February", "expect": "any_on_topic", "expect_world": {"min": 1, "max_km": 80, "month": 2}}
+{"id": "lv124", "group": "world", "lang": "en", "q": "Recommend a long-distance hike of at least 400 km", "expect": "any_on_topic", "expect_world": {"min": 1, "min_km": 400}}
+{"id": "lv125", "group": "world", "lang": "en", "q": "Which hiking trail can I walk in 4 days in June?", "expect": "any_on_topic", "expect_world": {"min": 1, "max_days": 4, "month": 6}}
+{"id": "lv126", "group": "world", "lang": "ru", "q": "Какие музеи стоит посетить в Гданьске за один день?", "expect": "any_on_topic", "expect_world": {"max": 0}}
+{"id": "lv127", "group": "world", "lang": "pl", "q": "Trasa rowerowa do 40 km w okolicach Wrocławia", "expect": "any_on_topic", "expect_world": {"max": 0}}
+{"id": "lv128", "group": "world", "lang": "en", "q": "Which quests can I finish in Krakow in one evening?", "expect": "any_on_topic", "expect_world": {"max": 0}}
+{"id": "lv129", "group": "world", "lang": "uk", "q": "Що подивитися у Львові за вихідні?", "expect": "any_on_topic", "expect_world": {"max": 0}}

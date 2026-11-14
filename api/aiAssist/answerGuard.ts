@@ -354,7 +354,7 @@ const stripPromptEcho = (text: string): { text: string; removed: string[] } => {
  */
 export function guardAnswer(rawText: string, sources: readonly AiSource[], context: AnswerGuardContext = {}): AnswerGuardResult {
   // Вырезанная ссылка оставляет метку: по ней ниже уходит предложение или пункт с материалом не из подсказки.
-  const linked = enforceSourceLinks(rawText, sources, { markRemoved: true })
+  const linked = enforceSourceLinks(rawText, sources, { markRemoved: true, worldSources: context.worldSources })
   const findings: GuardFinding[] = []
   if (linked.relabeled) findings.push({ check: 'label_mismatch', detail: `подписей заменено названием карточки: ${linked.relabeled}` })
   const echoed = stripPromptEcho(linked.text)
@@ -613,5 +613,5 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
     findings.push({ check: 'echo', detail })
   }
 
-  return { text, removed: linked.removed, relabeled: linked.relabeled, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, strayAdmissions, fallback, findings }
+  return { text, removed: linked.removed, relabeled: linked.relabeled, removedWorld: linked.removedWorld, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, strayAdmissions, fallback, findings }
 }

@@ -308,7 +308,8 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(texts.every((e) => !String(e.data.text).includes('evil.example'))).toBe(true)
       expect(rest.at(-1)).toEqual({
         event: 'done',
-        data: { status: 'done', removed_links: 1, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: AI_ASK_DAILY_LIMIT - 1 },
+        // Вырезанный адрес — внешний (evil.example): с #3357 его считает и `removed_world_links`.
+        data: { status: 'done', removed_links: 1, removed_world_links: 1, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: AI_ASK_DAILY_LIMIT - 1 },
       })
     } finally {
       await close(server)

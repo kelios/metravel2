@@ -13,6 +13,7 @@ import { translate as i18nT } from '@/i18n'
 import { hasDisplayFields, splitAnswerSources } from './answerSources'
 import { AssistantAnswerText } from './AssistantAnswerText'
 import { AssistantSourceCards } from './AssistantSourceCards'
+import { AssistantWorldTrails } from './AssistantWorldTrails'
 import type { AssistantStyles } from './assistantStyles'
 import type { AssistantTurn } from './useAssistantChat'
 
@@ -151,6 +152,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
   const toggleMore = useCallback(() => setMoreOpen((open) => !open), [])
   const collapsible = cards.length > 0 && listed.length > 0
   const showList = showSources && (!collapsible || moreOpen)
+  // Маршруты мира (#3357) — второй ярус: после ответа по сайту либо под «на сайте материалов нет».
+  const worldTrails = turn.status === 'done' || turn.status === 'no_sources' ? (turn.world ?? []) : []
   // Пустой ответ модели (#3291): вместо повтора вопроса — честная фраза; источники остаются ниже.
   // Пустая подсказка (#3345): модель не вызывалась — «на сайте пока нет материалов», найденное рядом ниже.
   const noMaterial = turn.status === 'done' && turn.fallback === true && turn.noMaterial === true
@@ -310,6 +313,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
             ))}
           </>
         ) : null}
+
+        {worldTrails.length > 0 ? <AssistantWorldTrails trails={worldTrails} styles={styles} colors={colors} layerUrl={turn.worldLayerUrl} /> : null}
       </View>
     </View>
   )

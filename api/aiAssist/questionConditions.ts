@@ -19,6 +19,11 @@
  *     Детский квест на вопрос с личным условием, в котором детей нет, — карточка другой аудитории
  *     (`unfit`): в подсказку не идёт никогда.
  *
+ * Маршрут мира (#3357, `trailFacts.ts`) сверяется тем же `judgeCard`: длина, число дней, месяцы и вид
+ * маршрута — по фактам внешней карточки. Отличия от статьи: месяцы маршрута — расчёт «без снега по
+ * климатической норме», поэтому месяц вне расчётного сезона карточку убирает, а вердикт «круглый год»
+ * условие не усиливает; оценочные дни убирают карточку только с запасом в полтора раза.
+ *
  * Порядок карточек и группы «подходит / рядом» собирает `sourceSelection.ts`.
  * Модуль без `@/`-импортов: службу грузит `node --experimental-strip-types`.
  */
@@ -27,6 +32,7 @@ import { asksAboutChildren } from './questAudience.ts'
 import { asksAboutService } from './serviceIntent.ts'
 import { detectIntent } from './retrievalQuery.ts'
 import { formatKm, MONTHS_RU, type RouteKind, routeKindOf, type SourceFacts } from './sourceFacts.ts'
+import { type TrailFacts, WORLD_CARD_TYPE } from './trailFacts.ts'
 import type { AiCardType, AiSourceType } from './types'
 
 export type QuestionConditions = {
@@ -433,6 +439,8 @@ const PUBLIC_TRANSPORTS = new Set(['автобус', 'поезд', 'электр
 const WEEKEND_CATEGORY = 'тур выходного дня'
 
 const ROUTE_RU: Record<RouteKind, string> = { foot: 'пеший маршрут', bike: 'веломаршрут' }
+/** Оценочные дни маршрута мира нарушают условие «на N дней», только когда больше названного во столько раз. */
+export const TRAIL_ESTIMATE_SLACK = 1.5
 
 const daysLabel = (days: number): string => {
   const tail = days % 10
@@ -448,7 +456,7 @@ const lower = (values: readonly string[] | undefined): string[] => (values ?? []
  */
 export const judgeCard = (
   conditions: QuestionConditions,
-  card: { type: AiCardType; facts?: SourceFacts | null; title?: string | null; snippet?: string | null },
+  card: { type: AiCardType | typeof WORLD_CARD_TYPE; facts?: SourceFacts | null; title?: string | null; snippet?: string | null; trail?: TrailFacts | null },
 ): CardVerdict => {
   const reasons: string[] = []
   let score = 0
@@ -459,6 +467,8 @@ export const judgeCard = (
   }
   const quest = card.facts?.type === 'quest' ? card.facts : null
   const travel = card.facts?.type === 'travel' ? card.facts : null
+  // Маршрут мира (#3357): факты внешней карточки; вид материала («квесты…», «статья…») к нему не относится.
+  const trail = card.type === WORLD_CARD_TYPE ? (card.trail ?? null) : null
 
   // Детский квест (аудитория «дети» по каталогу) на вопрос с личным условием, где детей нет, — не ответ:
   // «Где погулять с собакой недалеко от Варшавы?» получал детский квест, потому что он «можно с собакой».
@@ -475,7 +485,7 @@ export const judgeCard = (
     conditions.route !== undefined
   if (!conditions.children && personal && quest?.audience === 'kids') return { reasons: [], score: -1, dropped: true, unfit: true }
 
-  if (conditions.kind) score += card.type === conditions.kind ? 1 : -1
+  if (conditions.kind && card.type !== WORLD_CARD_TYPE) score += card.type === conditions.kind ? 1 : -1
 
   if (conditions.easy) {
     if (quest?.difficulty) {
@@ -484,6 +494,11 @@ export const judgeCard = (
     } else if (card.type === 'travel' && EASY_SIGN_RE.test(`${card.title ?? ''}. ${card.snippet ?? ''}`)) {
       // У статьи факта сложности нет; признак — её собственные слова: «Закопане: лёгкая тропа…».
       match('лёгкий маршрут')
+    } else if (trail?.effort) {
+      // Ступень нагрузки считает сборка индекса: «прогулка» — ответ на «для новичков», маршрут для
+      // подготовленных и с горным опытом — явное нарушение.
+      if (trail.effort === 'walk') match('прогулка')
+      else if (trail.effort !== 'hike') dropped = true
     }
   }
 
@@ -516,6 +531,13 @@ export const judgeCard = (
     else if (shared.length) match(`${shared.length > 1 ? 'месяцы' : 'месяц'}: ${shared.map((month) => MONTHS_RU[month - 1]).join(', ')}`)
     else score -= 1
   }
+  // Месяцы маршрута мира — расчёт «без снега по норме». Вне расчётного сезона маршрут не предлагается;
+  // «круглый год» значит «устойчивого снега нет», а не «открыт и рекомендован», и условие не усиливает.
+  if (conditions.months?.length && trail?.months?.length && trail.months.length < MONTHS_RU.length) {
+    const shared = trail.months.filter((month) => conditions.months!.includes(month))
+    if (shared.length) match(`без снега по норме: ${shared.map((month) => MONTHS_RU[month - 1]).join(', ')}`)
+    else dropped = true
+  }
 
   const { maxMinutes, maxDays } = conditions
   if (quest?.duration_min) {
@@ -540,8 +562,18 @@ export const judgeCard = (
     }
   }
 
+  if (trail?.days !== undefined) {
+    const limit = maxDays ?? (maxMinutes !== undefined ? 1 : undefined)
+    if (limit !== undefined) {
+      // Дни по этапам источника сверяются как у статьи; оценка от усилия — с запасом.
+      if (trail.days_estimated ? trail.days >= limit * TRAIL_ESTIMATE_SLACK : trail.days > limit) dropped = true
+      else if (maxDays !== undefined && trail.days <= limit) match(trail.days_estimated ? `около ${daysLabel(trail.days)}` : daysLabel(trail.days))
+    }
+  }
+
   // Вид маршрута (#3353): пеший или вело — по категориям и транспорту статьи; каталог молчит — не нарушено.
-  const kind = travel ? routeKindOf(travel) : null
+  // Маршрут мира — пеший по составу внешнего индекса.
+  const kind = trail ? 'foot' : travel ? routeKindOf(travel) : null
   const otherKind = conditions.route !== undefined && kind !== null && kind !== conditions.route
   if (conditions.route && kind === conditions.route) match(ROUTE_RU[kind])
   else if (otherKind) score -= 1
@@ -549,11 +581,12 @@ export const judgeCard = (
   // Длина маршрута (#3353): сверяется только у статьи с фактом длины; длиннее верхней границы или короче
   // нижней — явное нарушение числового условия. У маршрута другого вида длина не сверяется: веломаршрут на
   // 15 км — не ответ на «пеший маршрут до 20 км», и нарушением его длина тоже не становится.
-  if (!otherKind && travel?.distance_km !== undefined && (conditions.maxKm !== undefined || conditions.minKm !== undefined)) {
-    const tooLong = conditions.maxKm !== undefined && travel.distance_km > conditions.maxKm
-    const tooShort = conditions.minKm !== undefined && travel.distance_km < conditions.minKm
+  const distance = travel?.distance_km ?? trail?.distance_km
+  if (!otherKind && distance !== undefined && (conditions.maxKm !== undefined || conditions.minKm !== undefined)) {
+    const tooLong = conditions.maxKm !== undefined && distance > conditions.maxKm
+    const tooShort = conditions.minKm !== undefined && distance < conditions.minKm
     if (tooLong || tooShort) dropped = true
-    else match(`${formatKm(travel.distance_km)} км`)
+    else match(`${formatKm(distance)} км`)
   }
 
   return { reasons, score, dropped, unfit: false }

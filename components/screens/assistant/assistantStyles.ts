@@ -133,6 +133,30 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
     sourceRowPressed: {
       opacity: 0.8,
     },
+    // Блок «Ещё в мире» (#3357): строка маршрута выше строки источника — под названием стоят факты.
+    worldRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      minHeight: ASSISTANT_TOUCH_TARGET,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radii.sm,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    worldFacts: {
+      ...typography.scale.caption,
+      color: colors.text,
+    },
+    worldEffort: {
+      ...typography.scale.caption,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    worldNote: {
+      ...typography.scale.caption,
+      color: colors.textMuted,
+    },
     sourceIcon: {
       width: 32,
       height: 32,

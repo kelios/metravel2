@@ -314,7 +314,7 @@ describe('useAssistantChat (#2460)', () => {
     expect(guardStreamingText('Смотрите https://metravel.by/travels/vyhodnye-pod-grodno ', [source]).text).toBe(
       'Смотрите https://metravel.by/travels/vyhodnye-pod-grodno',
     )
-    expect(guardStreamingText('Смотрите https://evil.example/x ', [source])).toEqual({ text: 'Смотрите', removed: 1, relabeled: 0 })
+    expect(guardStreamingText('Смотрите https://evil.example/x ', [source])).toEqual({ text: 'Смотрите', removed: 1, relabeled: 0, removedWorld: 1 })
   })
 })
 

@@ -27,6 +27,13 @@ export type AiCardType = AiSourceType | 'help'
 export const AI_SOURCE_GROUPS = ['page', 'match', 'nearby'] as const
 export type AiSourceGroup = (typeof AI_SOURCE_GROUPS)[number]
 
+/**
+ * Маршрут мира (#3357) — карточка вида `trail` с группой `world`: приходит от службы `/ai/ask` в том же
+ * событии `sources`, но материалом сайта не является и в `AiSource` не входит. Сборка приложения, не
+ * знающая этого вида, такую карточку отбрасывает (`toSource`, `askProvider.ts`).
+ */
+export type { AiWorldTrail } from './trailFacts.ts'
+
 /** Карточка материала сайта, найденная подбором; единственный источник ссылок в ответе. */
 export type AiSource = {
   type: AiCardType

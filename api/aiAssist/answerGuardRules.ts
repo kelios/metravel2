@@ -16,7 +16,7 @@
  * Модуль без `@/`-импортов: его грузит служба (`node --experimental-strip-types`) и контур оценки.
  */
 
-import { tidyText } from './linkGuard.ts'
+import { tidyText, type WorldLinkSource } from './linkGuard.ts'
 import { asksAboutChildren } from './questAudience.ts'
 import { parseConditions } from './questionConditions.ts'
 import type { AiSource } from './types'
@@ -33,6 +33,12 @@ export type AnswerGuardContext = {
    * Не задано — подсказкой считаются все `sources`.
    */
   promptSources?: readonly AiSource[]
+  /**
+   * Внешние карточки этого ответа (#3357, блок «Ещё в мире»): внешний адрес в тексте остаётся только при
+   * полном совпадении с адресом одной из них. В подсказку они не идут, поэтому опорой чисел не служат:
+   * длина или набор высоты маршрута мира в тексте модели — число без опоры.
+   */
+  worldSources?: readonly WorldLinkSource[]
 }
 
 /** Конец фразы: знак, за которым новая фраза с заглавной буквы, ссылка или конец строки. «ok. 180 min» фразу не делит. */

@@ -23,6 +23,7 @@ import { INTENT_LIMITS_PREFIX } from './intent.ts'
 import { AskLimits, createCounterStore, createDayClock } from './limits.ts'
 import { createRedisClient } from './redis.ts'
 import { createTagCatalog } from './suggestTags.ts'
+import { loadWorldIndex } from './worldIndex.ts'
 
 const log = (line: string) => console.error(`[${new Date().toISOString()}] ${line}`)
 
@@ -39,6 +40,15 @@ async function main(): Promise<void> {
   const ageDays = indexAgeDays(manifest.built_at)
   if (ageDays === null || ageDays > DEFAULT_MAX_AGE_DAYS) {
     log(`⚠️ индекс собран ${ageDays ?? '?'} дн. назад (порог ${DEFAULT_MAX_AGE_DAYS}): материалы, опубликованные позже, не находятся — \`npm run ai:index -- build\``)
+  }
+
+  // #3357: внешний индекс маршрутов мира — отдельный артефакт; без переменной блока «Ещё в мире» нет.
+  const world = config.worldIndexDir ? loadWorldIndex(config.worldIndexDir, { expectedModel: spec.key }) : null
+  if (world) {
+    log(
+      `маршруты мира: ${config.worldIndexDir} — ${world.trails.length} маршрутов, ${world.manifest.chunks} фрагментов, собран ${world.manifest.built_at}; ` +
+        `файл слоя ODbL: ${config.worldLayerUrl ?? 'адрес не задан (AI_WORLD_LAYER_URL) — ссылки под блоком нет'}`,
+    )
   }
 
   log(`модель: ${spec.hfId} (${spec.dtype}), потоков ${config.threads}, кэш ${config.modelCacheDir}${config.offline ? ', offline' : ''}`)
@@ -105,6 +115,7 @@ async function main(): Promise<void> {
 
   const server = createApp({
     index,
+    world,
     modelKey: spec.key,
     embedQuery: (q) => embedder.embedQuery(q),
     lexical,
@@ -119,6 +130,7 @@ async function main(): Promise<void> {
       evalTrace: config.evalTrace ? { llmUrl: config.llmUrl } : null,
       promptHints: config.promptHints,
       helpMode: config.helpMode,
+      worldLayerUrl: config.worldLayerUrl,
     },
     askFragmentChars: config.askFragmentChars,
     promptFocus: config.promptFocus,

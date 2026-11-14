@@ -13,6 +13,16 @@ export interface AssistConfig {
   host: string
   /** Директория артефакта индекса (#2454): chunks.jsonl + vectors.f16 + manifest.json. */
   indexDir: string
+  /**
+   * Директория внешнего индекса пеших маршрутов мира (#3357, `scripts/ai-index/world/`): второй ярус
+   * ответа `/ai/ask`, блок «Ещё в мире». `null` — переменная не задана: служба отвечает только по сайту.
+   */
+  worldIndexDir: string | null
+  /**
+   * Адрес опубликованного файла слоя OpenStreetMap внешнего индекса (ODbL) — `https://metravel.by` +
+   * `WORLD_OSM_LAYER_PUBLIC_PATH`. Задаётся, когда файл выложен: экран показывает ссылку под блоком.
+   */
+  worldLayerUrl: string | null
   /** База бэкенда для лексической половины гибрида (`GET /api/travels/?query=`). */
   backendUrl: string
   /** Потоки ONNX для эмбеддинга запроса; прод — 1 vCPU. */
@@ -81,6 +91,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
     port: envNumber(env, 'PORT', 8787),
     host: env.HOST || '0.0.0.0',
     indexDir: env.AI_INDEX_DIR || 'dist/ai-index',
+    worldIndexDir: env.AI_WORLD_INDEX_DIR || null,
+    worldLayerUrl: env.AI_WORLD_LAYER_URL && /^https:\/\//i.test(env.AI_WORLD_LAYER_URL) ? env.AI_WORLD_LAYER_URL : null,
     backendUrl: (env.BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/+$/, ''),
     threads: Math.max(1, envNumber(env, 'AI_ASSIST_THREADS', 1)),
     modelCacheDir: env.AI_ASSIST_MODEL_CACHE || defaultModelCacheDir(),

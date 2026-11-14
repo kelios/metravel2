@@ -207,6 +207,10 @@ export function createAskSession({ createAskClient, askUrl, visitor, locale, sou
         status,
         ...(fallback ? { answerText: noMaterial ? shownTexts.noMaterial : shownTexts.fallback, linkLabels: [] } : renderShown(refused ? '' : result.text, sources)),
         sources: sources.map((item) => ({ type: item.type, id: item.source_id, title: item.title, ...(item.group ? { group: item.group } : {}) })),
+        // Маршруты мира (#3357): блок «Ещё в мире» экран показывает и под «материалов нет».
+        ...(status !== 'off_topic' && result.world?.length
+          ? { world: result.world.map((trail) => ({ id: trail.source_id, title: trail.title, country: trail.country, distance_km: trail.distance_km, days: trail.days, ...(trail.days_estimated ? { days_estimated: true } : {}), months: trail.months, effort: trail.effort })) }
+          : {}),
         linksRemovedNotice: result.done.removedLinks > 0,
         // Запасной ответ стража (#3291) и пустая подсказка (#3345): текста модели нет, `answerText` — строка экрана.
         fallback: result.done.fallback === true,

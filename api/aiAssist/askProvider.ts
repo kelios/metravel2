@@ -16,8 +16,9 @@
  */
 
 import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
-import { ASK_NO_MATERIAL_REASON } from './policy'
+import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from './policy'
 import type { AiSourceRef } from './sourceRef'
+import { type AiWorldTrail, isWorldUrl, parseWorldTrail } from './trailFacts'
 import { AI_SOURCE_DISPLAY_FIELDS, AI_SOURCE_GROUPS, type AiHistoryItem, type AiSource, type AiSourceGroup, type AiUsage } from './types'
 
 const DEFAULT_RETRY_AFTER_SEC = 30
@@ -78,6 +79,8 @@ export type AskDoneEvent = {
   remaining: number | null
   /** Идентификатор хода для оценки ответа (#3296); `null` — служба оценку не ведёт либо ход до ответа не дошёл. */
   turnId: string | null
+  /** Сколько внешних адресов страж вырезал из ответа (#3357); поля нет — ни одного. */
+  removedWorldLinks?: number
 }
 
 /** Оценка ответа (#3296): голос посетителя и необязательная причина у «Не помогло». */
@@ -97,6 +100,13 @@ export type AskSourcesEvent = {
   degraded: boolean
   /** Остаток дневного лимита после списания этого вопроса. */
   remaining: number | null
+  /**
+   * Маршруты мира (#3357) — второй ярус ответа, блок «Ещё в мире»: карточки вида `trail` с группой `world`
+   * из того же списка `sources`. Поля нет — служба их не прислала.
+   */
+  world?: AiWorldTrail[]
+  /** Адрес файла слоя OpenStreetMap под ODbL (#3357); есть — под блоком стоит ссылка на него. */
+  worldLayerUrl?: string
 }
 
 export type AskRequest = {
@@ -115,6 +125,9 @@ export type AskResult = {
   sources: AiSource[]
   text: string
   done: AskDoneEvent
+  /** Маршруты мира этого ответа (#3357); поля нет — блока «Ещё в мире» нет. */
+  world?: AiWorldTrail[]
+  worldLayerUrl?: string
 }
 
 export interface AskClient {
@@ -224,12 +237,16 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
   if (!payload || typeof payload !== 'object') return null
   if (name === 'sources') {
     const list = Array.isArray(payload.sources) ? payload.sources : []
+    // Маршруты мира (#3357) стоят в том же списке: `toSource` их не узнаёт (вид `trail`), разбор у них свой.
+    const world = list.map(parseWorldTrail).filter((trail): trail is AiWorldTrail => trail !== null).slice(0, AI_MAX_RECOMMENDATIONS)
     return {
       name,
       data: {
         sources: list.map(toSource).filter((source): source is AiSource => source !== null),
         degraded: payload.degraded === true,
         remaining: toInt(payload.remaining),
+        ...(world.length ? { world } : {}),
+        ...(world.length && typeof payload.world_layer_url === 'string' && isWorldUrl(payload.world_layer_url) ? { worldLayerUrl: payload.world_layer_url } : {}),
       },
     }
   }
@@ -253,6 +270,7 @@ export const parseAskSseEvent = (event: string): ParsedAskEvent | null => {
         usage: toUsage(payload.usage),
         remaining: toInt(payload.remaining),
         turnId: typeof payload.turn_id === 'string' && payload.turn_id ? payload.turn_id : null,
+        ...(toInt(payload.removed_world_links) ? { removedWorldLinks: toInt(payload.removed_world_links) ?? 0 } : {}),
       },
     }
   }
@@ -312,6 +330,8 @@ export class HttpAskClient implements AskClient {
     }
 
     let sources: AiSource[] = []
+    let world: AiWorldTrail[] = []
+    let worldLayerUrl: string | undefined
     let text = ''
     let done: AskDoneEvent | null = null
 
@@ -321,6 +341,8 @@ export class HttpAskClient implements AskClient {
       if (!parsed) return
       if (parsed.name === 'sources') {
         sources = parsed.data.sources
+        world = parsed.data.world ?? []
+        worldLayerUrl = parsed.data.worldLayerUrl
         onSources?.(parsed.data)
       } else if (parsed.name === 'text') {
         text = parsed.data.text
@@ -385,7 +407,7 @@ export class HttpAskClient implements AskClient {
         remaining: null,
         turnId: null,
       }
-      return { sources, text, done: finished }
+      return { sources, text, done: finished, ...(world.length ? { world } : {}), ...(world.length && worldLayerUrl ? { worldLayerUrl } : {}) }
     } catch (error) {
       throw failure(error, 'ask stream failed')
     } finally {
