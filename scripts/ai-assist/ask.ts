@@ -66,6 +66,7 @@ import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { guardAnswer } from '../../api/aiAssist/answerGuard.ts'
+import { questionLanguage } from '../../api/aiAssist/language.ts'
 import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources } from '../../api/aiAssist/prompt.ts'
@@ -75,6 +76,7 @@ import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '
 import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog } from './demandLog.ts'
+import { helpPageTitle } from './helpPages.ts'
 import type { AskLimits } from './limits.ts'
 import { HttpError, parseLocale, parseQuery } from './params.ts'
 import { BusyError, type SingleFlight } from './queue.ts'
@@ -101,6 +103,14 @@ export interface RetrievalResult {
   help?: boolean
 }
 
+export interface RetrieveOptions {
+  /**
+   * Язык справочного ответа (#3369) — язык самого вопроса: запись справки отдаётся дословно, без модели, и
+   * перевести её некому. Не задан — язык запроса `locale`.
+   */
+  helpLocale?: Locale
+}
+
 /** Режим контура оценки (#3286); адрес модели показывает `/ai/health` — приёмка сверяет, на какую модель смотрит служба. */
 export interface EvalTrace {
   llmUrl: string | null
@@ -112,7 +122,7 @@ export interface AskDeps {
    * (#3290) тем же вектором запроса ищет ещё и внутри фрагментов этой страницы. Карточки приходят
    * расставленными под вопрос (#3289): порядок и группы `match` / `nearby` обработчик не меняет.
    */
-  retrieve: (q: string, locale: Locale, page?: AiSourceRef | null) => Promise<RetrievalResult>
+  retrieve: (q: string, locale: Locale, page?: AiSourceRef | null, options?: RetrieveOptions) => Promise<RetrievalResult>
   /** Карточка страницы-источника (#2897) из индекса; `null` — такого материала в индексе нет. */
   lookupSource: (ref: AiSourceRef, locale: Locale) => AiSource | null
   /** `null` — `AI_LLM_URL` не задан: вопросы по теме получают 503 generator_unavailable. */
@@ -136,14 +146,14 @@ export interface AskDeps {
 
 /**
  * Текст ответа справки (#3293): записи дословно и ссылка на страницу сайта, к которой запись относится.
- * Две записи об одной странице дают одну ссылку — после второй. Подпись ссылки — адрес страницы без
- * протокола: своего названия у страницы в записи нет.
+ * Две записи об одной странице дают одну ссылку — после второй. Подпись ссылки — название страницы из
+ * навигации сайта на языке ответа (#3369, `helpPages.ts`); у страницы без названия — её адрес без протокола.
  */
-export const helpAnswerText = (cards: ReadonlyArray<Pick<AiSource, 'snippet' | 'url'>>): string =>
+export const helpAnswerText = (cards: ReadonlyArray<Pick<AiSource, 'snippet' | 'url'>>, locale: Locale): string =>
   cards
     .map((card, index) => {
       const last = !cards.slice(index + 1).some((next) => next.url === card.url)
-      return `${card.snippet.trim()}${last ? `\n\n[${card.url.replace(/^https?:\/\//, '')}](${card.url})` : ''}`
+      return `${card.snippet.trim()}${last ? `\n\n[${helpPageTitle(card.url, locale) ?? card.url.replace(/^https?:\/\//, '')}](${card.url})` : ''}`
     })
     .join('\n\n')
 
@@ -274,9 +284,12 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     // Опора уточнений (#2719/#2884): «А какой подойдёт детям?» ищется вместе с последним
     // самостоятельным вопросом из истории; модель получает исходный вопрос и историю.
     const retrievalQuery = buildRetrievalQuery(question, resolveRetrievalAnchor(history) ?? pinned?.title ?? null)
+    // Справка отвечает на языке вопроса (#3369): польский вопрос из русского интерфейса или без `locale`
+    // получал русскую запись. Вопрос, который между языками не выбирает, читается на языке запроса.
+    const helpLocale = questionLanguage(question, locale)
     let retrieved: RetrievalResult
     try {
-      retrieved = await deps.retrieve(retrievalQuery, locale, pinned ? (sourceRef ?? null) : null)
+      retrieved = await deps.retrieve(retrievalQuery, locale, pinned ? (sourceRef ?? null) : null, { helpLocale })
     } catch (error) {
       await refund()
       throw error
@@ -300,12 +313,11 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const promptSources = selectPromptSources(sources, undefined, null, true)
     // Справка о сайте (#3293): ответ — утверждённый текст записи и ссылка на её страницу, без модели. Текст
     // читает посетитель и утверждает владелец; модель его пересказывала с искажениями (замер 12.11.2026).
-    // Подпись ссылки — адрес страницы без протокола: своего названия у страницы в записи нет.
     if (retrieved.help === true && deps.helpMode !== 'model' && promptSources.length) {
       const stream = openStream(response)
       stream.event('sources', { sources: sources.map(withoutPlace), degraded, remaining: quota.remaining })
       if (deps.evalTrace) stream.event('trace', { prompt_sources: promptSources.map(withoutPlace), raw_text: '', model_called: false, help: true })
-      stream.event('text', { text: helpAnswerText(promptSources) })
+      stream.event('text', { text: helpAnswerText(promptSources, helpLocale) })
       stream.done({ status: 'done', removed_links: 0, remaining: quota.remaining })
       return
     }

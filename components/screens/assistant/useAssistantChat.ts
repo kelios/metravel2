@@ -394,6 +394,16 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         try {
           sources = await searchSiteMaterials({ query: searchQuery, locale, signal: controller.signal })
         } catch {
+          // Подбор не ответил (#3369) — это не «материала нет»: в журнал спроса вопрос не идёт, лимит не
+          // тратится. Закреплённая страница отвечает и без подбора.
+          if (controller.signal.aborted) {
+            patchTurn(id, { status: 'aborted' })
+            return
+          }
+          if (!pinned) {
+            patchTurn(id, { status: 'unavailable' })
+            return
+          }
           sources = []
         }
         // Одна цепочка порядка со службой (#3289): место → условия → превосходная степень; не прошедшие

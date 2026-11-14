@@ -177,7 +177,7 @@ const VERY_RU = 'сам(?:ый|ая|ое|ые|ого|ую|ым|ой|ых)'
 const VERY_BE = 'сам(?:ы|ая|ае|ыя|ага|ую|ым|ай|ых)'
 const POINTS = '(?:точ(?:ек|ки|ках)|кроп(?:ак|кі|ках)|точок|punkt(?:[óo]w|y|ach)|points|stops)'
 // «не больше пяти точек» — условие, а не превосходная степень: число между словами не допускается.
-const COUNT_FILLER = '(?:\\s+(?:всего|число|количество|усяго|колькасць|всього|кількість|liczb[aęe]|number\\s+of))?\\s+'
+const COUNT_FILLER = '(?:\\s+(?:всего|число|количество|усяго|за\\s+[ўу]с[ёе]|колькасць|всього|за\\s+все|кількість|liczb[aęe]|number\\s+of))?\\s+'
 const NOT_NEGATED = '(?<!(?:не|ня|nie|not|no)\\s+)'
 
 const SUPERLATIVES: ReadonlyArray<[Superlative, RegExp]> = [
@@ -257,4 +257,22 @@ export const rankBySuperlative = <T>(ask: Superlative, items: readonly T[], fact
     ranked.push({ item, index, value, tie: ask.field === 'difficulty' ? (facts.duration_min ?? Number.MAX_SAFE_INTEGER * (direction === 1 ? 1 : -1)) : 0 })
   })
   return ranked.sort((a, b) => direction * (a.value - b.value) || direction * (a.tie - b.tie) || a.index - b.index).map((entry) => entry.item)
+}
+
+const SUPERLATIVE_RU: Record<SuperlativeField, Record<Superlative['order'], string>> = {
+  duration_min: { asc: 'самый короткий', desc: 'самый длинный' },
+  points: { asc: 'меньше всего точек', desc: 'больше всего точек' },
+  difficulty: { asc: 'самый лёгкий', desc: 'самый сложный' },
+}
+
+/**
+ * Строка «почему подходит» карточки-ответа на превосходную степень (#3369): «самый длинный: 300 мин»,
+ * «меньше всего точек: 6», «самый лёгкий». Слова русские, как вся карточка; `null` — у квеста нет факта.
+ */
+export const superlativeReason = (ask: Superlative, facts: QuestFacts): string | null => {
+  const label = SUPERLATIVE_RU[ask.field][ask.order]
+  if (ask.field === 'difficulty') return facts.difficulty ? label : null
+  const value = facts[ask.field]
+  if (!value) return null
+  return ask.field === 'duration_min' ? `${label}: ${value} мин` : `${label}: ${value}`
 }

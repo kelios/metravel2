@@ -91,7 +91,21 @@ const NUMERAL_RE = new RegExp(
   'u',
 )
 
-type Word = { text: string; capital: boolean; afterPreposition: boolean; origin: boolean }
+/**
+ * Названия каталога, которые совпадают с обычным словом: «на мост» — не Мосты, «под берёзой» — не Берёза,
+ * «в глубоком озере» — не Глубокое, «на ветке» — не Ветка. Местом такое название становится только словом с
+ * заглавной буквы не в начале фразы. Записаны как после `normalize`.
+ */
+const COMMON_WORD_NAMES = new Set(['мосты', 'масты', 'mosty', 'береза', 'бяроза', 'глубокое', 'глыбокае', 'горки', 'горкі', 'ветка', 'круглое', 'круглае', 'высокое', 'высокае', 'столбцы', 'стоубцы'])
+
+type Word = {
+  text: string
+  capital: boolean
+  afterPreposition: boolean
+  origin: boolean
+  /** Первое слово фразы: заглавная буква там — правило письма, а не признак названия. */
+  initial: boolean
+}
 
 // NFD снимает диакритику («Kraków» → «krakow», «ё» → «е»): город в вопросе и в каталоге пишут по-разному.
 const normalize = (value: unknown): string =>
@@ -103,12 +117,21 @@ const wordsOf = (value: unknown): Word[] => {
   const words: Word[] = []
   let afterPreposition = false
   let origin = false
-  for (const raw of normalize(value).split(/[^\p{L}\p{N}]+/u)) {
-    if (!raw) continue
-    const text = raw.toLowerCase()
-    if (raw.length >= MIN_WORD_LENGTH && !NUMERAL_RE.test(text)) words.push({ text, capital: /^\p{Lu}/u.test(raw), afterPreposition, origin })
-    afterPreposition = PLACE_PREPOSITIONS.has(text)
-    origin = ORIGIN_PREPOSITIONS.has(text)
+  // Фразы делятся знаком конца предложения и переводом строки; слова — всем, что не буква и не цифра.
+  // Точка после одной буквы — сокращение («в г. Минске», «с. Вашково»), фразу она не делит.
+  for (const sentence of normalize(value).split(/(?<=[\p{L}\p{N}]{2}|[)»"”])[.!?…]+\s+|[!?…]+\s+|\n+/u)) {
+    let initial = true
+    for (const raw of sentence.split(/[^\p{L}\p{N}]+/u)) {
+      if (!raw) continue
+      const text = raw.toLowerCase()
+      if (raw.length >= MIN_WORD_LENGTH && !NUMERAL_RE.test(text)) words.push({ text, capital: /^\p{Lu}/u.test(raw), afterPreposition, origin, initial })
+      initial = false
+      afterPreposition = PLACE_PREPOSITIONS.has(text)
+      origin = ORIGIN_PREPOSITIONS.has(text)
+    }
+    // Предлог в конце фразы к следующей не относится.
+    afterPreposition = false
+    origin = false
   }
   return words
 }
@@ -119,7 +142,14 @@ const wordsOf = (value: unknown): Word[] => {
  */
 const stemsOf = (name: string): string[] => {
   const fleeting = /^(.{3,})[оаеэ]([кц])$/u.exec(name)
-  return fleeting ? [name, fleeting[1] + fleeting[2]] : [name]
+  if (fleeting) return [name, fleeting[1] + fleeting[2]]
+  // Украинские чередования (#3369): «Відень — до Відня», «Львів — зі Львова», «Київ — з Києва» (после
+  // `normalize` «ї» читается как «і»), «Тернопіль — до Тернополя».
+  const softFleeting = /^(.{3,})ень$/u.exec(name)
+  if (softFleeting) return [name, `${softFleeting[1]}н`]
+  const closed = /^(.{2,})і(в|ль)$/u.exec(name)
+  if (closed) return closed[2] === 'в' ? [name, `${closed[1]}ов`, `${closed[1]}ев`, `${closed[1]}єв`] : [name, `${closed[1]}ол`]
+  return [name]
 }
 
 /** Слова названия места: с заглавной буквы и не служебные («болото Ельня (Миорский район)» → «ельня», «миорский»). */
@@ -146,15 +176,27 @@ const sharedPrefix = (a: string, b: string): number => {
 const startsWithName = (word: string, name: string, maxEnding: number): boolean =>
   stemsOf(name).some((stem) => {
     const shared = sharedPrefix(word, stem)
-    return shared >= Math.max(MIN_WORD_LENGTH, stem.length - 1) && word.length - shared <= maxEnding
+    if (shared < Math.max(MIN_WORD_LENGTH, stem.length - 1) || word.length - shared > maxEnding) return false
+    // У названия на «-а» падежной формы на «-о» нет: «Лидо» (ресторан в статье о Риге) — не Лида (#3369).
+    return !(shared === stem.length - 1 && /[аa]$/u.test(stem) && word.length === stem.length && /[оo]$/u.test(word))
   })
 
 /**
  * Слово вопроса называет место: падежная форма названия с заглавной буквы или после предлога места.
  * «Гродненская» и «варшавские» (прилагательные со строчной) названием не считаются.
  */
-const asksAbout = (word: Word, name: string): boolean =>
-  startsWithName(word.text, name, MAX_ENDING_LENGTH) && (word.capital || (word.afterPreposition && name.length > SHORT_NAME_LENGTH))
+const asksAbout = (word: Word, name: string): boolean => {
+  if (!startsWithName(word.text, name, MAX_ENDING_LENGTH)) return false
+  const common = COMMON_WORD_NAMES.has(name)
+  // Строчная буква после предлога места («квесты в гродно»); название-омоним обычного слова так не читается.
+  if (word.afterPreposition && !common && name.length > SHORT_NAME_LENGTH) return true
+  if (!word.capital) return false
+  // Заглавная в начале фразы — правило письма (#3369): «Глубокой ночью приезжаем…» — не Глубокое, «Most
+  // interesting quests» — не Мосты. Первым словом место называет только само название («Гродно за день?»)
+  // или слово после предлога; название-омоним в начале фразы местом не считается вовсе.
+  if (!word.initial || word.afterPreposition) return true
+  return !common && word.text === name
+}
 
 /** Слово текста статьи называет место — в том числе прилагательным; короткое название — только с заглавной. */
 const mentions = (word: Word, name: string): boolean =>
@@ -296,14 +338,37 @@ const samePlaceWord = (a: string, b: string): boolean => {
 }
 
 /**
+ * Перед названием стоит слово обзора: с горы Турбач в Горце «в ясную погоду открывается панорама Татр»,
+ * «потрясающие виды на Татры и Пьенины» — статья о Горце упоминала Татры в шести фрагментах из девяти и
+ * вставала в подсказку на «маршрут в Татрах для новичков» (lv79). Между словом обзора и названием
+ * допускается одно слово («видно Высокие Татры», «панорама польских Татр»).
+ */
+const VIEW_BEFORE_RE =
+  /(?<![\p{L}])(?:вид(?:ы|ом|ами|а|ов)?\s+на|в[іi]д(?:ы|ам)?\s+на|краявід\p{L}*\s+на|краєвид\p{L}*\s+на|панорам\p{L}*|панарам\p{L}*|видн[оыа]|виден|видать|відаць|открыва\p{L}+|адкрыва\p{L}+|відкрива\p{L}+|widok\p{L}*\s+na|wida[ćc]|panoram\p{L}*(?:\s+of)?|views?\s+(?:of|over|to|towards|across)|overlook\p{L}*)\s+(?:(?:the|на|в)\s+)?(?:[\p{L}-]+\s+)?$/iu
+const VIEW_WINDOW_CHARS = 60
+
+/**
  * Текст упоминает хотя бы одно из названных мест — словом в любом падеже. Грубее отбора по месту
- * (регистр и предлог не смотрятся): отвечает на вопрос «есть ли об этом месте хоть что-то» для режима
+ * (регистр и предлог не смотрятся; упоминание места как вида с другой точки не считается): отвечает на вопрос «есть ли об этом месте хоть что-то» для режима
  * страницы (#3290) и признака «материала о месте нет» (#3289). Название на другом письме («w Gdańsku»
  * при русском тексте) не узнаётся.
  */
 export const mentionsAnyPlace = (places: readonly string[], text: string): boolean => {
   const names = places.map(foldWord).filter((name) => name.length >= MIN_PLACE_WORD)
   if (!names.length) return false
-  const words = new Set(String(text ?? '').split(/[^\p{L}]+/u).filter((word) => word.length >= MIN_PLACE_WORD).map(foldWord))
-  return names.some((name) => [...words].some((word) => samePlaceWord(name, word)))
+  const value = String(text ?? '')
+  const seen = new Map<string, boolean>()
+  for (const match of value.matchAll(/\p{L}+/gu)) {
+    const raw = match[0]
+    if (raw.length < MIN_PLACE_WORD) continue
+    let named = seen.get(raw)
+    if (named === undefined) {
+      const word = foldWord(raw)
+      named = names.some((name) => samePlaceWord(name, word))
+      seen.set(raw, named)
+    }
+    // Место, на которое только смотрят, — не место материала (#3369): «виды на Татры», «панорама Татр».
+    if (named && !VIEW_BEFORE_RE.test(value.slice(Math.max(0, (match.index ?? 0) - VIEW_WINDOW_CHARS), match.index))) return true
+  }
+  return false
 }

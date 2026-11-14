@@ -184,6 +184,10 @@ texts = {
 known = {"https://metravel.by/quests/1"}
 out = {k: detect_lang(v) for k, v in texts.items()}
 out["none"] = detect_lang("https://metravel.by/quests/1 {{value1}} 123")
+# 3369: equal letter score is decided by function words and letters only one language has, not by order.
+out["be_tie"] = detect_lang("У картцы не пазначаны ўзровень гадин; каля 120 хв")
+out["uk_tie"] = detect_lang("Ось головне в горах взимку: У картках не вказано про катання на лижах")
+out["ru_tie"] = detect_lang("Можно выбрать любой маршрут")
 def v(expect, answer, lang=None):
     return verdict({"expect": expect, "lang": lang}, check(answer, known), answer)
 out["be_ok"] = v("lang", texts["be"], "be")
@@ -198,6 +202,7 @@ print(json.dumps(out))
     expect(res.stderr).toBe('');
     expect(JSON.parse(res.stdout)).toEqual({
       ru: 'ru', be: 'be', uk: 'uk', pl: 'pl', en: 'en', none: null,
+      be_tie: 'be', uk_tie: 'uk', ru_tie: 'ru',
       be_ok: true, be_as_uk: false, made_up: false, no_link: false, loop: false, answer_untouched: true,
     });
   });

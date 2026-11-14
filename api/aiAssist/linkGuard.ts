@@ -15,7 +15,8 @@
 
 import type { AiSource } from './types'
 
-const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(\s*(<?)([^\s)]+)\2(?:\s+"[^"]*")?\s*\)/g
+// Адрес в угловых скобках («[x](</quests/4>)») — тот же адрес: скобки в него не входят.
+const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)/g
 const ABSOLUTE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'«»]+/gi
 // Голое «metravel.by» без пути — название сайта, а не ссылка: оно стоит во фразе отказа «не по теме»
 // (#2711) и в обычной речи модели; режется только `metravel.by/<путь>`.
@@ -91,6 +92,12 @@ export const isSameTitle = (label: string, title: string): boolean => {
   return key(label) === key(title)
 }
 
+/**
+ * Адрес ссылки — полный адрес карточки: с протоколом и тем же ключом. Хвост запроса и якорь, которые модель
+ * могла дописать к настоящему адресу, остаются как есть — ключ их не учитывает.
+ */
+const isCardAddress = (url: string, card: AiSource): boolean => /^https?:\/\//i.test(url) && normalizeLinkKey(url) === normalizeLinkKey(card.url)
+
 /** Название как подпись markdown-ссылки: квадратная скобка закрыла бы подпись раньше времени. */
 const toLinkLabel = (title: string): string => String(title ?? '').replace(/\[/g, '(').replace(/\]/g, ')').replace(/\s+/g, ' ').trim()
 
@@ -128,14 +135,17 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
   const urlByTitle = new Map(sources.map((source) => [normalizeTitleKey(source.title), source.url]))
 
   let text = stripThinking(rawText)
-  text = text.replace(MARKDOWN_LINK_RE, (match, label: string, _bracket: string, url: string) => {
+  text = text.replace(MARKDOWN_LINK_RE, (match, label: string, url: string) => {
     const card = sourceByKey.get(normalizeLinkKey(url))
     if (card) {
-      // Адрес настоящий — подпись обязана быть названием его карточки (#3291).
+      // Адрес настоящий — подпись обязана быть названием его карточки (#3291), а сам адрес — адресом карточки
+      // (#3369): модель пишет его путём («/quests/4/minsk-cmok») или без протокола («metravel.by/quests/…»),
+      // экран (`AssistantAnswerText`) узнаёт ссылкой только `[…](https://…)` и показал бы такую разметкой.
       const title = toLinkLabel(card.title)
-      if (!title || isSameTitle(label, card.title)) return match
+      const address = isCardAddress(url, card) ? url : card.url
+      if (!title || isSameTitle(label, card.title)) return address === url ? match : `[${label}](${address})`
       relabeled += 1
-      return `[${title}](${url})`
+      return `[${title}](${address})`
     }
     const cardUrl = urlByTitle.get(normalizeTitleKey(label))
     if (cardUrl) return `[${label}](${cardUrl})`
@@ -186,7 +196,7 @@ export function nameBareSourceLinks(text: string, sources: readonly AiSource[]):
   for (const match of text.matchAll(MARKDOWN_LINK_RE)) {
     const start = match.index ?? 0
     spans.push([start, start + match[0].length])
-    const card = sourceByKey.get(normalizeLinkKey(match[3]))
+    const card = sourceByKey.get(normalizeLinkKey(match[2]))
     if (card) linked.add(card)
   }
   let out = ''

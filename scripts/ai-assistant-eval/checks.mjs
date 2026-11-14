@@ -17,7 +17,9 @@
  */
 
 import { findUngroundedNumbers, guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
+import { detectLanguage } from '../../api/aiAssist/language.ts'
 import { isSameTitle } from '../../api/aiAssist/linkGuard.ts'
+import { detectSuperlative } from '../../api/aiAssist/sourceFacts.ts'
 
 export const LAYERS = ['infra', 'retrieval', 'gate', 'prompt', 'guard', 'model']
 
@@ -282,56 +284,11 @@ export const countRecommendations = (raw, cards) => {
   return { cardLinks: mentioned.size, bullets, bulletsWithoutLink, unknownUrls }
 }
 
-const POLISH = 'ąćęłńśźżó'
-const CYRILLIC_NEVER = { ru: 'іўїєґ', be: 'ищъїєґ', uk: 'ыэёъў' }
-const PL_RE = /sz|cz|rz|dz|ie|ow|ych|\b(?:i|w|z|na|nie|jest|się|do)\b/g
-const EN_RE = /th|wh|sh|ea|ou|ing\b|\b(?:a|an|the|and|of|to|is|in|for)\b/g
-
 /**
- * Признаки языка для равного счёта по буквам (#3345): буквы, которые есть только в одном языке, и
- * служебные слова. Белорусская фраза с опечаткой («…ўзровень гадин; каля 120 хв» — одна «и») и украинская
- * без «і», «ї», «є» («Ось головне в горах взимку… не вказано про катання на лижах») по буквам от русской
- * не отличались, а равный счёт отдавался русскому.
+ * Язык по буквам и служебным словам — общий определитель службы и контура (`api/aiAssist/language.ts`,
+ * #3369): проверка «ответ на языке вопроса» и язык справочного ответа службы читают текст одним правилом.
  */
-const CYRILLIC_ONLY = { ru: '', be: 'ў', uk: 'їєґ' }
-const CYRILLIC_WORDS = {
-  ru: ['и', 'что', 'как', 'это', 'или', 'если', 'есть', 'нет', 'вот', 'но', 'также', 'только', 'уже', 'ещё', 'еще', 'чтобы', 'из', 'от', 'можно', 'указано', 'указаны'],
-  be: ['што', 'як', 'гэта', 'або', 'калі', 'ёсць', 'няма', 'вось', 'але', 'таксама', 'толькі', 'ужо', 'яшчэ', 'каб', 'ад', 'каля', 'можна', 'пазначана', 'пазначаны'],
-  uk: ['що', 'як', 'це', 'або', 'якщо', 'є', 'немає', 'ось', 'але', 'також', 'тільки', 'вже', 'ще', 'щоб', 'від', 'та', 'й', 'можна', 'вказано', 'вказані', 'взимку', 'влітку'],
-}
-
-/**
- * Язык по буквам — как `detect_lang` в `scripts/ai-train/eval.py`: кириллический язык — тот, чьих «чужих»
- * букв в тексте меньше всего. При равном счёте (в `eval.py` — русский, затем белорусский) здесь решают
- * признаки `CYRILLIC_ONLY` и `CYRILLIC_WORDS`; без них порядок прежний. Латинские имена в кириллическом
- * тексте в счёт не идут.
- */
-export const detectLang = (text) => {
-  const raw = String(text ?? '').replace(URL_RE, ' ')
-  // Латинское слово с заглавной буквой в кириллическом тексте — имя, а не язык ответа: «Да, приложение
-  // MeTravel есть для iPhone, iPad и Android — в App Store и Google Play» (запись справки, lv89) по буквам
-  // выходила английской. Английская фраза в таком ответе по-прежнему видна: её слова — со строчной.
-  const value = (/[а-яёіўїєґ]/i.test(raw) ? raw.replace(/[A-Za-z]*[A-Z][A-Za-z]*/g, ' ') : raw).toLowerCase()
-  const letters = value.match(/\p{L}/gu) ?? []
-  const cyr = letters.filter((ch) => (ch >= 'а' && ch <= 'я') || 'ёіўїєґ'.includes(ch)).join('')
-  const lat = letters.filter((ch) => (ch >= 'a' && ch <= 'z') || POLISH.includes(ch)).join('')
-  if (!cyr && !lat) return null
-  if (lat.length > cyr.length) {
-    const words = (value.match(/[a-ząćęłńśźżó]+/g) ?? []).join(' ')
-    const pl = 3 * [...lat].filter((ch) => POLISH.includes(ch)).length + (words.match(PL_RE) ?? []).length
-    const en = (words.match(EN_RE) ?? []).length
-    return pl > en ? 'pl' : 'en'
-  }
-  const count = (chars) => [...chars].reduce((sum, ch) => sum + cyr.split(ch).length - 1, 0)
-  const scored = Object.entries(CYRILLIC_NEVER).map(([lang, never]) => ({ lang, bad: count(never) }))
-  const least = Math.min(...scored.map((item) => item.bad))
-  const tied = scored.filter((item) => item.bad === least)
-  if (tied.length === 1) return tied[0].lang
-  const words = value.match(/[\p{L}’'ʼ]+/gu) ?? []
-  const evidence = (lang) => count(CYRILLIC_ONLY[lang]) + words.filter((word) => CYRILLIC_WORDS[lang].includes(word)).length
-  // При равных признаках — прежний порядок: русский, белорусский, украинский.
-  return tied.reduce((best, item) => (evidence(item.lang) > evidence(best.lang) ? item : best)).lang
-}
+export const detectLang = (text) => detectLanguage(text)
 
 const CARD_WORD_MIN = 3
 /** Меньше стольких знаков — язык не судится: по трём словам его не отличить. */
@@ -400,8 +357,38 @@ export function splitPlaceCards(cards, expectSources) {
 
 const fail = (failures, check, layer, detail) => failures.push({ check, layer, detail })
 
+/** Факт карточки квеста из её строки фактов (`questFactsLine`): длительность, число точек, сложность. */
+const SUPERLATIVE_FACTS = {
+  duration_min: (snippet) => Number(/Длительность:\s*(\d+)\s*мин/u.exec(snippet)?.[1] ?? NaN),
+  points: (snippet) => Number(/Точек:\s*(\d+)/u.exec(snippet)?.[1] ?? NaN),
+  difficulty: (snippet) => ({ 'лёгкий': 1, 'средний': 2, 'сложный': 3 })[/Сложность:\s*(лёгкий|средний|сложный)/u.exec(snippet)?.[1] ?? ''] ?? NaN,
+}
+
+/**
+ * Превосходная степень: названа не та карточка (#3369, f23). На «What's the longest quest you have in
+ * Krakow?» модель называла квест на 240 минут при квестах на 300 и 270 в той же подсказке — с верным для
+ * своей карточки числом, поэтому проверка чисел (`invented_number`) хода не красила. Вопрос с превосходной
+ * степенью (`detectSuperlative` — тот же разбор, что у службы) отвечает первая названная в сыром ответе
+ * карточка: её факт должен быть крайним среди квестов подсказки с этим фактом; равные значения допустимы.
+ * `null` — вопрос без превосходной степени, фактов меньше двух либо карточка не названа.
+ */
+export const findWrongSuperlative = (question, raw, cards) => {
+  const ask = detectSuperlative(String(question ?? ''))
+  if (!ask) return null
+  const valueOf = SUPERLATIVE_FACTS[ask.field]
+  const known = (cards ?? []).filter((card) => card.type === 'quest').map((card) => ({ card, value: valueOf(String(card.snippet ?? '')) })).filter((item) => Number.isFinite(item.value))
+  if (known.length < 2) return null
+  const pathOf = (url) => normalizeUrl(url).replace(/^[^/]+/, '')
+  const byPath = new Map(known.map((item) => [pathOf(item.card.url), item]))
+  const named = findUrls(raw).map((url) => byPath.get(pathOf(url))).find(Boolean)
+  if (!named) return null
+  const best = ask.order === 'asc' ? Math.min(...known.map((item) => item.value)) : Math.max(...known.map((item) => item.value))
+  if (named.value === best) return null
+  return { named: named.card, value: named.value, best: known.find((item) => item.value === best).card, bestValue: best }
+}
+
 /** Проверки стража содержания (#3291): то, что он обязан был исправить до показа. */
-export const GUARD_CHECKS = ['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'echo']
+export const GUARD_CHECKS = ['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'stray_admission', 'echo']
 
 /**
  * Слой стража содержания (#3291) по ПОКАЗАННОМУ ответу — тем же `guardAnswer`, что у экрана и службы:
@@ -413,6 +400,7 @@ export const GUARD_CHECKS = ['label_mismatch', 'bare_url', 'foreign_description'
  *   - `counter_question` — вопросительное предложение, которое не уточняет возраст ребёнка: повтор
  *     вопроса посетителя, встречный вопрос без смысла (#3345);
  *   - `orphan_lead_in` — подводка к списку («…:»), под которой нет ни ссылки, ни пункта, ни фразы (#3345);
+ *   - `stray_admission` — «возрастные ограничения не указаны» в ответе со ссылками на вопрос не о возрасте (#3369);
  *   - `echo` — ответ без содержания: повтор вопроса, фраза без ссылки и признания, остаток после вырезаний.
  * Показанный текст ссылок не несёт, поэтому подпись, равная названию карточки, снова становится
  * ссылкой на неё: так страж видит, чьё пояснение стоит рядом. `earlier` — прошлые вопросы диалога:
@@ -601,6 +589,9 @@ export function evaluateTurn({ expect, lang, expectSources, question, earlier, n
       const invented = findInventedNumbers({ question, earlier }, raw, cards)
       metrics.inventedNumbers = invented.length
       if (invented.length) fail(failures, 'invented_number', 'model', `числа «${invented[0]}» нет в карточках подсказки${invented.length > 1 ? ` (и ещё ${invented.length - 1})` : ''}`)
+      // Превосходная степень (#3369): первой названа карточка, факт которой не крайний среди квестов подсказки.
+      const wrong = findWrongSuperlative(question, raw, cards)
+      if (wrong) fail(failures, 'wrong_superlative', 'model', `названа «${wrong.named.title}» (${wrong.value}), а крайнее значение у «${wrong.best.title}» (${wrong.bestValue})`)
     }
   }
 

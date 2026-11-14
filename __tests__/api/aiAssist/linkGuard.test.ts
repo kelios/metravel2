@@ -95,8 +95,30 @@ describe('страж ссылок: подпись равна названию к
     for (const label of ['Городной квест по Гродно', 'Семейный городской квест по Гродно', 'Квест', 'здесь', '']) {
       expect(enforceSourceLinks(`- [${label}](${url}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${url}) — 9 точек`, removed: 0, relabeled: 1 })
     }
-    // Относительный адрес карточки — та же карточка.
-    expect(enforceSourceLinks('[маршрут](/travels/vyhodnye-pod-grodno)', sources).text).toBe('[Выходные под Гродно](/travels/vyhodnye-pod-grodno)')
+    // Относительный адрес карточки — та же карточка; адрес ссылки — адрес карточки (#3369).
+    expect(enforceSourceLinks('[маршрут](/travels/vyhodnye-pod-grodno)', sources).text).toBe(`[Выходные под Гродно](${sources[0].url})`)
+  })
+
+  // #3369: при замене подписи оставался адрес, написанный моделью, — путь или адрес без протокола экран
+  // (`AssistantAnswerText`) ссылкой не узнаёт и показывает разметкой.
+  it('адрес ссылки на карточку — полный адрес карточки: путь и адрес без протокола заменяются', () => {
+    const [travel, quest] = sources
+    const questPath = new URL(quest.url).pathname
+    for (const address of [questPath, quest.url.replace(/^https:\/\//, ''), `www.${quest.url.replace(/^https:\/\//, '')}`, `<${questPath}>`]) {
+      // Подпись выдумана — меняется и она, и адрес.
+      expect(enforceSourceLinks(`- [x](${address}) — 9 точек`, sources)).toEqual({ text: `- [Квест по Гродно](${quest.url}) — 9 точек`, removed: 0, relabeled: 1 })
+      // Подпись верная — меняется только адрес, заменой подписи это не считается.
+      expect(enforceSourceLinks(`Пройдите [Квест по Гродно](${address}).`, sources)).toEqual({ text: `Пройдите [Квест по Гродно](${quest.url}).`, removed: 0, relabeled: 0 })
+    }
+    // Полный адрес карточки остаётся как написан: с якорем, хвостом запроса и косой чертой в конце.
+    for (const address of [`${travel.url}#route`, `${travel.url}/`, `${travel.url}?utm=1`]) {
+      const text = `[Выходные под Гродно](${address})`
+      expect(enforceSourceLinks(text, sources)).toEqual({ text, removed: 0, relabeled: 0 })
+    }
+    // Страж ответа целиком: показанная ссылка — с протоколом, карточка считается названной.
+    const guarded = guardAnswer(`Начните с [x](${questPath}) — городской квест.`, sources, { question: 'Какие квесты есть в Гродно?' })
+    expect(guarded.text).toBe(`Начните с [Квест по Гродно](${quest.url}) — городской квест.`)
+    expect(guarded).toMatchObject({ relabeled: 1, removed: 0, fallback: false })
   })
 
   it('подпись с названием карточки не трогается: регистр, кавычки, выделение и точка в конце названия не меняют', () => {

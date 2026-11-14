@@ -39,7 +39,7 @@ const guardFailures = (question: string, shownMarkdown: string, expect = 'answer
 
 describe('контур оценки: слой стража содержания (#3291)', () => {
   it('четыре проверки стража объявлены и считаются слоем guard', () => {
-    expect(GUARD_CHECKS).toEqual(['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'echo'])
+    expect(GUARD_CHECKS).toEqual(['label_mismatch', 'bare_url', 'foreign_description', 'ungrounded_number', 'card_fragment', 'counter_question', 'orphan_lead_in', 'stray_admission', 'echo'])
   })
 
   it('label_mismatch: нажимаемая ссылка подписана не названием карточки (p14)', () => {

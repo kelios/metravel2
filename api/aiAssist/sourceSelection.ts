@@ -35,7 +35,7 @@
 import { AI_MAX_RECOMMENDATIONS } from './policy.ts'
 import { matchPlaceSources, mentionsAnyPlace, namesOnlyOrigin } from './promptPlace.ts'
 import { judgeCard, parseConditions, type QuestionConditions } from './questionConditions.ts'
-import { detectSuperlative, rankBySuperlative } from './sourceFacts.ts'
+import { detectSuperlative, rankBySuperlative, superlativeReason } from './sourceFacts.ts'
 import { namedDestinations } from './topicGate.ts'
 import type { AiSource } from './types'
 
@@ -170,6 +170,13 @@ export const arrangeSources = (query: string | null | undefined, sources: readon
     )
       .slice(0, AI_MAX_RECOMMENDATIONS)
       .map((source) => found.get(keyOf(source)) ?? withWhy(source, reasonsOf.get(source) ?? []))
+      // Карточка-ответ названа прямо (#3369, f23): на «the longest quest in Krakow» модель при трёх карточках
+      // (300, 270 и 240 минут) называла третью — 3 из 3. Строка «почему подходит» первой карточки несёт сам
+      // ответ: «самый длинный: 300 мин»; остальные карточки её не получают.
+      .map((source, index) => {
+        const reason = index === 0 && source.facts?.type === 'quest' ? superlativeReason(superlative, source.facts) : null
+        return reason ? { ...source, why: [source.why, reason].filter(Boolean).join(', ') } : source
+      })
     if (lead.length) {
       const taken = new Set(lead.map(keyOf))
       ordered = lead

@@ -10,6 +10,7 @@ import {
   QUEST_RESERVED_SLOTS,
   buildTravelsSearchQuery,
   scoreText,
+  RetrievalFailedError,
   searchSiteMaterials,
   searchStem,
   tokenizeQuery,
@@ -83,6 +84,28 @@ describe('aiAssist retrieval (#2460)', () => {
     mockedQuests.mockResolvedValue(['a', 'b', 'c', 'd', 'e'].map((id) => quest(`q-${id}`, `Квест ${id}`, 'minsk', 'Минск')))
     const iceland = await searchSiteMaterials({ query: 'Какие квесты есть в Исландии?', locale: 'ru' })
     expect(iceland.filter((s) => s.type === 'quest')).toHaveLength(3)
+  })
+
+  // #3369: в соседних повторах контура оценки экран получал пустой подбор — API каталога отвечал 429 под
+  // нагрузкой прогона, отказ глотался, и ход закрывался «материала нет» со строкой в журнале спроса.
+  it('#3369: подбор не ответил — ошибка `RetrievalFailedError`, а не пустой результат; отказ одного источника подбор не роняет', async () => {
+    const failed = Object.assign(new Error('429'), { status: 429 })
+    mockedFetchTravels.mockRejectedValue(failed)
+    mockedQuests.mockRejectedValue(failed)
+    await expect(searchSiteMaterials({ query: 'Что посмотреть в Гродно?', locale: 'ru' })).rejects.toBeInstanceOf(RetrievalFailedError)
+
+    // Статьи не ответили, каталог квестов ничего не дал — подбор тоже не состоялся.
+    mockedQuests.mockResolvedValue([])
+    await expect(searchSiteMaterials({ query: 'Что посмотреть в Гродно?', locale: 'ru' })).rejects.toBeInstanceOf(RetrievalFailedError)
+
+    // Один источник не ответил, второй нашёл карточки — ответ по ним.
+    mockedQuests.mockResolvedValue([quest('kvest-po-grodno', 'Квест по Гродно', 'grodno', 'Гродно')])
+    expect((await searchSiteMaterials({ query: 'Что посмотреть в Гродно?', locale: 'ru' })).map((source) => source.source_id)).toEqual(['kvest-po-grodno'])
+
+    // Оба источника ответили пусто — честное «материалов нет».
+    mockedFetchTravels.mockResolvedValue({ data: [], total: 0 } as never)
+    mockedQuests.mockResolvedValue([])
+    await expect(searchSiteMaterials({ query: 'Что посмотреть в Исландии?', locale: 'ru' })).resolves.toEqual([])
   })
 
   it('запрос бэкенду — основы слов без местоимений; «посмотреть» остаётся (#2709)', () => {

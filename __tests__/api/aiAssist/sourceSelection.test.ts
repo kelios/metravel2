@@ -196,7 +196,9 @@ describe('цепочка порядка карточек (#3289): место →
     expect(groupOf(arranged, 'match')).toEqual(['q5', 'q3'])
     expect(groupOf(arranged, 'nearby')).toEqual(['q2', 't1', 'q4'])
     expect(ids(selectPromptSources(arranged, 8, null, true))).toEqual(['q5', 'q3'])
-    expect(arranged[0].why).toBe('детский')
+    // Карточка-ответ названа прямо (#3369): строка «почему подходит» несёт саму превосходную степень.
+    expect(arranged[0].why).toBe('детский, самый короткий: 60 мин')
+    expect(arranged[1].why).toBe('детский')
     // Без каталога (экран) кандидаты — найденные карточки места.
     expect(ids(arrangeSources('Самый короткий детский квест в Минске', found).sources)).toEqual(['q3', 'q2', 't1', 'q4'])
     // Без условий — прежнее правило #3287: самые короткие квесты города; их не больше трёх, статья города — «рядом».

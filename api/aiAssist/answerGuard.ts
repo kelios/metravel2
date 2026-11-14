@@ -98,12 +98,23 @@ import {
   wholeSentences,
 } from './answerGuardRules.ts'
 import { asksAboutChildren } from './questAudience.ts'
+import { parseConditions } from './questionConditions.ts'
 import type { AiSource } from './types'
 
 // Правила, вынесенные в `answerGuardRules.ts`, читаются отсюда же: у стража, службы и контура оценки один вход.
 export { type AnswerGuardContext, echoesQuestion, extractNumberFacts, findUngroundedNumbers } from './answerGuardRules.ts'
 
-export type GuardCheck = 'label_mismatch' | 'bare_url' | 'foreign_description' | 'ungrounded_number' | 'card_fragment' | 'prompt_leak' | 'counter_question' | 'orphan_lead_in' | 'echo'
+export type GuardCheck =
+  | 'label_mismatch'
+  | 'bare_url'
+  | 'foreign_description'
+  | 'ungrounded_number'
+  | 'card_fragment'
+  | 'prompt_leak'
+  | 'counter_question'
+  | 'orphan_lead_in'
+  | 'stray_admission'
+  | 'echo'
 export type GuardFinding = { check: GuardCheck; detail: string }
 
 export type AnswerGuardResult = LinkGuardResult & {
@@ -119,6 +130,8 @@ export type AnswerGuardResult = LinkGuardResult & {
   cardFragments: number
   /** Сколько вопросительных предложений убрано: повтор вопроса, встречный вопрос без смысла (#3345). */
   counterQuestions: number
+  /** Сколько признаний не о том, что спросили, убрано из ответа со ссылками (#3369). */
+  strayAdmissions: number
   /** Ответ пустой: вместо `text` показывается запасная фраза (`aiAssistStatic:ask.fallbackAnswer`). */
   fallback: boolean
   findings: GuardFinding[]
@@ -216,6 +229,22 @@ const ADMISSION_SUBJECTS: ReadonlyArray<[string, RegExp]> = [
 
 const subjectsOf = (text: string): string[] => ADMISSION_SUBJECTS.filter(([, pattern]) => pattern.test(text)).map(([name]) => name)
 
+/** Вопрос о сложности словами без существительного: «насколько сложный маршрут», «чи важко йти», «is it hard». */
+const ASKED_DIFFICULTY_RE =
+  /(?<![\p{L}])(?:сложн\p{L}+|трудн\p{L}+|тяжел\p{L}+|тяжёл\p{L}+|л[её]гк\p{L}+|складан\p{L}+|цяжк\p{L}+|складн\p{L}+|важк\p{L}+|легк\p{L}+|trudn\p{L}+|ci[ęe][żz]k\p{L}+|[łl]atw\p{L}+|hard(?:er|est)?|eas(?:y|ier|iest)|tough\p{L}*|challenging)(?![\p{L}])/iu
+
+/**
+ * О каких фактах карточки спрашивает вопрос (вместе с опорой уточнения): предметы `ADMISSION_SUBJECTS`.
+ * Возраст — тема любого вопроса о детях и вопроса с названным возрастом («для пятилетки»); сложность — ещё
+ * и вопрос «для новичков» (`parseConditions`) и вопрос прилагательным («насколько сложный маршрут»).
+ */
+const askedSubjectsOf = (question: string): Set<string> =>
+  new Set([
+    ...subjectsOf(question),
+    ...(asksAboutChildren(question) || askedAges(question).length ? ['age'] : []),
+    ...(ASKED_DIFFICULTY_RE.test(question) || parseConditions(question).easy ? ['difficulty'] : []),
+  ])
+
 /**
  * Признание по теме вопроса (#3345): «этого в карточках нет» — ответ, когда оно о том, что спросили.
  * На «А квэст там колькі часу займае?» модель отвечала заученным «У картках не пазначаны ўзроставыя
@@ -227,7 +256,7 @@ const subjectsOf = (text: string): string[] => ADMISSION_SUBJECTS.filter(([, pat
  */
 export const admitsOnTopic = (text: string, asked: string | null | undefined): boolean => {
   const question = String(asked ?? '')
-  const askedSubjects = new Set([...subjectsOf(question), ...(asksAboutChildren(question) ? ['age'] : [])])
+  const askedSubjects = askedSubjectsOf(question)
   return String(text ?? '')
     .split('\n')
     .flatMap(sentencesOf)
@@ -236,6 +265,42 @@ export const admitsOnTopic = (text: string, asked: string | null | undefined): b
       const subjects = subjectsOf(sentence)
       return subjects.length === 0 || !question.trim() || subjects.some((subject) => askedSubjects.has(subject))
     })
+}
+
+const HAS_LINK_RE = /\]\(/
+/**
+ * Предметы заученной концовки: возраст и сложность. Слова длительности и цены («время», «long», «free»)
+ * стоят и в честном «материалов про поездку во время Рождества нет» — по ним предложение не вырезается.
+ */
+const STOCK_ADMISSION_SUBJECTS = new Set(['age', 'difficulty'])
+
+/**
+ * Текст без признаний не о том, что спросили (#3369). «Возрастные ограничения в карточках не указаны.» модель
+ * дописывала заученной концовкой к ответу о Татрах без машины и о веломаршруте — вместе с вопросом «Сколько
+ * лет ребёнку?»; вопрос страж вырезал, признание оставалось. Убирается предложение без ссылки, которое
+ * признаёт отсутствие возраста или сложности в карточке (`STOCK_ADMISSION_SUBJECTS`),
+ * когда вопрос вместе с опорой уточнения об этом факте не спрашивает (`askedSubjectsOf`).
+ * Признание без такого предмета («отдельного материала о прогулках с собакой на сайте нет») остаётся. Число
+ * из карточки в предложении («не указано, но длится 90 мин») оставляет его: это утверждение, а не концовка.
+ */
+const stripStrayAdmissions = (text: string, asked: string, hasCardNumber: (sentence: string) => boolean): { text: string; removed: string[] } => {
+  const removed: string[] = []
+  if (!asked.trim()) return { text, removed }
+  const askedSubjects = askedSubjectsOf(asked)
+  const stray = (sentence: string): boolean => {
+    // Подводка к списку («Квесты в карточках не указаны по времени, но вот что есть:») — не концовка.
+    if (HAS_LINK_RE.test(sentence) || /[:：]\s*$/.test(sentence) || !ADMISSION_RE.test(sentence) || hasCardNumber(sentence)) return false
+    const subjects = subjectsOf(sentence)
+    return subjects.length > 0 && subjects.every((subject) => STOCK_ADMISSION_SUBJECTS.has(subject) && !askedSubjects.has(subject))
+  }
+  const lines = text.split('\n').flatMap((line) => {
+    const sentences = wholeSentences(line)
+    if (!sentences.some(stray)) return [line]
+    const rest = sentences.filter((sentence) => !stray(sentence) || (removed.push(sentence.trim()), false)).join('')
+    // От пункта списка остался один маркер — пункта больше нет.
+    return rest.trim() && !/^\s*(?:[-*•]|\d+[.)])\s*$/.test(rest) ? [rest] : []
+  })
+  return removed.length ? { text: tidyText(lines.join('\n')), removed } : { text, removed }
 }
 
 /**
@@ -506,7 +571,13 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
   const unled = stripOrphanLeadIns(repeated.text, { pageMode, carriesCardContent, hasCardNumber })
   orphanLeadIns.push(...unled.removed)
   if (orphanLeadIns.length) findings.push({ check: 'orphan_lead_in', detail: `подводка без списка: «${orphanLeadIns.join(' ⏎ ').slice(0, 120)}»` })
-  const text = unled.text
+  // Признание не о том, что спросили, рядом с рекомендациями — заученная концовка, а не ответ (#3369). Без
+  // ссылок такое признание делает ответ пустым целиком (`strayAdmission` ниже) — там текст не трогается.
+  const keptBefore = countKeptSourceLinks(unled.text, sources)
+  const unadmitted = keptBefore > 0 ? stripStrayAdmissions(unled.text, askedText, hasCardNumber) : { text: unled.text, removed: [] }
+  const strayAdmissions = unadmitted.removed.length
+  if (strayAdmissions) findings.push({ check: 'stray_admission', detail: `признание не о том, что спросили: «${unadmitted.removed[0].slice(0, 120)}»` })
+  const text = unadmitted.text
   const keptLinks = countKeptSourceLinks(text, sources)
   // Режим страницы (#3290): ответ о самой странице ссылки не требует — «Хватит двух дней на город.»
   // короткий, но верный; пустым там считается только пустой текст и повтор вопроса.
@@ -542,5 +613,5 @@ export function guardAnswer(rawText: string, sources: readonly AiSource[], conte
     findings.push({ check: 'echo', detail })
   }
 
-  return { text, removed: linked.removed, relabeled: linked.relabeled, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, fallback, findings }
+  return { text, removed: linked.removed, relabeled: linked.relabeled, droppedDescriptions, ungroundedNumbers, promptLeaks, bareLinks, cardFragments, counterQuestions, strayAdmissions, fallback, findings }
 }

@@ -307,3 +307,66 @@ describe('страж ответа: единый набор правил (#3345)'
     })
   })
 })
+
+// #3369: хвосты после #3345. Сырые ответы модели v7 — из записанных прогонов (`.codex-temp/train2/**`,
+// `probe-b-r5.jsonl`, `r5/results.jsonl`) с карточками того же хода.
+describe('страж ответа: признание не о том, что спросили, рядом с рекомендациями (#3369)', () => {
+  const path = card('travel', 'Закопане: лёгкая тропа Ścieżka nad Reglami', 'https://metravel.by/travels/zakopane-legkaia-tropa-sciezka-nad-reglami', 'Польша. Дней: 1. Месяц: август. Несложная тропа вдоль северной кромки Татр')
+  const hut = card('travel', 'Териева хата в Высоких Татрах: маршрут из Старого Смоковца через водопады', 'https://metravel.by/travels/terieva-khata-v-vysokikh-tatrakh', 'Словакия. Дней: 1. Месяц: июнь. Маршрут через водопады')
+  const list = `Для маршрута в Татрах без машины посмотрите:\n- [${path.title}](${path.url}) — Польша. Август\n- [${hut.title}](${hut.url}) — Словакия. Июнь`
+
+  it('3289-p08: «Возрастные ограничения в карточках не указаны. Сколько лет ребёнку?» на вопрос о Татрах без машины — уходит целиком', () => {
+    const raw = `${list}\nВозрастные ограничения в карточках не указаны. Сколько лет ребёнку?`
+    const result = guardAnswer(raw, [path, hut], { question: 'Посоветуй маршрут в Татрах для новичков без машины' })
+    expect(result.text).toBe(list)
+    expect(result).toMatchObject({ strayAdmissions: 1, counterQuestions: 1, fallback: false })
+    expect(result.findings.map((finding) => finding.check)).toEqual(expect.arrayContaining(['stray_admission', 'counter_question']))
+  })
+
+  it('заученная концовка на BE/UK/PL/EN и о сложности — та же единица', () => {
+    for (const [question, tail] of [
+      ['Як даехаць з Мінска да Нясвіжа без машыны і што там паглядзець за дзень?', 'У картках не пазначаны ўзровень складанасці маршруту.'],
+      ['Хочемо поїхати Європою на машині разом із собакою. Чи є у вас такий маршрут?', 'У картці не вказано вікові обмеження.'],
+      ['Kraków zimą: jest tam co robić, gdy na długie spacery jest za zimno?', 'Karty nie podają ograniczeń wiekowych.'],
+      ['Is there a quest in Grodno?', 'The cards do not state age restrictions.'],
+    ]) {
+      const result = guardAnswer(`${list}\n${tail}`, [path, hut], { question })
+      expect({ question, text: result.text, stray: result.strayAdmissions }).toEqual({ question, text: list, stray: 1 })
+    }
+  })
+
+  it('признание по теме вопроса остаётся: вопрос о детях, названный возраст, вопрос о сложности', () => {
+    for (const [question, tail] of [
+      ['Куда поехать из Минска на один день с детьми четырёх и семи лет?', 'Возрастные ограничения в карточках не указаны.'],
+      ['Есть ли в Гомеле квест для пятилетки? Читать сам он ещё не умеет.', 'Возрастные ограничения в карточках не указаны.'],
+      ['Насколько сложный маршрут в Татрах?', 'Сложность маршрута в карточках не указана.'],
+    ]) {
+      const raw = `${list}\n${tail}`
+      const result = guardAnswer(raw, [path, hut], { question })
+      expect({ question, text: result.text, stray: result.strayAdmissions }).toEqual({ question, text: raw, stray: 0 })
+    }
+  })
+
+  it('не концовка: признание без предмета карточки, о времени и цене, подводка к списку, предложение со ссылкой или числом карточки', () => {
+    const question = 'Посоветуй маршрут в Татрах для новичков без машины'
+    for (const kept of [
+      'Отдельного материала о маршрутах без машины на сайте пока нет.',
+      'Материалов про поездку в Татры во время Рождества в карточках нет.',
+      'Цена билета на подъёмник в карточках не указана.',
+    ]) {
+      const raw = `${list}\n${kept}`
+      expect(guardAnswer(raw, [path, hut], { question }).text).toBe(raw)
+    }
+    // Подводка, в которой стоит «не указаны», списка не теряет.
+    const led = `Возрастные ограничения в карточках не указаны, но вот что есть:\n- [${path.title}](${path.url})`
+    expect(guardAnswer(led, [path, hut], { question }).text).toBe(led)
+    // Признание рядом со ссылкой — пояснение к ней, а не концовка.
+    const linked = `В [${path.title}](${path.url}) возрастные ограничения не указаны.`
+    expect(guardAnswer(linked, [path, hut], { question }).text).toBe(linked)
+  })
+
+  it('ответ без ссылок правило не трогает: там признание не по теме делает ответ пустым целиком', () => {
+    const result = guardAnswer('Возрастные ограничения в карточках не указаны.', [path, hut], { question: 'Посоветуй маршрут в Татрах для новичков без машины' })
+    expect(result).toMatchObject({ fallback: true, strayAdmissions: 0 })
+  })
+})

@@ -1,4 +1,4 @@
-import { matchPlaceSources, withoutPlace } from '@/api/aiAssist/promptPlace'
+import { matchPlaceSources, mentionsAnyPlace, withoutPlace } from '@/api/aiAssist/promptPlace'
 import { arrangeSources, withoutNearby } from '@/api/aiAssist/sourceSelection'
 import type { AiSource } from '@/api/aiAssist/types'
 
@@ -189,5 +189,109 @@ describe('aiAssist promptPlace: карточки подсказки — толь
     const source = quest('gr', 'Квест по Гродно', ['Гродно'])
     expect(withoutPlace(source)).not.toHaveProperty('place')
     expect(withoutPlace(source)).toMatchObject({ source_id: 'gr', title: 'Квест по Гродно' })
+  })
+})
+
+// #3369: корпус падежей и названий места — формы на RU/BE/UK/PL/EN, которые место называют, и слова, которые
+// с названием только совпадают. Каждая строка — вопрос, названия города в каталоге и ожидание.
+describe('aiAssist promptPlace: корпус падежей и названий места (#3369)', () => {
+  const other = quest('other', 'Квест по Пинску', ['Пинск', 'Пінск', 'Pińsk', 'Pinsk'])
+  const asksAboutCity = (query: string, cities: string[]): boolean => {
+    const own = quest('own', 'Квест города', cities)
+    const kept = matchPlaceSources(query, [other, own])
+    return kept !== null && kept.includes(own) && !kept.includes(other)
+  }
+
+  it.each<[string, string[]]>([
+    // RU
+    ['Что посмотреть, если поеду в Лиду?', ['Лида']],
+    ['Едем из Гродно в Лиду на день', ['Лида']],
+    ['Квесты в Новогрудке', ['Новогрудок']],
+    ['квесты в гродно', ['Гродно']],
+    ['Гродно за день: что успеть?', ['Гродно']],
+    ['Что посмотреть в г. Минске?', ['Минск']],
+    ['Есть квест в Мостах?', ['Мосты']],
+    ['Что посмотреть в Глубоком за день?', ['Глубокое']],
+    // BE
+    ['Квэст па Навагрудку', ['Навагрудак']],
+    ['Што паглядзець у Мінску?', ['Мінск']],
+    ['Як даехаць да Нясвіжа?', ['Нясвіж']],
+    // UK
+    ['Що подивитися дорогою до Відня?', ['Відень']],
+    ['Їдемо зі Львова, що подивитися у Кракові?', ['Краків']],
+    ['Квести у Львові', ['Львів']],
+    ['Що цікавого біля Львова?', ['Львів']],
+    ['Маршрут до Тернополя', ['Тернопіль']],
+    ['Прогулянка по Києву', ['Київ']],
+    ['Що подивитися біля Києва?', ['Київ']],
+    // PL
+    ['Jakie questy są w Krakowie?', ['Kraków']],
+    ['Jedziemy do Gdańska na weekend', ['Gdańsk']],
+    ['Co zobaczyć we Wrocławiu?', ['Wrocław']],
+    ['Ile trwa quest po Sandomierzu?', ['Sandomierz']],
+    // EN
+    ['Is there a quest in Vienna?', ['Vienna']],
+    ['Krakow in one day?', ['Krakow']],
+  ])('место названо: «%s»', (query, cities) => {
+    expect(asksAboutCity(query, cities)).toBe(true)
+  })
+
+  it.each<[string, string[]]>([
+    // Заглавная буква в начале фразы — не признак названия.
+    ['Глубокой ночью приезжаем, где позавтракать?', ['Глубокое']],
+    ['Сорок минут есть. Глубокой осенью что посмотреть?', ['Глубокое']],
+    ['Most interesting quests for a weekend?', ['Мосты', 'Mosty']],
+    ['Мосты через Неман красивые?', ['Мосты']],
+    ['Берёзой пахнет в лесу. Куда сходить в поход?', ['Берёза']],
+    // Название — обычное слово: строчная буква после предлога местом не становится.
+    ['Как пройти на мост влюблённых?', ['Мосты']],
+    ['Гуляли под берёзой у реки', ['Берёза']],
+    ['Купались в глубоком озере', ['Глубокое']],
+    ['Сидели на ветке дерева', ['Ветка']],
+    // Числительное и слово, похожее на название только началом.
+    ['Квест на сорок минут', ['Сороки']],
+    ['Ужинали в Лидо, что посмотреть рядом?', ['Лида']],
+  ])('место не названо: «%s»', (query, cities) => {
+    expect(matchPlaceSources(query, [other, quest('own', 'Квест города', cities)])).toBeNull()
+  })
+
+  it('«Лидо» в тексте статьи о Риге — не Лида: статья в подсказку на «в Лиду» не идёт', () => {
+    const lida = quest('lida', 'Квест по Лиде: гости замка Гедимина', ['Лида', 'Ліда', 'Lida'])
+    const castle = travel('castle', 'Лидский замок: история и как добраться', 'Беларусь. Дней: 1. Замок Гедимина в центре Лиды')
+    const riga = travel('riga', 'Латвия. Рига и Юрмала в октябре.', 'Латвия. Дней: 3. Обедали в ресторане Лидо — большой выбор латышской кухни', ['Латвия'])
+    expect(ids(placeCards('Что посмотреть, если поеду в Лиду?', [castle, riga, lida]))).toEqual(['castle', 'lida'])
+  })
+
+  it('место, на которое только смотрят, упоминанием не считается: «виды на Татры» у статьи о Горце', () => {
+    const tatras = ['Татрах']
+    for (const view of [
+      '6 км в одну сторону, потрясающие виды на Татры и Пьенины, приют PTTK почти у вершины',
+      'в ясную погоду отсюда открывается панорама Татр, Пьенин и Бескидов',
+      'В ясную погоду с Турбача видны Высокие Татры, Пенины и хребты западных Бескидов',
+      'особенно с Халы Турбач и вершины, с которых открываются Татры',
+      'Отсюда видно польские Татры',
+    ]) {
+      expect(mentionsAnyPlace(tatras, view)).toBe(false)
+    }
+    expect(mentionsAnyPlace(['Tatry'], 'Ze szczytu jest piękny widok na Tatry')).toBe(false)
+    expect(mentionsAnyPlace(['Tatras'], 'The summit has wide views of the Tatras')).toBe(false)
+    for (const own of [
+      'Ścieżka nad Reglami — несложная тропа вдоль северной кромки Татр',
+      'Téryho chata — одна из самых известных горных хат Высоких Татр',
+      'Технически Гевонт не самый сложный пик Татр',
+      'Вид на Татры открывается с тропы. Сам маршрут идёт по Татрам от Закопане',
+    ]) {
+      expect(mentionsAnyPlace(tatras, own)).toBe(true)
+    }
+  })
+
+  it('цепочка подсказки: статья с видом на место уходит в «рядом», статьи о самом месте остаются (lv79)', () => {
+    const path = travel('path', 'Закопане: лёгкая тропа Ścieżka nad Reglami', 'Польша. Дней: 1. Несложная тропа вдоль северной кромки Татр', ['Польша'])
+    const turbacz = travel('turbacz', 'Гора Турбач (1310 м): поход в Горце, Польша', 'Польша. Дней: 1. Потрясающие виды на Татры и Пьенины, приют PTTK у вершины', ['Польша'])
+    const hut = travel('hut', 'Териева хата в Высоких Татрах: маршрут из Старого Смоковца', 'Словакия. Дней: 1. Маршрут через водопады', ['Словакия'])
+    const mentions = (source: AiSource, places: readonly string[]) => mentionsAnyPlace(places, `${source.title} ${source.snippet}`)
+    const arranged = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', [path, turbacz, hut], { mentions })
+    expect(ids(withoutNearby(arranged.sources))).toEqual(['path', 'hut'])
+    expect(arranged.sources.find((source) => source.source_id === 'turbacz')?.group).toBe('nearby')
   })
 })

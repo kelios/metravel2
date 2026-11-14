@@ -23,7 +23,7 @@ import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
 import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
-import { type AskDeps, createAskHandler, type RetrievalResult } from './ask.ts'
+import { type AskDeps, createAskHandler, type RetrievalResult, type RetrieveOptions } from './ask.ts'
 import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHandler } from './authorDraft.ts'
 import type { ResponseCache } from './cache.ts'
 import type { LoadedIndex } from './index.ts'
@@ -420,13 +420,14 @@ export function createApp(deps: AppDeps): http.Server {
     })
   }
 
-  async function retrieve(q: string, locale: Locale, page: AiSourceRef | null = null): Promise<RetrievalResult> {
+  async function retrieve(q: string, locale: Locale, page: AiSourceRef | null = null, options: RetrieveOptions = {}): Promise<RetrievalResult> {
     const { items, degraded, vector } = await hybrid({ q, locale, limit: AI_SOURCES_LIMIT })
     // Вопрос о самом сайте (#3293): отвечает справка, статьи и квесты к ней не добавляются. Со страницы
     // статьи или квеста вопрос читается как вопрос об этой странице — справка туда не вмешивается.
+    // Запись берётся на языке вопроса (#3369), а не интерфейса: её текст уходит посетителю дословно.
     if (!page) {
       const material = Math.max(0, ...items.map((item) => item.score ?? 0))
-      const help = helpSources(vector, locale, parseConditions(q).service === true, material)
+      const help = helpSources(vector, options.helpLocale ?? locale, parseConditions(q).service === true, material)
       if (help.length) return { sources: help, degraded: false, page: null, help: true }
     }
     const card = page ? pageCard(page, q, locale, vector) : null

@@ -197,6 +197,22 @@ describe('useAssistantChat (#2460)', () => {
     expect(mockedConsume).toHaveBeenCalledTimes(1)
   })
 
+  // #3369: отказ подбора (API каталога ответил 429) закрывал ход «материала нет» и писал вопрос в журнал спроса.
+  it('#3369: подбор не ответил → unavailable: модель не вызывается, журнал спроса и лимит не трогаются', async () => {
+    mockedSearch.mockRejectedValue(new Error('подбор материалов не ответил'))
+    const generate = jest.fn()
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+
+    await act(async () => {
+      await result.current.ask('Что посмотреть в Гродно?')
+    })
+
+    expect(generate).not.toHaveBeenCalled()
+    expect(result.current.turns[0].status).toBe('unavailable')
+    expect(mockedLogDemand).not.toHaveBeenCalled()
+    expect(mockedConsume).not.toHaveBeenCalled()
+  })
+
   it('сервер модели недоступен → unavailable без списания лимита; retry повторяет вопрос', async () => {
     mockedSearch.mockResolvedValue([source])
     const generator = failingGenerator(new AiGeneratorError('unavailable', 'down'))

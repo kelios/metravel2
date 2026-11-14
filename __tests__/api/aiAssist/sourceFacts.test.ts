@@ -7,6 +7,7 @@ import {
   questFactsLine,
   questFactsOf,
   rankBySuperlative,
+  superlativeReason,
   travelFactsLine,
   travelFactsOf,
   type QuestFacts,
@@ -216,6 +217,8 @@ describe('факты источника в карточке ассистента
     ['ru', 'Какой квест в Минске самый сложный?', { field: 'difficulty', order: 'desc' }],
     ['be', 'Які квэст у Гродне самы кароткі?', { field: 'duration_min', order: 'asc' }],
     ['be', 'Дзе менш кропак?', { field: 'points', order: 'asc' }],
+    ['be', 'У якім квэсце Мінска менш за ўсё кропак?', { field: 'points', order: 'asc' }],
+    ['uk', 'У якому квесті менше за все точок?', { field: 'points', order: 'asc' }],
     ['uk', 'Який квест у Львові найкоротший?', { field: 'duration_min', order: 'asc' }],
     ['uk', 'Де менше точок?', { field: 'points', order: 'asc' }],
     ['pl', 'Który quest w Krakowie jest najkrótszy?', { field: 'duration_min', order: 'asc' }],
@@ -243,6 +246,19 @@ describe('факты источника в карточке ассистента
     '',
   ])('«%s» — не превосходная степень', (question) => {
     expect(detectSuperlative(question)).toBeNull()
+  })
+
+  // #3369, f23: карточка-ответ несёт саму превосходную степень строкой «почему подходит».
+  it('строка «почему подходит» карточки-ответа: превосходная степень и её факт; без факта строки нет', () => {
+    const facts: QuestFacts = { type: 'quest', source_id: 1, duration_min: 300, points: 9, difficulty: 'easy' }
+    expect(superlativeReason({ field: 'duration_min', order: 'desc' }, facts)).toBe('самый длинный: 300 мин')
+    expect(superlativeReason({ field: 'duration_min', order: 'asc' }, facts)).toBe('самый короткий: 300 мин')
+    expect(superlativeReason({ field: 'points', order: 'asc' }, facts)).toBe('меньше всего точек: 9')
+    expect(superlativeReason({ field: 'points', order: 'desc' }, facts)).toBe('больше всего точек: 9')
+    expect(superlativeReason({ field: 'difficulty', order: 'asc' }, facts)).toBe('самый лёгкий')
+    expect(superlativeReason({ field: 'difficulty', order: 'desc' }, { ...facts, difficulty: 'hard' })).toBe('самый сложный')
+    expect(superlativeReason({ field: 'duration_min', order: 'desc' }, { type: 'quest', source_id: 2, points: 5 })).toBeNull()
+    expect(superlativeReason({ field: 'difficulty', order: 'asc' }, { type: 'quest', source_id: 2, points: 5 })).toBeNull()
   })
 
   it('сортировка по факту: первым — ответ; квест без факта ответом не становится; равные сохраняют порядок', () => {

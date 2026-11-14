@@ -1482,7 +1482,7 @@ describe('metravel-assist: POST /ai/ask — справка о сайте (#3293)
     // Статей и квестов среди источников нет.
     expect(new Set(sources.map((source) => source.type))).toEqual(new Set(['help']))
     expect(sources.slice(1).every((source) => source.group === 'nearby')).toBe(true)
-    expect(text).toBe(`${PRICE}\n\n[metravel.by/quests](https://metravel.by/quests)`)
+    expect(text).toBe(`${PRICE}\n\n[Квесты](https://metravel.by/quests)`)
     expect(trace).toMatchObject({ raw_text: '', model_called: false, help: true })
     expect(trace.prompt_sources.map((source: { source_id: string }) => source.source_id)).toEqual(['1'])
     expect(done).toEqual({ status: 'done', removed_links: 0, remaining: AI_ASK_DAILY_LIMIT - 1 })
@@ -1494,7 +1494,7 @@ describe('metravel-assist: POST /ai/ask — справка о сайте (#3293)
   it('язык вопроса: «Czy potrzebuję internetu podczas questu?» отвечает польской записью; запись без перевода отдаётся на русском', async () => {
     const pl = await ask('Czy potrzebuję internetu podczas questu?', { locale: 'pl' })
     expect(pl.sources[0]).toMatchObject({ type: 'help', source_id: '13', title: 'Czy podczas questu potrzebny jest internet?' })
-    expect(pl.text).toBe(`${OFFLINE_PL}\n\n[metravel.by/quests](https://metravel.by/quests)`)
+    expect(pl.text).toBe(`${OFFLINE_PL}\n\n[Questy](https://metravel.by/quests)`)
     expect(pl.seen).toEqual([])
     // У записи о статье польского перевода нет — на польской локали она находится русским фрагментом.
     const fallback = await ask('Как добавить свою статью?', { locale: 'pl' })
@@ -1502,11 +1502,25 @@ describe('metravel-assist: POST /ai/ask — справка о сайте (#3293)
     expect(fallback.text).toContain('Войдите в аккаунт')
   })
 
+  // #3369: язык справочного ответа брался из `locale` запроса — польский вопрос из русского интерфейса (или
+  // вовсе без `locale`) получал русскую запись. Запись уходит дословно, перевести её некому.
+  it('#3369: справка отвечает на языке вопроса, а не интерфейса; подпись ссылки — название страницы на языке ответа', async () => {
+    for (const body of [{ locale: 'ru' }, { locale: undefined }, { locale: 'en' }]) {
+      const pl = await ask('Czy potrzebuję internetu podczas questu?', { body })
+      expect(pl.sources[0]).toMatchObject({ type: 'help', source_id: '13', title: 'Czy podczas questu potrzebny jest internet?' })
+      expect(pl.text).toBe(`${OFFLINE_PL}\n\n[Questy](https://metravel.by/quests)`)
+      expect(pl.seen).toEqual([])
+    }
+    // Русский вопрос из польского интерфейса — русская запись и русское название страницы.
+    const ru = await ask('Сколько стоит пройти квест?', { locale: 'pl' })
+    expect(ru.text).toBe(`${PRICE}\n\n[Квесты](https://metravel.by/quests)`)
+  })
+
   describe('одна запись в ответе; вторая — только почти столь же близкая, из той же темы и не «Да/Нет» (замер r2)', () => {
     const ASKED = 'нужна ли регистрация'
     const NEEDED = 'Читать статьи и смотреть карту можно без регистрации.'
     const HOW = 'Создать аккаунт можно по email и паролю.'
-    const LINK = '[metravel.by/registration](https://metravel.by/registration)'
+    const LINK = '[Регистрация](https://metravel.by/registration)'
     /** Запись справки как в индексе: фрагмент-формулировка и фрагмент ответа; `question` с теми же словами, что вопрос, — близость 1. */
     const entry = (sourceId: number, topic: string, answer: string, question = ASKED): Spec[] => [
       { type: 'help', sourceId, title: question, text: question, answer, page: '/registration', tags: [`help-${sourceId}`, topic], city: null, lat: null, lng: null },

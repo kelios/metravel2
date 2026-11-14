@@ -446,8 +446,23 @@ export type SearchSiteMaterialsOptions = {
 }
 
 /**
+ * Подбор не состоялся: источник не ответил, а другой ничего не дал (#3369). Это не «материалов нет»:
+ * вопрос не идёт в журнал спроса и не тратит дневной лимит.
+ */
+export class RetrievalFailedError extends Error {
+  constructor() {
+    super('подбор материалов не ответил')
+    this.name = 'RetrievalFailedError'
+  }
+}
+
+/**
  * Карточки под вопрос. Ошибка одного источника не роняет подбор: статьи и квесты
- * запрашиваются независимо, пустой результат — честный «материалов нет».
+ * запрашиваются независимо, пустой результат — честный «материалов нет». Пустой результат при
+ * отказе источника — `RetrievalFailedError` (#3369): в соседних повторах контура оценки экран получал
+ * пустой подбор на вопросы, на которые за минуту до того находил карточки (h30@2, f20@1, f21@1, f05@3,
+ * f07@3 журнала #3277) — API каталога отвечал 429 под нагрузкой прогона, отказ глотался и ход закрывался
+ * «материала нет» со строкой в журнале спроса.
  */
 export async function searchSiteMaterials({
   query,
@@ -502,6 +517,7 @@ export async function searchSiteMaterials({
     }
     candidates.push(...dropRescuedQuestsWhenMatched(questSources, intent, questTokens.length > 0))
   }
+  if (!candidates.length && (travelsResult.status === 'rejected' || questsResult.status === 'rejected')) throw new RetrievalFailedError()
   return mergeSources(
     candidates,
     limit,

@@ -1,5 +1,5 @@
 import { renderShown } from '../../../scripts/ai-assistant-eval/ask-path.mjs'
-import { admitsNotInCards, detectLang, evaluateTurn, findInventedNumbers, ownProse, primaryLayer } from '../../../scripts/ai-assistant-eval/checks.mjs'
+import { admitsNotInCards, detectLang, evaluateTurn, findInventedNumbers, findWrongSuperlative, ownProse, primaryLayer } from '../../../scripts/ai-assistant-eval/checks.mjs'
 
 // #3277, пункт 5: автопроверки слоя модели. Раньше выдуманные цену, часы и длительность ловил только судья:
 // страж вырезал число из показанного ответа, и ход проходил. Наблюдения — из прогона 12.11.2026
@@ -215,3 +215,57 @@ describe('контур оценки: вопросы о сайте — ожида
   })
 })
 
+
+// #3369, f23: «What's the longest quest you have in Krakow?» — модель называла квест на 240 минут при квестах
+// на 300 и 270 в той же подсказке. Число у названной карточки верное, поэтому `invented_number` хода не красил.
+describe('контур оценки: слой модели — превосходная степень называет карточку с крайним фактом (#3369)', () => {
+  const bike = (n: number, slug: string, minutes: number, points: number, difficulty = 'средний'): Card => ({
+    n,
+    type: 'quest',
+    title: `Kraków cycling quest: ${slug}`,
+    url: `https://metravel.by/en/quests/1/krakow-bike-${slug}`,
+    snippet: `Городской квест по городу Краков (Польша). Точек: ${points}. Длительность: ${minutes} мин. Сложность: ${difficulty}`,
+    group: 'match',
+  })
+  const wanda = bike(1, 'wanda', 300, 9)
+  const pradnik = bike(2, 'pradnik', 270, 8)
+  const tyniec = bike(3, 'tyniec', 240, 10, 'лёгкий')
+  const cards = [wanda, pradnik, tyniec]
+  const longest = "What's the longest quest you have in Krakow? Name just that one."
+  const link = (card: Card) => `[${card.title}](${card.url})`
+
+  it('названа не самая длинная карточка — провал wrong_superlative слоя модели; верная — проходит', () => {
+    const wrong = `The longest quest in Krakow is ${link(tyniec)} with 240 minutes.`
+    expect(findWrongSuperlative(longest, wrong, cards)).toMatchObject({ named: tyniec, value: 240, best: wanda, bestValue: 300 })
+    const turn = evaluateTurn({ expect: 'answer', lang: 'en', question: longest }, observe(wrong, cards))
+    expect(checksOf(turn)).toEqual(['wrong_superlative'])
+    expect(turn.failures[0]).toMatchObject({ layer: 'model' })
+
+    const right = `The longest quest in Krakow is ${link(wanda)} — about 300 min.`
+    expect(findWrongSuperlative(longest, right, cards)).toBeNull()
+    expect(evaluateTurn({ expect: 'answer', lang: 'en', question: longest }, observe(right, cards)).failures).toEqual([])
+  })
+
+  it('судится первая названная карточка: остальные в списке на вердикт не влияют; равные значения допустимы', () => {
+    expect(findWrongSuperlative(longest, `Longest: ${link(wanda)}. Also ${link(tyniec)}.`, cards)).toBeNull()
+    expect(findWrongSuperlative(longest, `Try ${link(pradnik)}, then ${link(wanda)}.`, cards)).toMatchObject({ named: pradnik, best: wanda })
+    const twin = bike(4, 'twin', 300, 7)
+    expect(findWrongSuperlative(longest, `The longest is ${link(twin)}.`, [...cards, twin])).toBeNull()
+  })
+
+  it('поле и направление берутся из вопроса: короткий, число точек, сложность — на разных языках', () => {
+    expect(findWrongSuperlative('Самый короткий квест в Кракове?', `Самый короткий — ${link(wanda)}.`, cards)).toMatchObject({ best: tyniec, bestValue: 240 })
+    expect(findWrongSuperlative('Самый короткий квест в Кракове?', `Самый короткий — ${link(tyniec)}.`, cards)).toBeNull()
+    expect(findWrongSuperlative('W którym queście jest najmniej punktów?', `Najmniej punktów: ${link(tyniec)}.`, cards)).toMatchObject({ best: pradnik, bestValue: 8 })
+    expect(findWrongSuperlative('Які квэст самы лёгкі ў Кракаве?', `Самы лёгкі — ${link(wanda)}.`, cards)).toMatchObject({ best: tyniec })
+  })
+
+  it('проверка неприменима: вопрос без превосходной степени, факт известен меньше чем у двух квестов, карточка не названа', () => {
+    expect(findWrongSuperlative('Какие квесты есть в Кракове?', `Есть ${link(tyniec)}.`, cards)).toBeNull()
+    expect(findWrongSuperlative(longest, `The longest is ${link(tyniec)}.`, [tyniec, { ...wanda, snippet: 'Городской квест по городу Краков (Польша)' }])).toBeNull()
+    expect(findWrongSuperlative(longest, 'The cards do not say which one is the longest.', cards)).toBeNull()
+    // Статья с числом дней квестом не считается.
+    const article: Card = { n: 9, type: 'travel', title: 'Краков за 3 дня', url: 'https://metravel.by/travels/krakow-3', snippet: 'Польша. Дней: 3' }
+    expect(findWrongSuperlative(longest, `Read [${article.title}](${article.url}).`, [article, tyniec])).toBeNull()
+  })
+})

@@ -92,7 +92,17 @@ LETTER_RE = re.compile(r"[^\W\d_]")
 DEGENERATE_RE = re.compile(r"([^\W\d_])\1{5,}")
 PLACEHOLDER_RE = re.compile(r"\{\{[^}]*\}\}")
 POLISH = set("ąćęłńśźżó")
-CYRILLIC_NEVER = {"ru": "іўїєґ", "be": "ищъїєґ", "uk": "ыэёъў"}  # dict order breaks ties
+CYRILLIC_NEVER = {"ru": "іўїєґ", "be": "ищъїєґ", "uk": "ыэёъў"}  # dict order breaks the last tie
+# Evidence for an equal letter score (#3369) — the same lists as api/aiAssist/language.ts: letters only one
+# language has and its function words. A Belarusian phrase with a typo ("…ўзровень гадин") and a Ukrainian one
+# without і/ї/є scored the same as Russian, and the tie went to Russian.
+CYRILLIC_ONLY = {"ru": "", "be": "ў", "uk": "їєґ"}
+CYRILLIC_WORDS = {
+    "ru": {"и", "что", "как", "это", "или", "если", "есть", "нет", "вот", "но", "также", "только", "уже", "ещё", "еще", "чтобы", "из", "от", "можно", "указано", "указаны"},
+    "be": {"што", "як", "гэта", "або", "калі", "ёсць", "няма", "вось", "але", "таксама", "толькі", "ужо", "яшчэ", "каб", "ад", "каля", "можна", "пазначана", "пазначаны"},
+    "uk": {"що", "як", "це", "або", "якщо", "є", "немає", "ось", "але", "також", "тільки", "вже", "ще", "щоб", "від", "та", "й", "можна", "вказано", "вказані", "взимку", "влітку"},
+}
+CYRILLIC_WORD_RE = re.compile(r"[^\W\d_’'ʼ]+(?:[’'ʼ][^\W\d_]+)*")
 LATIN_WORD_RE = re.compile(r"[a-ząćęłńśźżó]+")
 PL_RE = re.compile(r"sz|cz|rz|dz|ie|ow|ych|\b(?:i|w|z|na|nie|jest|się|do)\b")
 EN_RE = re.compile(r"th|wh|sh|ea|ou|ing\b|\b(?:a|an|the|and|of|to|is|in|for)\b")
@@ -138,8 +148,10 @@ def detect_lang(text: str) -> str | None:
     """ru / be / uk / pl / en by letter statistics, or None without letters.
 
     Cyrillic: each language is scored by the letters it never uses (Russian:
-    і ў ї є ґ; Belarusian: и щ ъ ї є ґ; Ukrainian: ы э ё ъ ў), the fewest wins,
-    ties go to Russian, then Belarusian. Latin: Polish diacritics and digraphs
+    і ў ї є ґ; Belarusian: и щ ъ ї є ґ; Ukrainian: ы э ё ъ ў), the fewest wins;
+    an equal score is decided by letters only one language has and by function
+    words (CYRILLIC_ONLY, CYRILLIC_WORDS), and only then by the order Russian,
+    Belarusian, Ukrainian. Latin: Polish diacritics and digraphs
     against English ones. Placeholders and URLs are left out.
     """
     text = PLACEHOLDER_RE.sub(" ", URL_RE.sub(" ", text)).lower()
@@ -154,7 +166,17 @@ def detect_lang(text: str) -> str | None:
         en = len(EN_RE.findall(words))
         return "pl" if pl > en else "en"
     bad = {lang: sum(cyr.count(ch) for ch in never) for lang, never in CYRILLIC_NEVER.items()}
-    return min(bad, key=lambda lang: bad[lang])
+    least = min(bad.values())
+    tied = [lang for lang in bad if bad[lang] == least]
+    if len(tied) == 1:
+        return tied[0]
+    words = CYRILLIC_WORD_RE.findall(text)
+
+    def evidence(lang: str) -> int:
+        return sum(cyr.count(ch) for ch in CYRILLIC_ONLY[lang]) + sum(word in CYRILLIC_WORDS[lang] for word in words)
+
+    # max keeps the first of equal ones: Russian, then Belarusian, then Ukrainian — the previous order.
+    return max(tied, key=evidence)
 
 
 def find_urls(text: str) -> list[str]:
