@@ -70,6 +70,7 @@ export const aiAssistStaticResources = {
   "ask.worldTitle": "Ще у світі",
   "ask.worldAttribution": "Маршрути поза сайтом. Дані: © учасники OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Довжина, набір висоти й місяці — розрахунок за відкритими даними: перед походом звіряйте їх із джерелом.",
   "ask.worldAttributionMore": "Про джерела даних",
+  "ask.worldAttributionLess": "Згорнути джерела даних",
   "ask.worldAttributionDetails": "Довжина, клас стежки й етапи — OpenStreetMap, © учасники OpenStreetMap, ліцензія ODbL 1.0. Назви, країни й посилання на статті — Wikidata (CC0). Набір висоти й найвища точка: produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Організації, що відповідають за програму Copernicus за законом або за дорученням, не несуть відповідальності за використання Copernicus WorldDEM-30. Місяці без снігу — розрахунок за кліматичними нормами NASA Langley Research Center POWER Project.",
   "ask.worldLicense": "Умови OpenStreetMap",
   "ask.worldLayer": "Шар даних (ODbL)",

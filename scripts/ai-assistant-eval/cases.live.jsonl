@@ -126,3 +126,11 @@
 {"id": "lv127", "group": "world", "lang": "pl", "q": "Trasa rowerowa do 40 km w okolicach Wrocławia", "expect": "any_on_topic", "expect_world": {"max": 0}}
 {"id": "lv128", "group": "world", "lang": "en", "q": "Which quests can I finish in Krakow in one evening?", "expect": "any_on_topic", "expect_world": {"max": 0}}
 {"id": "lv129", "group": "world", "lang": "uk", "q": "Що подивитися у Львові за вихідні?", "expect": "any_on_topic", "expect_world": {"max": 0}}
+{"id": "lv130", "group": "world", "lang": "ru", "q": "Пеший маршрут в Шотландии", "expect": "any_on_topic", "expect_world": {"min": 1, "country": "великобритан"}}
+{"id": "lv131", "group": "world", "lang": "en", "q": "Hiking trail in Scotland", "expect": "any_on_topic", "expect_world": {"min": 1, "country": "united kingdom"}}
+{"id": "lv132", "group": "world", "lang": "pl", "q": "Szlak pieszy w Szkocji", "expect": "any_on_topic", "expect_world": {"min": 1, "country": "wielka brytania"}}
+{"id": "lv133", "group": "world", "lang": "ru", "q": "Пеший маршрут на Корсике", "expect": "any_on_topic", "expect_world": {"min": 1, "country": "франц"}}
+{"id": "lv134", "group": "world", "lang": "ru", "q": "Поход в Альпах на неделю", "expect": "any_on_topic", "expect_world": {"min": 1, "max_days": 7, "country": "франц|швейцар|итал|австри|герман|словени|лихтенштейн"}}
+{"id": "lv135", "group": "world", "lang": "en", "q": "West Highland Way", "expect": "any_on_topic", "expect_world": {"min": 1, "title": "west highland way"}}
+{"id": "lv136", "group": "world", "lang": "ru", "q": "Расскажи про Tour du Mont Blanc", "expect": "any_on_topic", "expect_world": {"min": 1, "title": "монблан|mont.blanc"}}
+{"id": "lv137", "group": "world", "lang": "ru", "q": "Пеший маршрут в Нарнии на три дня", "expect": "any_on_topic", "expect_world": {"max": 0}}

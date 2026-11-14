@@ -150,6 +150,11 @@ const stemsOf = (name: string): string[] => {
   if (softFleeting) return [name, `${softFleeting[1]}н`]
   const closed = /^(.{2,})і(в|ль)$/u.exec(name)
   if (closed) return closed[2] === 'в' ? [name, `${closed[1]}ов`, `${closed[1]}ев`, `${closed[1]}єв`] : [name, `${closed[1]}ол`]
+  // Польское чередование «k → c» в местном падеже (#3357): «Polska — w Polsce», «Korsyka — na Korsyce»,
+  // «Wieliczka — w Wieliczce», «Białka — w Białce». Вторая основа — с «c» на месте «k»; только у названий
+  // латиницей на «-ka» («ł» после `normalize` остаётся собой).
+  const softened = /^(\p{Script=Latin}{3,})ka$/u.exec(name)
+  if (softened) return [name, `${softened[1]}ce`]
   return [name]
 }
 
@@ -333,7 +338,8 @@ const MAX_PLACE_ENDING = 2
 
 const foldWord = (value: string): string => normalize(value).toLowerCase()
 
-const samePlaceWord = (a: string, b: string): boolean => {
+/** Два слова — одно название в разных падежах: общее начало почти во всю длину («Франция» — «Франции»). Оба — как после `foldWord`. */
+export const samePlaceWord = (a: string, b: string): boolean => {
   const shared = sharedPrefix(a, b)
   return shared >= Math.max(MIN_PLACE_WORD, Math.min(a.length, b.length) - MAX_PLACE_ENDING) && Math.max(a.length, b.length) - shared <= MAX_PLACE_ENDING + 1
 }

@@ -42,7 +42,7 @@ import { NetworkError, newStats, OfflineError, readJson, sleep, writeJson } from
 import { fetchTaggedRelations, OVERPASS_ENDPOINT } from './overpass.ts'
 import { ASCENT_PARAMS, candidatesToTry, joinList, lengthMismatch, type ListEntry, processTrail, toOpenRecord, type TrailResult, withoutAscent } from './pipeline.ts'
 import { ascentCalibrated, checkReference, REFERENCE_TRAILS, type ReferenceVerdict } from './references.ts'
-import { type ClassMember, fetchClassMembers, fetchEntities, parseEntity, TRAIL_CLASSES, TRAIL_PROPS } from './wikidata.ts'
+import { type ClassMember, fetchClassMembers, fetchEntities, fetchPlaceEntities, parseEntity, resolvePlaces, TRAIL_CLASSES, TRAIL_PROPS } from './wikidata.ts'
 
 const log = (line: string) => console.error(line)
 
@@ -92,11 +92,15 @@ async function runList(paths: Paths, flags: Record<string, string | boolean>): P
   })
   const countries = await fetchEntities([...new Set(trails.flatMap(({ trail }) => trail.countries))], 'labels', { rawDir: paths.raw, stats: stats.wikidata, log })
   const distanceTag = new Map(tagged.map((relation) => [relation.id, Number.parseFloat(String(relation.distance ?? '').replace(',', '.'))]))
+  // Места маршрута ниже страны: цепочка административных единиц и рельефа Wikidata. Страны и сами маршруты
+  // перечня местами не считаются.
+  const placeRules = { countries: new Set(trails.flatMap(({ trail }) => trail.countries)), exclude: classQids }
+  const placeEntities = await fetchPlaceEntities(trails.flatMap(({ trail }) => trail.place_refs), placeRules, { rawDir: paths.raw, stats: stats.wikidata, log })
 
   const open: OpenLayerRecord[] = []
   const rows: ListRow[] = []
   for (const { entry, trail } of trails) {
-    const record = toOpenRecord(trail, countries)
+    const record = toOpenRecord(trail, countries, resolvePlaces(trail.place_refs, placeEntities, placeRules))
     // Служебные сайты (Commons) статьёй не считаются: элемент без статьи в перечень не идёт.
     if (!record) continue
     open.push(record)
@@ -113,6 +117,7 @@ async function runList(paths: Paths, flags: Record<string, string | boolean>): P
   writeJsonl(path.join(paths.work, 'list.jsonl'), rows)
   writeJsonl(path.join(paths.work, 'open-layer.jsonl'), open)
 
+  const withPlaces = new Set(open.filter((record) => record.places?.length).map((record) => record.source_id))
   const lengthOf = (row: ListRow): number | undefined => row.wd_length_km ?? row.tag_distance_km
   const within = (low: number, high: number) => rows.filter((row) => {
     const km = lengthOf(row)
@@ -133,6 +138,8 @@ async function runList(paths: Paths, flags: Record<string, string | boolean>): P
     km_100_300: within(100.001, 300),
     km_over_300: within(300.001, 1e9),
     first_version: rows.filter(inFirstVersion).length,
+    // У скольких маршрутов названо хотя бы одно место ниже страны — по всему перечню и по первой версии.
+    with_places: { all: open.filter((record) => record.places?.length).length, first_version: rows.filter((row) => inFirstVersion(row) && withPlaces.has(row.qid)).length },
     sitelinks: { ge2: rows.filter((row) => row.sitelinks >= 2).length, ge3: rows.filter((row) => row.sitelinks >= 3).length, ge5: rows.filter((row) => row.sitelinks >= 5).length, ge10: rows.filter((row) => row.sitelinks >= 10).length },
     total_km_known: Math.round(rows.reduce((sum, row) => sum + (lengthOf(row) ?? 0), 0)),
     top_countries: [...byCountry].sort((a, b) => b[1] - a[1]).slice(0, 10),

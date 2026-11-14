@@ -7,7 +7,7 @@ import { parseAskSseEvent } from '@/api/aiAssist/askProvider'
 import { judgeCard, parseConditions, TRAIL_ESTIMATE_SLACK } from '@/api/aiAssist/questionConditions'
 import { type AiWorldTrail, LOAD_STEP_RU, LOAD_STEPS, monthRanges, monthsLabelRu, parseWorldTrail, roundAltitude, roundClimb, trailFactsLine, WORLD_OSM_LAYER_PUBLIC_PATH } from '@/api/aiAssist/trailFacts'
 import type { AiSource } from '@/api/aiAssist/types'
-import { asksForWorldTrails, selectWorldTrails, type WorldCandidate } from '@/api/aiAssist/worldTrails'
+import { asksForWorldTrails, gazetteerPlace, gazetteerWords, namesTrail, selectWorldTrails, titleKeys, type WorldCandidate } from '@/api/aiAssist/worldTrails'
 import { toTrailCard } from '@/scripts/ai-index/world/cards'
 
 import { WORLD_OPEN_LAYER, WORLD_OSM_LAYER, worldFakeVector } from '../../fixtures/worldTrails'
@@ -20,14 +20,21 @@ const cardOf = (id: string, locale: 'ru' | 'be' | 'uk' | 'pl' | 'en' = 'ru'): Ai
   return toTrailCard(osm, open, locale)!
 }
 
-/** Кандидаты как у службы: карточка на языке вопроса, близость по вектору-заглушке, известность, названия. */
+/** Кандидаты как у службы: карточка на языке вопроса, близость по вектору-заглушке, известность, место и названия. */
 const candidates = (query: string, locale: 'ru' | 'be' | 'uk' | 'pl' | 'en' = 'ru'): WorldCandidate[] => {
   const vector = worldFakeVector(query)
   return WORLD_OSM_LAYER.map((osm) => {
     const open = WORLD_OPEN_LAYER.find((record) => record.source_id === osm.source_id)!
-    const names = [...Object.values(open.labels), ...Object.values(open.descriptions), ...open.countries.flatMap((country) => Object.values(country.names))].join('. ')
-    const own = worldFakeVector(names)
-    return { card: toTrailCard(osm, open, locale)!, similarity: own.reduce((sum, value, index) => sum + value * vector[index], 0), fame: open.sitelinks, names }
+    const countries = open.countries.flatMap((country) => Object.values(country.names))
+    const places = (open.places ?? []).flatMap((place) => Object.values(place.names))
+    const own = worldFakeVector([...Object.values(open.labels), ...countries].join('. '))
+    return {
+      card: toTrailCard(osm, open, locale)!,
+      similarity: own.reduce((sum, value, index) => sum + value * vector[index], 0),
+      fame: open.sitelinks,
+      place: gazetteerPlace(places, countries),
+      titles: titleKeys([...Object.values(open.labels), open.native_title, ...Object.values(open.aliases).flat()]),
+    }
   })
 }
 
@@ -240,8 +247,70 @@ describe('маршруты мира: подбор второго яруса', ()
     expect(pick('Szlak pieszy w Polsce', 'pl').map((trail) => trail.source_id)).toEqual([SUDETES])
     expect(pick('Пеший маршрут в Испании').map((trail) => trail.source_id)).toEqual([CAMINO])
     expect(pick('Пеший маршрут в Беларуси до 100 км')).toEqual([])
+    expect(pick('Szlak pieszy do 100 km w Polsce', 'pl')).toEqual([])
     // Место есть, а условие не выполнено: единственный маршрут Польши длиннее 100 км.
     expect(pick('Пеший маршрут в Польше до 100 км')).toEqual([])
+  })
+
+  it('регион внутри страны: Шотландия на трёх языках находит West Highland Way, а не всю Великобританию', () => {
+    for (const [question, locale] of [['Пеший маршрут в Шотландии', 'ru'], ['Hiking trail in Scotland', 'en'], ['Szlak pieszy w Szkocji', 'pl']] as const) {
+      expect({ question, ids: pick(question, locale).map((trail) => trail.source_id) }).toEqual({ question, ids: [WHW] })
+    }
+    // Страна по-прежнему даёт все свои маршруты: West Highland Way и Peddars Way.
+    expect(pick('Пеший маршрут в Великобритании').map((trail) => trail.source_id).sort()).toEqual([PEDDARS, WHW].sort())
+    expect(pick('Пеший маршрут в Англии').map((trail) => trail.source_id)).toEqual([PEDDARS])
+  })
+
+  it('остров с предлогом «на», горная система и штат: место берётся из газеттира индекса, а не из списка предлогов', () => {
+    expect(pick('Пеший маршрут на Корсике').map((trail) => trail.source_id)).toEqual([GR20])
+    expect(pick('Hiking trail on Corsica', 'en').map((trail) => trail.source_id)).toEqual([GR20])
+    expect(pick('Szlak pieszy na Korsyce', 'pl').map((trail) => trail.source_id)).toEqual([GR20])
+    expect(pick('Поход в Альпах на неделю').map((trail) => trail.source_id)).toEqual([TMB])
+    expect(pick('Пеший маршрут в Тасмании').map((trail) => trail.source_id)).toEqual(['Q491216'])
+    expect(pick('Пеший маршрут в Судетах').map((trail) => trail.source_id)).toEqual([SUDETES])
+    // «На выходные», «на два дня», «на машине» местом не становятся: блок идёт как на вопрос без места.
+    expect(pick('Пеший маршрут на выходные')).toHaveLength(3)
+    expect(pick('Поход на два дня не длиннее 60 км').every((trail) => (trail.distance_km ?? 0) <= 60)).toBe(true)
+  })
+
+  it('общее слово в названиях мест двух маршрутов их не связывает: Альпы — не Weg der Schweiz и не GR 20', () => {
+    // У «Трека вокруг Монблана» среди мест «Canton of Valais» и «Метраполія Францыі», у Weg der Schweiz —
+    // «Canton of Uri», у GR 20 — «Метраполія Францыі»: на вопрос об Альпах идёт только первый.
+    expect(pick('Пеший маршрут в Альпах').map((trail) => trail.source_id)).toEqual([TMB])
+    expect(pick('Hiking trail in the Alps', 'en').map((trail) => trail.source_id)).toEqual([TMB])
+    expect(pick('Пеший маршрут на Корсике не короче 100 км').map((trail) => trail.source_id)).toEqual([GR20])
+  })
+
+  it('место и условие вместе: маршруты места, не прошедшие условие, в блок не идут', () => {
+    expect(pick('Поход в Альпах в ноябре')).toEqual([])
+    expect(pick('Пеший маршрут в Шотландии до 100 км')).toEqual([])
+    expect(pick('Пеший маршрут в Шотландии не короче 150 км').map((trail) => trail.source_id)).toEqual([WHW])
+  })
+
+  it('место, которого газеттир не знает, блок закрывает: чужие маршруты не показываются', () => {
+    for (const question of ['Пеший маршрут в Нарнии на три дня', 'Hiking trail in Atlantis', 'Поход в Беларуси', 'Szlak pieszy w Bieszczadach']) {
+      expect({ question, trails: pick(question) }).toEqual({ question, trails: [] })
+    }
+  })
+
+  it('слова газеттира: каждое слово названия с заглавной буквы, без общих слов и месяцев', () => {
+    expect(gazetteerWords(['Шотландия', 'Scottish Highlands', 'Новая Зеландия', 'North Island', 'Loch Lomond and The Trossachs National Park', 'May', 'Восточная Англия', 'Великобритания'])).toEqual([
+      'Шотландия', 'Scottish', 'Highlands', 'Зеландия', 'Loch', 'Lomond', 'Trossachs', 'Англия', 'Великобритания',
+    ])
+    // Слово страны в названии места («метрополия Франции») остаётся только у страны.
+    expect(gazetteerPlace(['метрополия Франции', 'Корсика', 'Great Britain'], ['Франция', 'France'])).toEqual({ cities: ['Корсика', 'Britain'], countries: ['Франция', 'France'] })
+  })
+
+  it('общее слово названия место не называет: «Новая тропа» — не Новая Зеландия, «North» — не Северный остров', () => {
+    const kepler = pick('Новая тропа для похода на 5 дней').map((trail) => trail.source_id)
+    expect(kepler).toHaveLength(3)
+    expect(pick('Поход в Новой Зеландии').map((trail) => trail.source_id)).toEqual([KEPLER])
+  })
+
+  it('месяц после предлога места — условие сезона, а не место', () => {
+    const trails = pick('Which hiking trail can I walk in 4 days in June?', 'en')
+    expect(trails.length).toBeGreaterThan(0)
+    expect(trails.every((trail) => !trail.months || trail.months.includes(6))).toBe(true)
   })
 
   it('часть света отбором по месту не служит', () => {
@@ -256,6 +325,52 @@ describe('маршруты мира: подбор второго яруса', ()
     expect(ids.slice(0, 3)).toEqual(expect.arrayContaining([TMB, GR20, SUDETES]))
     expect(ids.indexOf(WHW)).toBeGreaterThan(ids.indexOf(TMB))
     expect(ids.indexOf(CAMINO)).toBeGreaterThan(ids.indexOf(GR20))
+  })
+
+  it('вопрос из одного названия маршрута включает блок и не добавляет к нему другие маршруты', () => {
+    expect(pick('West Highland Way', 'en').map((trail) => trail.source_id)).toEqual([WHW])
+    expect(pick('Трек вокруг Монблана').map((trail) => trail.source_id)).toEqual([TMB])
+    expect(pick('Расскажи про Tour du Mont Blanc').map((trail) => trail.source_id)).toEqual([TMB])
+    expect(pick('Что такое Główny Szlak Sudecki?', 'pl').map((trail) => trail.source_id)).toEqual([SUDETES])
+    // Короткое или однословное название маршрут не называет; вопрос не о маршрутах блока не получает.
+    expect(pick('Что такое GR 20?')).toEqual([])
+    expect(pick('Какие квесты есть в Гродно?')).toEqual([])
+  })
+
+  it('названный маршрут стоит первым и условиями вопроса не отсеивается; остальные идут за ним', () => {
+    // West Highland Way — 8 дней по этапам; спросили о нём «за 5 дней».
+    const trails = pick('Пеший маршрут West Highland Way за 5 дней')
+    expect(trails[0].source_id).toBe(WHW)
+    expect(trails).toHaveLength(3)
+    expect(trails.slice(1).every((trail) => !trail.days || (trail.days_estimated ? trail.days < 7.5 : trail.days <= 5))).toBe(true)
+  })
+
+  it('ключи названий: без диакритики и знаков; название от двух слов либо от восьми букв', () => {
+    expect(titleKeys(['West Highland Way', 'Tour du Mont-Blanc', 'Główny Szlak Sudecki', 'GR 20', 'E4', 'Camino', 'Kungsleden', 'The Way', null])).toEqual(['west highland way', 'tour du mont blanc', 'głowny szlak sudecki', 'kungsleden'])
+    expect(namesTrail('Сколько дней идти Tour du Mont Blanc?', ['tour du mont blanc'])).toBe(true)
+    expect(namesTrail('Tour du Mont-Blanc!', ['tour du mont blanc'])).toBe(true)
+    // Только целыми словами: «Kungsledens» и часть названия маршрут не называют.
+    expect(namesTrail('тур вокруг Mont Blanc', ['tour du mont blanc'])).toBe(false)
+    expect(namesTrail('Kungsledenstuga', ['kungsleden'])).toBe(false)
+    expect(namesTrail('', ['kungsleden'])).toBe(false)
+  })
+
+  it('название короче трёх слов — только с заглавной буквы у каждого слова: «a long trail» — не Long Trail', () => {
+    expect(namesTrail('Hiking a long trail in Poland', ['long trail'])).toBe(false)
+    expect(namesTrail('Hiking a Long trail in Poland', ['long trail'])).toBe(false)
+    expect(namesTrail('Hike the Long Trail in Vermont', ['long trail'])).toBe(true)
+    expect(namesTrail('пеший маршрут как kungsleden', ['kungsleden'])).toBe(false)
+    expect(namesTrail('Пеший маршрут как Kungsleden', ['kungsleden'])).toBe(true)
+    // Совпадение со строчной раньше в тексте не мешает найти написание с заглавной дальше.
+    expect(namesTrail('long trail or Long Trail?', ['long trail'])).toBe(true)
+    // От трёх слов регистр не важен.
+    expect(namesTrail('west highland way за 5 дней', ['west highland way'])).toBe(true)
+  })
+
+  it('общие слова мест слоя газеттиром не становятся: пояс через Евразию, «Grand», польские слова с «ł», слова из трёх букв', () => {
+    expect(gazetteerWords(['Alpide belt', 'Альпійска-Гімалайскі пояс', 'Средиземноморский складчатый пояс', 'Łańcuch alpejsko-himalajski', 'Grand Canyon', 'Dolny Śląsk', 'Północna Irlandia', 'Trenčiansky kraj', 'Мар-дель-Плата', 'Las Palmas'])).toEqual([
+      'Śląsk', 'Irlandia', 'Trenčiansky', 'Плата', 'Palmas',
+    ])
   })
 
   it('подбор детерминирован: тот же вопрос — те же маршруты в том же порядке', () => {

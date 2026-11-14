@@ -15,7 +15,7 @@ import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { loadConfig } from '@/scripts/ai-assist/config'
 import { createDemandLog } from '@/scripts/ai-assist/demandLog'
 import { AskLimits, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
-import { loadWorldIndex, worldCandidates } from '@/scripts/ai-assist/worldIndex'
+import { asksWorld, loadWorldIndex, worldCandidates } from '@/scripts/ai-assist/worldIndex'
 import { OSM_LAYER_FILE } from '@/scripts/ai-index/world/cards'
 
 import { WORLD_FIXTURE_MODEL, WORLD_OSM_LAYER, writeWorldFixture } from '../../fixtures/worldTrails'
@@ -291,6 +291,44 @@ describe('metravel-assist: маршруты мира в /ai/ask (#3357)', () => 
     }
   })
 
+  it('приёмка 14.11.2026: регион, остров с «на», горная система и название маршрута дают свои маршруты', async () => {
+    const { server } = makeServer()
+    await listen(server)
+    try {
+      const ids = async (q: string, locale: string) => trailsOf((await post(server, { q, locale })).events).map((trail) => trail.source_id)
+      expect(await ids('Пеший маршрут в Шотландии', 'ru')).toEqual(['Q965998'])
+      expect(await ids('Hiking trail in Scotland', 'en')).toEqual(['Q965998'])
+      expect(await ids('Szlak pieszy w Szkocji', 'pl')).toEqual(['Q965998'])
+      expect(await ids('Пеший маршрут на Корсике', 'ru')).toEqual(['Q262374'])
+      expect(await ids('Поход в Альпах на неделю', 'ru')).toEqual(['Q24777'])
+      expect(await ids('Пеший маршрут в Тасмании', 'ru')).toEqual(['Q491216'])
+      // Место, которого индекс не знает, — блока нет; чужие маршруты не показываются.
+      expect(await ids('Пеший маршрут в Нарнии на три дня', 'ru')).toEqual([])
+      // Вопрос из одного названия маршрута: слов о походе нет, блок есть, маршрут один.
+      expect(await ids('West Highland Way', 'en')).toEqual(['Q965998'])
+      expect(await ids('Трек вокруг Монблана', 'ru')).toEqual(['Q24777'])
+      // Со страницы материала название маршрута блока не вызывает.
+      expect(trailsOf((await post(server, { q: 'West Highland Way', locale: 'en', source: { type: 'travel', id: 816 } })).events)).toEqual([])
+    } finally {
+      await close(server)
+    }
+  })
+
+  it('ссылка карточки — статья на языке запроса, когда она есть: у «Трека вокруг Монблана» — русская Википедия', async () => {
+    const { server } = makeServer()
+    await listen(server)
+    try {
+      const card = async (q: string, locale: string) => trailsOf((await post(server, { q, locale })).events)[0]
+      expect(await card('Поход в Альпах', 'ru')).toMatchObject({ source_id: 'Q24777', title: 'Трек вокруг Монблана', url: expect.stringMatching(/^https:\/\/ru\.wikipedia\.org\/wiki\//) })
+      expect(await card('Szlak pieszy w Alpach', 'pl')).toMatchObject({ source_id: 'Q24777', url: 'https://pl.wikipedia.org/wiki/Tour_du_Mont_Blanc' })
+      expect(await card('Hiking trail in the Alps', 'en')).toMatchObject({ source_id: 'Q24777', url: 'https://en.wikipedia.org/wiki/Tour_du_Mont_Blanc' })
+      // Русской статьи о West Highland Way нет — запасная английская.
+      expect(await card('Пеший маршрут в Шотландии', 'ru')).toMatchObject({ source_id: 'Q965998', url: 'https://en.wikipedia.org/wiki/West_Highland_Way' })
+    } finally {
+      await close(server)
+    }
+  })
+
   it('проба здоровья показывает состав внешнего индекса', async () => {
     const { server } = makeServer()
     await listen(server)
@@ -311,8 +349,14 @@ describe('metravel-assist: загрузка внешнего индекса (#33
     expect(candidates).toHaveLength(WORLD_OSM_LAYER.length)
     const whw = candidates.find((candidate) => candidate.card.source_id === 'Q965998')!
     expect(whw).toMatchObject({ fame: 15, card: { title: 'West Highland Way', country: 'United Kingdom', group: 'world' } })
-    expect(whw.names).toContain('Великобритания')
+    // Газеттир маршрута: страна и места ниже страны на языках индекса; название — ключом для вопроса-названия.
+    expect(whw.place.countries).toEqual(expect.arrayContaining(['Великобритания', 'Kingdom']))
+    expect(whw.place.cities).toEqual(expect.arrayContaining(['Шотландия', 'Scotland', 'Szkocja', 'Highland']))
+    expect(whw.titles).toContain('west highland way')
     expect(Number.isFinite(whw.similarity)).toBe(true)
+    expect(asksWorld(index, 'West Highland Way')).toBe(true)
+    expect(asksWorld(index, 'Пеший маршрут на выходные')).toBe(true)
+    expect(asksWorld(index, 'Какие квесты есть в Гродно?')).toBe(false)
   })
 
   it('модель векторов обязана совпадать с моделью службы; индекс без векторов и с подменённым слоем не грузится', () => {

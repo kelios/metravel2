@@ -55,6 +55,11 @@ export interface ButtonProps {
   fullWidth?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /**
+   * Кнопка раскрывает и сворачивает блок: состояние уходит вспомогательным технологиям
+   * (`accessibilityState.expanded`, на web — `aria-expanded`). Не задано — кнопка состояния не объявляет.
+   */
+  expanded?: boolean;
   testID?: string;
   dataSet?: WebDataSet;
   style?: StyleProp<ViewStyle>;
@@ -89,6 +94,7 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   fullWidth = false,
   accessibilityLabel,
   accessibilityHint,
+  expanded,
   testID,
   dataSet,
   style,
@@ -129,7 +135,8 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
       {...(Platform.OS === 'web' && dataSet ? webDataSetProps(dataSet) : null)}
       {...anchorProps}
       accessibilityRole={linkHref ? 'link' : 'button'}
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityState={{ disabled: isDisabled, busy: loading, ...(typeof expanded === 'boolean' ? { expanded } : null) }}
+      {...(Platform.OS === 'web' && typeof expanded === 'boolean' ? { 'aria-expanded': expanded } : null)}
       accessibilityLabel={accessibilityLabel || label}
       accessibilityHint={accessibilityHint}
       {...(webHint ? { 'aria-describedby': hintId } : null)}

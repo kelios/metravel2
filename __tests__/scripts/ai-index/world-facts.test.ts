@@ -18,7 +18,7 @@ import { effortKm, estimateEffort, LOAD_STEP_RU, LOAD_STEPS, sacGrade, stagesAsD
 import { candidatesToTry, joinList, lengthMismatch, toOpenRecord, withoutAscent } from '@/scripts/ai-index/world/pipeline'
 import { ascentCalibrated, checkReference, monthsAgree, REFERENCE_TRAILS, withinRange } from '@/scripts/ai-index/world/references'
 import { altitudeQuantile, passableMonths, SEASON_PARAMS, segmentSeason, snowpack, temperaturesAt } from '@/scripts/ai-index/world/season'
-import { articleFor, articlesOf, classQuery, lengthKmOf, parseClassTsv, parseEntity } from '@/scripts/ai-index/world/wikidata'
+import { articleFor, articlesOf, classQuery, lengthKmOf, parentRefsOf, parseClassTsv, parseEntity, PLACE_MAX_PER_TRAIL, placeRefsOf, type RawEntity, resolvePlaces } from '@/scripts/ai-index/world/wikidata'
 
 import { makeTempDir } from '../cli-test-utils'
 import { REFERENCE_SEGMENTS, TRAIL_ENTITY } from './world.fixture'
@@ -261,6 +261,91 @@ describe('внешний индекс маршрутов: перечень Wikid
       { qid: 'Q10', relation: 701, link: 'tag', candidates: [701, 700] },
       { qid: 'Q24777', relation: 9678362, link: 'both', candidates: [9678362, 500] },
     ])
+  })
+})
+
+describe('внешний индекс маршрутов: места маршрута ниже страны', () => {
+  const item = (id: string) => ({ mainsnak: { datavalue: { value: { id } } } })
+  const place = (id: string, labels: Record<string, string>, claims: Record<string, string[]> = {}): RawEntity => ({
+    id,
+    labels: Object.fromEntries(Object.entries(labels).map(([locale, value]) => [locale, { value }])),
+    claims: Object.fromEntries(Object.entries(claims).map(([property, ids]) => [property, property === 'P625' ? [{ mainsnak: { datavalue: { value: { latitude: 1, longitude: 2 } } } }] : ids.map(item)])),
+  })
+  // West Highland Way: округ → Шотландия → Великобритания; гряда → горная система; «часть от» — сеть троп без координат.
+  const trail: RawEntity = { id: 'Q965998', claims: { P131: [item('Q208279'), item('Q201149')], P706: [item('Q106652')], P361: [item('Q900'), item('Q901')], P17: [item('Q145')] } }
+  const entities = new Map<string, RawEntity>(
+    [
+      place('Q208279', { en: 'Highland', ru: 'Хайленд' }, { P131: ['Q22'] }),
+      place('Q201149', { en: 'Stirling' }, { P131: ['Q22'] }),
+      place('Q22', { en: 'Scotland', ru: 'Шотландия', pl: 'Szkocja' }, { P131: ['Q145'], P31: ['Q3336843'] }),
+      place('Q145', { en: 'United Kingdom', ru: 'Великобритания' }, { P31: ['Q3624078'] }),
+      place('Q106652', { en: 'Grampian Mountains', ru: 'Грампианские горы' }, { P4552: ['Q1'], P361: ['Q2'] }),
+      place('Q1', { en: 'Scottish Highlands' }, { P361: ['Q46'] }),
+      place('Q2', { en: 'Great Britain' }, { P625: ['x'], P361: ['Q46'] }),
+      place('Q46', { en: 'Europe', ru: 'Европа' }, { P31: ['Q5107'], P625: ['x'] }),
+      place('Q900', { en: "Scotland's Great Trails" }),
+      place('Q901', { en: 'Loch Lomond and The Trossachs National Park', ru: 'Лох-Ломонд и Троссахс' }, { P625: ['x'] }),
+      place('Q777', { de: 'Nur Deutsch' }),
+    ].map((entity) => [entity.id, entity]),
+  )
+  const rules = { countries: new Set(['Q145']), exclude: new Set(['Q965998']) }
+
+  it('ссылки элемента на места — по пяти свойствам, без повторов', () => {
+    expect(placeRefsOf(trail)).toEqual([
+      { qid: 'Q208279', kind: 'admin' },
+      { qid: 'Q201149', kind: 'admin' },
+      { qid: 'Q106652', kind: 'terrain' },
+      { qid: 'Q900', kind: 'part' },
+      { qid: 'Q901', kind: 'part' },
+    ])
+    expect(parseEntity(trail).place_refs).toHaveLength(5)
+    expect(placeRefsOf({ id: 'Q5' })).toEqual([])
+  })
+
+  it('цепочка идёт вверх: у административной единицы — по P131, у рельефа — к горной системе и целому', () => {
+    expect(parentRefsOf(entities.get('Q208279')!, 'admin')).toEqual([{ qid: 'Q22', kind: 'admin' }])
+    expect(parentRefsOf(entities.get('Q106652')!, 'terrain')).toEqual([{ qid: 'Q1', kind: 'range' }, { qid: 'Q2', kind: 'part' }])
+    expect(parentRefsOf(entities.get('Q106652')!, 'admin')).toEqual([])
+  })
+
+  it('места маршрута: рельеф, затем регионы — от крупных к мелким; страна и часть света в места не идут', () => {
+    const places = resolvePlaces(placeRefsOf(trail), entities, rules)
+    expect(places.map((entry) => entry.qid)).toEqual(['Q1', 'Q2', 'Q106652', 'Q901', 'Q22', 'Q208279', 'Q201149'])
+    expect(places.find((entry) => entry.qid === 'Q22')).toEqual({ qid: 'Q22', names: { ru: 'Шотландия', pl: 'Szkocja', en: 'Scotland' }, kind: 'admin' })
+    expect(places.map((entry) => entry.qid)).not.toContain('Q145')
+    expect(places.map((entry) => entry.qid)).not.toContain('Q46')
+  })
+
+  it('«часть от» без координат (сеть троп) местом не считается; место без названия на языках сайта — тоже', () => {
+    const places = resolvePlaces([{ qid: 'Q900', kind: 'part' }, { qid: 'Q777', kind: 'admin' }, { qid: 'Q404', kind: 'admin' }], entities, rules)
+    expect(places).toEqual([])
+  })
+
+  it('Шотландия помечена в Wikidata классом «страна», но местом остаётся; упразднённое государство местом не считается', () => {
+    const scotland = place('Q22', { en: 'Scotland', ru: 'Шотландия' }, { P131: ['Q145', 'Q174193'], P31: ['Q3336843', 'Q6256'] })
+    const former = { ...place('Q174193', { en: 'United Kingdom of Great Britain and Ireland' }), claims: { P576: [{ mainsnak: { datavalue: { value: { time: '+1927-04-12T00:00:00Z' } } } }] } }
+    const map = new Map<string, RawEntity>([...entities, ['Q22', scotland], ['Q174193', former]])
+    expect(resolvePlaces([{ qid: 'Q208279', kind: 'admin' }], map, rules).map((entry) => entry.qid)).toEqual(['Q22', 'Q208279'])
+  })
+
+  it('сам маршрут перечня и повтор места в цепочке не берутся; глубина и число мест ограничены', () => {
+    expect(resolvePlaces([{ qid: 'Q965998', kind: 'part' }], new Map([...entities, ['Q965998', { ...trail, labels: { en: { value: 'West Highland Way' } } }]]), rules)).toEqual([])
+    const chain = new Map<string, RawEntity>(Array.from({ length: 8 }, (_, index) => [`Q${index + 1000}`, place(`Q${index + 1000}`, { en: `Level ${index}` }, { P131: [`Q${index + 1001}`] })]))
+    expect(resolvePlaces([{ qid: 'Q1000', kind: 'admin' }], chain, rules).map((entry) => entry.qid)).toEqual(['Q1003', 'Q1002', 'Q1001', 'Q1000'])
+    const wide = new Map<string, RawEntity>(Array.from({ length: 40 }, (_, index) => [`Q${index + 2000}`, place(`Q${index + 2000}`, { en: `County ${index}` })]))
+    expect(resolvePlaces([...wide.keys()].map((qid) => ({ qid, kind: 'admin' as const })), wide, rules)).toHaveLength(PLACE_MAX_PER_TRAIL)
+  })
+
+  it('места входят в слой Wikidata и в текст смыслового поиска на языке фрагмента', () => {
+    const countries = new Map([['Q145', { id: 'Q145', labels: { en: { value: 'United Kingdom' }, ru: { value: 'Великобритания' } } }]])
+    const places = resolvePlaces(placeRefsOf(trail), entities, rules)
+    const record = toOpenRecord({ ...parseEntity(TRAIL_ENTITY), countries: ['Q145'] }, countries, places)!
+    expect(record.places?.map((entry) => entry.names.en)).toEqual(['Scottish Highlands', 'Great Britain', 'Grampian Mountains', 'Loch Lomond and The Trossachs National Park', 'Scotland', 'Highland', 'Stirling'])
+    const chunks = buildWorldChunks(record)
+    expect(chunks.find((chunk) => chunk.locale === 'ru')!.text).toContain('Великобритания. Scottish Highlands, Great Britain, Грампианские горы, Лох-Ломонд и Троссахс, Шотландия, Хайленд')
+    expect(chunks.find((chunk) => chunk.locale === 'pl')!.text).toContain('Szkocja')
+    // Без мест поля в записи нет: слой прежних сборок читается как раньше.
+    expect(toOpenRecord({ ...parseEntity(TRAIL_ENTITY), countries: ['Q145'] }, countries)).not.toHaveProperty('places')
   })
 })
 

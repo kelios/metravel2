@@ -72,6 +72,7 @@ export const aiAssistStaticResources = {
   "ask.worldTitle": "Ещё в мире",
   "ask.worldAttribution": "Маршруты вне сайта. Данные: © участники OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Длина, набор высоты и месяцы — расчёт по открытым данным: перед походом сверяйте их с источником.",
   "ask.worldAttributionMore": "Об источниках данных",
+  "ask.worldAttributionLess": "Свернуть источники данных",
   "ask.worldAttributionDetails": "Длина, класс тропы и этапы — OpenStreetMap, © участники OpenStreetMap, лицензия ODbL 1.0. Названия, страны и ссылки на статьи — Wikidata (CC0). Набор высоты и высшая точка: produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Организации, отвечающие за программу Copernicus по закону или по поручению, не несут ответственности за использование Copernicus WorldDEM-30. Месяцы без снега — расчёт по климатическим нормам NASA Langley Research Center POWER Project.",
   "ask.worldLicense": "Условия OpenStreetMap",
   "ask.worldLayer": "Слой данных (ODbL)",

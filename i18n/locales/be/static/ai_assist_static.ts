@@ -70,6 +70,7 @@ export const aiAssistStaticResources = {
   "ask.worldTitle": "Яшчэ ў свеце",
   "ask.worldAttribution": "Маршруты па-за сайтам. Даныя: © удзельнікі OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Даўжыня, набор вышыні і месяцы — разлік па адкрытых даных: перад паходам звярайце іх з крыніцай.",
   "ask.worldAttributionMore": "Пра крыніцы даных",
+  "ask.worldAttributionLess": "Згарнуць крыніцы даных",
   "ask.worldAttributionDetails": "Даўжыня, клас сцежкі і этапы — OpenStreetMap, © удзельнікі OpenStreetMap, ліцэнзія ODbL 1.0. Назвы, краіны і спасылкі на артыкулы — Wikidata (CC0). Набор вышыні і найвышэйшая кропка: produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Арганізацыі, якія адказваюць за праграму Copernicus паводле закона або па даручэнні, не нясуць адказнасці за выкарыстанне Copernicus WorldDEM-30. Месяцы без снегу — разлік па кліматычных нормах NASA Langley Research Center POWER Project.",
   "ask.worldLicense": "Умовы OpenStreetMap",
   "ask.worldLayer": "Слой даных (ODbL)",

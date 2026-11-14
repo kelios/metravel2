@@ -78,9 +78,9 @@ export const loadCases = (file) => {
     if (item.expect_world !== undefined) {
       const world = item.expect_world
       const numeric = ['min', 'max', 'max_km', 'min_km', 'month', 'max_days']
-      const known = [...numeric, 'country']
+      const known = [...numeric, 'country', 'title']
       const bad = !world || typeof world !== 'object' || Object.keys(world).some((key) => !known.includes(key)) || numeric.some((key) => world[key] !== undefined && !(Number.isFinite(world[key]) && world[key] >= 0))
-      if (bad || (world.month !== undefined && !(Number.isInteger(world.month) && world.month >= 1 && world.month <= 12))) throw new Error(`${item.id}: expect_world — {min, max, max_km, min_km, month 1–12, max_days, country}`)
+      if (bad || (world.month !== undefined && !(Number.isInteger(world.month) && world.month >= 1 && world.month <= 12))) throw new Error(`${item.id}: expect_world — {min, max, max_km, min_km, month 1–12, max_days, country, title}`)
     }
     seen.add(item.id)
     cases.push({ ...item, turns, expects, locale: item.locale ?? item.lang ?? 'ru', lang: item.lang ?? 'ru' })

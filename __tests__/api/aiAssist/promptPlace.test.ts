@@ -86,6 +86,21 @@ describe('aiAssist promptPlace: карточки подсказки — толь
     expect(ids(placeCards('Что посмотреть в Несвиже?', nesvizh))).toEqual(['nq', 'nz', 'nm'])
   })
 
+  it('PL (#3357): чередование «k → c» в местном падеже — «Wieliczka — w Wieliczce», «Polska — w Polsce»', () => {
+    const sources = [
+      quest('w1', 'Quest po Wieliczce: sól i święta Kinga', ['Wieliczka', 'Величка'], 'Польша'),
+      quest('k1', 'Quest po Krakowie: smok i Wawel', ['Kraków', 'Краков'], 'Польша'),
+      quest('g1', 'Quest po Grodnie', ['Grodno', 'Гродно']),
+    ]
+    expect(ids(placeCards('Jakie questy są w Wieliczce?', sources))).toEqual(['w1'])
+    const bialka = [quest('b1', 'Quest w Białce', ['Białka Tatrzańska']), ...sources]
+    expect(ids(placeCards('Co robić w Białce zimą?', bialka))).toEqual(['b1'])
+    // Название с «c» в основе само по себе чередованием не становится: «Wieliczce» — не «Wielice».
+    expect(ids(placeCards('Questy w Wielicach', sources))).toEqual(['w1', 'k1', 'g1'])
+    const byCountry = [travel('p1', 'Szlak Orlich Gniazd', 'Jura Krakowsko-Częstochowska', ['Polska']), travel('b1', 'Нарочанский край', 'озёра', ['Беларусь'])]
+    expect(ids(placeCards('Co zobaczyć w Polsce?', byCountry))).toEqual(['p1'])
+  })
+
   it('слово-омоним названием не считается: строчная буква без предлога места, короткое название — только с заглавной', () => {
     const sources = [quest('gl', 'Глубокое: вишни, барон и пять озёр', ['Глубокое']), quest('mi', 'Квест по Миру', ['Мир']), quest('gr', 'Квест по Гродно', ['Гродно'])]
     expect(placeCards('Приезжаем глубокой ночью, а заселение только с двух часов дня. Как переждать?', sources)).toBe(sources)

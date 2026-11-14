@@ -145,7 +145,13 @@ describe('блок «Ещё в мире» (#3357)', () => {
     await fireEvent.press(screen.getByTestId('assistant-world-license'))
     expect(mockOpenExternal).toHaveBeenCalledWith(OSM_COPYRIGHT_URL)
     expect(screen.queryByTestId('assistant-world-attribution-details')).toBeNull()
-    await fireEvent.press(screen.getByTestId('assistant-world-attribution-toggle'))
+    // Кнопка раскрытия объявляет своё состояние и меняет подпись.
+    const toggle = () => screen.getByTestId('assistant-world-attribution-toggle')
+    expect(toggle().props.accessibilityState).toMatchObject({ expanded: false })
+    expect(toggle().props.accessibilityLabel).toBe('Об источниках данных')
+    await fireEvent.press(toggle())
+    expect(toggle().props.accessibilityState).toMatchObject({ expanded: true })
+    expect(toggle().props.accessibilityLabel).toBe('Свернуть источники данных')
     const details = screen.getByTestId('assistant-world-attribution-details').props.children as string
     expect(details).toContain('produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved')
     expect(details).toContain('ODbL 1.0')
@@ -245,7 +251,7 @@ describe('блок «Ещё в мире»: подписи на пяти лока
   const worldKeys = Object.keys(ruKeys).filter((key) => key.startsWith('ask.world'))
 
   it('ключи блока есть на каждой локали и несут те же подстановки, что в RU', () => {
-    expect(worldKeys.length).toBeGreaterThanOrEqual(23)
+    expect(worldKeys.length).toBeGreaterThanOrEqual(24)
     const placeholders = (value: string) => (value.match(/\{\{\w+\}\}/g) ?? []).sort()
     for (const [locale, bundle] of Object.entries(bundles)) {
       for (const key of worldKeys) {

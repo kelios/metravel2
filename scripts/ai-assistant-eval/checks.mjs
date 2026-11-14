@@ -300,7 +300,10 @@ export const ownProse = (answer, linkLabels, cards) => {
  *   - `max: 0` — вопрос не о пешем маршруте: блока быть не должно (`world_unexpected`);
  *   - `min` — сколько маршрутов должно быть в блоке (`world_missing`);
  *   - `max_km`, `min_km`, `month`, `max_days`, `country` — условие вопроса: каждый маршрут блока обязан
- *     его не нарушать (`world_condition`). Сверка — по фактам карточки, тем же смыслом, что у службы:
+ *     его не нарушать (`world_condition`); `country` — шаблон страны: так проверяется и вопрос о регионе
+ *     («в Шотландии» — маршруты Великобритании);
+ *   - `title` — шаблон названия: вопрос называет сам маршрут, он обязан стоять в блоке первым
+ *     (`world_title`). Сверка — по фактам карточки, тем же смыслом, что у службы:
  *     маршрут без факта о месяцах условие не нарушает, оценочные дни нарушают его с запасом в полтора раза.
  * Блок собирает код службы, поэтому все три провала — слой подбора. Больше трёх маршрутов — тоже провал.
  */
@@ -312,6 +315,9 @@ export const checkWorld = (world, expectWorld) => {
   const max = expectWorld.max ?? MAX_RECOMMENDATIONS
   if (list.length > max) problems.push({ check: 'world_unexpected', detail: `маршрутов мира в ответе ${list.length} при допустимых ${max}: ${list.map((trail) => trail.title).join('; ')}` })
   if (list.length < (expectWorld.min ?? 0)) problems.push({ check: 'world_missing', detail: `маршрутов мира ${list.length} из ${expectWorld.min} нужных` })
+  if (expectWorld.title && list.length && !new RegExp(expectWorld.title, 'iu').test(String(list[0].title ?? ''))) {
+    problems.push({ check: 'world_title', detail: `первым стоит «${list[0].title}», а вопрос называет маршрут «${expectWorld.title}»` })
+  }
   const country = expectWorld.country ? new RegExp(expectWorld.country, 'iu') : null
   for (const trail of list) {
     const broken = []

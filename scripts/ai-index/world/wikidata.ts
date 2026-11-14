@@ -93,6 +93,26 @@ export interface TrailArticle {
   url: string
 }
 
+/**
+ * Свойства Wikidata, которыми элемент маршрута называет своё место: административная единица (P131, вверх
+ * по ней — регион и часть страны), форма рельефа (P706), горная система (P4552), «часть от» (P361) и
+ * «место» (P276). По ним «West Highland Way» находится на вопрос о Шотландии, а «GR 20» — о Корсике.
+ */
+export const PLACE_PROPS = { P131: 'admin', P706: 'terrain', P4552: 'range', P361: 'part', P276: 'location' } as const
+export type PlaceKind = (typeof PLACE_PROPS)[keyof typeof PLACE_PROPS]
+
+export interface PlaceRef {
+  qid: string
+  kind: PlaceKind
+}
+
+/** Место маршрута ниже страны: регион, остров, горная система — с названиями на языках сайта. */
+export interface TrailPlace {
+  qid: string
+  names: Partial<Record<CardLocale, string>>
+  kind: PlaceKind
+}
+
 export interface WikidataTrail {
   qid: string
   labels: Partial<Record<CardLocale, string>>
@@ -106,6 +126,8 @@ export interface WikidataTrail {
   wd_length_km?: number
   /** Статьи Википедии и Wikivoyage на всех языках. */
   articles: TrailArticle[]
+  /** Ссылки элемента на свои места (`PLACE_PROPS`) — исходные точки цепочки мест. */
+  place_refs: PlaceRef[]
 }
 
 const snakValues = (entity: RawEntity, property: string): unknown[] =>
@@ -157,7 +179,123 @@ export function parseEntity(entity: RawEntity): WikidataTrail {
     osm: [...new Set(snakValues(entity, 'P402').map((value) => Number.parseInt(String(value), 10)).filter((id) => Number.isInteger(id) && id > 0))],
     ...(length !== undefined ? { wd_length_km: length } : {}),
     articles: articlesOf(entity),
+    place_refs: placeRefsOf(entity),
   }
+}
+
+const itemIds = (entity: RawEntity, property: string): string[] => [...new Set(snakValues(entity, property).map((value) => String((value as { id?: string })?.id ?? '')).filter((id) => /^Q\d+$/.test(id)))]
+
+/** Ссылки элемента на места по всем свойствам `PLACE_PROPS`, без повторов. */
+export function placeRefsOf(entity: RawEntity): PlaceRef[] {
+  const seen = new Set<string>()
+  const out: PlaceRef[] = []
+  for (const [property, kind] of Object.entries(PLACE_PROPS) as Array<[string, PlaceKind]>) {
+    for (const qid of itemIds(entity, property)) {
+      if (seen.has(qid)) continue
+      seen.add(qid)
+      out.push({ qid, kind })
+    }
+  }
+  return out
+}
+
+/**
+ * Суверенное государство и часть света: место «ниже страны» ими не бывает, цепочка на них кончается. Класс
+ * «страна» (Q6256) сюда не входит: им помечены и Шотландия, Англия, Уэльс — как раз те места, ради которых
+ * цепочка строится; сами страны маршрутов отсекает `PlaceRules.countries`.
+ */
+const TOP_LEVEL_CLASSES = new Set(['Q3624078', 'Q5107'])
+/** Глубина цепочки мест от маршрута и предел числа мест у одного маршрута. */
+export const PLACE_MAX_DEPTH = 4
+export const PLACE_MAX_PER_TRAIL = 24
+
+/** Куда цепочка идёт дальше от места: у административной единицы — вверх по P131, у рельефа — к горной системе и целому. */
+export function parentRefsOf(entity: RawEntity, kind: PlaceKind): PlaceRef[] {
+  if (kind === 'admin' || kind === 'location') return itemIds(entity, 'P131').map((qid) => ({ qid, kind: 'admin' as const }))
+  return [...itemIds(entity, 'P4552').map((qid) => ({ qid, kind: 'range' as const })), ...itemIds(entity, 'P361').map((qid) => ({ qid, kind: 'part' as const }))]
+}
+
+export interface PlaceRules {
+  /** QID стран всех маршрутов: страна в места не идёт — она у карточки отдельным полем. */
+  countries: ReadonlySet<string>
+  /** QID, которые местом не считаются: сами маршруты перечня («часть от» у тропы — часто сеть троп). */
+  exclude: ReadonlySet<string>
+}
+
+/** Страна маршрутов, суверенное государство, часть света либо упразднённое образование (у него есть дата конца, P576). */
+const isTopLevel = (entity: RawEntity, rules: PlaceRules): boolean =>
+  rules.countries.has(entity.id) || itemIds(entity, 'P31').some((id) => TOP_LEVEL_CLASSES.has(id)) || snakValues(entity, 'P576').length > 0
+
+/**
+ * Места маршрута: от ссылок элемента вверх по цепочке не глубже `PLACE_MAX_DEPTH`, до страны. «Часть от»
+ * и «место» берутся, только когда это географический объект с координатами (сеть троп и организация их
+ * не имеют). Порядок: рельеф и горные системы, затем административные единицы — в каждой группе от
+ * крупных к мелким: первые места списка самые узнаваемые.
+ */
+export function resolvePlaces(refs: readonly PlaceRef[], entities: ReadonlyMap<string, RawEntity>, rules: PlaceRules): TrailPlace[] {
+  const seen = new Set<string>()
+  const found: Array<TrailPlace & { depth: number }> = []
+  let level: PlaceRef[] = [...refs]
+  for (let depth = 1; depth <= PLACE_MAX_DEPTH && level.length; depth += 1) {
+    const next: PlaceRef[] = []
+    for (const ref of level) {
+      if (seen.has(ref.qid)) continue
+      seen.add(ref.qid)
+      const entity = entities.get(ref.qid)
+      if (!entity || rules.exclude.has(ref.qid) || isTopLevel(entity, rules)) continue
+      if ((ref.kind === 'part' || ref.kind === 'location') && !snakValues(entity, 'P625').length) continue
+      const names: TrailPlace['names'] = {}
+      for (const locale of CARD_LOCALES) {
+        const value = entity.labels?.[locale]?.value?.trim()
+        if (value) names[locale] = value
+      }
+      if (Object.keys(names).length) found.push({ qid: ref.qid, names, kind: ref.kind, depth })
+      next.push(...parentRefsOf(entity, ref.kind))
+    }
+    level = next
+  }
+  // Крупное — первым: «Альпы» раньше «Массива Монблан», «Шотландия» раньше округа.
+  const relief = found.filter((place) => place.kind !== 'admin').sort((a, b) => b.depth - a.depth)
+  const admin = found.filter((place) => place.kind === 'admin').sort((a, b) => b.depth - a.depth)
+  return [...relief, ...admin].slice(0, PLACE_MAX_PER_TRAIL).map(({ depth: _depth, ...place }) => place)
+}
+
+export const PLACE_ENTITY_PROPS = 'labels|claims'
+
+/**
+ * Элементы мест по уровням цепочки: уровень — одна доборка пачками, следующий уровень — родители
+ * найденных. Запрашивается надмножество (правила отбора применяет `resolvePlaces`); на стране и части
+ * света цепочка не продолжается.
+ */
+export async function fetchPlaceEntities(start: readonly PlaceRef[], rules: PlaceRules, options: WikidataFetch): Promise<Map<string, RawEntity>> {
+  const all = new Map<string, RawEntity>()
+  const kinds = new Map<string, Set<PlaceKind>>()
+  const note = (ref: PlaceRef): void => {
+    const set = kinds.get(ref.qid) ?? new Set<PlaceKind>()
+    set.add(ref.kind)
+    kinds.set(ref.qid, set)
+  }
+  start.forEach(note)
+  let level = [...new Set(start.map((ref) => ref.qid))]
+  for (let depth = 1; depth <= PLACE_MAX_DEPTH && level.length; depth += 1) {
+    const fetched = await fetchEntities(level.filter((qid) => !all.has(qid)), PLACE_ENTITY_PROPS, options)
+    const next = new Set<string>()
+    for (const qid of level) {
+      const entity = fetched.get(qid) ?? all.get(qid)
+      if (!entity) continue
+      all.set(qid, entity)
+      if (rules.exclude.has(qid) || isTopLevel(entity, rules)) continue
+      for (const kind of kinds.get(qid) ?? []) {
+        for (const parent of parentRefsOf(entity, kind)) {
+          note(parent)
+          if (!all.has(parent.qid)) next.add(parent.qid)
+        }
+      }
+    }
+    options.log?.(`места Wikidata, уровень ${depth}: элементов ${level.length}, дальше ${next.size}`)
+    level = [...next]
+  }
+  return all
 }
 
 /** Элементы пачками по 50 (`wbgetentities`); сырой ответ пачки — в кэше по её первому и последнему QID. */

@@ -75,6 +75,12 @@ describe('контур оценки: маршруты мира (#3357)', () => {
     expect(checksOf([peddars, whw, tmb, camino], { min: 1 })).toEqual(['world_unexpected'])
   })
 
+  it('world_title: вопрос называет маршрут — он обязан стоять в блоке первым', () => {
+    expect(checksOf([whw, peddars], { min: 1, title: 'west highland way' })).toEqual([])
+    expect(checksOf([peddars, whw], { min: 1, title: 'west highland way' })).toEqual(['world_title'])
+    expect(checksOf([], { min: 1, title: 'west highland way' })).toEqual(['world_missing'])
+  })
+
   it('провалы блока — слой подбора; ход «материала на сайте нет» с верным блоком проходит', () => {
     const expectation = { expect: 'any_on_topic', lang: 'ru', question: 'Какой пеший маршрут до 90 км пройти в декабре?', expectWorld: { min: 1, max_km: 90, month: 12 } }
     const good = evaluateTurn(expectation, observed([peddars]))
@@ -116,9 +122,13 @@ describe('контур оценки: маршруты мира (#3357)', () => {
     expect(asked.length).toBeGreaterThanOrEqual(12)
     expect([...new Set(asked.map((item) => item.lang))].sort()).toEqual(['be', 'en', 'pl', 'ru', 'uk'])
     // У каждого вопроса о маршруте есть проверяемое условие.
-    expect(asked.every((item) => ['max_km', 'min_km', 'month', 'max_days'].some((key) => item.expect_world![key] !== undefined))).toBe(true)
+    expect(asked.every((item) => ['max_km', 'min_km', 'month', 'max_days', 'country', 'title'].some((key) => item.expect_world![key] !== undefined))).toBe(true)
     const control = world.filter((item) => item.expect_world!.max === 0)
     expect(control.length).toBeGreaterThanOrEqual(3)
+    // Приёмка 14.11.2026: регион внутри страны на трёх языках, остров с предлогом «на», название маршрута вопросом.
+    const question = (id: string) => (world.find((item) => item.id === id) as unknown as { turns: string[] }).turns[0]
+    expect(['lv130', 'lv131', 'lv132', 'lv133'].map(question)).toEqual(['Пеший маршрут в Шотландии', 'Hiking trail in Scotland', 'Szlak pieszy w Szkocji', 'Пеший маршрут на Корсике'])
+    expect(world.filter((item) => item.expect_world!.title).map((item) => item.id)).toEqual(['lv135', 'lv136'])
     // Вне группы ожидания блока нет: прежние вопросы набора не менялись.
     expect(live.filter((item) => item.group !== 'world' && item.expect_world)).toEqual([])
   })

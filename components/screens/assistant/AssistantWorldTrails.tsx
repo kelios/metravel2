@@ -163,7 +163,8 @@ function AssistantWorldTrailsComponent({ trails, styles, colors, layerUrl }: Pro
         <UIButton
           variant="ghost"
           size="sm"
-          label={i18nT(detailsOpen ? 'aiAssistStatic:ask.moreMaterialsCollapse' : 'aiAssistStatic:ask.worldAttributionMore')}
+          label={i18nT(detailsOpen ? 'aiAssistStatic:ask.worldAttributionLess' : 'aiAssistStatic:ask.worldAttributionMore')}
+          expanded={detailsOpen}
           icon={<Feather name={detailsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primaryText} />}
           onPress={toggleDetails}
           testID="assistant-world-attribution-toggle"

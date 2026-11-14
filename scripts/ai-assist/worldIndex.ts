@@ -9,7 +9,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import type { WorldCandidate } from '../../api/aiAssist/worldTrails.ts'
+import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
+import type { AiSourcePlace } from '../../api/aiAssist/types.ts'
+import { asksForWorldTrails, gazetteerPlace, namesTrail, titleKeys, type WorldCandidate } from '../../api/aiAssist/worldTrails.ts'
 import { decodeVectors, readJsonl } from '../ai-index/format.ts'
 import {
   OPEN_LAYER_FILE,
@@ -31,8 +33,10 @@ export interface WorldTrailEntry {
   open: OpenLayerRecord
   /** Строки векторов фрагментов маршрута. */
   rows: number[]
-  /** Названия, псевдонимы, описания и страны на всех языках индекса — для сверки места вопроса. */
-  names: string
+  /** Место маршрута для газеттира: слова названий мест ниже страны и стран на всех языках индекса. */
+  place: AiSourcePlace
+  /** Ключи названий и псевдонимов: по ним вопрос называет сам маршрут. */
+  titles: string[]
 }
 
 export interface WorldIndex {
@@ -48,16 +52,13 @@ export interface LoadWorldIndexOptions {
   expectedModel: string
 }
 
-const namesOf = (open: OpenLayerRecord): string =>
-  [
-    ...Object.values(open.labels),
-    open.native_title ?? '',
-    ...Object.values(open.aliases).flat(),
-    ...Object.values(open.descriptions),
-    ...open.countries.flatMap((country) => Object.values(country.names)),
-  ]
-    .filter(Boolean)
-    .join('. ')
+const placeOf = (open: OpenLayerRecord): AiSourcePlace =>
+  gazetteerPlace(
+    (open.places ?? []).flatMap((place) => Object.values(place.names)),
+    open.countries.flatMap((country) => Object.values(country.names)),
+  )
+
+const titlesOf = (open: OpenLayerRecord): string[] => titleKeys([...Object.values(open.labels), open.native_title, ...Object.values(open.aliases).flat()])
 
 export function loadWorldIndex(distDir: string, options: LoadWorldIndexOptions): WorldIndex {
   const manifestFile = path.join(distDir, WORLD_MANIFEST_FILE)
@@ -84,7 +85,7 @@ export function loadWorldIndex(distDir: string, options: LoadWorldIndexOptions):
   })
   const trails = osm.flatMap((record): WorldTrailEntry[] => {
     const own = open.get(record.source_id)
-    return own ? [{ osm: record, open: own, rows: rows.get(record.source_id) ?? [], names: namesOf(own) }] : []
+    return own ? [{ osm: record, open: own, rows: rows.get(record.source_id) ?? [], place: placeOf(own), titles: titlesOf(own) }] : []
   })
   return { manifest, trails, vectors, dim: manifest.dim }
 }
@@ -106,7 +107,13 @@ export function worldCandidates(index: WorldIndex, vector: ArrayLike<number>, lo
       for (let i = 0; i < dim; i += 1) dot += vectors[offset + i] * vector[i]
       if (dot > similarity) similarity = dot
     }
-    out.push({ card, similarity, fame: trail.open.sitelinks, names: trail.names })
+    out.push({ card, similarity, fame: trail.open.sitelinks, place: trail.place, titles: trail.titles })
   }
   return out
 }
+
+/**
+ * Вопросу нужен второй ярус: он о пешем маршруте либо дословно называет маршрут индекса («West Highland
+ * Way»). Проверка дешёвая — без векторов и карточек; кандидаты служба собирает только после неё.
+ */
+export const asksWorld = (index: WorldIndex, query: string): boolean => asksForWorldTrails(parseConditions(query)) || index.trails.some((trail) => namesTrail(query, trail.titles))

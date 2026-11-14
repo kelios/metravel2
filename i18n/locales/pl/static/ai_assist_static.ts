@@ -70,6 +70,7 @@ export const aiAssistStaticResources = {
   "ask.worldTitle": "Jeszcze na świecie",
   "ask.worldAttribution": "Szlaki spoza serwisu. Dane: © autorzy OpenStreetMap (ODbL), Wikidata, Copernicus DEM, NASA POWER. Długość, suma podejść i miesiące to obliczenia na otwartych danych: przed wyjściem sprawdź je w źródle.",
   "ask.worldAttributionMore": "O źródłach danych",
+  "ask.worldAttributionLess": "Zwiń źródła danych",
   "ask.worldAttributionDetails": "Długość, klasa szlaku i etapy — OpenStreetMap, © autorzy OpenStreetMap, licencja ODbL 1.0. Nazwy, kraje i linki do artykułów — Wikidata (CC0). Suma podejść i najwyższy punkt: produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. Organizacje odpowiedzialne za program Copernicus z mocy prawa lub z upoważnienia nie ponoszą odpowiedzialności za korzystanie z Copernicus WorldDEM-30. Miesiące bez śniegu — obliczenia na podstawie norm klimatycznych NASA Langley Research Center POWER Project.",
   "ask.worldLicense": "Warunki OpenStreetMap",
   "ask.worldLayer": "Warstwa danych (ODbL)",

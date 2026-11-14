@@ -5,8 +5,8 @@
  *   trails-osm.jsonl       — слой полей, полученных из OpenStreetMap (ODbL): длина по геометрии, набор и
  *                            высоты вдоль неё, класс тропы, этапы, дни, ступень нагрузки, месяцы. Этот файл
  *                            выкладывается под ODbL как производная база (решение H);
- *   trails-wikidata.jsonl  — слой Wikidata (CC0): названия, псевдонимы, описание, страны, адреса статей,
- *                            число вики-статей, длина P2043;
+ *   trails-wikidata.jsonl  — слой Wikidata (CC0): названия, псевдонимы, описание, страны, места ниже
+ *                            страны, адреса статей, число вики-статей, длина P2043;
  *   chunks.jsonl           — тексты для смыслового поиска, собранные ТОЛЬКО из слоя Wikidata;
  *   vectors.f16            — векторы фрагментов той же моделью, что у индекса сайта (пишет `embed`);
  *   manifest.json          — состав, отпечатки слоёв, параметры расчёта и лицензия с атрибуцией каждого
@@ -23,7 +23,7 @@ import type { AscentParams } from './elevation.ts'
 import { EFFORT_THRESHOLDS } from './effort.ts'
 import { writeJson } from './net.ts'
 import { SEASON_ALTITUDE_QUANTILE, SEASON_PARAMS, type SeasonParams } from './season.ts'
-import { CARD_LOCALES, type CardLocale } from './wikidata.ts'
+import { CARD_LOCALES, type CardLocale, type TrailPlace } from './wikidata.ts'
 
 export const WORLD_INDEX_FORMAT_VERSION = 1
 export const OSM_LAYER_FILE = 'trails-osm.jsonl'
@@ -78,6 +78,12 @@ export interface OpenLayerRecord {
   aliases: Partial<Record<CardLocale, string[]>>
   descriptions: Partial<Record<CardLocale, string>>
   countries: TrailCountry[]
+  /**
+   * Места маршрута ниже страны (#3357, приёмка): регион, остров, горная система — цепочка P131 и свойства
+   * рельефа Wikidata. По ним маршрут находится на вопрос «в Шотландии», «на Корсике», «в Альпах»; входят в
+   * текст смыслового поиска. Поля нет — у элемента места не названы.
+   */
+  places?: TrailPlace[]
   /**
    * Название статьи Википедии — заголовок карточки, когда у элемента нет названия ни на одном из пяти
    * языков сайта (немецкая тропа с названием только по-немецки).
@@ -199,10 +205,13 @@ export interface WorldChunk {
   text: string
 }
 
+/** Сколько мест маршрута идёт в текст смыслового поиска: первые в списке — самые узнаваемые. */
+export const CHUNK_PLACES = 6
+
 /**
- * Текст для смыслового поиска (решение E): название, псевдонимы и описание элемента Wikidata и названия
- * стран — на языке фрагмента, с английским запасным. Прозы и чужих абзацев нет. Один фрагмент на язык:
- * вопрос на польском находит маршрут по польскому названию.
+ * Текст для смыслового поиска (решение E): название, псевдонимы и описание элемента Wikidata, названия
+ * стран и мест маршрута — на языке фрагмента, с английским запасным. Прозы и чужих абзацев нет. Один
+ * фрагмент на язык: вопрос на польском находит маршрут по польскому названию.
  */
 export function buildWorldChunks(open: OpenLayerRecord): WorldChunk[] {
   const out: WorldChunk[] = []
@@ -213,7 +222,8 @@ export function buildWorldChunks(open: OpenLayerRecord): WorldChunk[] {
     const aliases = [...new Set([...(open.aliases[locale] ?? []), ...(open.aliases.en ?? []), open.labels.en ?? ''])].filter((alias) => alias && alias !== title)
     const description = open.descriptions[locale] ?? open.descriptions.en ?? ''
     const countries = open.countries.map((country) => country.names[locale] ?? country.names.en ?? '').filter(Boolean)
-    const text = [title, aliases.join(', '), description, countries.join(', ')].filter(Boolean).join('. ')
+    const places = [...new Set((open.places ?? []).map((place) => place.names[locale] ?? place.names.en ?? '').filter(Boolean))].slice(0, CHUNK_PLACES)
+    const text = [title, aliases.join(', '), description, countries.join(', '), places.join(', ')].filter(Boolean).join('. ')
     // Языки без своего названия дали бы пять одинаковых английских фрагментов: текст индексируется один раз.
     if (seen.has(text)) continue
     seen.add(text)

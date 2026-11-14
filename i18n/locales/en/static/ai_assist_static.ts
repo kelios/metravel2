@@ -70,6 +70,7 @@ export const aiAssistStaticResources = {
   "ask.worldTitle": "Also around the world",
   "ask.worldAttribution": "Trails outside this site. Data: © OpenStreetMap contributors (ODbL), Wikidata, Copernicus DEM, NASA POWER. Length, ascent and months are calculated from open data: check them against the source before you go.",
   "ask.worldAttributionMore": "About the data sources",
+  "ask.worldAttributionLess": "Collapse the data sources",
   "ask.worldAttributionDetails": "Length, trail grade and stages — OpenStreetMap, © OpenStreetMap contributors, ODbL 1.0 licence. Names, countries and article links — Wikidata (CC0). Ascent and highest point: produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30. Snow-free months are calculated from climate normals of the NASA Langley Research Center POWER Project.",
   "ask.worldLicense": "OpenStreetMap terms",
   "ask.worldLayer": "Data layer (ODbL)",

@@ -31,6 +31,15 @@ describe('ui/Button', () => {
     expect(btn.props.disabled).toBe(true)
   })
 
+  it('announces expanded state only when `expanded` is set', async () => {
+    const { getByRole, rerender } = await render(<Button label="Подробнее" />)
+    expect(getByRole('button').props.accessibilityState).not.toHaveProperty('expanded')
+    await rerender(<Button label="Подробнее" expanded={false} />)
+    expect(getByRole('button').props.accessibilityState?.expanded).toBe(false)
+    await rerender(<Button label="Свернуть" expanded />)
+    expect(getByRole('button').props.accessibilityState?.expanded).toBe(true)
+  })
+
   it('marks the button busy and disabled while loading', async () => {
     const { getByRole } = await render(<Button label="Отправка" loading />)
     const btn = getByRole('button')

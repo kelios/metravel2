@@ -14,7 +14,7 @@ import { type Point, resampleLine } from './geo.ts'
 import type { NetStats } from './net.ts'
 import { assembleRoute, fetchRoute, type RouteGeometry, type TaggedRelation } from './overpass.ts'
 import { altitudeQuantile, passableMonths, SEASON_ALTITUDE_QUANTILE, type SeasonSegment } from './season.ts'
-import { articleFor, CARD_LOCALES, type ClassMember, type RawEntity, type WikidataTrail } from './wikidata.ts'
+import { articleFor, CARD_LOCALES, type ClassMember, type RawEntity, type TrailPlace, type WikidataTrail } from './wikidata.ts'
 
 /**
  * Параметры набора высоты по продуктам рельефа — подобраны на эталонах 14.11.2026
@@ -72,8 +72,8 @@ export function joinList(members: readonly ClassMember[], tagged: readonly Tagge
   return out.sort((a, b) => Number(a.qid.slice(1)) - Number(b.qid.slice(1)))
 }
 
-/** Запись слоя Wikidata из разобранного элемента и названий стран. */
-export function toOpenRecord(trail: WikidataTrail, countryNames: ReadonlyMap<string, RawEntity>): OpenLayerRecord | null {
+/** Запись слоя Wikidata из разобранного элемента, названий стран и мест маршрута ниже страны. */
+export function toOpenRecord(trail: WikidataTrail, countryNames: ReadonlyMap<string, RawEntity>, places: readonly TrailPlace[] = []): OpenLayerRecord | null {
   if (!trail.articles.length) return null
   // Название статьи без уточнения в скобках: «Rennsteig (Wanderweg)» → «Rennsteig».
   const native = Object.keys(trail.labels).length ? '' : (articleFor(trail.articles, 'en')?.title ?? '').replace(/\s*\([^)]*\)\s*$/, '').trim()
@@ -98,6 +98,7 @@ export function toOpenRecord(trail: WikidataTrail, countryNames: ReadonlyMap<str
     aliases: trail.aliases,
     descriptions: trail.descriptions,
     countries,
+    ...(places.length ? { places: [...places] } : {}),
     links,
     sitelinks: trail.articles.length,
     ...(trail.wd_length_km !== undefined ? { wd_length_km: trail.wd_length_km } : {}),
