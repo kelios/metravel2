@@ -1254,7 +1254,6 @@ function validateIosRelease(root = process.cwd(), options = {}) {
     // (RCT_USE_PREBUILT_RNCORE) and carries its privacy manifest inside the xcframework.
     'React-cxxreact_privacy.bundle',
     'React-timing_privacy.bundle',
-    'RNImagePickerPrivacyInfo.bundle',
   ];
   if (privacyBundles.some(bundle => count(project, new RegExp(bundle.replace('.', '\\.'), 'g')) !== 2) ||
       count(project, /PrivacyInfo\.xcprivacy in Resources/g) !== 2) {

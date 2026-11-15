@@ -188,8 +188,9 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.devDependencies['@babel/core']).toBeDefined();
     });
 
-    it('should have metro bundler dependencies', () => {
-      expect(packageJson.dependencies['metro-react-native-babel-transformer']).toBeDefined();
+    it('should use the Expo Metro transformer', () => {
+      expect(require.resolve('@expo/metro-config/babel-transformer')).toEqual(expect.any(String));
+      expect(packageJson.dependencies['metro-react-native-babel-transformer']).toBeUndefined();
     });
   });
 

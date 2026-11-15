@@ -63,7 +63,6 @@ const ALLOWED_ROOT_FILES = new Set([
   'babel.config.js',
   'build-dev.sh',
   'build-prod.sh',
-  'build.sh',
   'eas.json',
   'entry.js',
   'eslint.config.js',

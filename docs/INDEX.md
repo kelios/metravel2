@@ -227,6 +227,8 @@ Dated snapshots — использовать только с указанным 
 
 Эти файлы не являются task source of truth:
 
+- `docs/REPOSITORY_CLEANUP_3309.md` — журнал решений второй волны чистки:
+  удалённые файлы, сохранённые потребители, перенос drafts и проверки; не backlog;
 - `docs/AGENT_WORKBOARD.md` — compatibility adapter;
 - `docs/AGENT_WORKBOARD_AUTOMATION.md` — local evidence runner notes;
 - `docs/AGENT_WORKBOARD_LOCAL.html` — legacy local viewer.

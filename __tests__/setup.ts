@@ -888,14 +888,6 @@ jest.mock('expo-web-browser', () => ({
   dismissBrowser: jest.fn(),
 }))
 
-jest.mock('expo-auth-session/providers/google', () => ({
-  useIdTokenAuthRequest: jest.fn(() => [
-    {},
-    null,
-    jest.fn(async () => ({ type: 'dismiss' })),
-  ]),
-}))
-
 jest.mock('@react-native-google-signin/google-signin', () => {
   const mockUserInfo = {
     idToken: 'mockIdToken',
