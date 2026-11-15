@@ -95,6 +95,9 @@ export function useRouteFilePreviews({
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const [routeFilePoints, setRouteFilePoints] = useState<RouteFilePointItem[]>([])
   const [isParsingRouteFiles, setIsParsingRouteFiles] = useState(false)
+  // Supported files whose previews were already resolved (#3430): until then the
+  // map block reserves one profile slot per file.
+  const [resolvedRouteFilesKey, setResolvedRouteFilesKey] = useState<string | null>(null)
   const colors = useThemedColors()
 
   const routeColorPalette = useMemo(
@@ -133,6 +136,7 @@ export function useRouteFilePreviews({
       }),
     [routeFiles]
   )
+  const supportedFilesKey = useMemo(() => supportedFiles.map((file) => file.id).join(','), [supportedFiles])
 
   useEffect(() => {
     let active = true
@@ -230,6 +234,7 @@ export function useRouteFilePreviews({
       } finally {
         if (active) {
           setIsParsingRouteFiles(false)
+          setResolvedRouteFilesKey(supportedFilesKey)
         }
       }
     }
@@ -238,7 +243,7 @@ export function useRouteFilePreviews({
     return () => {
       active = false
     }
-  }, [canRenderHeavy, routeColorPalette, shouldForceRenderMap, shouldRender, supportedFiles, travelId])
+  }, [canRenderHeavy, routeColorPalette, shouldForceRenderMap, shouldRender, supportedFiles, supportedFilesKey, travelId])
 
   const resetRoutePreviewItems = useCallback(() => {
     setRoutePreviewItems([])
@@ -260,6 +265,7 @@ export function useRouteFilePreviews({
     resetRoutePreviewItems,
     primaryRoutePreview: routePreviewItems[0]?.preview ?? null,
     hasSupportedRouteFiles: supportedFiles.length > 0,
+    pendingRouteFileCount: resolvedRouteFilesKey === supportedFilesKey ? 0 : supportedFiles.length,
     isRoutePreviewLoading: routeFilesEnabled && (isRouteFilesLoading || isRouteFilesFetching || isParsingRouteFiles),
   }
 }

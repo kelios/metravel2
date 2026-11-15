@@ -11,6 +11,7 @@ import Svg, { Circle, Line } from 'react-native-svg'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { createRouteElevationProfileStyles } from './RouteElevationProfile.styles'
 import { ChartStaticLayers } from './routeElevationProfile/ChartStaticLayers'
@@ -28,6 +29,7 @@ import {
 } from './routeElevationProfile/useRouteElevationModel'
 import { translate as i18nT } from '@/i18n'
 
+const CHART_RESERVE_STYLE = { height: CHART_HEIGHT } as const
 
 type Props = {
   title?: string
@@ -67,7 +69,13 @@ export default function RouteElevationProfile({
   const [activeSampleIndex, setActiveSampleIndex] = useState<number | null>(
     null,
   )
-  const isCompactLayout = width > 0 && width < 520
+  // #3430: the profile mounts after its GPX loads, long after hydration. Until its
+  // own layout reports a width, the viewport bounds the column: a phone draws the
+  // compact layout and the chart box from the first frame instead of growing a
+  // wide one and collapsing it a frame later (route block 692 → 1402 → 1203 px).
+  const viewportWidth = useResponsiveWidth({ clientOnly: true })
+  const layoutWidth = width > 0 ? width : viewportWidth
+  const isCompactLayout = layoutWidth > 0 && layoutWidth < 520
 
   const {
     metrics,
@@ -222,7 +230,7 @@ export default function RouteElevationProfile({
         ))}
       </View>
 
-      {metrics.hasElevation && width > 0 ? (
+      {metrics.hasElevation ? (
         <View style={styles.chartWrap}>
           <View style={styles.chartMetaRow}>
             <View
@@ -278,42 +286,46 @@ export default function RouteElevationProfile({
               ) : null}
             </View>
           ) : null}
-          <Svg width={width} height={CHART_HEIGHT}>
-            <ChartStaticLayers
-              width={width}
-              yAxisGuides={yAxisGuides}
-              areaPath={areaPath}
-              polylinePoints={polylinePoints}
-              chartAreaColor={chartAreaColor}
-              chartLineColor={chartLineColor}
-              borderLightColor={colors.borderLight}
-              infoColor={colors.info}
-              primaryDarkColor={colors.primaryDark}
-              keyPoints={keyPoints}
-            />
-            {activePoint ? (
-              <>
-                <Line
-                  x1={activePoint.x}
-                  y1={CHART_PADDING}
-                  x2={activePoint.x}
-                  y2={CHART_HEIGHT - CHART_PADDING}
-                  stroke={colors.primary}
-                  strokeWidth={1}
-                  strokeDasharray="3 3"
-                  opacity={0.45}
-                />
-                <Circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r={5}
-                  fill={colors.surface}
-                  stroke={colors.primary}
-                  strokeWidth={2}
-                />
-              </>
-            ) : null}
-          </Svg>
+          {width > 0 ? (
+            <Svg width={width} height={CHART_HEIGHT}>
+              <ChartStaticLayers
+                width={width}
+                yAxisGuides={yAxisGuides}
+                areaPath={areaPath}
+                polylinePoints={polylinePoints}
+                chartAreaColor={chartAreaColor}
+                chartLineColor={chartLineColor}
+                borderLightColor={colors.borderLight}
+                infoColor={colors.info}
+                primaryDarkColor={colors.primaryDark}
+                keyPoints={keyPoints}
+              />
+              {activePoint ? (
+                <>
+                  <Line
+                    x1={activePoint.x}
+                    y1={CHART_PADDING}
+                    x2={activePoint.x}
+                    y2={CHART_HEIGHT - CHART_PADDING}
+                    stroke={colors.primary}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                    opacity={0.45}
+                  />
+                  <Circle
+                    cx={activePoint.x}
+                    cy={activePoint.y}
+                    r={5}
+                    fill={colors.surface}
+                    stroke={colors.primary}
+                    strokeWidth={2}
+                  />
+                </>
+              ) : null}
+            </Svg>
+          ) : (
+            <View style={CHART_RESERVE_STYLE} testID="route-elevation-chart-reserve" />
+          )}
           <View style={[styles.yAxisLabels, { pointerEvents: 'none' }]}>
             {yAxisGuides.map((guide) => (
               <Text
