@@ -143,7 +143,7 @@ const skeletonStyles = StyleSheet.create({
  */
 // The map toggle is reserved only where the loaded list can show it (#2382):
 // callers pass the travel, the coordinate rule lives in one place.
-type NearTravelSkeletonProps = { travel?: NearTravelCoordinateSource }
+type NearTravelSkeletonProps = { travel?: NearTravelCoordinateSource & { id?: number | string | null } }
 
 export const NearTravelListSkeleton = memo(function NearTravelListSkeleton({ travel }: NearTravelSkeletonProps) {
   const canShowMapMode = !!travel && canShowNearTravelMapMode(getNearTravelMapOrigin(travel))
@@ -207,6 +207,9 @@ export const SidebarSectionSkeleton = ({ travel }: NearTravelSkeletonProps) => {
   const colors = useThemedColors()
   const headers = useMemo(() => createTravelDetailsSectionHeaderStyles(colors), [colors])
   const isNearMobile = width < METRICS.breakpoints.tablet
+  // То же условие, что у самой секции «Похожих» (`travelDetailsSidebarSectionModel`):
+  // без валидного id секции не будет, и каркас не должен держать под неё место.
+  const hasValidTravelId = Number.isFinite(Number(travel?.id)) && Number(travel?.id) > 0
   if (Platform.OS !== 'web') {
     return (
       <View style={skeletonStyles.sidebarContainer}>
@@ -250,7 +253,7 @@ export const SidebarSectionSkeleton = ({ travel }: NearTravelSkeletonProps) => {
           <PopularTravelListSkeleton />
         </View>
       </View>
-      {aiSimilarSkeleton && isAiSimilarEnabled() ? (
+      {aiSimilarSkeleton && isAiSimilarEnabled() && hasValidTravelId ? (
         <aiSimilarSkeleton.AiSimilarSectionSkeleton isNarrowLayout={width > 0 && isNearMobile} />
       ) : null}
     </View>

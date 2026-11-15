@@ -9,7 +9,7 @@ import { installReadOnlyTravelApi } from './readOnlyTravelApi';
 // не прошёл поздний рост (без профилей блок 692 px на проде).
 const ARTICLES = [
   { path: '/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney', id: 470, routeBlockMinPx: 2000 },
-  { path: '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg', id: 544, routeBlockMinPx: 1100 },
+  { path: '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg', id: 544, routeBlockMinPx: 900 },
 ] as const;
 // Протокол воспроизведения с прода 14.11.2026: около 1800 px/с. При шаге раз в
 // 450 мс хвост успевает разрешиться за экраном и сдвига нет.

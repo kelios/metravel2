@@ -31,9 +31,9 @@ beforeAll(() => {
   Skeleton = require('@/components/travel/NearTravelListSkeleton').SidebarSectionSkeleton
 })
 
-const render = () => {
+const render = (travel: { id?: number } = { id: 544 }) => {
   const host = document.createElement('div')
-  host.innerHTML = renderToStaticMarkup(createElement(Skeleton, { travel: { id: 544 } }))
+  host.innerHTML = renderToStaticMarkup(createElement(Skeleton, { travel }))
   return host
 }
 
@@ -50,5 +50,11 @@ describe('SidebarSectionSkeleton keeps the «Похожие» place (#3430)', ()
     mockSidebarWidth = 390
     mockSimilarEnabled = false
     expect(render().querySelector('[data-testid="travel-sidebar-similar-skeleton"]')).toBeNull()
+  })
+
+  it('reserves nothing without a valid travel id: the section itself would not mount', () => {
+    mockSidebarWidth = 390
+    mockSimilarEnabled = true
+    expect(render({}).querySelector('[data-testid="travel-sidebar-similar-skeleton"]')).toBeNull()
   })
 })
