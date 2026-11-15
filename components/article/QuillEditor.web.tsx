@@ -459,12 +459,32 @@ export const applyQuillAccessibility = (
   })
 }
 
+// #3427: the fallback alt is editor presentation, not article content. Quill
+// models `alt` as an image format, so setting it is a DOM mutation that Quill
+// reports as a `user` text-change; emitting it made merely opening an old
+// article (images without alt) write the description back to the server.
+export const serializeQuillContent = (root: HTMLElement | null | undefined): string => {
+  if (!root) return ''
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>('img'))
+  const generated = images.map(
+    (image) => generatedImageAlts.has(image) && image.getAttribute('alt') === generatedImageAlts.get(image),
+  )
+  if (!generated.includes(true)) return String(root.innerHTML ?? '')
+  const clone = root.cloneNode(true) as HTMLElement
+  const cloneImages = clone.querySelectorAll('img')
+  generated.forEach((isGenerated, index) => {
+    if (isGenerated) cloneImages[index]?.removeAttribute('alt')
+  })
+  return clone.innerHTML
+}
+
 const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any) {
   const { theme, value, onChange, placeholder, style, editorChromeAttrs } = props
   const containerRef = useRef<HTMLDivElement | null>(null)
   const quillRef = useRef<QuillInstance | null>(null)
   const [loadError, setLoadError] = useState<Error | null>(null)
   const lastHtmlRef = useRef<string>('')
+  const lastContentRef = useRef<string>('')
   const isApplyingValueRef = useRef(false)
   const onChangeRef = useRef<Props['onChange']>(onChange)
   const initialValueRef = useRef<string>(typeof value === 'string' ? value : '')
@@ -582,11 +602,14 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
           }
         }
         applyQuillAccessibility(quill, toolbarEl)
+        lastContentRef.current = serializeQuillContent(quill.root)
 
         onTextChange = (delta: unknown, _oldDelta: unknown, source: unknown) => {
           if (isApplyingValueRef.current) return
           applyQuillAccessibility(quill, toolbarEl)
-          const html = String(quill.root?.innerHTML ?? '')
+          const html = serializeQuillContent(quill.root)
+          if (html === lastContentRef.current) return
+          lastContentRef.current = html
           lastHtmlRef.current = html
           onChangeRef.current?.(html, delta, source)
         }
@@ -660,11 +683,13 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
       }
       lastHtmlRef.current = next
       applyQuillAccessibility(quill, null)
+      lastContentRef.current = serializeQuillContent(quill.root)
     } catch {
       try {
         quill.root.innerHTML = toInertHtml(next)
         lastHtmlRef.current = next
         applyQuillAccessibility(quill, null)
+        lastContentRef.current = serializeQuillContent(quill.root)
       } catch (e) {
         void e
       }

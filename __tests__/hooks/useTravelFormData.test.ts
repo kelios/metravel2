@@ -1425,6 +1425,40 @@ describe('useTravelFormData', () => {
 	  });
 
   describe('Edit flow - data initialization', () => {
+    // #3427: открытие существующей статьи без ввода не пишет на сервер.
+    it('does not save an existing travel opened without user input', async () => {
+      (fetchTravel as jest.Mock).mockResolvedValue({
+        id: 123,
+        name: 'Old Travel',
+        description: '<p>Старая статья</p><p><img src="https://metravel.by/a.jpg"></p>',
+        plus: '',
+        minus: null,
+        recommendation: '<p><b>совет</b></p>',
+        userIds: '42',
+        user: { id: 42 },
+        countries: [{ country_id: '1' }],
+        coordsMeTravel: [{ id: 1, lat: 41.7, lng: 44.8, address: 'Tbilisi', categories: [] }],
+        publish: true,
+        moderation: false,
+      });
+
+      const { result } = await renderHook(() => useTravelFormData(baseOptions), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.formData.name).toBe('Old Travel'), { timeout: 5000 });
+      expect(result.current.autosave.phase).toBe('clean');
+
+      // Дольше debounce автосейва (5 с): отложенной записи быть не должно.
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 5500));
+      });
+
+      expect(saveTravelContent).not.toHaveBeenCalled();
+      expect(saveFormData).not.toHaveBeenCalled();
+      expect(result.current.autosave.phase).toBe('clean');
+      expect(result.current.autosave.hasUnsavedChanges).toBe(false);
+    }, 15000);
+
     it('correctly initializes form data from existing travel', async () => {
       const existingTravel = {
         id: 123,
