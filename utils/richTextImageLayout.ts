@@ -24,6 +24,8 @@ import {
   editFirstStartTag,
   findFirstStartTag,
   getAttribute,
+  isImageOnlyParagraphContent,
+  isImageOnlyParagraphHtml as isSingleImageParagraph,
   removeAttribute,
   setAttribute,
   tokenizeHtml,
@@ -39,14 +41,7 @@ function expandMultiImageOnlyParagraphs(html: string): string {
     const normalizedInner = String(inner || '').trim();
     if (!normalizedInner) return full;
 
-    const withoutImagesAndBreaks = normalizedInner
-      .replace(/<img\b[^>]*>/gi, '')
-      .replace(/<br\s*\/?>/gi, '')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/\s+/g, '')
-      .trim();
-
-    if (withoutImagesAndBreaks.length > 0) return full;
+    if (!isImageOnlyParagraphContent(normalizedInner)) return full;
 
     const images = normalizedInner.match(/<img\b[^>]*>\s*(?:<br\s*\/?>\s*)*/gi) ?? [];
     if (images.length <= 1) return full;
@@ -174,10 +169,6 @@ function stripClassesFromParagraph(paragraphHtml: string, classesToStrip: string
 
 function wrapImageGroup(wrapperClassName: string, images: string[]): string {
   return `<div class="${wrapperClassName}">${images.join('')}</div>`;
-}
-
-function isSingleImageParagraph(paragraphHtml: string): boolean {
-  return /^<p[^>]*>\s*<img\b[^>]*>\s*(?:<br\s*\/?>\s*)?<\/p>$/i.test(paragraphHtml);
 }
 
 function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {

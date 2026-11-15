@@ -28,7 +28,7 @@ describe('fetchArticles', () => {
     const result = await fetchArticles(0, 10, {});
     expect(result).toEqual({ data: [{ id: 1, title: 'A' }], total: 1 });
     expect(fetchWithTimeout).toHaveBeenCalledWith(
-      expect.stringContaining('/api/articles?'),
+      expect.stringContaining('/api/articles/?'),
       expect.any(Object),
       30000,
       {},
@@ -181,7 +181,7 @@ describe('fetchArticle', () => {
     const result = await fetchArticle(5);
     expect(result).toEqual(article);
     expect(fetchWithTimeout).toHaveBeenCalledWith(
-      expect.stringContaining('/api/articles/5'),
+      expect.stringContaining('/api/articles/5/'),
       expect.any(Object),
       10000,
       {},

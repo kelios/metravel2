@@ -145,7 +145,7 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
     const discovery = useQuestDiscovery();
     const initial = discovery?.locale === locale ? discovery.quests : undefined;
 
-    const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
+    const { data, isPending, error, dataUpdatedAt } = useQuery<ApiQuestMeta[]>({
         queryKey: queryKeys.questsPreview(limit, locale),
         queryFn: ({ signal }) => fetchQuestsPreview(limit, { signal, locale }),
         enabled,
@@ -171,7 +171,9 @@ export function useQuestsPreview(limit: number, opts?: { enabled?: boolean }) {
 
     if (error) devWarn('Failed to load quests preview:', error);
 
-    return { quests, loading: enabled && isPending, failed: Boolean(error) };
+    // The timestamp-zero discovery seed omits square media. Keep its cards,
+    // but let a successful API/cache result choose their first image URL.
+    return { quests, loading: enabled && isPending, failed: Boolean(error), mediaReady: dataUpdatedAt > 0 || Boolean(error) };
 }
 
 /** Хук для загрузки полного бандла квеста по quest_id */

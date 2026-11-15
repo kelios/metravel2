@@ -38,7 +38,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const responsiveWeb = IS_WEB && discovery?.view === 'home'
   const { width, isPhone, isLargePhone } = useResponsive()
   const isMobile = !responsiveWeb && isPhoneLayout({ width, isPhone, isLargePhone })
-  const { quests: previewQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
+  const { quests: previewQuests, loading, mediaReady } = useQuestsPreview(MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
   const [scenarioHovered, setScenarioHovered] = useState(false)
 
@@ -104,6 +104,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
                 responsiveWeb={responsiveWeb}
                 quest={quest}
                 imageLoading="lazy"
+                deferLegacyCover={responsiveWeb && !mediaReady}
                 analyticsSource="home_quests"
                 analyticsContextId="home"
               />

@@ -105,7 +105,16 @@ export const buildNativeMapLayersScript = (): string => `        window.__metrav
             }).addTo(markersLayer);
           }
 
-          const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(markersLayer);
+          const markerOptions = { icon: markerIcon };
+          if (categoryName) {
+            markerOptions.title = categoryName;
+            markerOptions.alt = categoryName;
+          }
+          const marker = L.marker([lat, lng], markerOptions).addTo(markersLayer);
+          // DivIcon не использует img.alt: доступное имя задаём самому
+          // фокусируемому маркеру, из того же текста категории, что видит RN.
+          const markerElement = typeof marker.getElement === 'function' ? marker.getElement() : null;
+          if (markerElement && categoryName) markerElement.setAttribute('aria-label', categoryName);
 
           // F-46 — на native НЕ открываем Leaflet-попап: тап только отдаёт выбор
           // в RN, экран показывает нижнюю карточку места (MapPlaceBottomCard).
@@ -253,6 +262,9 @@ export const buildNativeMapLayersScript = (): string => `        window.__metrav
         // Зовётся только из канала маркеров: RN шлёт его последним (после центра,
         // маршрута и кластеров), поэтому одноразовая защёлка видит все данные.
         function __metravelPositionAfterMarkers() {
+          if (!__metravelMarkerMeta.pointsOnly && typeof window.__metravelSetPointFitBounds === 'function') {
+            window.__metravelSetPointFitBounds(null);
+          }
           if (window.__metravelRouteActive) return;
           const bounds = L.latLngBounds();
           // #1773 — границы считаем числовым проходом (без DOM), чтобы fitBounds
@@ -264,12 +276,18 @@ export const buildNativeMapLayersScript = (): string => `        window.__metrav
           for (var clusterKey in __metravelClusterEntries) {
             bounds.extend(__metravelClusterEntries[clusterKey].latLng);
           }
+          if (!bounds.isValid() && typeof window.__metravelSetPointFitBounds === 'function') {
+            window.__metravelSetPointFitBounds(null);
+          }
           if (__metravelMarkerMeta.pointsOnly) {
             // Каталог квестов (pointsOnly): рефит при СМЕНЕ набора точек — выбор
             // города меняет маркеры, карта обязана перелететь на них. Ручной пан
             // набор не меняет, поэтому карту не дёргает. Radius-режим сюда не
             // заходит и сохраняет одноразовую защёлку ниже.
             if (bounds.isValid() && __metravelPointsFitVersion !== __metravelMarkerVersion) {
+              if (typeof window.__metravelSetPointFitBounds === 'function') {
+                window.__metravelSetPointFitBounds(bounds);
+              }
               map.fitBounds(bounds, { padding: [50, 50] });
               __metravelPointsFitVersion = __metravelMarkerVersion;
               __metravelDidInitialRadiusPosition = true;

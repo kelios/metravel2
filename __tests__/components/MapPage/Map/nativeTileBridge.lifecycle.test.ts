@@ -20,6 +20,7 @@ import {
   fetchTileWithRetry,
 } from '@/components/MapPage/Map/tileFetchRetry';
 import { LEAFLET_INLINE_VERSION, LEAFLET_JS } from '@/utils/leafletInlineAsset';
+import { buildNativeMapLayersScript } from '@/components/MapPage/Map/nativeMapLayersScript';
 
 // iPhone 13 mini (модель, на которой владелец воспроизвёл серую подложку).
 const VIEWPORT_WIDTH = 375;
@@ -51,6 +52,8 @@ type BridgeWindow = typeof window & {
   __metravelSetTile?: (key: string, dataUrl: string) => void;
   __metravelGetTileStats?: () => TileStats;
   __metravelBaseTileLayer?: L.GridLayer;
+  __metravelSetPointFitBounds?: (bounds: L.LatLngBounds | null) => void;
+  __metravelRouteActive?: boolean;
 };
 
 const setViewport = (width: number, height: number) => {
@@ -221,6 +224,8 @@ describe('#1561 native base-tile lifecycle', () => {
     delete win.__metravelBaseMinZoom;
     delete win.__metravelResolveBaseMinZoom;
     delete win.__metravelBaseTileLayer;
+    delete win.__metravelSetPointFitBounds;
+    delete win.__metravelRouteActive;
   });
 
   // Мост переопределяет приватный `_removeTile` и полагается на то, что
@@ -421,6 +426,52 @@ describe('#1561 native base-tile lifecycle', () => {
     harness.resize(0, 0);
 
     expect(harness.map.getMinZoom()).toBe(minZoom);
+  });
+
+  it('fits every distant quest with real Leaflet, retains lower-zoom tiles after resize and restores the radius floor', async () => {
+    harness = mountBridge({ width: 390, height: 700 });
+    const map = harness.map;
+    const layers = [L.layerGroup(), L.layerGroup(), L.layerGroup()];
+    layers.forEach((layer) => layer.addTo(map));
+    new Function(
+      'L', 'map', 'window', 'markersLayer', 'clustersLayer', 'routeLayer', 'markerIcon',
+      'makeClusterIcon', 'disposeRoutePointClusterGroup', buildNativeMapLayersScript(),
+    )(L, map, window, ...layers, L.divIcon({ html: '' }), () => L.divIcon({ html: '' }), () => undefined);
+    const channels = window as unknown as {
+      __metravelSetMarkers: (payload: unknown) => void;
+    };
+    const locations: [number, number][] = [[40.7, -74], [41.7, 44.8], [41.3, 69.2], [35.7, 139.7]];
+    expect(map.getBoundsZoom(L.latLngBounds(locations), false, L.point(100, 100)))
+      .toBe(resolveBaseMinZoom(390, 700));
+    channels.__metravelSetMarkers({
+      replace: locations.map(([lat, lng], index) => ({ placeKey: String(index), coord: `${lat},${lng}`, categoryName: 'Квест' })),
+      pointsOnly: true,
+    });
+    expect(map.getMinZoom()).toBeLessThan(resolveBaseMinZoom(390, 700));
+    expect(locations.every((location) => map.getBounds().contains(location))).toBe(true);
+    const fittedZoom = map.getZoom();
+    expect(harness.requests.some((request) => request.z === fittedZoom)).toBe(true);
+    harness.drain();
+    expect(harness.domTiles().hidden).toBe(0);
+    expect(harness.stats().pending).toBe(0);
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    const accessibleMarkers = harness.container.querySelectorAll('.leaflet-marker-icon[role="button"][aria-label="Квест"]');
+    expect(accessibleMarkers).toHaveLength(locations.length);
+    expect(Array.from(accessibleMarkers).every((marker) => marker.tagName === 'DIV' && marker.getAttribute('title') === 'Квест')).toBe(true);
+
+    for (const [width, height] of [[700, 390], [390, 900]]) {
+      harness.resize(width, height);
+      expect({ width, height, zoom: map.getZoom(), allVisible: locations.every((location) => map.getBounds().contains(location)) })
+        .toMatchObject({ allVisible: true });
+      expect(map.getMinZoom()).toBeLessThan(resolveBaseMinZoom(width, height));
+      harness.drain();
+      expect(harness.domTiles().hidden).toBe(0);
+    }
+
+    (window as BridgeWindow).__metravelRouteActive = true;
+    channels.__metravelSetMarkers({ replace: [], pointsOnly: false, usesServerClusters: true });
+    expect(map.getMinZoom()).toBe(resolveBaseMinZoom(390, 900));
+    expect(map.getZoom()).toBeGreaterThanOrEqual(map.getMinZoom());
   });
 
   it('возврат к исходному зуму снова заполняет подложку', () => {

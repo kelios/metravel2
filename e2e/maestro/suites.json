@@ -25,6 +25,13 @@
       "checks": ["reviews close and reopen", "quest intro point count", "GPX system share"],
       "completeReviewScenes": []
     },
+    "quest-catalog-map": {
+      "platforms": ["android"],
+      "account": "guest",
+      "flows": ["quest-catalog-map.yaml"],
+      "checks": ["guest guard", "catalogue map opens without the web-only fallback", "one native Back action", "accessible marker opens a quest intro", "map closes and reopens with markers"],
+      "completeReviewScenes": []
+    },
     "recommendations": {
       "platforms": ["android"],
       "account": "seeded",

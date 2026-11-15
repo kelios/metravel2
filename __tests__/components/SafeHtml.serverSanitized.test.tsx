@@ -15,6 +15,17 @@ import { sanitizeRichText } from '@/utils/sanitizeRichText';
 const mockedSanitize = sanitizeRichText as jest.MockedFunction<typeof sanitizeRichText>;
 
 describe('SafeHtml serverSanitized canonical path (#709)', () => {
+  it.each([true, false])('canonicalizes legacy storage images through the owned proxy (server=%s)', async (serverSanitized) => {
+    const { container } = render(<SafeHtml serverSanitized={serverSanitized}
+      html={'<p><img src="https://metravelprod.s3.eu-north-1.amazonaws.com/uploads/1605622377IMG_8266.JPG" alt="Авторская подпись"></p>'} />);
+    await waitFor(() => expect(container.querySelector('img')).toBeTruthy());
+    const image = container.querySelector('img')!;
+    const source = new URL(image.getAttribute('src')!);
+    expect(source.pathname).toBe('/media-resize/uploads/1605622377IMG_8266.JPG');
+    expect(source.search).toBe('?w=800');
+    expect(source.hostname).not.toContain('amazonaws.com');
+    expect(image.getAttribute('alt')).toBe('Авторская подпись');
+  });
   beforeEach(() => {
     jest.clearAllMocks();
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });

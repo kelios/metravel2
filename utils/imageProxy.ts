@@ -248,6 +248,10 @@ export function optimizeImageUrl(
   try {
     const parsedUrl = new URL(sourceUrl, publicOrigin || 'https://placeholder.invalid');
 
+    // Exported assets are immutable files, not image-proxy endpoints. Query
+    // variants download identical bytes and split the cache on hydration.
+    if (/^\/assets\//i.test(parsedUrl.pathname)) return sourceUrl;
+
     // Local dev/E2E still serves first-party media through the configured API
     // origin, so it must exercise the same proxy parameters as production.
     // Unrelated LAN/private URLs remain untouched.

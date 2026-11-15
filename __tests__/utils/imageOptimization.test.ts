@@ -25,6 +25,14 @@ const withPlatform = (os: 'web' | 'ios' | 'android', fn: () => void) => {
 }
 
 describe('utils/imageOptimization', () => {
+  it('keeps an exported asset identical across requested slots and emits no fake resized srcset', () => {
+    const asset = 'https://metravel.by/assets/assets/images/cover_trecime.hash.webp'
+    withPlatform('web', () => {
+      expect(optimizeImageUrl(asset, { width: 320, quality: 60 })).toBe(asset)
+      expect(optimizeImageUrl(asset, { width: 960, quality: 80, fit: 'contain' })).toBe(asset)
+      expect(generateSrcSet(asset, [320, 640, 960])).toBe('')
+    })
+  })
   /**
    * Граница «готовые производные / ресайз на лету» (2026-08-09).
    *

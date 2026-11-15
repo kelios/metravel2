@@ -1,11 +1,10 @@
 import React from 'react'
-import { View } from 'react-native'
+import { View, type StyleProp, type ViewStyle } from 'react-native'
 import EmptyState from '@/components/ui/EmptyState'
 import { translate as i18nT } from '@/i18n'
-import type { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 
 type Props = {
-  styles: ReturnType<typeof getStyles>
+  styles: { root: StyleProp<ViewStyle> }
   onRetry: () => void
   /** Повтор уже идёт: кнопка показывает загрузку, а не кажется мёртвой (офлайн запрос ждёт сеть). */
   retrying?: boolean

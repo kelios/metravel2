@@ -60,10 +60,16 @@ const createHarness = () => {
     };
     return shape;
   };
-  const bounds = { points: 0, extend: () => { bounds.points += 1; return bounds; }, isValid: () => bounds.points > 0 };
+  const bounds = {
+    points: 0,
+    coordinates: [] as unknown[],
+    extend: (coordinates: unknown) => { bounds.points += 1; bounds.coordinates.push(coordinates); return bounds; },
+    isValid: () => bounds.points > 0,
+  };
   const L = {
     latLngBounds: () => {
       bounds.points = 0;
+      bounds.coordinates = [];
       return bounds;
     },
     marker: (coordinates: unknown) => makeShape(coordinates),
@@ -206,5 +212,22 @@ describe('#2453 nativeMapLayersScript — keyed channels', () => {
     h.channels.__metravelRenderPoints({ points: [], clusters: [], mode: 'radius' });
     h.drainFrames();
     expect(h.invalidate).not.toHaveBeenCalled();
+  });
+
+  it('fits the complete quest dataset without swapping distant coordinates and refits only after a dataset change', () => {
+    const h = createHarness();
+    h.channels.__metravelSetMarkers({
+      add: [point('tbilisi', '41.7,44.8'), point('new-york', '40.7,-74')],
+      removeKeys: [], reset: true, pointsOnly: true,
+    });
+    expect(h.fitBounds).toHaveBeenCalledTimes(1);
+    expect(h.fitBounds.mock.calls[0][0].coordinates).toEqual([[41.7, 44.8], [40.7, -74]]);
+    h.channels.__metravelSetMarkers({ add: [], removeKeys: [], pointsOnly: true });
+    expect(h.fitBounds).toHaveBeenCalledTimes(1);
+    h.channels.__metravelSetMarkers({ add: [point('tashkent', '41.3,69.2')], removeKeys: [], pointsOnly: true });
+    expect(h.fitBounds).toHaveBeenCalledTimes(2);
+    expect(h.fitBounds.mock.calls[1][0].coordinates).toEqual([[41.7, 44.8], [40.7, -74], [41.3, 69.2]]);
+    h.drainFrames();
+    expect(h.markersLayer.added).toHaveLength(3);
   });
 });

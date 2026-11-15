@@ -38,6 +38,17 @@ jest.mock('@/components/ui/richMediaViewport', () => ({
 }))
 
 describe('QuestForCityCard', () => {
+  it('never starts a legacy snapshot image before switching to the API square source', async () => {
+    const quest = { id: 'test', cityId: '4', title: 'Quest', lat: 53, lng: 27,
+      cover: 'https://metravel.by/quest-cover/quests/4/main/cover.webp' };
+    const { rerender } = await render(<QuestForCityCard quest={quest} deferLegacyCover />);
+    expect(mockImageCardMedia.mock.calls.at(-1)?.[0].source).toBeNull();
+    const square = { src: `${quest.cover}?surface=square&w=320`,
+      srcSet: `${quest.cover}?surface=square&w=160 160w, ${quest.cover}?surface=square&w=320 320w` };
+    await rerender(<QuestForCityCard quest={{ ...quest, squareCoverWebResponsiveSource: square }} />);
+    expect(mockImageCardMedia.mock.calls.at(-1)?.[0].source).toEqual({ uri: square.src });
+    expect(mockImageCardMedia.mock.calls.every(([props]) => props.source?.uri !== quest.cover)).toBe(true);
+  });
   beforeEach(() => {
     jest.clearAllMocks()
     mockImageCardMedia.mockClear()

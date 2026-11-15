@@ -20,6 +20,13 @@ export const ARTICLE_BODY_SIZES = ARTICLE_BODY_SLOTS.map(({ maxViewport, cssSize
   Number.isFinite(maxViewport) ? `(max-width: ${maxViewport}px) ${cssSize}` : cssSize,
 ).join(', ')
 
+// The authored photo wraps a 720px narrative column at 45% on desktop.
+// Mobile removes the float; wide photographs keep ARTICLE_BODY_SIZES.
+export const articleBodySizesForClasses = (classes = '', inImageParagraphRun = false): string =>
+  !inImageParagraphRun && /(?:^|\s)img-float-(?:left|right)(?:\s|$)/.test(classes)
+    ? '(max-width: 768px) 100vw, 324px'
+    : ARTICLE_BODY_SIZES
+
 /**
  * Вьюпорт мобильного слота. Ширина 0 — это SSR: там вьюпорт неизвестен, и набор
  * остаётся десктопным (разметка уезжает в браузер, который выберет ступень сам).

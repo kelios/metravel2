@@ -29,6 +29,82 @@ export type HtmlToken =
 
 export type HtmlStartTag = Extract<HtmlToken, { kind: 'start' }>
 
+export const HTML_VOID_ELEMENTS: ReadonlySet<string> = new Set([
+  'area', 'base', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source',
+  'track', 'wbr',
+])
+
+export const isImageOnlyParagraphHtml = (html: string): boolean =>
+  /^<p[^>]*>\s*<img\b[^>]*>\s*(?:<br\s*\/?>\s*)?<\/p>$/i.test(html)
+
+export const isImageOnlyParagraphContent = (html: string): boolean =>
+  !html.replace(/<img\b[^>]*>|<br\s*\/?>|&nbsp;|\s/gi, '')
+
+export type HtmlImageContext = { ancestorClasses: string; inImageParagraphRun: boolean }
+
+const imageParagraphRun = (html: string, tokens: readonly HtmlToken[], index: number): boolean => {
+  const skip = (from: number, step: number, insideParagraph = false): number => {
+    let cursor = from
+    while (tokens[cursor]?.kind === 'text') {
+      const text = html.slice(tokens[cursor].start, tokens[cursor].end)
+      if ((insideParagraph ? text.replace(/&nbsp;/gi, ' ') : text).trim()) break
+      cursor += step
+    }
+    return cursor
+  }
+  const isTag = (at: number, kind: 'start' | 'end', name: string): boolean => {
+    const token = tokens[at]
+    return token?.kind === kind && token.name === name
+  }
+  const imageEdge = (from: number, step: 1 | -1): number => {
+    let at = skip(from, step, true)
+    while (isTag(at, 'start', 'img') || isTag(at, 'start', 'br')) at = skip(at + step, step, true)
+    return at
+  }
+  const imageCount = (start: number, end: number): number => {
+    if (!isTag(start, 'start', 'p') || !isTag(end, 'end', 'p')) return 0
+    const markup = html.slice(tokens[start].start, tokens[end].end)
+    if (isImageOnlyParagraphHtml(markup)) return 1
+    // The full renderer splits image-only paragraphs before grouping them.
+    const images = markup.match(/<img\b[^>]*>/gi) ?? []
+    return images.length > 1 && isImageOnlyParagraphContent(html.slice(tokens[start].end, tokens[end].start))
+      ? images.length : 0
+  }
+  const start = imageEdge(index - 1, -1)
+  const end = imageEdge(index + 1, 1)
+  const count = imageCount(start, end)
+  if (!count) return false
+  if (count > 1) return true
+  const neighbour = (from: number, step: 1 | -1): boolean => {
+    const edge = skip(from, step)
+    if (!isTag(edge, step === 1 ? 'start' : 'end', 'p')) return false
+    const other = imageEdge(edge + step, step)
+    return imageCount(Math.min(edge, other), Math.max(edge, other)) > 0
+  }
+  return neighbour(start - 1, -1) || neighbour(end + 1, 1)
+}
+
+/** Parsed image context; consecutive image-only paragraphs form a group, not a float. */
+export const createImageContext = (html: string, tokens: readonly HtmlToken[]) => {
+  const parents: { name: string; classes: string }[] = []
+  return (token: HtmlToken, index: number): HtmlImageContext | undefined => {
+    if (token.kind === 'end') {
+      let last = parents.length - 1
+      while (last >= 0 && parents[last].name !== token.name) last -= 1
+      if (last >= 0) parents.length = last
+    }
+    if (token.kind !== 'start') return undefined
+    if (token.name === 'img') return {
+      ancestorClasses: parents.at(-1)?.classes ?? '',
+      inImageParagraphRun: imageParagraphRun(html, tokens, index),
+    }
+    if (!token.selfClosing && !HTML_VOID_ELEMENTS.has(token.name)) {
+      parents.push({ name: token.name, classes: `${parents.at(-1)?.classes ?? ''} ${getAttribute(token.attrs, 'class') ?? ''}` })
+    }
+    return undefined
+  }
+}
+
 // Элементы, содержимое которых браузер читает как текст до `</имя`.
 const RAW_TEXT_ELEMENTS = new Set([
   'script', 'style', 'xmp', 'iframe', 'noembed', 'noframes', 'noscript', 'textarea', 'title',
@@ -264,7 +340,7 @@ export const removeAttribute = (attrs: HtmlAttribute[], name: string): void => {
   if (index !== -1) attrs.splice(index, 1)
 }
 
-export type StartTagEditor = (tag: HtmlStartTag, html: string) => void | false
+export type StartTagEditor = (tag: HtmlStartTag, html: string, imageContext?: HtmlImageContext) => void | false
 
 /**
  * Переписывает открывающие теги с именами из `tagNames` (`null` — любые) по
@@ -275,17 +351,21 @@ export function rewriteStartTags(
   html: string,
   tagNames: readonly string[] | null,
   edit: StartTagEditor,
-  options?: { limit?: number },
+  options?: { limit?: number; imageContext?: boolean },
 ): string {
   if (!html) return html
   const names = tagNames && new Set(tagNames)
   let out = ''
   let cursor = 0
   let edited = 0
-  for (const token of tokenizeHtml(html)) {
+  const tokens = tokenizeHtml(html)
+  const context = options?.imageContext ? createImageContext(html, tokens) : null
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]
+    const imageContext = context?.(token, index)
     if (token.kind !== 'start' || (names && !names.has(token.name))) continue
     if (options?.limit !== undefined && edited >= options.limit) break
-    if (edit(token, html) === false) continue
+    if (edit(token, html, imageContext) === false) continue
     out += html.slice(cursor, token.start) + serializeStartTag(token.name, token.attrs)
     cursor = token.end
     edited += 1

@@ -1,8 +1,11 @@
 import {
   escapeHtmlText,
+  createImageContext,
+  HTML_VOID_ELEMENTS as VOID_ELEMENTS,
   serializeStartTag,
   tokenizeHtml,
   type HtmlAttribute,
+  type HtmlImageContext,
 } from '@/utils/htmlTokens'
 import {
   serializeDeferredImage,
@@ -38,10 +41,6 @@ const DROP_WITH_CONTENT = new Set([
 const RAW_TEXT_DROPPED = new Set(['script', 'style', 'xmp', 'noembed', 'noframes', 'noscript', 'textarea', 'title', 'plaintext'])
 // Сам тег не нужен, содержимое остаётся.
 const DROP_TAG_ONLY = new Set(['html', 'head', 'body'])
-const VOID_ELEMENTS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source',
-  'track', 'wbr',
-])
 const VALID_TAG_NAME_RE = /^[a-z][a-z0-9-]*$/
 const VALID_ATTRIBUTE_NAME_RE = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/
 const URL_ATTRIBUTES = new Set([
@@ -169,9 +168,10 @@ const toAttributeValue = (value: string): string => value.replace(/&/g, '&amp;')
 const withOwnImageSources = (
   attrs: HtmlAttribute[],
   resolve: DeferredImageSourcesResolver | null,
+  context?: HtmlImageContext,
 ): { attrs: HtmlAttribute[]; mobileSrcset: string | null } => {
   const src = resolve ? attrs.find((attr) => attr.name === 'src')?.value : null
-  const own = src && resolve ? resolve(src) : null
+  const own = src && resolve ? resolve(src, context) : null
   if (!own) return { attrs, mobileSrcset: null }
   const sources: HtmlAttribute[] = [{ name: 'src', value: toAttributeValue(own.src) }]
   if (own.srcSet) {
@@ -197,8 +197,11 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
   const ownImages = typeof options?.deferImages === 'object' ? options.deferImages : null
   const resolveSources = ownImages?.sources ?? null
   const reserveImage = ownImages?.reserve ?? null
+  const tokens = tokenizeHtml(source)
+  const imageContext = resolveSources ? createImageContext(source, tokens) : null
 
-  for (const token of tokenizeHtml(source)) {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]
     if (dropName !== null) {
       if (token.kind === 'start' && token.name === dropName && !token.selfClosing) dropDepth += 1
       else if (token.kind === 'end' && token.name === dropName) dropDepth -= 1
@@ -220,13 +223,14 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
           break
         }
         if (!VALID_TAG_NAME_RE.test(name) || DROP_TAG_ONLY.has(name)) break
+        const context = imageContext?.(token, index)
         const attrs = sanitizeAttributes(name, name === 'img' && reserveImage ? reserveImage(token.attrs) : token.attrs)
         if (name === 'iframe') {
           if (isAllowedIframe(attrs)) out += `${serializeStartTag(name, attrs)}</iframe>`
           break
         }
         if (name === 'img' && deferImages) {
-          const own = withOwnImageSources(attrs, resolveSources)
+          const own = withOwnImageSources(attrs, resolveSources, context)
           out += serializeDeferredImage(own.attrs, own.mobileSrcset)
         } else {
           out += serializeStartTag(name, attrs)
@@ -234,6 +238,7 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
         break
       }
       case 'end':
+        imageContext?.(token, index)
         // `</iframe>` уже выведен вместе с открывающим тегом.
         if (token.closesRawText || token.name === 'iframe') break
         if (DROP_WITH_CONTENT.has(token.name) || DROP_TAG_ONLY.has(token.name)) break

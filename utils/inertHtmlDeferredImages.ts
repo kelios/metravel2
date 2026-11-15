@@ -16,7 +16,7 @@
  * `utils/richTextDeferredImages.ts`.
  */
 
-import { getAttribute, serializeStartTag, type HtmlAttribute } from '@/utils/htmlTokens'
+import { getAttribute, serializeStartTag, type HtmlAttribute, type HtmlImageContext } from '@/utils/htmlTokens'
 
 /**
  * Живой атрибут → отложенный. Порядок выдачи: `sizes`, `srcset`, затем `src` —
@@ -49,7 +49,7 @@ export const DEFERRED_MOBILE_SRCSET_ATTRIBUTE = 'data-deferred-srcset-mobile'
  * `mobileSrcSet: null` — мобильный набор совпал с десктопным.
  */
 export type DeferredImageSources = { src: string; srcSet: string; sizes: string; mobileSrcSet: string | null }
-export type DeferredImageSourcesResolver = (src: string) => DeferredImageSources | null
+export type DeferredImageSourcesResolver = (src: string, context?: HtmlImageContext) => DeferredImageSources | null
 
 /**
  * #3414: резерв места картинки — `width`/`height` и `aspect-ratio` по атрибутам

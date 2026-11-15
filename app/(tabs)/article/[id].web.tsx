@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   ActivityIndicator,
   StyleSheet,
@@ -6,13 +7,13 @@ import {
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
 import ArticleActivationCtaSection from '@/components/article/ArticleActivationCtaSection'
 import ArticleNextStepSection from '@/components/article/ArticleNextStepSection'
 import ArticleAuthorBanner from '@/components/article/ArticleAuthorBanner'
 import OfflineSaveControl from '@/components/offline/OfflineSaveControl'
-import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
+import { extractArticleIdFromParam } from '@/api/articles'
+import { articleQueryOptions } from '@/api/articleQueries'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -50,9 +51,12 @@ export default function ArticleDetails() {
     return normalizedSlug
   }, [numericId, normalizedSlug])
 
-  const [article, setArticle] = useState<Article | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const articleQuery = useQuery(articleQueryOptions(normalizedSlug || null))
+  const article = articleQuery.data ?? null
+  const isLoading = Boolean(normalizedSlug) && articleQuery.isPending
+  const errorMessage = articleQuery.error
+    ? articleQuery.error.message || i18nT('sharedStatic:article.loadFailed')
+    : null
   const articlePath = useMemo(() => {
     if (article?.slug) return `/article/${article.slug}`
     if (routeKey) return `/article/${routeKey}`
@@ -64,55 +68,6 @@ export default function ArticleDetails() {
     contentType: 'article',
     contentId: article?.id ?? routeKey,
   })
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = async () => {
-      setIsLoading(true)
-      setErrorMessage(null)
-      setArticle(null)
-
-      try {
-        let loadedArticle: Article | null = null
-
-        if (numericId) {
-          try {
-            loadedArticle = await fetchArticle(numericId, { throwOnError: true })
-          } catch (primaryError) {
-            if (normalizedSlug && normalizedSlug !== String(numericId)) {
-              loadedArticle = await fetchArticleBySlug(normalizedSlug, { throwOnError: true })
-            } else {
-              throw primaryError
-            }
-          }
-        } else if (normalizedSlug) {
-          loadedArticle = await fetchArticleBySlug(normalizedSlug, { throwOnError: true })
-        }
-
-        if (!loadedArticle?.id) {
-          throw new Error(i18nT('shared:app.tabs.article.id.statya_ne_naydena_697a610d'))
-        }
-
-        if (!cancelled) {
-          setArticle(loadedArticle)
-        }
-      } catch (error: any) {
-        if (!cancelled) {
-          setErrorMessage(error?.message || i18nT('sharedStatic:article.loadFailed'))
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [numericId, normalizedSlug])
 
   useEffect(() => {
     if (!article || !articlePath) return

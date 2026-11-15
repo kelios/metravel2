@@ -3,10 +3,10 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { hashKey, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Article, Travel } from '@/types/types';
+import type { Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { COLLECTION_PATHS, hasListFilterQuery, needsGlobalBackAffordance } from '@/components/layout/topLevelSections';
-import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles';
+import { articleQueryOptions } from '@/api/articleQueries';
 import { consumePreloadedTravel } from '@/hooks/useTravelDetails';
 // #1552: крошки живут в шапке КАЖДОГО маршрута, поэтому статический импорт
 // их route-специфичных фетчеров держал в стартовом графе всего сайта слои
@@ -375,23 +375,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length >= 2 ? normalizeSlugPart(parts[1]) : null;
   }, [resolvedPathname]);
 
-  const articleIdForBreadcrumb = useMemo(
-    () => (articleParamForBreadcrumb ? extractArticleIdFromParam(articleParamForBreadcrumb) : null),
-    [articleParamForBreadcrumb],
-  );
-
-  const { data: articleData } = useQuery<Article | null>({
-    queryKey: queryKeys.article(articleIdForBreadcrumb ?? articleParamForBreadcrumb ?? undefined),
-    queryFn: ({ signal }) => {
-      if (!articleParamForBreadcrumb) return null;
-      return articleIdForBreadcrumb
-        ? fetchArticle(articleIdForBreadcrumb, { signal })
-        : fetchArticleBySlug(articleParamForBreadcrumb, { signal });
-    },
-    enabled: !!articleParamForBreadcrumb,
-    staleTime: 600_000,
-    gcTime: 10 * 60 * 1000,
-  });
+  const { data: articleData } = useQuery(articleQueryOptions(articleParamForBreadcrumb));
   const articleTitle = articleData?.name ? truncateLabel(String(articleData.name)) : '';
 
   // User profile name (for breadcrumbs on /user/[id] pages)

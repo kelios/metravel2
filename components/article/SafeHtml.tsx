@@ -9,7 +9,10 @@ import { getInstagramCardStyles, replaceInstagramEmbedsWithCards } from '@/utils
 import { normalizeRichTextListFragments } from '@/utils/richTextLists';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { guardServerSafeHtml } from '@/utils/serverSafeHtml';
-import { getAttribute, rewriteStartTags } from '@/utils/htmlTokens';
+import { getAttribute, rewriteStartTags, setAttribute } from '@/utils/htmlTokens';
+import { optimizeImageUrl } from '@/utils/imageProxy';
+import { LEGACY_UPLOAD_FIXED_WIDTH } from '@/constants/imageContract';
+import { toLegacyResizePath } from '@/utils/mediaUrl';
 import { inertMarkup, toInertHtml } from '@/utils/inertHtml';
 import { getQuillRichTextStyles } from '@/utils/quillRichText';
 
@@ -38,6 +41,13 @@ export const addFallbackImageAlt = (html: string, imageAlt: string) => {
     });
 };
 
+const prepareWebImages = (html: string) => rewriteStartTags(html, ['img'], ({ attrs }) => {
+    const src = getAttribute(attrs, 'src');
+    if (!src || !toLegacyResizePath(src)) return;
+    const optimized = optimizeImageUrl(src, { width: LEGACY_UPLOAD_FIXED_WIDTH });
+    if (optimized) setAttribute(attrs, 'src', escapeHtmlAttribute(optimized));
+});
+
 /**
  * Компонент для безопасного рендеринга HTML контента
  * Автоматически санитизирует HTML для защиты от XSS
@@ -55,7 +65,8 @@ export function SafeHtml({ html, serverSanitized = false, style, className, test
                 sanitizeRichText(replaceInstagramEmbedsWithCards(normalizeArticleEditorHtmlForInput(html)))
             );
         // #3202: рубеж — последний шаг перед стоком.
-        return toInertHtml(imageAlt !== undefined ? addFallbackImageAlt(safeHtml, imageAlt) : safeHtml);
+        const withAlt = imageAlt !== undefined ? addFallbackImageAlt(safeHtml, imageAlt) : safeHtml;
+        return toInertHtml(Platform.OS === 'web' ? prepareWebImages(withAlt) : withAlt);
     }, [html, trimmed, serverSanitized, imageAlt]);
     const richTextStyles = useMemo(
         () => `

@@ -82,7 +82,6 @@ export default function PlaceRequestCard({
           width="100%"
           fit="contain"
           blurBackground
-          optimizeWeb={false}
         />
         <View
           style={[styles.badge, { backgroundColor: colors.surface, borderColor: colors.border }]}

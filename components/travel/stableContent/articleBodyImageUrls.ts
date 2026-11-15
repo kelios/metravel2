@@ -12,6 +12,7 @@ import {
 } from '@/components/travel/stableContent/articleBodyMedia'
 import {
   ARTICLE_BODY_SIZES,
+  articleBodySizesForClasses,
   isArticleBodyMobileViewport,
 } from '@/components/travel/stableContent/articleBodySlots'
 import {
@@ -33,6 +34,7 @@ import { reserveRichTextIslandImage } from '@/utils/richTextImageReserve'
 import { pickWidthCandidate } from '@/utils/travelMediaVariants'
 import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 import { isMetravelMediaHostname } from '@/utils/webResourceHints'
+import type { HtmlImageContext } from '@/utils/htmlTokens'
 
 const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
 
@@ -379,11 +381,13 @@ export const buildArticleBodyResponsiveImage = (
 export const buildArticleBodyIslandImageSources = (
   src: string,
   media: ArticleBodyMediaIndex | null,
+  context?: HtmlImageContext,
 ): DeferredImageSources | null => {
   const desktop = buildArticleBodyResponsiveImage(src, media, RESPONSIVE_WIDTHS_DESKTOP)
   if (!desktop) return null
   const mobileSrcSet = buildArticleBodyResponsiveImage(src, media, RESPONSIVE_WIDTHS_MOBILE)?.srcSet ?? ''
-  return { ...desktop, mobileSrcSet: mobileSrcSet === desktop.srcSet ? null : mobileSrcSet }
+  return { ...desktop, sizes: desktop.srcSet ? articleBodySizesForClasses(context?.ancestorClasses, context?.inImageParagraphRun) : '',
+    mobileSrcSet: mobileSrcSet === desktop.srcSet ? null : mobileSrcSet }
 }
 
 /**
@@ -393,6 +397,6 @@ export const buildArticleBodyIslandImageSources = (
 export const articleBodyIslandDeferredImages = (
   media: ArticleBodyMediaIndex | null,
 ): { sources: DeferredImageSourcesResolver; reserve: DeferredImageReserve } => ({
-  sources: (src) => buildArticleBodyIslandImageSources(src, media),
+  sources: (src, context) => buildArticleBodyIslandImageSources(src, media, context),
   reserve: reserveRichTextIslandImage,
 })

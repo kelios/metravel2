@@ -55,6 +55,8 @@ type Props = {
   /** Надзаголовок над названием квеста */
   eyebrow?: string
   imageLoading?: 'lazy' | 'eager'
+  /** A discovery snapshot has no square manifest; wait for its API media. */
+  deferLegacyCover?: boolean
   style?: any
   analyticsSource?: string
   analyticsContextId?: string | number | null
@@ -82,6 +84,7 @@ export function QuestForCityCard({
   // далеко ниже вьюпорта. Ленивая загрузка — правильный дефолт для рельса;
   // eager остаётся осознанным выбором вызывающего.
   imageLoading = 'lazy',
+  deferLegacyCover = false,
   style,
   analyticsSource = 'quest_card',
   analyticsContextId,
@@ -171,7 +174,7 @@ export function QuestForCityCard({
     })
 
   const cityLabel = quest.cityName ? i18nT('quests:components.quests.QuestForCityCard.po_gorodu_value1_2e44f93b', { value1: quest.cityName }) : i18nT('quests:components.quests.QuestForCityCard.po_etomu_gorodu_57c3bf25')
-  const legacyCoverUri = typeof quest.cover === 'string' ? quest.cover.trim() : ''
+  const legacyCoverUri = !deferLegacyCover && typeof quest.cover === 'string' ? quest.cover.trim() : ''
   const squareSource = quest.squareCoverWebResponsiveSource
   const squareCoverUri = typeof squareSource?.src === 'string' ? squareSource.src.trim() : ''
   const coverUri = squareCoverUri || legacyCoverUri

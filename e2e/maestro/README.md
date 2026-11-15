@@ -60,6 +60,7 @@ add `--dev-client` deliberately; Android also needs an already configured
 |---|---|---|
 | `guest-smoke` | Android, iOS simulator | Guest; login and registration consent hint disappears after checking, returns after unchecking |
 | `quest-regression` | Android | Guest; review modal load/close/reopen/close, intro point count, GPX share for the specified quest |
+| `quest-catalog-map` | Android | Guest; catalogue map markers, one Back action, marker-to-quest intro, close and reopen; at least one public quest with coordinates on the selected API |
 | `recommendations` | Android | Seeded signed-in test account with favorites/history; both shelf headings visible |
 
 Selectors currently require RU. Production data ordering is not a fixture:

@@ -34,6 +34,23 @@ beforeEach(() => {
 });
 afterEach(() => client.clear());
 
+it('defers snapshot-only media until the API provides the square-cover manifest', async () => {
+  let release!: (rows: ApiQuestMeta[]) => void;
+  mockFetchPreview.mockReturnValue(new Promise<ApiQuestMeta[]>((resolve) => { release = resolve; }));
+  const { result } = await renderHook(() => useQuestsPreview(6), { wrapper: wrapper(discovery('home')) });
+  expect(result.current.mediaReady).toBe(false);
+  expect(result.current.quests).toHaveLength(1);
+  await act(async () => release([seed]));
+  await waitFor(() => expect(result.current.mediaReady).toBe(true));
+});
+
+it('uses fresh catalog cache media immediately without waiting for a redundant preview fetch', async () => {
+  client.setQueryData(queryKeys.questsCatalog('ru'), [seed]);
+  const { result } = await renderHook(() => useQuestsPreview(6), { wrapper: wrapper(discovery('home')) });
+  expect(result.current.mediaReady).toBe(true);
+  expect(mockFetchPreview).not.toHaveBeenCalled();
+});
+
 it('shows guest-safe SSR data immediately and waits for normal credentials before replacing personal state', async () => {
   let release: () => void = () => {};
   mockCredentials.mockReturnValue(new Promise<void>((resolve) => { release = resolve; }));

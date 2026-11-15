@@ -29,6 +29,7 @@ import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/b
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { getQuestCatalogMapHeight } from '@/screens/tabs/QuestsStyleMetrics';
+import QuestLandingLoadError from '@/components/quests/QuestLandingLoadError';
 
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
@@ -87,7 +88,7 @@ export default function QuestsMapScreen() {
     const insets = useSafeAreaInsets();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { quests, loading: questsLoading } = useQuestsList();
+    const { quests, loading: questsLoading, failed, refetch, refetching } = useQuestsList({ trackRefetching: true });
 
     const isWeb = Platform.OS === 'web';
 
@@ -177,14 +178,45 @@ export default function QuestsMapScreen() {
         />
     ) : null;
 
-    if (!isWeb && !questsLoading && travel.data.length > 0) {
+    const status = questsLoading || travel.data.length === 0 ? (
+        failed && !questsLoading ? (
+            <QuestLandingLoadError styles={{ root: styles.fallback }} onRetry={refetch} retrying={refetching} />
+        ) : (
+            <View style={styles.fallback}>
+                {questsLoading ? (
+                    <ActivityIndicator
+                        color={colors.primaryDark}
+                        accessibilityLabel={i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}
+                    />
+                ) : <Feather name="map" size={48} color={colors.textMuted} />}
+                <Text style={styles.fallbackText}>
+                    {questsLoading
+                        ? i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')
+                        : i18nT('quests:app.tabs.quests.map.net_kvestov_s_koordinatami_dlya_otobrazheniy_6ec1ec92')}
+                </Text>
+                {!questsLoading && isWeb ? (
+                    <Pressable onPress={handleBack} style={styles.backBtn}>
+                        <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
+                        <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.k_spisku_kvestov_e40d397b')}</Text>
+                    </Pressable>
+                ) : null}
+            </View>
+        )
+    ) : null;
+
+    if (status) {
+        return isWeb ? <QuestMapWebFrame>{seoBlock}{status}</QuestMapWebFrame> : status;
+    }
+
+    if (!isWeb) {
         return (
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1 }} testID="quest-map-native">
                 <Map
                     travel={travel}
                     coordinates={questsCenter}
                     mode="radius"
-                    radius="2000"
+                    pointsOnly
+                    showRadiusCircle={false}
                     routePoints={[]}
                     transportMode="foot"
                     onMapClick={() => {}}
@@ -199,58 +231,7 @@ export default function QuestsMapScreen() {
                     setRouteDistance={() => {}}
                     setFullRouteCoords={() => {}}
                 />
-                <Pressable
-                    onPress={handleBack}
-                    style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT('quests:app.tabs.quests.map.nazad_855672ef')}
-                >
-                    <Feather name="arrow-left" size={18} color={colors.text} />
-                </Pressable>
             </View>
-        );
-    }
-
-    if (!isWeb) {
-        return (
-            <View style={styles.fallback}>
-                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.karta_dostupna_v_veb_versii_85f3b9c2')}</Text>
-                <Pressable onPress={handleBack} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.nazad_855672ef')}</Text>
-                </Pressable>
-            </View>
-        );
-    }
-
-    if (questsLoading) {
-        return (
-          <QuestMapWebFrame>
-            <View style={styles.fallback}>
-                {seoBlock}
-                <ActivityIndicator
-                    color={colors.primaryDark}
-                    accessibilityLabel={i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}
-                />
-                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}</Text>
-            </View>
-          </QuestMapWebFrame>
-        );
-    }
-
-    if (travel.data.length === 0) {
-        return (
-          <QuestMapWebFrame>
-            <View style={styles.fallback}>
-                {seoBlock}
-                <Feather name="map" size={48} color={colors.textMuted} />
-                <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.net_kvestov_s_koordinatami_dlya_otobrazheniy_6ec1ec92')}</Text>
-                <Pressable onPress={handleBack} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.k_spisku_kvestov_e40d397b')}</Text>
-                </Pressable>
-            </View>
-          </QuestMapWebFrame>
         );
     }
 

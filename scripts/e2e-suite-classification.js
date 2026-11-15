@@ -22,6 +22,7 @@ const LIVE_CONTRACT_SPECS = [
 ]
 
 const PRODUCTION_SMOKE_SPECS = [
+  'media-resource-production-smoke.spec.ts',
   'google-signin.spec.ts',
   // #2094: thin companion over the shared e2e/helpers/mobileScreenBudget.ts —
   // only the public screens (`SCREENS[].isPublic`). The full 13-screen

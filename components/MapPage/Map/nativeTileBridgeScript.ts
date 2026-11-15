@@ -444,6 +444,30 @@ export const buildNativeTileBridgeScript = ({
         map.on('movestart', window.__metravelCancelTileCapture);
         map.on('zoomstart', window.__metravelCancelTileCapture);
         window.__metravelBaseTileLayer.addTo(map);
+        // #3424 — у каталога цель кадра — ВСЕ его точки, а не заполнение
+        // высоты окна одним миром. Иначе phone-floor z2 обрезает дальние города.
+        var __metravelPointFitBounds = null;
+        function __metravelApplySurfaceMinZoom() {
+          if (typeof window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL} !== 'function') return;
+          var size = map.getSize();
+          if (!size || !(size.x > 0) || !(size.y > 0)) return;
+          var next = window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL}(size.x, size.y);
+          window.${NATIVE_BASE_MIN_ZOOM_GLOBAL} = next;
+          if (__metravelPointFitBounds && __metravelPointFitBounds.isValid()) {
+            // getBoundsZoom сам ограничен getMinZoom: сначала снимаем прежний
+            // floor публичным API Leaflet, затем берём точный zoom с теми же
+            // отступами, что у fitBounds. Для radius прежний floor неизменен.
+            if (map.getMinZoom() !== 0) map.setMinZoom(0);
+            var fitted = map.getBoundsZoom(__metravelPointFitBounds, false, [100, 100]);
+            if (isFinite(fitted)) next = Math.max(0, Math.min(next, fitted));
+          }
+          if (next !== map.getMinZoom()) map.setMinZoom(next);
+        }
+        window.__metravelSetPointFitBounds = function(bounds) {
+          if (!bounds && !__metravelPointFitBounds) return;
+          __metravelPointFitBounds = bounds || null;
+          __metravelApplySurfaceMinZoom();
+        };
         // #1561 — стартовый minZoom меряется ДО layout: WebView отдаёт финальный
         // размер позже (RN-layout вкладки, поворот, F-17-каскад
         // __metravelScheduleInvalidate → invalidateSize). Если контейнер вырос,
@@ -452,7 +476,6 @@ export const buildNativeTileBridgeScript = ({
         // стреляет \`resize\` ровно из того же invalidateSize.
         map.on('resize', function() {
           try {
-            if (typeof window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL} !== 'function') return;
             var size = map.getSize();
             // Контейнер может схлопнуться в 0 (скрытая вкладка, промежуточный
             // layout). Нулевой размер — это «размер неизвестен», а не «нужен
@@ -460,10 +483,11 @@ export const buildNativeTileBridgeScript = ({
             // настоящая граница выше, она молча опустилась бы обратно в серое
             // поле. Уже посчитанную границу держим до реального замера.
             if (!size || !(size.x > 0) || !(size.y > 0)) return;
-            var next = window.${NATIVE_BASE_MIN_ZOOM_RESOLVER_GLOBAL}(size.x, size.y);
-            window.${NATIVE_BASE_MIN_ZOOM_GLOBAL} = next;
-            // setMinZoom сам подтянет текущий зум вверх, если тот стал ниже
-            // границы, — это и есть выход из серого поля.
-            if (next !== map.getMinZoom()) map.setMinZoom(next);
+            __metravelApplySurfaceMinZoom();
+            // Новый размер — новый кадр каталога. Панорамирование и обычный
+            // zoom не вызывают resize и по-прежнему не сбрасывают выбор вида.
+            if (__metravelPointFitBounds && __metravelPointFitBounds.isValid()) {
+              map.fitBounds(__metravelPointFitBounds, { padding: [50, 50], animate: false });
+            }
           } catch (e) {}
         });`;

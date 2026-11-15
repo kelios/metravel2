@@ -21,6 +21,15 @@ export const PERF_PROFILES = [
   'mobile',
 ] as const satisfies readonly PerfProfile[]
 
+/** #3439: real guest pages, cold Chromium baseline 2026-11-15: 855/821 KB. */
+export const ARTICLE_REQUEST_BUDGETS = {
+  ARTICLES: { path: '/articles', totalTransferKBMax: 1100, redirectsMax: 0, duplicateUrlsMax: 0 },
+  ARTICLE_DETAIL: {
+    path: '/article/rozygrysh-trekh-termosov-1?from=%2Farticles',
+    totalTransferKBMax: 1000, redirectsMax: 0, duplicateUrlsMax: 0, detailRequestsMax: 1,
+  },
+} as const
+
 /** Признанный долг: бюджет прибит к измеренному значению и адресован карточке. */
 export type PerfBudgetDebt = {
   /** Измеренное значение на момент фиксации — запаса сверху не даётся. */

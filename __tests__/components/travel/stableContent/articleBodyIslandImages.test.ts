@@ -209,6 +209,99 @@ describe('server island addresses body photos like the full render (#3408)', () 
   })
 })
 
+describe('authored float photos use their narrative slot (#3438)', () => {
+  const raw = (side: string) => `<p class="img-float-${side}"><img src="${STORED_DESCRIPTION_IMAGE}" width="1200" height="1600" alt=""></p><p>Сопровождающий текст</p>`
+
+  it.each(['left', 'right'])('%s: island, shell release and full render share the narrow slot', (side) => {
+    const html = raw(side)
+    for (const width of [390, 1280, 1440]) {
+      const full = withViewport(width, 'web', () => attrsOf(parse(prepareStableContentHtml(html, {
+        serverSanitized: true, articleBodyMedia: MEDIA,
+      })).querySelector('img')))
+      expect(full.sizes).toBe('(max-width: 768px) 100vw, 324px')
+      const released = withViewport(width, 'web', () => {
+        const root = parse(`<div data-ssr-html-island="description">${islandOf(html)}</div>`)
+        releaseDeferredRichTextImages(root)
+        return attrsOf(root.querySelector('img'))
+      })
+      expect(released).toEqual(full)
+      const shell = withViewport(width, 'web', () => {
+        document.documentElement.className = ''
+        document.body.innerHTML = `<div data-ssr-html-island="description">${islandOf(html)}</div>`
+        try {
+          new Function(buildDeferredRichTextImagesScript())()
+          return attrsOf(document.querySelector('[data-ssr-html-island] img'))
+        } finally {
+          document.body.innerHTML = ''
+        }
+      })
+      expect(shell).toEqual(full)
+    }
+  })
+
+  it('uses parsed classes, does not leak through siblings or void elements, and keeps wide sources', () => {
+    const html = `<div><p class="img-float-left"><br><span><img src="${STORED_DESCRIPTION_IMAGE}" alt=""></span></p>`
+      + `<p title="class='img-float-right'"><img src="${STORED_DESCRIPTION_IMAGE}" alt=""></p></div>`
+    const imgs = Array.from(parse(islandOf(html)).querySelectorAll('img'))
+    expect(imgs[0].getAttribute('data-deferred-sizes')).toBe('(max-width: 768px) 100vw, 324px')
+    expect(imgs[1].getAttribute('data-deferred-sizes')).toBe(buildArticleBodyIslandImageSources(STORED_DESCRIPTION_IMAGE, MEDIA)?.sizes)
+    expect(imgs[1].getAttribute('data-deferred-src')).toBe(buildArticleBodyIslandImageSources(STORED_DESCRIPTION_IMAGE, MEDIA)?.src)
+  })
+
+  it('retains the single-width legacy route without adding a sizes hint', () => {
+    const html = `<p class="img-float-right"><img src="${ARTICLE_BODY_LEGACY_UPLOAD_URL}" alt=""></p>`
+    const img = parse(islandOf(html)).querySelector('img')
+    expect(img?.hasAttribute('data-deferred-sizes')).toBe(false)
+    expect(img?.hasAttribute('data-deferred-srcset')).toBe(false)
+  })
+
+  it('does not narrow consecutive authored floats that the existing renderer groups', () => {
+    const html = `<p class="img-float-left"><img src="${STORED_DESCRIPTION_IMAGE}" width="1200" height="1600" alt=""><br></p>\n`
+      + `<p class="img-float-right"><img src="${ARTICLE_BODY_DESCRIPTION_IMAGE_URL}" width="1200" height="1600" alt=""></p>`
+    const full = withViewport(1440, 'web', () => parse(prepareStableContentHtml(html, {
+      serverSanitized: true, articleBodyMedia: MEDIA,
+    })))
+    expect(full.querySelector('.img-row-2')).not.toBeNull()
+    const islandImages = Array.from(parse(islandOf(html)).querySelectorAll('img'))
+    const fullImages = Array.from(full.querySelectorAll('img'))
+    for (const [index, img] of fullImages.entries()) {
+      expect(img.getAttribute('sizes')).toBe(buildArticleBodyIslandImageSources(STORED_DESCRIPTION_IMAGE, MEDIA)?.sizes)
+      expect(islandImages[index].getAttribute('data-deferred-sizes')).toBe(img.getAttribute('sizes'))
+    }
+  })
+
+  it.each(['alone', 'before', 'after'])('keeps multi-photo paragraphs and adjacent floats wide (%s)', (position) => {
+    const multiple = `<p class="img-float-left"><img src="${STORED_DESCRIPTION_IMAGE}" width="1200" height="1600" alt=""><br>&nbsp;`
+      + `<img src="${ARTICLE_BODY_DESCRIPTION_IMAGE_URL}" width="1200" height="1600" alt=""></p>`
+    const single = `<p class="img-float-right"><img src="${STORED_DESCRIPTION_IMAGE}" width="1200" height="1600" alt=""></p>`
+    const html = position === 'before' ? `${single}\n${multiple}` : position === 'after' ? `${multiple}\n${single}` : multiple
+    const full = withViewport(1440, 'web', () => parse(prepareStableContentHtml(html, {
+      serverSanitized: true, articleBodyMedia: MEDIA,
+    })))
+    expect(full.querySelector('.img-row-2, .img-grid')).not.toBeNull()
+    const islandImages = Array.from(parse(islandOf(html)).querySelectorAll('img'))
+    const fullImages = Array.from(full.querySelectorAll('img'))
+    for (const [index, img] of fullImages.entries()) {
+      expect(img.getAttribute('sizes')).toBe(buildArticleBodyIslandImageSources(STORED_DESCRIPTION_IMAGE, MEDIA)?.sizes)
+      expect(islandImages[index].getAttribute('data-deferred-sizes')).toBe(img.getAttribute('sizes'))
+    }
+  })
+
+  it('keeps floats narrow when visible content separates image paragraphs', () => {
+    const html = `<p class="img-float-left"><img src="${STORED_DESCRIPTION_IMAGE}" alt=""></p>&nbsp;`
+      + `<p class="img-float-right"><img src="${ARTICLE_BODY_DESCRIPTION_IMAGE_URL}" alt=""></p>`
+    const full = withViewport(1440, 'web', () => parse(prepareStableContentHtml(html, {
+      serverSanitized: true, articleBodyMedia: MEDIA,
+    })))
+    expect(full.querySelector('.img-row-2')).toBeNull()
+    const islandImages = Array.from(parse(islandOf(html)).querySelectorAll('img'))
+    for (const [index, img] of Array.from(full.querySelectorAll('img')).entries()) {
+      expect(img.getAttribute('sizes')).toBe('(max-width: 768px) 100vw, 324px')
+      expect(islandImages[index].getAttribute('data-deferred-sizes')).toBe(img.getAttribute('sizes'))
+    }
+  })
+})
+
 // #3414: от выпуска адреса до загрузки файла коробку кадра держит только резерв.
 // Он обязан совпасть с резервом полного рендера, который подменяет остров.
 describe('server island reserves the frame box of the full render (#3414)', () => {

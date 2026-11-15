@@ -1,0 +1,52 @@
+# #3424: каталог карты на native показывает квесты, маркер ведёт на квест,
+# закрытие и повторное открытие сохраняют рабочий экран. Координатных тапов нет.
+# API должен содержать хотя бы один опубликованный квест с координатами.
+appId: by.metravel.app
+---
+- runFlow: launch.yaml
+- tapOn: "Профиль"
+- assertVisible: "Войдите в аккаунт"
+- openLink: "metravel://quests/map"
+- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: "quest-map-native"
+    timeout: 60000
+- assertNotVisible: "Карта доступна в веб-версии"
+- assertVisible: "^Назад$"
+- assertNotVisible:
+    text: "^Назад$"
+    index: 1
+# Маркер-DivIcon имеет aria-label из существующей категории «Квест». Выбор не
+# зависит от порядка/названия квестов: бизнес-результат — стартовая страница квеста.
+- extendedWaitUntil:
+    visible: "^Квест$"
+    timeout: 30000
+- tapOn:
+    text: "^Квест$"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "quest-trust-bar"
+    timeout: 30000
+- assertNotVisible:
+    id: "quest-map-native"
+- tapOn: "^Назад$"
+- extendedWaitUntil:
+    visible:
+      id: "quest-map-native"
+    timeout: 15000
+- tapOn: "^Назад$"
+- extendedWaitUntil:
+    visible: "Все квесты"
+    timeout: 15000
+- openLink: "metravel://quests/map"
+- runFlow: confirm-ios-app-link.yaml
+- extendedWaitUntil:
+    visible:
+      id: "quest-map-native"
+    timeout: 15000
+- assertVisible: "^Квест$"
+- assertNotVisible:
+    text: "^Назад$"
+    index: 1

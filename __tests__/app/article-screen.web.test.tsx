@@ -1,4 +1,5 @@
 import React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { waitFor } from '@testing-library/react-native'
 import { createRootRegistry } from '../helpers/rawRootLifecycle'
 
@@ -94,7 +95,8 @@ describe('ArticleScreen web SEO focus behavior', () => {
 
   it('renders SEO on web even when navigation focus is false', async () => {
     const root = webRoots.createRoot()
-    await React.act(() => root.render(<ArticleScreen />))
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })
+    await React.act(() => root.render(<QueryClientProvider client={client}><ArticleScreen /></QueryClientProvider>))
 
     await waitFor(() => {
       expect(mockSeo).toHaveBeenCalled()

@@ -29,7 +29,7 @@ const URLAPI = rawApiUrl;
 
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
-const GET_ARTICLES = `${URLAPI}/articles`;
+const GET_ARTICLES = `${URLAPI}/articles/`;
 
 // #2130/#2134: статьи читаются с сессией, иначе бэк не применит фильтр блокировок
 // автора (`articles/views.py:107`); общий помощник — `api/publicFetchWithSession.ts`.
@@ -309,7 +309,7 @@ export const fetchArticle = async (
   }
 
   try {
-    const res = await fetchArticlesWithSession(`${GET_ARTICLES}/${id}`, options?.signal, 10000);
+    const res = await fetchArticlesWithSession(`${GET_ARTICLES}${id}/`, options?.signal, 10000);
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
@@ -356,7 +356,7 @@ export const fetchArticleBySlug = async (
 
   try {
     const resolverRes = await fetchArticlesWithSession(
-      `${GET_ARTICLES}/resolve-slug/${safeSlug}/`,
+      `${GET_ARTICLES}resolve-slug/${safeSlug}/`,
       options?.signal,
       LONG_TIMEOUT
     );
@@ -378,7 +378,7 @@ export const fetchArticleBySlug = async (
 
     if (resolverRes.status === 404) {
       const directRes = await fetchArticlesWithSession(
-        `${GET_ARTICLES}/by-slug/${safeSlug}/`,
+        `${GET_ARTICLES}by-slug/${safeSlug}/`,
         options?.signal,
         10000
       );

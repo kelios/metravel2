@@ -229,6 +229,23 @@ guard, падающий в CI на попытке обойти этот конт
 | --- | --- | --- |
 | QUEST-MAP-MOBILE-INITIAL-VIEW | #1348 → #3397 | `/quests/map` передавала общей карте `mode="radius"` и `radius="2000"` без `pointsOnly`. Три следствия одного механизма: слой мест брал кластеры `/api/map/clusters/` (на desktop «999+» при 343 квестах — места, не квесты); радиусный фильтр отбрасывал квесты дальше 2000 км от центра масс; на панели ≤560 px «пол» #1348 ставил `setView(центр масс, 11)` без единого квеста в кадре. Подсказка порядка координат от центра масс переставила бы 26 квестов (Тбилиси, Ташкент, Дубай). Теперь страница — `pointsOnly`-поверхность без круга: «пол» круга относится только к цели-кругу, набор точек ограничен зумом покрытия мира, у `pointsOnly` нет подсказки порядка. `MapLogicComponent.pointsFit.test.tsx` (3 из 5 красные на старой подгонке), `mapWebGeometry.hintCenter.test.ts`, `QuestMap.sectionFrame.test.tsx`; прод-проба `.codex-temp/task3397/probe.js`. Вторая половина всплыла на приёмке: переход с `/map` открывал карту квестов на z16 без квестов — `Map.web` читал глобальный `bottomSheetStore` панели `/map` на любой поверхности, резерв 631 px превышал панель 696 px, и `fitBounds` упирался в `maxZoom`. Резерв теперь читает только карта `/map` (`readMapSheetReserve`); `Map.web.test.tsx` «reserves the bottom sheet only on its own surface», проба `.codex-temp/task3397/probe-link.js`. Остаток того же владения — #3428: тап по маркеру квеста сворачивал панель `/map` (обработчик читал состояние чужой панели); тест «collapses the bottom sheet on a marker tap only on its own surface», проба `.codex-temp/task3428/probe.js`. Уроки: число на кластере больше размера своего каталога — в кадре чужой слой; прямой заход не доказывает переход внутри приложения — глобальные хранилища переживают экран. |
 
+- **Native-продолжение #3424 (15.11.2026):** тот же вызов `radius="2000"`
+  остался в native-ветке маршрута. `Map.ios.tsx` включает серверные кластеры
+  только при `radius && !pointsOnly`, Android переэкспортирует этот renderer.
+  Исправление использует существующие `pointsOnly`, `showRadiusCircle={false}`
+  и подгонку по набору; координатный парсер native читает `lat,lng` напрямую.
+  Ложное сообщение «Карта доступна в веб-версии» заменено отдельными состояниями
+  загрузки, успешного пустого набора и ошибки с повтором; назад ведёт шапка.
+  Постоянный контроль — `QuestMap.sectionFrame.test.tsx`: native-пропсы,
+  дальние координаты, переход по маркеру, retry и отсутствие второй кнопки.
+  Независимое ревью выявило второй механизм: нижний зум подложки z2
+  обрезал мировой набор даже при `fitBounds`. Tile controller теперь хранит
+  pointsOnly bounds, выбирает floor по фактической подгонке с теми же отступами,
+  пересчитывает его при resize и восстанавливает прежний floor для radius.
+  Настоящий Leaflet regression проверяет дальние точки, тайлы, resize и возврат
+  radius; tracked Maestro `quest-catalog-map` проверяет маркер → квест и reopen.
+  Фактическая native/web-приёмка записывается в #3424 после review в `testing`.
+
 ### MAP-USER-VIEW-FLAG-CROSS-INSTANCE-001 — флаг жеста одной карты отключал подгонку другой
 
 | Problem key | Карточки | Подтверждённый механизм и постоянная проверка |
@@ -1381,6 +1398,21 @@ guard, падающий в CI на попытке обойти этот конт
   фикс без записи сюда запрещён.
 
 ### MEDIA-001 — canonical media URL and byte budget
+
+- **Поезд #3437/#3438/#3439 — 2026-11-15:** повторная baseline-проба главной
+  подтвердила смену legacy→square URL у обложек квестов (5 файлов mobile,
+  6 desktop). Источник — discovery-снимок без square media; первоначальный
+  URL теперь ждёт API-манифеста, свежий cache не задерживается. Bundled assets
+  не получают фиктивных параметров ресайза. На статье один ресурс независимо
+  запрашивали экран и хлебные крошки, оба через 301: общий query contract и
+  канонические slash URL устраняют fan-out. Старый S3 img в SafeHtml направлен
+  в first-party proxy (контрольный ответ 111886 B против ~231 KB). В #3438
+  уточнён реальный узкий слот: authored float внутри rich-inline-photo-flow,
+  324 CSS px при naturalWidth 883, а не предположенная группа. Контроли:
+  unit на cache/dedup/failure, seed→API media, canonical asset URL и slot
+  equality; committed e2e media-resource-production-smoke с нулевыми
+  redirects/duplicates/oversized. Финальный production verdict — по карточкам,
+  source checks сами его не устанавливают.
 
 - **Инвариант:** один media identity в одном visual slot использует один
   канонический manifest/proxy variant; blur не создаёт вторую сетевую загрузку;

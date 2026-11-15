@@ -1,4 +1,5 @@
 import { Platform } from 'react-native'
+import { articleBodySizesForClasses } from '@/components/travel/stableContent/articleBodySlots'
 
 import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia'
@@ -58,7 +59,7 @@ const escapeHtmlAttr = (value: string) =>
 // регулярки по строке тега, и `src="` в хвосте значения `alt` принимался за `src`:
 // замена сдвигала кавычки, и текст из `class` становился атрибутом `onerror`.
 const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): string => {
-  return rewriteStartTags(html, ['img'], ({ attrs }) => {
+  return rewriteStartTags(html, ['img'], ({ attrs }, _html, context) => {
     const src = getAttribute(attrs, 'src') ?? ''
     const responsive = src ? buildArticleBodyResponsiveImage(src, media, currentSlotWidths()) : null
     const optimizedSrc = responsive?.src ?? (src ? buildExternalImageUrl(src) || src : src)
@@ -74,7 +75,7 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
     // кандидатов нет и в части движков гасит `src`.
     if (responsive?.srcSet) {
       attrs.push({ name: 'srcset', value: escapeHtmlAttr(responsive.srcSet) })
-      attrs.push({ name: 'sizes', value: escapeHtmlAttr(responsive.sizes) })
+      attrs.push({ name: 'sizes', value: escapeHtmlAttr(articleBodySizesForClasses(context?.ancestorClasses, context?.inImageParagraphRun)) })
     }
     applyRichTextImageReserveSize(attrs, reserve)
     for (const name of ['decoding', 'fetchpriority', 'loading']) removeAttribute(attrs, name)
@@ -83,7 +84,7 @@ const normalizeImgTags = (html: string, media: ArticleBodyMediaIndex | null): st
     applyRichTextImageAlt(attrs)
 
     attrs.push({ name: 'loading', value: 'lazy' }, { name: 'decoding', value: 'async' }, { name: 'fetchpriority', value: 'low' })
-  })
+  }, { imageContext: true })
 }
 
 // Пустой `<iframe src="…youtube…"></iframe>` → лёгкий фасад. `src` читается из
