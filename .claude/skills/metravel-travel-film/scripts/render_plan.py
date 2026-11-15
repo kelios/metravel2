@@ -30,7 +30,9 @@ VENC = (["-c:v", "h264_videotoolbox", "-b:v", _hwb, "-pix_fmt", "yuv420p", "-tag
 VENC += ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]   # YouTube читает метки цвета
 G = lambda o: ("," + o["grade"]) if o.get("grade") else ""
 # перекрытие, продлённое в запас перехода: нехватку исходника в начале/конце закрывает повтор крайнего кадра
-TP = lambda pre, post: (f",tpad=start_duration={pre:.3f}:start_mode=clone" if pre > 0.001 else "") + (f",tpad=stop_duration={post + 0.1:.3f}:stop_mode=clone" if post > 0.001 else "")
+# один tpad на оба края: два tpad подряд теряют начальный повтор (ffmpeg 8), кусок короче на запас — растворение обрывается
+TP = lambda pre, post: "" if pre <= 0.001 and post <= 0.001 else (",setpts=PTS-STARTPTS,tpad=" + ":".join(
+    ([f"start_duration={pre:.3f}:start_mode=clone"] if pre > 0.001 else []) + ([f"stop_duration={post + 0.1:.3f}:stop_mode=clone"] if post > 0.001 else [])))
 # растворение перекрытия по альфе (время — от начала самого перекрытия)
 AF = lambda fi, fo, d: ("" if not (fi or fo) else ",format=yuva420p" + (f",fade=t=in:st=0:d={fi:.3f}:alpha=1" if fi else "")
                         + (f",fade=t=out:st={max(0.0, d - fo):.3f}:d={fo:.3f}:alpha=1" if fo else ""))
@@ -67,21 +69,26 @@ for i, s in enumerate(SEG):
     import hashlib
     src = plan["sources"][s["src"]]
     dur = s["out"] - s["in"]
-    hL = min(HND, s["in"]) if i > 0 and joined(i - 1) else 0.0
-    hR = min(HND, max(0.0, src_dur(src) - s["out"] - 0.05)) if joined(i) else 0.0
+    # запас перехода всегда полный (0,5 с): если исходник кончается на склейке, недостающее доигрывает повтор крайнего кадра —
+    # иначе растворение сжимается до пары кадров и выглядит как рывок (v12, 3:05.8: завтрак → шаттл)
+    hLa = min(HND, s["in"]) if i > 0 and joined(i - 1) else 0.0
+    hRa = min(HND, max(0.0, src_dur(src) - s["out"] - 0.05)) if joined(i) else 0.0
+    hL = HND if i > 0 and joined(i - 1) else 0.0
+    hR = HND if joined(i) else 0.0
     nfL, nf, nfR = int(round(hL * FPS)), max(1, int(round(dur * FPS))), int(round(hR * FPS))
     hL, hR = nfL / FPS, nfR / FPS
     hand.append((hL, hR)); cores.append(nf / FPS)
-    h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|edges2|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
+    h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|edges2{'+3' if hL - hLa > 0.001 and hR - hRa > 0.001 else ''}|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
     f = os.path.join(wd, f"{i:03d}_{h}.mov")   # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
     parts.append(f)
     if only is not None and i not in only and os.path.exists(f):
         continue
     if os.path.exists(f) and only is None:
         continue
-    a0 = s["in"] - hL; full = (nfL + nf + nfR) / FPS
-    inputs = ["-ss", f"{a0:.3f}", "-t", f"{full + 0.1:.3f}", "-i", src]
-    fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1[base0]"]
+    a0 = s["in"] - hL; full = (nfL + nf + nfR) / FPS          # a0 — начало куска на шкале исходника (может уйти за начало файла)
+    dL, dR = max(0.0, hL - hLa), max(0.0, hR - hRa)              # нехватка исходника слева/справа
+    inputs = ["-ss", f"{s['in'] - hLa:.3f}", "-t", f"{full - dL - dR + 0.1:.3f}", "-i", src]
+    fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{TP(dL, dR)}[base0]"]
     cur = "base0"; k = 1
     OV = s.get("broll", []) + s.get("cards", [])
     vids = [o for o in OV if not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))]
@@ -130,7 +137,8 @@ for i, s in enumerate(SEG):
         fades = ""
         if s.get("fade_in") and not hL: fades += f",afade=t=in:d={float(s['fade_in']):.3f}"
         if s.get("fade_out") and not hR: fades += f",afade=t=out:st={max(0.0, full - float(s['fade_out'])):.3f}:d={float(s['fade_out']):.3f}"
-        fc.append(f"[0:a:0]volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{fades},apad,atrim=end_sample={NF * 1600}[aout]")
+        dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
+        fc.append(f"[0:a:0]volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}[aout]")
     cmd += ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]",
             ] + VENC + ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", f]
     r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True)
