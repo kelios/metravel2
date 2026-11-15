@@ -5,6 +5,7 @@
 import {
   assemblePlan,
   factHours,
+  isWholeDay,
   itemHours,
   orderByNearest,
   PLAN_DAY_MAX_HOURS,
@@ -175,6 +176,19 @@ describe('часы и регион (#3298)', () => {
     expect(regionCenter([noPoint])).toBeNull()
   })
 
+  it('регион при двух далёких карточках — скопление вокруг квеста, а не пустая середина между городами', () => {
+    // Польский вопрос о Гданьске: статья с точкой во Вроцлаве стоит первой, за ней — квест Гданьска.
+    const wroclaw = card('travel', 816, 51.11, 17.03)
+    const gdansk = card('quest', 18, 54.349, 18.653)
+    expect(regionCandidates([wroclaw, gdansk]).map((entry) => entry.source_id)).toEqual([18])
+    // Две статьи в разных городах — остаётся более близкая к вопросу (первая).
+    expect(regionCandidates([wroclaw, card('travel', 700, 54.35, 18.66)]).map((entry) => entry.source_id)).toEqual([816])
+    // Три города попарно далеко друг от друга, в одном — две карточки: скопление больше одиночной первой карточки.
+    expect(regionCandidates([wroclaw, card('travel', 177, 52.23, 21.01), gdansk, card('travel', 700, 54.35, 18.66), card('travel', 900, 49.3, 19.95)]).map((entry) => entry.source_id)).toEqual([18, 700])
+    // Плотный набор — прежний отбор по медиане.
+    expect(regionCandidates([...KRAKOW, card('travel', 177, 52.23, 21.01)]).map((entry) => entry.source_id)).toEqual([568, 246, 636, 13, 297])
+  })
+
   it('порядок внутри дня — от первого материала к ближайшему', () => {
     const points = [
       { lat: 50.0, lng: 19.0, name: 'a' },
@@ -199,16 +213,41 @@ describe('доводка плана модели (#3298)', () => {
   })
 
   it('день не длиннее предела по часам и числу материалов: лишнее уходит в день с местом либо в новый день', () => {
-    // 8 + 4 + 2 = 14 часов в одном дне: статья на несколько дней занимает день почти целиком.
-    const raw = { days: [{ items: [{ source: 'travel' as const, id: 297, hours: 2 }, { source: 'travel' as const, id: 568, hours: 4 }, { source: 'quest' as const, id: 246, hours: 2 }] }], note: '' }
+    // 4 + 2 + 5 + 1,5 = 12,5 часа в одном дне при пределе 10.
+    const raw = { days: [{ items: [{ source: 'travel' as const, id: 568, hours: 4 }, { source: 'quest' as const, id: 246, hours: 2 }, { source: 'travel' as const, id: 636, hours: 5 }, { source: 'quest' as const, id: 13, hours: 3 }] }], note: '' }
     const days = refinePlan(raw, KRAKOW, { days: 2 })
-    expect(days.map((day) => day.items.map((entry) => entry.source_id))).toEqual([[297, 246], [568]])
+    expect(days.map((day) => day.items.map((entry) => entry.source_id))).toEqual([[568, 13, 246], [636]])
     for (const day of days) {
       expect(day.items.reduce((sum, entry) => sum + entry.hours, 0)).toBeLessThanOrEqual(PLAN_DAY_MAX_HOURS)
       expect(day.items.length).toBeLessThanOrEqual(PLAN_MAX_ITEMS_PER_DAY)
     }
     // Запрошен один день — лишнее в план не попадает, новый день не появляется.
-    expect(refinePlan(raw, KRAKOW, { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[297, 246]])
+    expect(refinePlan(raw, KRAKOW, { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[568, 13, 246]])
+  })
+
+  it('материал на два дня и больше занимает день целиком: модель поставила рядом другие — они уходят в другой день', () => {
+    expect(isWholeDay(KRAKOW[4])).toBe(true)
+    expect(isWholeDay(KRAKOW[2])).toBe(false)
+    expect(isWholeDay(KRAKOW[1])).toBe(false)
+    const raw = { days: [{ items: [{ source: 'travel' as const, id: 297, hours: 2 }, { source: 'travel' as const, id: 568, hours: 4 }, { source: 'quest' as const, id: 246, hours: 2 }] }], note: '' }
+    const days = refinePlan(raw, KRAKOW, { days: 2 })
+    expect(days.map((day) => day.items.map((entry) => entry.source_id))).toEqual([[297], [568, 246]])
+    expect(days[0].items[0].hours).toBe(8)
+    // Материал на целый день стоит вторым — в день к другим он не добавляется, а встаёт отдельным днём.
+    const second = { days: [{ items: [{ source: 'quest' as const, id: 246, hours: 2 }, { source: 'travel' as const, id: 297, hours: 2 }, { source: 'quest' as const, id: 13, hours: 2 }] }], note: '' }
+    expect(refinePlan(second, KRAKOW, { days: 2 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[246, 13], [297]])
+    // Дней больше нет — материал на целый день в план не попадает, чужой день он не занимает.
+    expect(refinePlan({ days: [{ items: [{ source: 'quest' as const, id: 246, hours: 2 }] }, { items: [{ source: 'quest' as const, id: 13, hours: 2 }, { source: 'travel' as const, id: 297, hours: 2 }] }], note: '' }, KRAKOW, { days: 2 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[246], [13]])
+  })
+
+  it('план на один день: материал на несколько дней не берётся, пока есть другие кандидаты', () => {
+    const raw = { days: [{ items: [{ source: 'travel' as const, id: 297, hours: 8 }, { source: 'quest' as const, id: 246, hours: 2 }] }], note: '' }
+    expect(refinePlan(raw, KRAKOW, { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[246]])
+    // Модель назвала только его — доводка возвращает пустой план, и служба собирает план кодом.
+    expect(refinePlan({ days: [{ items: [{ source: 'travel' as const, id: 297, hours: 8 }] }], note: '' }, KRAKOW, { days: 1 })).toEqual([])
+    // Других кандидатов нет — материал на несколько дней остаётся единственным.
+    const only = [KRAKOW[4]]
+    expect(refinePlan({ days: [{ items: [{ source: 'travel' as const, id: 297, hours: 8 }] }], note: '' }, only, { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[297]])
   })
 
   it('материал вне карточек в доводку не попадает, пустых дней нет', () => {
@@ -240,6 +279,31 @@ describe('сборка плана кодом (#3298)', () => {
     const days = assemblePlan(lida, { days: 5 })
     expect(days).toHaveLength(1)
     expect(days[0].items.map((entry) => [entry.source_id, entry.hours])).toEqual([[11, 1.5], [348, 1.5]])
+  })
+
+  it('материал на два дня и больше занимает день целиком: других материалов в этот день код не ставит', () => {
+    const grodno = [
+      card('travel', 153, 53.68, 23.82, { type: 'travel', source_id: 153, number_days: 1 }),
+      card('travel', 238, 53.68, 23.83, { type: 'travel', source_id: 238, number_days: 2 }),
+      card('quest', 241, 53.679, 23.829, { type: 'quest', source_id: 241, duration_min: 120 }),
+      card('quest', 7, 53.677, 23.83, { type: 'quest', source_id: 7, duration_min: 120 }),
+      card('travel', 228, 53.63, 23.69, { type: 'travel', source_id: 228, number_days: 1 }),
+    ]
+    const days = assemblePlan(grodno, { days: 3 })
+    const alone = days.find((day) => day.items.some((entry) => entry.source_id === 238))!
+    expect(alone.items.map((entry) => [entry.source_id, entry.hours])).toEqual([[238, 8]])
+    // Остальные дни собраны из обычных материалов и не пусты.
+    expect(days).toHaveLength(3)
+    expect(days.filter((day) => day !== alone).every((day) => day.items.length >= 1 && day.items.every((entry) => entry.source_id !== 238))).toBe(true)
+    const ids = days.flatMap((day) => day.items.map((entry) => entry.source_id))
+    expect([...ids].sort((x, y) => x - y)).toEqual([7, 153, 228, 238, 241])
+  })
+
+  it('план на один день: материал на несколько дней не берётся, если есть другие кандидаты', () => {
+    const cards = [card('travel', 238, 53.68, 23.83, { type: 'travel', source_id: 238, number_days: 2 }), card('quest', 241, 53.679, 23.829, { type: 'quest', source_id: 241, duration_min: 120 }), card('quest', 7, 53.677, 23.83, { type: 'quest', source_id: 7, duration_min: 90 })]
+    expect(assemblePlan(cards, { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[241, 7]])
+    // Кроме него ничего нет — он и есть план.
+    expect(assemblePlan([cards[0]], { days: 1 }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[238]])
   })
 
   it('дней не больше запрошенного и не больше числа материалов; пустой список — пустой план', () => {

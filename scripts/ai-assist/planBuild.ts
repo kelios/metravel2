@@ -2,10 +2,12 @@
  * Детерминированная часть плана по дням (#3298): что из плана решает код, а не модель.
  *
  *   - **Регион.** Кандидаты плана — карточки одного места: всё, что дальше `PLAN_REGION_KM` от их
- *     географической середины (медианы координат), в план не идёт. Статья «Варшава — Закопане» с точкой в
+ *     географической середины (медианы координат), в план не идёт. Если карточек мало и медиана встала между
+ *     городами, регион — самое плотное скопление карточек. Статья «Варшава — Закопане» с точкой в
  *     Варшаве не попадёт в план по Кракову, даже если город в ней упомянут.
  *   - **Часы.** Время на материал берётся из фактов карточки (#3287): у квеста — длительность, у статьи на
- *     несколько дней — целый день. У однодневной статьи часов в фактах нет: годится оценка модели в
+ *     несколько дней — целый день. Такая статья стоит в своём дне одна, а в план на один день не берётся, пока
+ *     есть другие кандидаты. У однодневной статьи часов в фактах нет: годится оценка модели в
  *     пределах схемы, иначе — `PLAN_DEFAULT_HOURS`.
  *   - **Доводка плана модели** (`refinePlan`): порядок внутри дня — по расстоянию между координатами, от
  *     первого материала к ближайшему; сумма часов дня — не больше `PLAN_DAY_MAX_HOURS`, материалов — не
@@ -117,11 +119,32 @@ export const regionCenter = (cards: ReadonlyArray<Pick<PlanCandidate, 'lat' | 'l
 /**
  * Карточки одного региона в прежнем порядке: без координат и дальше `radiusKm` от середины — вне плана.
  * Ни у одной карточки нет координат — порядок по карте невозможен, план не собирается (пустой список).
+ *
+ * Середина — медиана координат. Когда карточек мало и они далеко друг от друга, медиана встаёт между ними и
+ * в радиус не попадает никто: у польского вопроса о Гданьске остались переведённый квест Гданьска и статья с
+ * точкой во Вроцлаве — середина между городами, регион пуст. Тогда регион — самое плотное скопление: карточка,
+ * вокруг которой в радиусе больше всего карточек (при равенстве — квест: его город — факт каталога, а статья
+ * могла лишь упомянуть место; затем — более близкая к вопросу), и её соседи.
  */
 export const regionCandidates = <T extends PlanCandidate>(cards: readonly T[], radiusKm: number = PLAN_REGION_KM): T[] => {
   const center = regionCenter(cards)
   if (!center) return []
-  return cards.filter((card) => hasPoint(card) && haversineKm(center.lat, center.lng, card.lat, card.lng) <= radiusKm)
+  const located = cards.filter((card) => hasPoint(card))
+  const around = (lat: number, lng: number): T[] => located.filter((card) => hasPoint(card) && haversineKm(lat, lng, card.lat, card.lng) <= radiusKm)
+  const byMedian = around(center.lat, center.lng)
+  if (byMedian.length) return byMedian
+  let dense: T[] = []
+  let denseQuest = false
+  for (const anchor of located) {
+    if (!hasPoint(anchor)) continue
+    const cluster = around(anchor.lat, anchor.lng)
+    const quest = anchor.type === 'quest'
+    if (cluster.length > dense.length || (cluster.length === dense.length && quest && !denseQuest)) {
+      dense = cluster
+      denseQuest = quest
+    }
+  }
+  return dense
 }
 
 const distanceKm = (a: Pick<PlanItem, 'lat' | 'lng'>, b: Pick<PlanItem, 'lat' | 'lng'>): number =>
@@ -156,8 +179,32 @@ const toItem = (card: PlanCandidate, hours: number): PlanItem => ({
 })
 
 const hoursOf = (items: readonly PlanItem[]): number => items.reduce((sum, item) => sum + item.hours, 0)
-const fits = (day: readonly PlanItem[], item: PlanItem): boolean =>
-  day.length === 0 || (day.length < PLAN_MAX_ITEMS_PER_DAY && hoursOf(day) + item.hours <= PLAN_DAY_MAX_HOURS)
+
+/**
+ * Материал занимает день целиком: по фактам карточки (#3287) он рассчитан на два дня и больше. Рядом с ним код
+ * других материалов в этот день не ставит — «Гродно-августовский канал» на два дня и квест в тот же день
+ * вместе не проходятся (живая QA 15.11.2026).
+ */
+export const isWholeDay = (card: Pick<PlanCandidate, 'facts'>): boolean => card.facts?.type === 'travel' && typeof card.facts.number_days === 'number' && card.facts.number_days >= 2
+
+/** Какие материалы занимают день целиком — ключами `type:id`. */
+const wholeDayKeys = (cards: readonly PlanCandidate[]): ReadonlySet<string> => new Set(cards.filter(isWholeDay).map(candidateKey))
+const keyOfItem = (item: Pick<PlanItem, 'type' | 'source_id'>): string => `${item.type}:${item.source_id}`
+
+/** Материал помещается в день: день пуст либо в нём нет и не появится материала на целый день, хватает часов и мест. */
+const fitsDay = (day: readonly PlanItem[], item: PlanItem, whole: ReadonlySet<string>): boolean =>
+  day.length === 0 ||
+  (!whole.has(keyOfItem(item)) && !day.some((placed) => whole.has(keyOfItem(placed))) && day.length < PLAN_MAX_ITEMS_PER_DAY && hoursOf(day) + item.hours <= PLAN_DAY_MAX_HOURS)
+
+/**
+ * Карточки плана на один день: материал на целый день в него не берётся, пока есть другие кандидаты —
+ * однодневный план из одной статьи «на два дня» не план. Других нет — остаётся как есть.
+ */
+const forDays = (cards: readonly PlanCandidate[], days: number): readonly PlanCandidate[] => {
+  if (days !== 1) return cards
+  const regular = cards.filter((card) => !isWholeDay(card))
+  return regular.length ? regular : cards
+}
 
 export interface BuildOptions {
   /** Запрошенное число дней: план не длиннее. */
@@ -167,10 +214,13 @@ export interface BuildOptions {
 /**
  * Доводка плана модели. Материалы остаются в днях, куда их поставила модель, пока день не переполнен по
  * часам или числу материалов; лишнее переносится в первый день с местом, а если запрошенных дней ещё
- * нет — в новый день. Пустых дней в ответе нет.
+ * нет — в новый день. Материал на целый день (`isWholeDay`) стоит в своём дне один; в план на один день он
+ * не берётся, если есть другие кандидаты. Пустых дней в ответе нет.
  */
 export function refinePlan(plan: RawPlan, cards: readonly PlanCandidate[], options: BuildOptions): PlanDay[] {
-  const byKey = new Map(cards.map((card) => [candidateKey(card), card]))
+  const allowed = forDays(cards, options.days)
+  const byKey = new Map(allowed.map((card) => [candidateKey(card), card]))
+  const whole = wholeDayKeys(allowed)
   const days: PlanItem[][] = []
   const spill: PlanItem[] = []
   for (const day of plan.days.slice(0, options.days)) {
@@ -179,30 +229,37 @@ export function refinePlan(plan: RawPlan, cards: readonly PlanCandidate[], optio
       const card = byKey.get(`${raw.source}:${raw.id}`)
       if (!card) continue
       const item = toItem(card, itemHours(card, raw.hours))
-      if (fits(kept, item)) kept.push(item)
+      if (fitsDay(kept, item, whole)) kept.push(item)
       else spill.push(item)
     }
     days.push(kept)
   }
   for (const item of spill) {
-    const target = days.find((day) => day.length > 0 && fits(day, item))
+    const target = days.find((day) => day.length > 0 && fitsDay(day, item, whole))
     if (target) target.push(item)
-    else if (days.length < options.days) days.push([item])
+    else if (days.filter((day) => day.length > 0).length < options.days) days.push([item])
   }
-  return days.filter((day) => day.length > 0).map((day) => ({ items: orderByNearest(day) }))
+  return days.filter((day) => day.length > 0).slice(0, options.days).map((day) => ({ items: orderByNearest(day) }))
 }
 
 /**
  * Сборка плана кодом из карточек в порядке близости к вопросу. Сколько дней — по часам: материалов на
  * `PLAN_DAY_TARGET_HOURS` в день; меньше — план короче запрошенного. Каждый день начинает самый близкий к
- * вопросу из оставшихся, дальше — ближайшие к нему по карте, пока хватает часов и мест в дне.
+ * вопросу из оставшихся, дальше — ближайшие к нему по карте, пока хватает часов и мест в дне. Материал на
+ * целый день (`isWholeDay`) начинает свой день и остаётся в нём один; в план на один день он не берётся,
+ * если есть другие кандидаты.
  */
 export function assemblePlan(cards: readonly PlanCandidate[], options: BuildOptions): PlanDay[] {
-  const pool = cards.map((card) => toItem(card, itemHours(card)))
+  const allowed = forDays(cards, options.days)
+  const whole = wholeDayKeys(allowed)
+  const pool = allowed.map((card) => toItem(card, itemHours(card)))
   if (!pool.length) return []
   const total = hoursOf(pool)
   const dayCount = Math.max(1, Math.min(options.days, pool.length, Math.ceil(total / PLAN_DAY_TARGET_HOURS)))
-  const perDay = Math.min(PLAN_MAX_ITEMS_PER_DAY, Math.max(1, Math.ceil(pool.length / dayCount)))
+  // Материалы на целый день в расчёт «сколько в день» не входят: каждый из них — отдельный день.
+  const regularCount = pool.filter((item) => !whole.has(keyOfItem(item))).length
+  const regularDays = Math.max(1, dayCount - (pool.length - regularCount))
+  const perDay = Math.min(PLAN_MAX_ITEMS_PER_DAY, Math.max(1, Math.ceil(regularCount / regularDays)))
   const days: PlanDay[] = []
   const rest = [...pool]
   while (days.length < dayCount && rest.length) {
@@ -212,7 +269,7 @@ export function assemblePlan(cards: readonly PlanCandidate[], options: BuildOpti
       // Ближайший по карте из тех, что помещаются по часам.
       let best = -1
       for (let index = 0; index < rest.length; index += 1) {
-        if (!fits(day, rest[index])) continue
+        if (!fitsDay(day, rest[index], whole)) continue
         if (best < 0 || distanceKm(last, rest[index]) < distanceKm(last, rest[best])) best = index
       }
       if (best < 0) break
