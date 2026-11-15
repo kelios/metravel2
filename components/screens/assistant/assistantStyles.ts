@@ -230,10 +230,14 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       ...typography.scale.caption,
       color: colors.textMuted,
     },
+    // Та же колонка, что у поля вопроса (`composerWrap`): на широком экране строка не уезжает к краю окна.
     profileNotice: {
       ...typography.scale.caption,
       color: colors.textMuted,
-      paddingHorizontal: spacing.md,
+      width: '100%',
+      maxWidth: ASSISTANT_CONTENT_MAX_WIDTH,
+      alignSelf: 'center',
+      paddingHorizontal: isMobile ? spacing.md : spacing.lg,
       paddingBottom: spacing.xs,
     },
   })

@@ -398,6 +398,12 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
         });
         expect(fit).toEqual({ inside: true, clipped: false });
         expect(await noHorizontalScroll(page)).toBe(true);
+        // Строка стоит в колонке поля вопроса, а не у края окна (на 1280 колонка уже окна).
+        const column = await page.evaluate(() => {
+          const left = (testId: string) => document.querySelector(`[data-testid="${testId}"]`)!.getBoundingClientRect().left;
+          return { notice: left('assistant-profile-notice'), composer: left('assistant-composer') };
+        });
+        expect(Math.abs(column.notice - column.composer)).toBeLessThanOrEqual(1);
         // Ответ остался на месте: строка не заменила и не сломала ход.
         await expect(page.getByTestId('assistant-answer-text')).toContainText('квеста по Минску для семьи');
 
