@@ -756,6 +756,8 @@ it('still preserves the reading frame once the reader has left the owner top', (
 // bottom 72, line 96). «Похожие статьи» then grows below it, above the still
 // visible «Комментарии». Holding «Комментарии» scrolled the chosen section away
 // by the whole block: 758px on desktop, 1393px on a phone.
+// #3430: the block leaving again has no anchor either, and its slack is on
+// screen, so the occupied height is held instead of pulling «Комментарии» up.
 it.each([758, 1393])('lets a late block that starts below the reading line push the following frame down by %ipx', height => {
   const f = fixture({ optional: true, initialTop: 600, anchorTop: 606 })
   f.transition().getBoundingClientRect = () => rect(605, Number.parseFloat(f.transition().style.height || '0'))
@@ -767,7 +769,8 @@ it.each([758, 1393])('lets a late block that starts below the reading line push 
   expect(f.anchor.getBoundingClientRect().top).toBe(before + height)
   f.render(true, false, null)
   expect(f.writes).toHaveLength(0)
-  expect(f.anchor.getBoundingClientRect().top).toBe(before)
+  expect(f.transition().style.height).toBe(`${height}px`)
+  expect(f.anchor.getBoundingClientRect().top).toBe(before + height)
   f.cleanup()
 })
 

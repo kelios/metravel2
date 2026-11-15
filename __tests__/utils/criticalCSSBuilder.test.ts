@@ -413,8 +413,9 @@ describe('buildCriticalCSS: первый экран travel-detail не проп�
       .filter((line) => line.trim().startsWith(`${selector}{`))
       .join(' ')
 
-  it('не вешает content-visibility на quick-facts', () => {
-    const rule = declarationsFor('[data-testid="travel-details-quick-facts"]')
+  // #3430: `author` — карточка автора в desktop-сайдбаре первого экрана.
+  it.each(['quick-facts', 'author'])('не вешает content-visibility на %s', (section) => {
+    const rule = declarationsFor(`[data-testid="travel-details-${section}"]`)
 
     expect(rule).not.toMatch(/content-visibility/)
     expect(rule).not.toMatch(/contain-intrinsic-size/)
@@ -434,6 +435,7 @@ describe('buildCriticalCSS: первый экран travel-detail не проп�
       ]),
     )
     expect(skipped).not.toContain('[data-testid="travel-details-quick-facts"]')
+    expect(skipped).not.toContain('[data-testid="travel-details-author"]')
   })
 
   it.each(['map', 'points'])('leaves the mounted %s geometry to its deferred section instead of a duplicated critical guess', section => {

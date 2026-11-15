@@ -252,7 +252,9 @@ export function buildCriticalCSS(): string {
     '[data-testid="search-container"]{min-height:100vh;contain:layout style}',
     '[data-testid="travel-card"]{contain:layout style paint;will-change:auto}',
     '[data-testid="travel-details-description"]{content-visibility:auto;contain-intrinsic-size:auto 400px}',
-    '[data-testid="travel-details-author"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
+    // #3430: `travel-details-author` здесь не пропускается — на desktop это карточка
+    // автора в сайдбаре первого экрана (y≈94); первый кадр клиента рисовал заглушку
+    // 200 px вместо реальных ~100 и сдвигал пункты меню на 100 px (CLS 0,010 в 17/17).
     '[data-testid="travel-details-author-mobile"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
     // #1479: у `travel-details-quick-facts` здесь стоял
     // `content-visibility:auto;contain-intrinsic-size:auto 80px` — и это был

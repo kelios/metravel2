@@ -1,7 +1,23 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type ViewInstance, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 
-import { SECTION_READING_LINE_BUFFER_PX, resolveSectionScrollOffset } from '@/utils/sectionScrollOffset'
+import {
+  RUNTIME_SETTLE_HEIGHT_EPSILON_PX,
+  type ReserveReleaseAnchor,
+  claimOwnerRelease,
+  connectedDOMView,
+  findMeasuredScrollOwner,
+  findReserveReleaseAnchor,
+  findRuntimeReadingAnchor,
+  heldSlackPlacement,
+  isDrawnWithinOwner,
+  isReserveSlackVisible,
+  noteOwnerScrollWrite,
+  ownerScrolledInCurrentFrame,
+  ownerScrolledInFrame,
+  startsBelowReadingLine,
+  watchOwnerScroll,
+} from './travelDetailsDeferredGeometry'
 
 // Shared by every reserved deferred section (footer #1604, sidebar and comments
 // #1642). Resolving a short frame can still move a visible following section
@@ -16,7 +32,6 @@ export const TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT = '100vh' as const
 // interactive instead of staying behind an inert placeholder forever.
 const RUNTIME_SETTLE_QUIET_MS = 320
 const RUNTIME_SETTLE_TIMEOUT_MS = 6000
-const RUNTIME_SETTLE_HEIGHT_EPSILON_PX = 1
 const RESERVE_RELEASE_SCROLL_QUIET_MS = 100
 
 /**
@@ -93,12 +108,6 @@ export function useDeferredSectionRuntimeSettle({
   return { onRuntimeFrameLayout, settled: active && settledVisit === visit }
 }
 
-type ReserveReleaseAnchor = {
-  anchor: HTMLElement
-  owner: HTMLElement
-  beforeTop: number
-}
-
 type ReserveReleaseState = 'reserved' | 'released' | 'anchored' | 'clamped'
 
 type MeasuredReserveSlack = {
@@ -140,140 +149,6 @@ function captureAncestorReserveSlack(node: HTMLElement) {
     measuredTransitions.get(ancestor)?.captureReserveSlack()
     ancestor = ancestor.parentElement
   }
-}
-
-// When releasing conserved slack, a drawn runtime is a fallback only if no
-// visible following frame owns the transaction. Its post-insertion aggregate
-// bounds cannot identify the reading anchor for a runtime payload mutation.
-function findRuntimeReadingAnchor(node: HTMLElement, runtime: HTMLElement | null): ReserveReleaseAnchor | null {
-  const owner = findMeasuredScrollOwner(node)
-  const view = node.ownerDocument.defaultView
-  if (!owner || !view || !runtime?.isConnected || !node.contains(runtime)) return null
-  const bounds = owner.getBoundingClientRect()
-  for (const child of Array.from(runtime.children)) {
-    if (!(child instanceof view.HTMLElement)) continue
-    const rect = child.getBoundingClientRect()
-    if (/^(absolute|fixed|sticky)$/.test(view.getComputedStyle(child).position)) continue
-    if (rect.width > 0 && rect.height > 0 &&
-        rect.bottom > Math.max(0, bounds.top + owner.clientTop) && rect.top < Math.min(view.innerHeight, bounds.top + owner.clientTop + owner.clientHeight) &&
-        rect.right > Math.max(0, bounds.left + owner.clientLeft) && rect.left < Math.min(view.innerWidth, bounds.left + owner.clientLeft + owner.clientWidth) &&
-        isDrawnWithinOwner(child, owner)) return { anchor: child, owner, beforeTop: rect.top }
-  }
-  return null
-}
-
-function connectedDOMView(ref: ViewInstance | null): HTMLElement | null {
-  const node = ref as unknown as HTMLElement | null
-  const view = node?.ownerDocument?.defaultView
-  // Native/test-renderer handles and stale/disconnected DOM refs cannot own
-  // web geometry. Do not attach an observer or mutate their style as fallback.
-  return view && node instanceof view.HTMLElement && node.isConnected ? node : null
-}
-
-function isDrawnWithinOwner(node: HTMLElement, owner: HTMLElement): boolean {
-  const view = node.ownerDocument.defaultView
-  if (!view) return false
-  let frame: HTMLElement | null = node
-  while (frame) {
-    const style = view.getComputedStyle(frame)
-    if (style.opacity === '0' || style.visibility === 'hidden' || style.visibility === 'collapse' || style.display === 'none') return false
-    if (frame === owner) return true
-    frame = frame.parentElement
-  }
-  return false
-}
-
-function findMeasuredScrollOwner(node: HTMLElement): HTMLElement | null {
-  const view = node.ownerDocument.defaultView
-  if (!node.isConnected || !view) return null
-  let owner = node.parentElement
-  while (owner) {
-    const overflowY = view.getComputedStyle(owner).overflowY
-    if (/^(auto|scroll)$/.test(overflowY) && owner.scrollHeight > owner.clientHeight) break
-    owner = owner.parentElement
-  }
-  return owner
-}
-
-// The part of the scroll owner the reader actually sees. On desktop it is shorter
-// than the window (header above, bottom bar below), so a `100vh` reserve can
-// cover it entirely.
-function ownerViewport(owner: HTMLElement, view: Window) {
-  const ownerRect = owner.getBoundingClientRect()
-  const top = Math.max(0, ownerRect.top + owner.clientTop)
-  const bottom = Math.min(view.innerHeight, ownerRect.top + owner.clientTop + owner.clientHeight)
-  const left = Math.max(0, ownerRect.left + owner.clientLeft)
-  const right = Math.min(view.innerWidth, ownerRect.left + owner.clientLeft + owner.clientWidth)
-  return bottom > top && right > left ? { top, bottom, left, right } : null
-}
-
-// #3430: a reserve covering the whole visible owner leaves no following frame to
-// anchor; releasing its visible slack then pulls the footer up into view (CLS
-// 0.72 on 390, 0.078 on 1280 — the owner is shorter than the `100vh` reserve).
-// Such a release waits until the slack leaves the viewport or a following frame
-// becomes visible: slack below the viewport moves nothing visible. A visible
-// following frame keeps the reading-line rule of `findMeasuredTransactionAnchor`.
-function isReserveSlackVisible(node: HTMLElement, runtime: HTMLElement, owner: HTMLElement): boolean {
-  const view = node.ownerDocument.defaultView
-  const viewport = view && owner.clientHeight > 0 && owner === findMeasuredScrollOwner(node) ? ownerViewport(owner, view) : null
-  if (!viewport) return false
-  const slackTop = runtime.getBoundingClientRect().bottom
-  const slackBottom = node.getBoundingClientRect().bottom
-  return slackBottom - slackTop > RUNTIME_SETTLE_HEIGHT_EPSILON_PX && slackBottom > viewport.top && slackTop < viewport.bottom
-}
-
-function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
-  const view = node.ownerDocument.defaultView
-  const owner = findMeasuredScrollOwner(node)
-  if (!view) return null
-  if (!owner || owner.clientHeight <= 0) return null
-  const viewport = ownerViewport(owner, view)
-  if (!viewport) return null
-  const { top, bottom, left, right } = viewport
-
-  // The transition sits inside a section wrapper. Walk only within this owner
-  // to the first visible following flow frame, never to the window/body.
-  let frame: HTMLElement | null = node
-  let anchor: HTMLElement | null = null
-  while (frame && frame !== owner) {
-    let sibling = frame.nextElementSibling
-    while (sibling) {
-      if (sibling instanceof view.HTMLElement) {
-        const rect = sibling.getBoundingClientRect()
-        const position = view.getComputedStyle(sibling).position
-        if (!/^(absolute|fixed|sticky)$/.test(position) && rect.width > 0 && rect.height > 0 &&
-            rect.bottom > top && rect.top < bottom && rect.right > left && rect.left < right &&
-            isDrawnWithinOwner(sibling, owner)) {
-          anchor = sibling
-          break
-        }
-      }
-      sibling = sibling.nextElementSibling
-    }
-    if (anchor) break
-    frame = frame.parentElement
-  }
-  if (!anchor || !owner.contains(anchor)) return null
-  const rect = anchor.getBoundingClientRect()
-  return { anchor, owner, beforeTop: rect.top }
-}
-
-// The frame under the scrollspy reading line is the one the reader is on: a menu
-// jump parks its section there. A mutation that starts below that line cannot
-// move it, so the following flow takes the change. Holding a lower visible frame
-// instead would scroll the reading frame away by the full height of the late
-// block — «Похожие статьи» growing under a just-opened «Популярные» (#3396).
-//
-// A block that only appends (route elevation profiles under the map, #3419)
-// changes the flow at its previous END, not at its start: its flow height is
-// still unpublished while the anchor is captured, so that end is the node's
-// current bottom. A reader looking at the map keeps it, and the profiles push
-// «Точки маршрута» down; only a reader already past the block has it compensated.
-function startsBelowReadingLine(origin: HTMLElement, owner: HTMLElement, fromEnd = false): boolean {
-  const ownerTop = owner.getBoundingClientRect().top
-  const readingLine = ownerTop + resolveSectionScrollOffset(owner) + SECTION_READING_LINE_BUFFER_PX
-  const rect = origin.getBoundingClientRect()
-  return (fromEnd ? rect.bottom : rect.top) > readingLine
 }
 
 function findMeasuredTransactionAnchor(node: HTMLElement, initialMeasurement = false): ReserveReleaseAnchor | null {
@@ -320,7 +195,10 @@ function correctMeasuredAnchor(capture: ReserveReleaseAnchor | null, node: HTMLE
   // would scroll the reader past the start of a freshly opened article (#2772).
   if (currentTop <= 0 && delta > 0) return null
   const targetTop = Math.max(0, Math.min(owner.scrollHeight - owner.clientHeight, currentTop + delta))
-  if (targetTop !== currentTop) owner.scrollTop = targetTop
+  if (targetTop !== currentTop) {
+    owner.scrollTop = targetTop
+    noteOwnerScrollWrite(owner)
+  }
   return Math.abs(anchor.getBoundingClientRect().top - beforeTop) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX ? 'anchored' : 'clamped'
 }
 
@@ -391,6 +269,11 @@ export function TravelDetailsDeferredTransition({
   const [runtimeMeasured, setRuntimeMeasured] = useState(false)
   const [optionalFlowFallback, setOptionalFlowFallback] = useState(false)
   const runtimeRef = useRef<ViewInstance>(null)
+  const placeholderRef = useRef<ViewInstance>(null)
+  // Occupied flow height kept after the frame shrank (#3430): the shrink lands
+  // below the viewport, or under the anchor in a frame without an owner scroll
+  // once the section settled — never as a free move of drawn content.
+  const heldFlowRef = useRef<number | null>(null)
   const measuredHeightRef = useRef<number | null>(null)
   const measuredWidthRef = useRef<number | null>(null)
   const reserveSlackRef = useRef<MeasuredReserveSlack | null>(null)
@@ -479,6 +362,7 @@ export function TravelDetailsDeferredTransition({
       measuredHeightRef.current = null
       measuredWidthRef.current = null
       reserveSlackRef.current = null
+      heldFlowRef.current = null
       if (node) node.style.height = ''
       if (runtimeMeasured) setRuntimeMeasured(false)
       if (reserveReleaseState !== 'reserved') setReserveReleaseState('reserved')
@@ -489,13 +373,32 @@ export function TravelDetailsDeferredTransition({
       slack.viewportHeight === node.ownerDocument.defaultView?.innerHeight && slack.ownerWidth === slack.owner.clientWidth && slack.ownerHeight === slack.owner.clientHeight &&
       (node.dataset.reserveReleaseState !== 'reserved' || slack.minHeight === node.ownerDocument.defaultView?.getComputedStyle(node).minHeight) &&
       Math.abs(slack.width - runtime.getBoundingClientRect().width) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
-    const measureRuntimeHeight = (expectedGeneration = generation) => {
+    // `shrinkAnchor` marks a transaction that may take a shrink: `null` without a
+    // following anchor, `undefined` for ancestor measurements of an outer one.
+    const measureRuntimeHeight = (expectedGeneration = generation, shrinkAnchor?: ReserveReleaseAnchor | null) => {
       if (generationRef.current !== expectedGeneration || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
       const { width, height } = runtime.getBoundingClientRect()
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height < 0 || (!allowEmptyRuntime && height === 0)) return false
       const slack = reserveSlackRef.current
       if (slack && !reserveSlackMatchesFrame(slack)) reserveSlackRef.current = null
-      const flowHeight = height + (node.dataset.reserveReleaseState === 'reserved' ? reserveSlackRef.current?.height ?? 0 : 0)
+      // The occupied frame is the last published one, or the placeholder before the
+      // first publication; a conserved reserve stays outside it (its own release).
+      // A smaller frame keeps the occupied height until `releaseHeldFlow`.
+      const placeholder = connectedDOMView(placeholderRef.current)
+      const occupiedHeight = Math.max(measuredHeightRef.current ?? placeholder?.getBoundingClientRect().height ?? 0, heldFlowRef.current ?? 0)
+      // A responsive reflow belongs to browser anchoring, never to a held frame.
+      const sameWidth = measuredWidthRef.current == null || Math.abs(width - measuredWidthRef.current) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
+      if (shrinkAnchor !== undefined && sameWidth && height < occupiedHeight - RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
+        const placement = heldSlackPlacement(node, height, occupiedHeight)
+        const owner = findMeasuredScrollOwner(node)
+        // A section still settling (`shown-pending`) keeps it too: its lists grow
+        // back, and a release in between would publish both moves (#3430).
+        if (placement !== 'below' && (!runtimeFrameReady || !shrinkAnchor || (owner && ownerScrolledInCurrentFrame(owner)))) {
+          heldFlowRef.current = occupiedHeight
+        }
+      }
+      if (heldFlowRef.current != null && heldFlowRef.current <= height + RUNTIME_SETTLE_HEIGHT_EPSILON_PX) heldFlowRef.current = null
+      const flowHeight = Math.max(height, heldFlowRef.current ?? 0) + (node.dataset.reserveReleaseState === 'reserved' ? reserveSlackRef.current?.height ?? 0 : 0)
       measuredWidthRef.current = width
       if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX && Math.abs(Number.parseFloat(node.style.height) - flowHeight) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
       // This imperative geometry owner deliberately runs within ResizeObserver's
@@ -538,6 +441,52 @@ export function TravelDetailsDeferredTransition({
         viewportHeight: view.innerHeight, ownerWidth: owner.clientWidth, ownerHeight: owner.clientHeight,
       }
     }
+    // Releases a held shrink in a frame without an owner scroll: below the viewport
+    // it moves nothing drawn; elsewhere the following frame keeps its place by the
+    // usual anchor transaction. Without an anchor the next owner scroll retries.
+    const releaseHeldFlow = () => {
+      if (heldFlowRef.current == null || !runtimeFrameReady || generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return
+      const placement = heldSlackPlacement(node, runtime.getBoundingClientRect().height, heldFlowRef.current)
+      const capture = placement === 'below' ? null : findMeasuredTransactionAnchor(node)
+      if (placement !== 'below' && !capture) return
+      const owner = findMeasuredScrollOwner(node)
+      if (owner && !claimOwnerRelease(owner, node)) {
+        // Another release owns this painted frame: retry after it (the claim
+        // lapses two frames later), through the tracked frame of this generation.
+        if (heldReleaseView && heldReleaseFrame == null) {
+          heldReleaseFrame = heldReleaseView.requestAnimationFrame(() => {
+            heldReleaseFrame = null
+            scheduleHeldRelease()
+          })
+        }
+        return
+      }
+      heldFlowRef.current = null
+      if (!measureRuntimeHeight(generation)) return
+      measureAncestorTransitions(node)
+      recordCorrection(correctMeasuredAnchor(capture, node))
+    }
+    function recordCorrection(corrected: ReserveReleaseState | null) {
+      if (!corrected) return
+      revealCorrectionRef.current = revealCorrectionRef.current === 'clamped' ? 'clamped' : corrected
+      if ((allowEmptyRuntime && reserveHeight == null) || (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released')) setReserveReleaseState(revealCorrectionRef.current)
+    }
+    const heldReleaseView = node?.ownerDocument.defaultView ?? null
+    let heldReleaseFrame: number | null = null
+    const scheduleHeldRelease = () => {
+      if (heldReleaseFrame != null || !heldReleaseView || heldFlowRef.current == null || generationRef.current !== generation) return
+      heldReleaseFrame = heldReleaseView.requestAnimationFrame((frameTime) => {
+        heldReleaseFrame = null
+        const owner = node ? findMeasuredScrollOwner(node) : null
+        if (owner && ownerScrolledInFrame(owner, frameTime)) scheduleHeldRelease()
+        else releaseHeldFlow()
+      })
+    }
+    const heldReleaseOwner = node ? findMeasuredScrollOwner(node) : null
+    if (heldReleaseOwner) {
+      watchOwnerScroll(heldReleaseOwner)
+      heldReleaseOwner.addEventListener('scroll', scheduleHeldRelease, { passive: true })
+    }
     const commitMeasuredHeight = () => {
       if (!node || generationRef.current !== generation) return
       const nextFrame = node.isConnected && runtime?.isConnected && node.contains(runtime) ? runtime.getBoundingClientRect() : null
@@ -561,13 +510,11 @@ export function TravelDetailsDeferredTransition({
         captureAncestorReserveSlack(node)
       }
       const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node, measuredHeightRef.current == null)
-      if (!measureRuntimeHeight()) return
+      const measured = measureRuntimeHeight(generation, capture)
+      if (heldFlowRef.current != null) scheduleHeldRelease()
+      if (!measured) return
       measureAncestorTransitions(node)
-      const corrected = correctMeasuredAnchor(capture, node)
-      if (corrected) {
-        revealCorrectionRef.current = revealCorrectionRef.current === 'clamped' ? 'clamped' : corrected
-        if ((allowEmptyRuntime && reserveHeight == null) || (reserveReleaseState !== 'reserved' && reserveReleaseState !== 'released')) setReserveReleaseState(revealCorrectionRef.current)
-      }
+      recordCorrection(correctMeasuredAnchor(capture, node))
     }
     // Child-dependent React cleanup may precede a leaf layout commit. The
     // registry owns this still-connected drawn DOM; stale observer callbacks
@@ -577,11 +524,17 @@ export function TravelDetailsDeferredTransition({
       return owner && runtime && isDrawnWithinOwner(runtime, owner) ? measureRuntimeHeight(generationRef.current) : false
     }
     commitMeasuredHeight()
+    // A section that has just settled may take its held shrink before paint,
+    // unless the reader scrolled in this frame; otherwise a quiet frame does.
+    if (heldReleaseOwner && !ownerScrolledInCurrentFrame(heldReleaseOwner)) releaseHeldFlow()
+    scheduleHeldRelease()
     const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(commitMeasuredHeight) : null
     if (runtime) observer?.observe(runtime)
     return () => {
       generationRef.current++
       observer?.disconnect()
+      heldReleaseOwner?.removeEventListener('scroll', scheduleHeldRelease)
+      if (heldReleaseFrame != null) heldReleaseView?.cancelAnimationFrame(heldReleaseFrame)
     }
   }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
@@ -640,6 +593,12 @@ export function TravelDetailsDeferredTransition({
           const retry = setTimeout(() => setReleaseAttempt((attempt) => attempt + 1), wait)
           return () => clearTimeout(retry)
         }
+      }
+      const releaseOwner = node && findMeasuredScrollOwner(node)
+      if (releaseOwner && node && !claimOwnerRelease(releaseOwner, node)) {
+        const view = releaseOwner.ownerDocument.defaultView
+        const retry = view?.requestAnimationFrame(() => setReleaseAttempt((attempt) => attempt + 1))
+        return () => { if (retry != null) view?.cancelAnimationFrame(retry) }
       }
       releaseAnchorRef.current = capture
       setReserveReleaseState('released')
@@ -701,6 +660,7 @@ export function TravelDetailsDeferredTransition({
       {keepPlaceholder ? (
         <View
           testID={`${testID}-placeholder`}
+          ref={placeholderRef}
           pointerEvents="none"
           style={styles.webLayer}
           accessibilityElementsHidden

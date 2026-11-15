@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/unifiedTravelCardTokens'
 import { isPhoneLayout } from '@/utils/phoneLayout'
 
-
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
 // Modern, легко читаемый sans-serif стек для подписей на изображении карточки.
 const REFINED_CARD_TITLE_FONT_FAMILY =
@@ -110,6 +109,7 @@ type Props = {
    * тянет ОРИГИНАЛ обложки (регрессия #1103).
    */
   mediaSlotWidth?: number;
+  /** Карточка смонтирована после гидратации: брейкпоинты без «нулевого» кадра (#3430). */ layoutClientOnly?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
   insetMedia?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -132,7 +132,6 @@ type Props = {
   webTouchAction?: string;
   nativePressScaleEnabled?: boolean;
 };
-
 
 function UnifiedTravelCard({
   title,
@@ -162,6 +161,7 @@ function UnifiedTravelCard({
   imageHeight,
   mediaAspectRatio,
   mediaSlotWidth,
+  layoutClientOnly = false,
   contentContainerStyle,
   insetMedia = false,
   style,
@@ -181,7 +181,7 @@ function UnifiedTravelCard({
   const [isFocused, setIsFocused] = useState(false);
   const isFeatured = visualVariant === 'featured';
   const enableWebHoverEffects = isWeb && webHoverScale;
-  const { width: viewportWidth, isPhone, isLargePhone } = useBreakpoints();
+  const { width: viewportWidth, isPhone, isLargePhone } = useBreakpoints({ clientOnly: layoutClientOnly });
   const isMobileDevice = isPhoneLayout({ width: viewportWidth, isPhone, isLargePhone });
   const cardActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_marshrut_value1_12fea2fb', { value1: title });
   const mediaActionLabel = i18nT('shared:components.ui.UnifiedTravelCard.otkryt_foto_marshruta_value1_485b08c5', { value1: title });

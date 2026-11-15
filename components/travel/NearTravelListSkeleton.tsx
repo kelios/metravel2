@@ -21,6 +21,16 @@ import { getNearbyTravelsSubtitle } from '@/constants/nearby'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { isAiSimilarEnabled } from '@/utils/aiPicksConfig'
+
+// #3430: каркас сайдбара держит и место блока «Похожие статьи»: иначе раскрытие
+// сайдбара росло не в резерв, а в поток (949 → 2368 px на 390), и у конца статьи
+// этот рост попадал в кадр прокрутки читателя. Модуль подключается под тем же
+// литеральным флагом, что сам блок: сборка без флага его не содержит (#2738).
+const aiSimilarSkeleton: typeof import('@/components/aiPicks/AiSimilarSkeleton') | null =
+  process.env.EXPO_PUBLIC_AI_PICKS || process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE
+    ? require('@/components/aiPicks/AiSimilarSkeleton')
+    : null
 
 // #2367: геометрия ряда «Рядом» — колонки, слот, зазор, отступы — и каркасы
 // сайдбара и отложенных секций, которые её повторяют. Модуль импортируют только
@@ -240,6 +250,9 @@ export const SidebarSectionSkeleton = ({ travel }: NearTravelSkeletonProps) => {
           <PopularTravelListSkeleton />
         </View>
       </View>
+      {aiSimilarSkeleton && isAiSimilarEnabled() ? (
+        <aiSimilarSkeleton.AiSimilarSectionSkeleton isNarrowLayout={width > 0 && isNearMobile} />
+      ) : null}
     </View>
   )
 }

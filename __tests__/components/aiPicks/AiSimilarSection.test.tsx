@@ -11,15 +11,26 @@ jest.mock('@/api/aiPicks', () => ({
   fetchAiSimilar: (...args: unknown[]) => mockFetchAiSimilar(...args),
 }))
 
+// The default: a hydrated desktop consumer. `mockFirstFrame` replays the first
+// web frame of `useHydrationReady`: only a `clientOnly` consumer is ready there.
+let mockFirstFrame: { isMobile: boolean } | null = null
 jest.mock('@/hooks/useResponsive', () => {
   const actual = jest.requireActual('@/hooks/useResponsive')
-  return { ...actual, useResponsive: () => ({ ...actual.useResponsive(), isHydrated: true, isMobile: false }) }
+  return {
+    ...actual,
+    useResponsive: (options?: { clientOnly?: boolean }) => ({
+      ...actual.useResponsive(),
+      ...(mockFirstFrame
+        ? { isHydrated: options?.clientOnly === true, isMobile: mockFirstFrame.isMobile }
+        : { isHydrated: true, isMobile: false }),
+    }),
+  }
 })
 
-const mockUnifiedTravelCard = (props: any) => {
+const mockUnifiedTravelCard = jest.fn((props: any) => {
   const { View, Text } = require('react-native')
   return React.createElement(View, { testID: 'unified-card' }, React.createElement(Text, null, props.title), React.createElement(Text, null, props.metaText))
-}
+})
 
 jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   __esModule: true,
@@ -60,6 +71,7 @@ describe('AiSimilarSection (#2459)', () => {
     process.env.EXPO_PUBLIC_AI_PICKS = '1'
     process.env.EXPO_PUBLIC_AI_SIMILAR_SOURCE = ''
     mockFetchAiSimilar.mockReset()
+    mockFirstFrame = null
   })
   afterAll(() => {
     process.env.EXPO_PUBLIC_AI_PICKS = env
@@ -92,6 +104,32 @@ describe('AiSimilarSection (#2459)', () => {
     expect(getAllByText('Kraków, Польша')).toHaveLength(2)
     expect(mockFetchAiSimilar).toHaveBeenCalledTimes(1)
     expect(mockFetchAiSimilar.mock.calls[0][0]).toMatchObject({ type: 'travel', id: 816, limit: 6, resultType: 'travel' })
+  })
+
+  // #3430: the travel block mounts in the deferred sidebar after hydration. Its
+  // first frame must already use the phone layout: 6 wide skeletons collapsing to
+  // 3 one frame later moved the comments by ~1000 px at the end of the article.
+  it('draws the phone skeleton count in the first frame of the post-hydration travel block', async () => {
+    mockFirstFrame = { isMobile: true }
+    mockFetchAiSimilar.mockReturnValue(new Promise<AiPickItem[]>(() => {}))
+    const { getAllByTestId } = await renderSection()
+    expect(getAllByTestId('ai-pick-card-skeleton')).toHaveLength(3)
+  })
+
+  // #3430: a freshly mounted card had its own width-0 frame (title in 2 lines, then
+  // 1: +12 px per card, grid 1290 → 1332 → 1296 px) — the cards share the opt-in.
+  it.each([['travel', true], ['quest', false]] as const)('lets the %s cards skip the hydration frame: %s', async (type, clientOnly) => {
+    mockFetchAiSimilar.mockResolvedValue([item(1, 'Пескова Скала')])
+    const { getByTestId } = await renderSection({ type })
+    await waitFor(() => expect(getByTestId('ai-similar-grid')).toBeTruthy())
+    expect(mockUnifiedTravelCard).toHaveBeenLastCalledWith(expect.objectContaining({ layoutClientOnly: clientOnly }))
+  })
+
+  it('keeps the hydration gate for the quest block rendered by the quest page', async () => {
+    mockFirstFrame = { isMobile: true }
+    mockFetchAiSimilar.mockReturnValue(new Promise<AiPickItem[]>(() => {}))
+    const { getAllByTestId } = await renderSection({ type: 'quest' })
+    expect(getAllByTestId('ai-pick-card-skeleton')).toHaveLength(6)
   })
 
   it('renders nothing (no gap) when the service returns no items', async () => {

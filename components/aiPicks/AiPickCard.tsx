@@ -4,11 +4,12 @@ import { useRouter } from 'expo-router'
 
 import { CARD_MEDIA_SLOT_RATIO } from '@/components/listTravel/travelListItemHelpers'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import type { AiPickItem } from '@/api/aiPicks'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+
+import { AI_PICK_CARD_SNIPPET_HEIGHT } from './AiSimilarSkeleton'
 
 /** Запасная высота обложки для кадров без пропорций; геометрию слота задаёт `CARD_MEDIA_SLOT_RATIO` (#1674). */
 export const AI_PICK_CARD_IMAGE_HEIGHT = 170
@@ -16,8 +17,7 @@ export const AI_PICK_CARD_IMAGE_HEIGHT = 170
 export const AI_PICK_CARD_COMPACT_IMAGE_HEIGHT = 120
 /** Пропорция обложки компактной карточки: шире кадра ленты, чтобы карточка с действиями помещалась в экран телефона. */
 export const AI_PICK_CARD_COMPACT_MEDIA_RATIO = 16 / 10
-/** Две строки `snippet` под карточкой поиска: тот же резерв у текста и скелета. */
-export const AI_PICK_CARD_SNIPPET_HEIGHT = 40
+export { AI_PICK_CARD_SNIPPET_HEIGHT, AiPickCardSkeleton } from './AiSimilarSkeleton'
 
 export function aiPickMetaText(item: Pick<AiPickItem, 'type' | 'city' | 'country'>): string | null {
   const place = [item.city, item.country].filter(Boolean).join(', ')
@@ -39,10 +39,12 @@ type Props = {
   compact?: boolean
   /** Отметка в углу обложки (#3295: «Из ответа» у карточки, которую ассистент назвал в тексте). */
   markerLabel?: string
+  /** Карточка смонтирована после гидратации (#3430): см. `UnifiedTravelCard.layoutClientOnly`. */
+  layoutClientOnly?: boolean
   testID?: string
 }
 
-export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, analyticsBlock, compact = false, markerLabel, testID }: Props) {
+export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, analyticsBlock, compact = false, markerLabel, layoutClientOnly, testID }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -61,6 +63,7 @@ export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, a
         imageHeight={compact ? AI_PICK_CARD_COMPACT_IMAGE_HEIGHT : AI_PICK_CARD_IMAGE_HEIGHT}
         mediaAspectRatio={compact ? AI_PICK_CARD_COMPACT_MEDIA_RATIO : CARD_MEDIA_SLOT_RATIO}
         mediaSlotWidth={slotWidth}
+        layoutClientOnly={layoutClientOnly}
         mediaFit={compact ? 'cover' : 'contain'}
         mediaProps={{ blurBackground: true, allowCriticalWebBlur: true }}
         leftTopSlot={
@@ -80,20 +83,6 @@ export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, a
         </Text>
       ) : null}
       {actionSlot ?? null}
-    </View>
-  )
-}
-
-export function AiPickCardSkeleton({ showSnippet = false }: { showSnippet?: boolean }) {
-  const colors = useThemedColors()
-  const styles = useMemo(() => createStyles(colors), [colors])
-  return (
-    <View style={styles.slot} testID="ai-pick-card-skeleton">
-      {/* height="auto": иначе дефолтные 20 px загрузчика перебивают aspectRatio (см. UnifiedTravelCard). */}
-      <SkeletonLoader width="100%" height="auto" borderRadius={16} style={styles.skeletonMedia} />
-      <SkeletonLoader width="80%" height={18} borderRadius={6} style={styles.skeletonLine} />
-      <SkeletonLoader width="50%" height={14} borderRadius={6} style={styles.skeletonLine} />
-      {showSnippet ? <SkeletonLoader width="100%" height={AI_PICK_CARD_SNIPPET_HEIGHT} borderRadius={6} style={styles.skeletonLine} /> : null}
     </View>
   )
 }
@@ -124,14 +113,6 @@ function createStyles(colors: ThemedColors) {
       lineHeight: 16,
       fontWeight: '600',
       color: colors.textOnPrimary,
-    },
-    skeletonLine: {
-      marginTop: 4,
-    },
-    // Та же пропорция, что у медиа-бокса карточки: каркас и карточка одной геометрии.
-    skeletonMedia: {
-      width: '100%',
-      aspectRatio: CARD_MEDIA_SLOT_RATIO,
     },
   })
 }

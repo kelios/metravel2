@@ -1,20 +1,24 @@
 import React, { useMemo } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
+import { Platform, View } from 'react-native'
 
 import type { AiPickType } from '@/api/aiPicks'
 import { useAiSimilar } from '@/hooks/useAiPicks'
 import { useResponsive } from '@/hooks/useResponsive'
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { translate as i18nT } from '@/i18n'
+import { useThemedColors } from '@/hooks/useTheme'
 import { isAiSimilarEnabled } from '@/utils/aiPicksConfig'
 
-import { AiPickCard, AiPickCardSkeleton } from './AiPickCard'
+import { AiPickCard } from './AiPickCard'
+import {
+  AI_SIMILAR_DEFAULT_LIMIT,
+  AiPickCardSkeleton,
+  AiSimilarFrame,
+  aiSimilarHeading,
+  aiSimilarVisibleLimit,
+  createAiSimilarStyles,
+} from './AiSimilarSkeleton'
 
 /** Потолок слота сетки (`maxWidth` ниже) — ширина растра для карточки. */
 const CARD_SLOT_WIDTH = 320
-/** Сколько карточек показывать в одноколоночной раскладке телефона. */
-const NARROW_LIMIT = 3
 /**
  * Ключ секции для навигации страницы (`data-section-key` на web, #3395). Блок статьи —
  * пункт меню `similar`; ключ выводится здесь, а не передаётся из сайдбара: чанк
@@ -48,26 +52,33 @@ export function AiSimilarSection(props: Props) {
 function AiSimilarSectionContent({
   type,
   id,
-  limit = 6,
+  limit = AI_SIMILAR_DEFAULT_LIMIT,
   enabled = true,
   testID = 'ai-similar-section',
   anchorRef,
 }: Props) {
   const colors = useThemedColors()
-  const { isHydrated, isMobile } = useResponsive()
+  // #3430: блок статьи монтируется только в отложенном сайдбаре, уже после
+  // гидратации. Без `clientOnly` его первый кадр брал широкую раскладку (6 каркасов,
+  // 2292 px на 390) и следующим кадром схлопывался до 3 (1290 px) — у конца
+  // страницы этот перепад приходился на кадры прокрутки и считался сдвигом.
+  // Блок квеста стоит в SSR-разметке страницы и сохраняет гейт гидратации.
+  // Карточки статьи — по той же причине: заголовок «нулевого» кадра шёл в 2 строки
+  // и через кадр в 1 (+12 px на карточку, 1290 → 1332 → 1296 px).
+  const clientOnly = type === 'travel'
+  const { isHydrated, isMobile } = useResponsive({ clientOnly })
   const isNarrowLayout = isHydrated && isMobile
-  const styles = useMemo(() => createStyles(colors, isNarrowLayout), [colors, isNarrowLayout])
+  const styles = useMemo(() => createAiSimilarStyles(colors, isNarrowLayout), [colors, isNarrowLayout])
   const query = useAiSimilar({ type, id, limit, resultType: 'travel', enabled })
   // На телефоне карточки идут в одну колонку во всю ширину — показываем первые
-  // NARROW_LIMIT из запрошенных, чтобы блок не растягивался на несколько экранов.
-  const visibleLimit = isNarrowLayout ? Math.min(limit, NARROW_LIMIT) : limit
+  // AI_SIMILAR_NARROW_LIMIT из запрошенных, чтобы блок не растягивался на несколько экранов.
+  const visibleLimit = aiSimilarVisibleLimit(limit, isNarrowLayout)
   const items = (query.data ?? []).slice(0, visibleLimit)
   const isLoading = query.isFetching && !query.data
 
   if (!isLoading && items.length === 0) return null
 
-  const heading = type === 'quest' ? i18nT('aiPicksStatic:similar.questTitle') : i18nT('aiPicksStatic:similar.travelTitle')
-  const subtitle = type === 'quest' ? i18nT('aiPicksStatic:similar.questSubtitle') : i18nT('aiPicksStatic:similar.travelSubtitle')
+  const { heading } = aiSimilarHeading(type)
 
   return (
     <View
@@ -79,18 +90,7 @@ function AiSimilarSectionContent({
       accessibilityRole={Platform.OS === 'web' ? ('region' as never) : undefined}
       {...(Platform.OS === 'web' ? { dataSet: { sectionKey: SECTION_KEY_BY_TYPE[type] } } : {})}
     >
-      <View style={styles.headerRow}>
-        <Feather name="compass" size={18} color={colors.primaryDark} />
-        <Text
-          style={styles.title}
-          accessibilityRole={Platform.OS === 'web' ? ('heading' as never) : undefined}
-          aria-level={2 as never}
-        >
-          {heading}
-        </Text>
-      </View>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-      <View style={styles.grid} testID={isLoading ? 'ai-similar-skeleton' : 'ai-similar-grid'}>
+      <AiSimilarFrame type={type} styles={styles} gridTestID={isLoading ? 'ai-similar-skeleton' : 'ai-similar-grid'}>
         {isLoading
           ? Array.from({ length: visibleLimit }, (_, index) => (
               <View key={`skeleton-${index}`} style={styles.cardWrapper}>
@@ -99,47 +99,12 @@ function AiSimilarSectionContent({
             ))
           : items.map((item) => (
               <View key={`${item.type}-${item.source_id}`} style={styles.cardWrapper}>
-                <AiPickCard item={item} slotWidth={CARD_SLOT_WIDTH} analyticsBlock={`similar_${type}`} />
+                <AiPickCard item={item} slotWidth={CARD_SLOT_WIDTH} analyticsBlock={`similar_${type}`} layoutClientOnly={clientOnly} />
               </View>
             ))}
-      </View>
+      </AiSimilarFrame>
     </View>
   )
-}
-
-function createStyles(colors: ThemedColors, isNarrowLayout: boolean) {
-  return StyleSheet.create({
-    section: {
-      marginTop: 24,
-      gap: 4,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    title: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: colors.text,
-    },
-    subtitle: {
-      fontSize: 13,
-      color: colors.textMuted,
-    },
-    grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 12,
-      gap: 12,
-    },
-    cardWrapper: {
-      flexGrow: 1,
-      flexBasis: 220,
-      minWidth: 200,
-      maxWidth: isNarrowLayout ? undefined : 320,
-    },
-  })
 }
 
 export default React.memo(AiSimilarSection)
