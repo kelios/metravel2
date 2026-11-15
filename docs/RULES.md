@@ -1028,8 +1028,8 @@ not by the fastest patch that makes the symptom disappear.
 - **Preferred (safe on web + native)**
   - `@expo/vector-icons/Feather` (default choice)
 - **Allowed with caution**
-  - Other `@expo/vector-icons/*` families are allowed only if they are not stubbed for web in `metro-stubs/`.
-  - If a family is stubbed (example: `metro-stubs/MaterialCommunityIcons.js`), importing that family on web may actually render a different icon set (and cause runtime errors when `name` does not exist).
+  - Before using another `@expo/vector-icons/*` family, check its active web resolver overrides in `metro.config.js`.
+  - A resolver override that substitutes a different icon family can cause runtime errors when `name` does not exist in the rendered set; an unused file in `metro-stubs/` does not constitute an active override.
 
 #### Rules to avoid runtime icon errors
 
