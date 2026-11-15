@@ -29,15 +29,6 @@ const RouteElevationProfile = React.lazy(
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const MAP_HEIGHT = 560
-// #3430: slot of one elevation profile (card + its 12 px top margin), the largest
-// measured on prod (Hexenstieg 511 px on 390 and 441 on 1280, Tour du Mont Blanc
-// 547). The block reserves it per route file until the GPX previews resolve, so
-// the profiles land in the reserve instead of pushing «Точки маршрута»; a smaller
-// result is released by the held-shrink rule of the deferred transition.
-const ROUTE_PROFILE_RESERVE_HEIGHT = 547
-
-const RouteProfilesReserve = ({ count }: { count: number }) =>
-  count > 0 ? <View style={{ height: count * ROUTE_PROFILE_RESERVE_HEIGHT }} testID="route-elevation-reserve" /> : null
 
 const MapFallback = () => {
   const styles = useTravelDetailsStyles()
@@ -62,7 +53,6 @@ export const TravelRouteMapBlock: React.FC<{
   keyPointLabels: any
   mapOpenTrigger: number
   mapResizeTrigger: number
-  pendingRouteFileCount: number
   placeHints: Array<{ name: string; coord: string }>
   routeFilePoints: RouteFilePointItem[]
   routePreviewItems: any[]
@@ -83,7 +73,6 @@ export const TravelRouteMapBlock: React.FC<{
   keyPointLabels,
   mapOpenTrigger,
   mapResizeTrigger,
-  pendingRouteFileCount,
   placeHints,
   routeFilePoints,
   routePreviewItems,
@@ -170,7 +159,7 @@ export const TravelRouteMapBlock: React.FC<{
               )}
             </ToggleableMap>
             {routeProfiles.length > 0 ? (
-              <Suspense fallback={<RouteProfilesReserve count={routeProfiles.length} />}>
+              <Suspense fallback={null}>
                 {routeProfiles.map((profile) => (
                   <RouteElevationProfile
                     key={profile.key}
@@ -186,9 +175,7 @@ export const TravelRouteMapBlock: React.FC<{
                   />
                 ))}
               </Suspense>
-            ) : (
-              <RouteProfilesReserve count={pendingRouteFileCount} />
-            )}
+            ) : null}
           </>
         ) : shouldShowMapLoadingState ? (
           <MapFallback />

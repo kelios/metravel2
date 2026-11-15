@@ -97,6 +97,15 @@ function nearAboveCommentsFixture(nearTop: number) {
     runtimeHeight = EMPTY
     act(() => observerCallback?.())
   }
+  // The shrink arrives with a React commit (a task) in a quiet frame: a later
+  // task of the same frame may still scroll, so the commit cannot publish it.
+  const resolveEmptyInCommit = () => {
+    Object.defineProperty(document, 'timeline', { configurable: true, value: { currentTime: performance.now() } })
+    runtimeHeight = EMPTY
+    act(() => root.render(createElement(MeasuredFlow, {
+      isMobile: true, testID: 'near-transition', children: createElement('div', { style: { height: EMPTY } }),
+    })))
+  }
   const quietFrame = () => act(() => {
     const pending = frames.splice(0)
     for (const callback of pending) callback(performance.now() + 1)
@@ -108,7 +117,7 @@ function nearAboveCommentsFixture(nearTop: number) {
     window.requestAnimationFrame = originalFrame
     delete (document as { timeline?: unknown }).timeline
   }
-  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveEmptyAfterPendingStep, quietFrame, cleanup, scrollTop: () => top }
+  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveEmptyAfterPendingStep, resolveEmptyInCommit, quietFrame, cleanup, scrollTop: () => top }
 }
 
 it('holds a visible anchored shrink that arrives in a frame with an owner scroll', () => {
@@ -130,6 +139,21 @@ it('holds the shrink when a reader step is still pending in the painted frame', 
     f.resolveEmptyAfterPendingStep()
     expect(f.transition().style.height).toBe(`${FULL}px`)
     expect(f.writes).toEqual([])
+  } finally {
+    f.cleanup()
+  }
+})
+
+it('defers an anchored shrink delivered by a React commit to the frame rendering steps', () => {
+  const f = nearAboveCommentsFixture(400 - FULL)
+  try {
+    const before = f.comments.getBoundingClientRect().top
+    f.resolveEmptyInCommit()
+    expect(f.transition().style.height).toBe(`${FULL}px`)
+    expect(f.writes).toEqual([])
+    f.quietFrame()
+    expect(f.transition().style.height).toBe(`${EMPTY}px`)
+    expect(f.comments.getBoundingClientRect().top).toBe(before)
   } finally {
     f.cleanup()
   }
@@ -195,4 +219,59 @@ it('lets one transition own the releases of a painted frame', async () => {
   expect(claimOwnerRelease(owner, comments)).toBe(false)
   await new Promise((resolve) => setTimeout(resolve, 80))
   expect(claimOwnerRelease(owner, comments)).toBe(true)
+})
+
+// #3430: the sidebar placeholder (2368 px, «Похожие» included) is held while the
+// early runtime is short (981 px). That held part is occupied height, not
+// reserve slack: once «Похожие» arrive (runtime 2368) the flow stayed 2368 +
+// 1387 = 3755 px and pushed the footer out of view on 390 (CLS 0.90).
+it('does not count a held placeholder as conserved reserve slack', () => {
+  const { TravelDetailsDeferredTransition: Transition } = require('@/components/travel/details/TravelDetailsDeferredTransition')
+  const PLACEHOLDER = 2368
+  const host = document.createElement('div')
+  const owner = document.createElement('div')
+  const mount = document.createElement('div')
+  const following = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount, following)
+  host.append(owner)
+  document.body.append(host)
+  let runtimeHeight = 981
+  const transition = () => mount.querySelector<HTMLElement>('[data-testid="sidebar-transition"]')!
+  const flowHeight = () => Number.parseFloat(transition()?.style.height || '0') || PLACEHOLDER
+  Object.defineProperties(owner, {
+    clientHeight: { configurable: true, get: () => OWNER_HEIGHT },
+    clientWidth: { configurable: true, get: () => 390 },
+    scrollHeight: { configurable: true, get: () => 50000 },
+    scrollTop: { configurable: true, get: () => 45987, set: () => {} },
+  })
+  owner.getBoundingClientRect = () => rect(OWNER_TOP, OWNER_HEIGHT)
+  following.getBoundingClientRect = () => rect(-2123 + flowHeight(), 844)
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.dataset.testid === 'sidebar-transition') return rect(-2123, flowHeight())
+    if (this.dataset.testid === 'sidebar-transition-runtime') return rect(-2123, runtimeHeight)
+    if (this.dataset.testid === 'sidebar-transition-placeholder') return rect(-2123, PLACEHOLDER)
+    return originalRect.call(this)
+  }
+  let root: Root
+  const render = () => act(() => {
+    root ??= createRoot(mount)
+    root.render(createElement(Transition, {
+      isMobile: true, pending: false, placeholder: createElement('div', { style: { height: PLACEHOLDER } }),
+      reserveHeight: '100vh', runtimeFrameReady: false, runtimeVisibilityReady: true,
+      testID: 'sidebar-transition', children: createElement('div', { style: { height: runtimeHeight } }),
+    }))
+  })
+  try {
+    render()
+    expect(transition().style.height).toBe(`${PLACEHOLDER}px`)
+    runtimeHeight = PLACEHOLDER
+    act(() => observerCallback?.())
+    expect(transition().style.height).toBe(`${PLACEHOLDER}px`)
+  } finally {
+    act(() => root.unmount())
+    host.remove()
+    HTMLElement.prototype.getBoundingClientRect = originalRect
+  }
 })

@@ -119,23 +119,6 @@ describe('useRouteFilePreviews', () => {
     } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
   })
 
-  // #3430: the map block reserves one profile slot per supported file until its
-  // previews resolve; the count must already be known before the map is reached.
-  it('counts supported files as pending profiles until their previews resolve', async () => {
-    const sourceLine = [{ coord: '50,19' }, { coord: '50.1,19.1' }]
-    useTravelRouteFiles.mockReturnValue({ data: [{ id: 77, original_name: 'a.gpx', ext: 'gpx' }, { id: 78, original_name: 'b.gpx', ext: 'gpx' }], isLoading: false, isFetching: false })
-    downloadTravelRouteFileBlob.mockResolvedValue({ text: '<gpx/>' })
-    parseRouteFileGeometry.mockReturnValue({ hasIndependentPoints: false, lines: [sourceLine], points: [] })
-    const { result, rerender } = await renderHook(
-      ({ shouldRender }: { shouldRender: boolean }) => useRouteFilePreviews({ travelId: 88, canRenderHeavy: true, shouldRender, shouldForceRenderMap: false }),
-      { initialProps: { shouldRender: false } },
-    )
-    expect(result.current.pendingRouteFileCount).toBe(2)
-    await rerender({ shouldRender: true })
-    await waitFor(() => expect(result.current.routePreviewItems).toHaveLength(2))
-    expect(result.current.pendingRouteFileCount).toBe(0)
-  })
-
   it('reports loading while route files request is still in flight', async () => {
     useTravelRouteFiles.mockReturnValue({
       data: [],

@@ -13,6 +13,7 @@ import {
   isDrawnWithinOwner,
   isReserveSlackVisible,
   noteOwnerScrollWrite,
+  ownerFrameKnown,
   ownerScrolledInCurrentFrame,
   ownerScrolledInFrame,
   startsBelowReadingLine,
@@ -375,7 +376,8 @@ export function TravelDetailsDeferredTransition({
       Math.abs(slack.width - runtime.getBoundingClientRect().width) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX
     // `shrinkAnchor` marks a transaction that may take a shrink: `null` without a
     // following anchor, `undefined` for ancestor measurements of an outer one.
-    const measureRuntimeHeight = (expectedGeneration = generation, shrinkAnchor?: ReserveReleaseAnchor | null) => {
+    // `inTask`: called from a React commit rather than the frame's rendering steps.
+    const measureRuntimeHeight = (expectedGeneration = generation, shrinkAnchor?: ReserveReleaseAnchor | null, inTask = false) => {
       if (generationRef.current !== expectedGeneration || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return false
       const { width, height } = runtime.getBoundingClientRect()
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height < 0 || (!allowEmptyRuntime && height === 0)) return false
@@ -393,7 +395,7 @@ export function TravelDetailsDeferredTransition({
         const owner = findMeasuredScrollOwner(node)
         // A section still settling (`shown-pending`) keeps it too: its lists grow
         // back, and a release in between would publish both moves (#3430).
-        if (placement !== 'below' && (!runtimeFrameReady || !shrinkAnchor || (owner && ownerScrolledInCurrentFrame(owner)))) {
+        if (placement !== 'below' && (!runtimeFrameReady || !shrinkAnchor || (owner && (ownerScrolledInCurrentFrame(owner) || (inTask && ownerFrameKnown(owner)))))) {
           heldFlowRef.current = occupiedHeight
         }
       }
@@ -435,7 +437,8 @@ export function TravelDetailsDeferredTransition({
       // Latch the prior drawn flow difference once, before any nested height
       // write. Subsequent measurements add this difference without collecting
       // it again from a flow height which already includes conserved slack.
-      const height = Math.max(0, flowHeight - measuredHeightRef.current)
+      // A held frame (#3430) is part of the occupied height, not reserve slack.
+      const height = Math.max(0, flowHeight - Math.max(measuredHeightRef.current, heldFlowRef.current ?? 0))
       if (height > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) reserveSlackRef.current = {
         height, width, owner, runtime, reserveHeight, minHeight: view.getComputedStyle(node).minHeight,
         viewportHeight: view.innerHeight, ownerWidth: owner.clientWidth, ownerHeight: owner.clientHeight,
@@ -445,8 +448,9 @@ export function TravelDetailsDeferredTransition({
     // it moves nothing drawn; elsewhere the following frame keeps its place by the
     // usual anchor transaction. Without an anchor the next owner scroll retries.
     const releaseHeldFlow = () => {
-      if (heldFlowRef.current == null || !runtimeFrameReady || generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return
-      const placement = heldSlackPlacement(node, runtime.getBoundingClientRect().height, heldFlowRef.current)
+      const held = heldFlowRef.current
+      if (held == null || !runtimeFrameReady || generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return
+      const placement = heldSlackPlacement(node, runtime.getBoundingClientRect().height, held)
       const capture = placement === 'below' ? null : findMeasuredTransactionAnchor(node)
       if (placement !== 'below' && !capture) return
       const owner = findMeasuredScrollOwner(node)
@@ -487,7 +491,7 @@ export function TravelDetailsDeferredTransition({
       watchOwnerScroll(heldReleaseOwner)
       heldReleaseOwner.addEventListener('scroll', scheduleHeldRelease, { passive: true })
     }
-    const commitMeasuredHeight = () => {
+    const commitMeasuredHeight = (inTask = false) => {
       if (!node || generationRef.current !== generation) return
       const nextFrame = node.isConnected && runtime?.isConnected && node.contains(runtime) ? runtime.getBoundingClientRect() : null
       // ResizeObserver can repeat the same frame. With no conserved slack and
@@ -510,7 +514,7 @@ export function TravelDetailsDeferredTransition({
         captureAncestorReserveSlack(node)
       }
       const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node, measuredHeightRef.current == null)
-      const measured = measureRuntimeHeight(generation, capture)
+      const measured = measureRuntimeHeight(generation, capture, inTask)
       if (heldFlowRef.current != null) scheduleHeldRelease()
       if (!measured) return
       measureAncestorTransitions(node)
@@ -523,12 +527,12 @@ export function TravelDetailsDeferredTransition({
       const owner = node ? findMeasuredScrollOwner(node) : null
       return owner && runtime && isDrawnWithinOwner(runtime, owner) ? measureRuntimeHeight(generationRef.current) : false
     }
-    commitMeasuredHeight()
-    // A section that has just settled may take its held shrink before paint,
-    // unless the reader scrolled in this frame; otherwise a quiet frame does.
-    if (heldReleaseOwner && !ownerScrolledInCurrentFrame(heldReleaseOwner)) releaseHeldFlow()
+    commitMeasuredHeight(true)
+    // A section that has just settled takes its held change in a quiet animation
+    // frame; only where frames cannot be told apart, before paint in this commit.
+    if (heldReleaseOwner && !ownerFrameKnown(heldReleaseOwner) && !ownerScrolledInCurrentFrame(heldReleaseOwner)) releaseHeldFlow()
     scheduleHeldRelease()
-    const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(commitMeasuredHeight) : null
+    const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(() => commitMeasuredHeight()) : null
     if (runtime) observer?.observe(runtime)
     return () => {
       generationRef.current++
@@ -595,6 +599,33 @@ export function TravelDetailsDeferredTransition({
         }
       }
       const releaseOwner = node && findMeasuredScrollOwner(node)
+      // #3430: a React commit is a task, and a later task of its frame may still
+      // scroll (TMB 1280: a probe step after the comments release, 0.117). Where
+      // frames are known the release lands in a quiet animation frame instead:
+      // the reserve leaves the style there and the state follows.
+      if (releaseOwner && node && ownerFrameKnown(releaseOwner)) {
+        const view = releaseOwner.ownerDocument.defaultView
+        let frame: number | null = null
+        const release = (frameTime: number) => {
+          frame = null
+          if (!node.isConnected || !view) return
+          // A scrolled frame may have brought the slack into view: decide again.
+          if (ownerScrolledInFrame(releaseOwner, frameTime) || !claimOwnerRelease(releaseOwner, node)) {
+            setReleaseAttempt((attempt) => attempt + 1)
+            return
+          }
+          const anchor = findMeasuredTransactionAnchor(node) ??
+            (reserveSlackRef.current ? findRuntimeReadingAnchor(node, connectedDOMView(runtimeRef.current)) : null)
+          node.style.minHeight = '0px'
+          // Conserved slack lives in this node's own height: drop it in this frame.
+          measuredTransitions.get(node)?.measure()
+          measureAncestorTransitions(node)
+          const corrected = correctMeasuredAnchor(anchor, node)
+          setReserveReleaseState(revealCorrectionRef.current === 'clamped' ? 'clamped' : corrected ?? 'released')
+        }
+        frame = view?.requestAnimationFrame(release) ?? null
+        return () => { if (frame != null) view?.cancelAnimationFrame(frame) }
+      }
       if (releaseOwner && node && !claimOwnerRelease(releaseOwner, node)) {
         const view = releaseOwner.ownerDocument.defaultView
         const retry = view?.requestAnimationFrame(() => setReleaseAttempt((attempt) => attempt + 1))

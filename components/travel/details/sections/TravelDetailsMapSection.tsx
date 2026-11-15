@@ -55,7 +55,6 @@ export const TravelDetailsMapSection: React.FC<{
     isLoading,
     isRoutePreviewLoading,
     keyPointLabels,
-    pendingRouteFileCount,
     routeFilePoints,
     routePreviewItems,
     setMapSectionRef,
@@ -119,7 +118,6 @@ export const TravelDetailsMapSection: React.FC<{
             keyPointLabels={keyPointLabels}
             mapOpenTrigger={mapOpenTrigger}
             mapResizeTrigger={mapResizeTrigger}
-            pendingRouteFileCount={pendingRouteFileCount}
             placeHints={placeHints}
             routeFilePoints={routeFilePoints}
             routePreviewItems={routePreviewItems}

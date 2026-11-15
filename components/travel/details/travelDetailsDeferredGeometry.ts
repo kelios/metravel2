@@ -121,6 +121,15 @@ export function noteOwnerScrollWrite(owner: HTMLElement) {
   if (stamp) stamp.top = owner.scrollTop
 }
 
+// #3430: a React commit runs in a task, and a later task of the same frame may
+// still scroll the owner (a probe step after an anchored map shrink scored 0.797
+// on 390). Where frames can be told apart (a document timeline), a height
+// change that moves drawn content therefore lands only in the frame's rendering
+// steps — a ResizeObserver or an animation frame callback — never in a task.
+export function ownerFrameKnown(owner: HTMLElement) {
+  return typeof owner.ownerDocument.timeline?.currentTime === 'number'
+}
+
 // Outside an animation frame callback the current frame time is the document
 // timeline's; without one (no Web Animations) the frame cannot be told apart.
 export function ownerScrolledInCurrentFrame(owner: HTMLElement) {

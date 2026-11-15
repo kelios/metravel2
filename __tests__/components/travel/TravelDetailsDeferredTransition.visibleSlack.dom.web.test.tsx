@@ -127,3 +127,154 @@ it('снимает резерв, когда прокрутка показала 
     f.cleanup()
   }
 })
+
+// #3430: the release was a React commit — a task — and a later task of the same
+// frame could still scroll (TMB 1280: a probe step after the comments release,
+// CLS 0.117). Where frames are known, it lands in a quiet animation frame.
+it('releases the reserve in an animation frame, not in the commit that decided it', async () => {
+  const frames: FrameRequestCallback[] = []
+  const originalFrame = window.requestAnimationFrame
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => frames.push(callback)
+  Object.defineProperty(document, 'timeline', { configurable: true, value: { currentTime: performance.now() } })
+  const f = commentsAboveFooterFixture()
+  const flushFrame = () => act(() => {
+    const pending = frames.splice(0)
+    for (const callback of pending) callback(performance.now() + 1)
+  })
+  try {
+    f.render(false)
+    f.render(true)
+    await f.scrollBy(RESERVE)
+    flushFrame()
+    expect(f.writes).toEqual([])
+    expect(f.transition().dataset.reserveReleaseState).toBe('reserved')
+    flushFrame()
+    expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
+    expect(f.footer.getBoundingClientRect().top).toBe(COMMENTS_TOP)
+    expect(f.writes).toEqual([86222 + RESERVE - (RESERVE - RUNTIME)])
+  } finally {
+    f.cleanup()
+    window.requestAnimationFrame = originalFrame
+    delete (document as { timeline?: unknown }).timeline
+  }
+})
+
+// #3430: growth inside the reserve conserves its slack in the flow height. The
+// release frame must drop that slack too; otherwise minHeight alone moves nothing
+// and the slack leaves in the following React commit — a task again.
+it('drops conserved reserve slack in the release frame, not in the following commit', () => {
+  let observe: (() => void) | null = null
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: class {
+    constructor(callback: () => void) { observe = callback }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } })
+  const frames: FrameRequestCallback[] = []
+  const originalFrame = window.requestAnimationFrame
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => frames.push(callback)
+  Object.defineProperty(document, 'timeline', { configurable: true, value: { currentTime: performance.now() } })
+  const host = document.createElement('div')
+  const owner = document.createElement('div')
+  const mount = document.createElement('div')
+  const footer = document.createElement('div')
+  owner.style.overflowY = 'auto'
+  owner.append(mount, footer)
+  host.append(owner)
+  document.body.append(host)
+  const initialTop = 86222
+  let top = initialTop
+  let runtimeHeight = 300
+  const writes: Array<[number, string | undefined]> = []
+  const transition = () => mount.querySelector<HTMLElement>('[data-testid="comments-transition"]')!
+  const transitionTop = () => -600 - (top - initialTop)
+  const transitionHeight = () => Math.max(transition().style.minHeight === '100vh' ? RESERVE : 0, Number.parseFloat(transition().style.height || '0'))
+  Object.defineProperties(owner, {
+    clientHeight: { configurable: true, get: () => OWNER_HEIGHT },
+    clientWidth: { configurable: true, get: () => 900 },
+    scrollHeight: { configurable: true, get: () => 90000 },
+    scrollTop: { configurable: true, get: () => top, set: (value: number) => { top = value; writes.push([value, transition().dataset.reserveReleaseState]) } },
+  })
+  owner.getBoundingClientRect = () => rect(OWNER_TOP, OWNER_HEIGHT)
+  footer.getBoundingClientRect = () => rect(transitionTop() + transitionHeight(), FOOTER_HEIGHT)
+  const originalRect = HTMLElement.prototype.getBoundingClientRect
+  HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.dataset.testid === 'comments-transition') return rect(transitionTop(), transitionHeight())
+    if (this.dataset.testid === 'comments-transition-runtime') return rect(transitionTop(), runtimeHeight)
+    return originalRect.call(this)
+  }
+  let root: Root | undefined
+  const render = (ready: boolean) => act(() => {
+    root ??= createRoot(mount)
+    root.render(createElement(Transition, {
+      isMobile: false, pending: false, placeholder: null, reserveHeight: '100vh', runtimeFrameReady: ready, runtimeVisibilityReady: true,
+      testID: 'comments-transition', children: createElement('div', { style: { height: runtimeHeight } }),
+    }))
+  })
+  try {
+    render(false)
+    runtimeHeight = RUNTIME
+    act(() => observe?.())
+    const slack = RESERVE - 300
+    expect(transition().style.height).toBe(`${RUNTIME + slack}px`)
+    render(true)
+    const footerTop = footer.getBoundingClientRect().top
+    const releaseTop = top
+    writes.length = 0
+    act(() => {
+      const pending = frames.splice(0)
+      for (const callback of pending) callback(performance.now() + 1)
+    })
+    expect(transition().style.height).toBe(`${RUNTIME}px`)
+    expect(footer.getBoundingClientRect().top).toBe(footerTop)
+    expect(writes).toEqual([[releaseTop - slack, 'reserved']])
+  } finally {
+    act(() => root?.unmount())
+    host.remove()
+    HTMLElement.prototype.getBoundingClientRect = originalRect
+    window.requestAnimationFrame = originalFrame
+    delete (document as { timeline?: unknown }).timeline
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: NoopResizeObserver })
+  }
+})
+
+// #3430: the commit decides, the animation frame releases. A reader scroll in
+// between can carry the empty reserve tail into view with no following frame:
+// the release must be decided again, not pull the footer into the viewport.
+it('re-decides a release postponed by a scrolled frame before dropping the reserve', async () => {
+  const frames: FrameRequestCallback[] = []
+  const originalFrame = window.requestAnimationFrame
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => frames.push(callback)
+  Object.defineProperty(document, 'timeline', { configurable: true, value: { currentTime: performance.now() } })
+  const f = commentsAboveFooterFixture()
+  const flushFrame = (frameTime = performance.now() + 1) => act(() => {
+    const pending = frames.splice(0)
+    for (const callback of pending) callback(frameTime)
+  })
+  try {
+    f.render(false)
+    // Runtime visible, reserve tail below the viewport: the commit decides to release.
+    await f.scrollBy(-391)
+    f.render(true)
+    // The reader steps in the frame of the release callback.
+    await f.scrollBy(400)
+    const footerTop = f.footer.getBoundingClientRect().top
+    expect(footerTop).toBeGreaterThan(OWNER_TOP + OWNER_HEIGHT - 1)
+    flushFrame(0)
+    flushFrame()
+    expect(f.transition().dataset.reserveReleaseState).toBe('reserved')
+    expect(f.footer.getBoundingClientRect().top).toBe(footerTop)
+    // A further step shows the footer: it anchors the usual release.
+    await f.scrollBy(400)
+    const anchoredTop = f.footer.getBoundingClientRect().top
+    flushFrame()
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
+    flushFrame()
+    expect(f.transition().dataset.reserveReleaseState).toBe('anchored')
+    expect(f.footer.getBoundingClientRect().top).toBe(anchoredTop)
+  } finally {
+    f.cleanup()
+    window.requestAnimationFrame = originalFrame
+    delete (document as { timeline?: unknown }).timeline
+  }
+})

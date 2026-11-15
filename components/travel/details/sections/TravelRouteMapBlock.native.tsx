@@ -37,8 +37,6 @@ export const TravelRouteMapBlock: React.FC<{
   keyPointLabels: any
   mapOpenTrigger: number
   mapResizeTrigger: number
-  /** Web reserve of profile slots before GPX previews resolve (#3430); native has no layout-shift metric. */
-  pendingRouteFileCount?: number
   placeHints: Array<{ name: string; coord: string }>
   routeFilePoints: RouteFilePointItem[]
   routePreviewItems: any[]
