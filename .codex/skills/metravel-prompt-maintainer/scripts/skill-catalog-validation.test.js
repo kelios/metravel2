@@ -74,10 +74,13 @@ test('OpenSpec vendor variants skip drift and budget but retain required metadat
   assert.match(auditSkillFamily(claude, shared).errors[0].message, /description must be <=380/)
 })
 
-test('spec-kit vendor skills skip the budget while project .github skills keep it', (t) => {
+test('retired Spec Kit names no longer bypass the metadata budget', (t) => {
   const { claude, write } = fixture(t)
   write(claude, 'speckit-plan', skill('speckit-plan', 'x'.repeat(500)))
-  assert.deepEqual(auditSkillFamily(claude), { count: 1, vendorCount: 1, mirrorCount: 0, errors: [] })
+  const retired = auditSkillFamily(claude)
+  assert.equal(retired.vendorCount, 0)
+  assert.equal(retired.errors.length, 1)
+  assert.match(retired.errors[0].message, /description must be <=380/)
   write(claude, 'speckit-plan', skill('renamed-by-hand'))
   assert.deepEqual(auditSkillFamily(claude).errors.map((error) => error.message), [
     'frontmatter name must match folder (speckit-plan)',

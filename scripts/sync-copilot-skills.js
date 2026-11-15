@@ -51,12 +51,6 @@ const MIRRORED_SKILLS = [
   'metravel-ui-guardrails',
 ]
 
-// Vendor-owned: `speckit-*` кладёт сам spec-kit через
-// `.specify/integrations/copilot.manifest.json` и отслеживает их хеши. Источника
-// в `.codex/skills` у них нет, править руками нельзя — по образцу `openspec-*` в
-// паре `.claude`/`.agents`.
-const VENDOR_OWNED_SKILLS = ['speckit-']
-
 // Все скиллы-оригиналы называются `metravel-*`, поэтому префикс — точный
 // признак «это снимок нашего скилла». Каталог с таким именем, не объявленный в
 // MIRRORED_SKILLS, — снова бесхозная копия без владельца и без гейта, то есть
@@ -64,8 +58,6 @@ const VENDOR_OWNED_SKILLS = ['speckit-']
 // молча удалить. Прочие каталоги (Copilot-native скиллы без оригинала) зеркало
 // не трогает: оно на них не претендует.
 const MIRRORED_SKILL_PREFIX = 'metravel-'
-
-const isVendorOwned = (skillName) => VENDOR_OWNED_SKILLS.some((prefix) => skillName.startsWith(prefix))
 
 // Чистое ядро: на вход — два плоских списка `{ path, content }`, на выход — план
 // правок. Без файловой системы, чтобы гейт и тест считали одно и то же.
@@ -102,7 +94,6 @@ const planSync = ({ sourceFiles = [], targetFiles = [], mirroredSkills = MIRRORE
   const unownedSkills = new Set()
   for (const relativePath of targetByPath.keys()) {
     const skillName = topSegment(relativePath)
-    if (isVendorOwned(skillName)) continue
     if (mirrored.has(skillName)) {
       // Удаляются только файлы внутри скилла, который в источнике остался. Скилл,
       // исчезнувший из `.codex/skills` целиком, — блокер `missingSkills`: синхронизация
@@ -207,7 +198,6 @@ if (require.main === module) {
 module.exports = {
   OUTPUT_CONTRACT_VERSION,
   MIRRORED_SKILLS,
-  VENDOR_OWNED_SKILLS,
   planSync,
   buildJsonResult,
 }

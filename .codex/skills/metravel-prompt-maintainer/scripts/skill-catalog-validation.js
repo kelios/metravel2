@@ -13,9 +13,7 @@ const OPENSPEC_VENDOR_SKILLS = new Set([
   'openspec-sync-specs',
   'openspec-update-change',
 ])
-// spec-kit regenerates `.github/skills/speckit-*` and tracks their hashes in
-// `.specify/integrations/copilot.manifest.json`; the project budget is not theirs to satisfy.
-const isVendorSkill = (name) => OPENSPEC_VENDOR_SKILLS.has(name) || name.startsWith('speckit-')
+const isVendorSkill = (name) => OPENSPEC_VENDOR_SKILLS.has(name)
 
 const yamlScalar = (frontmatter, key) => {
   const lines = frontmatter.split(/\r?\n/)

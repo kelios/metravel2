@@ -21,9 +21,6 @@ when routing or project-wide documentation also changes.
 - `.github/skills/metravel-*/SKILL.md`: generated Copilot mirrors of
   `.codex/skills`, routed from `.github/copilot-instructions.md`. Update canonical
   sources, then run `npm run sync:copilot-skills`; audit rejects text drift.
-  `speckit-*`
-  there is vendor output of spec-kit, hashed in
-  `.specify/integrations/copilot.manifest.json` — never hand-edit it.
 - `.claude/agents/*.md` and `.claude/commands/*.md`: canonical role prompts and
   command entry points. `.codex/agents/*.toml` delegates to the matching Claude
   role; keep its metadata concise, without copying role policy. Audit checks

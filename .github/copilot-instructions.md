@@ -108,18 +108,11 @@ repositories only (mandatory)». Upstream только читается; кар�
 
 ## Spec-Driven Development
 
-Репозиторий использует GitHub Spec Kit. Для новых фич, изменений API-контракта
-и БД, сложных багов, SEO-чувствительных правок, работы с изображениями и
-изменений, затрагивающих frontend и backend одновременно, работай через
-спецификацию, а не сразу кодом.
+Репозиторий использует OpenSpec. Когда нужен полный change и как проходят
+proposal → apply → archive, определяет `docs/spec-driven-development.md`;
+полномочия на реализацию и operation gates — `docs/RULES.md` → «Development workflow».
 
-- Обязательные принципы — `.specify/memory/constitution.md` (читать до правок).
-- Когда SDD обязателен и когда достаточно короткого пути —
-  `docs/spec-driven-development.md`.
-- Обязательные разделы `spec.md` — `docs/spec-driven-development-requirements.md`.
-- Правила процесса для агента —
-  `.github/instructions/spec-driven-development.instructions.md`.
-- Skills: `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`,
-  `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`.
-- Спецификации живут в `specs/NNN-slug/`. Feature-скрипты Spec Kit не создают
-  git-веток — работа остаётся на `main`.
+- Project context и правила artifacts — `openspec/config.yaml`.
+- Активные changes — `openspec/changes/<name>/`; living specs — `openspec/specs/`.
+- Обязательные разделы artifacts — `docs/spec-driven-development-requirements.md`.
+- Постоянный backlog и статусы остаются на MCP task board.

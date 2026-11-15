@@ -57,13 +57,13 @@ describe('sync-copilot-skills', () => {
     expect(plan.deletes).toHaveLength(0)
   })
 
-  it('не трогает vendor-owned speckit-* ни на запись, ни на удаление', () => {
+  it('не трогает Copilot-native skills без project-источника ни на запись, ни на удаление', () => {
     const plan = planSync({
       mirroredSkills: only,
       sourceFiles: [{ path: 'metravel-qa-agent/SKILL.md', content: 'QA\n' }],
       targetFiles: [
         { path: 'metravel-qa-agent/SKILL.md', content: 'QA\n' },
-        { path: 'speckit-plan/SKILL.md', content: 'вендорный spec-kit, источника в .codex нет' },
+        { path: 'copilot-local-plan/SKILL.md', content: 'Copilot-native скилл, источника в .codex нет' },
       ],
     })
 
@@ -248,8 +248,8 @@ describe('sync-copilot-skills CLI', () => {
       )
       // Сирота внутри зеркалимого скилла: источник этого файла исчез.
       writeTextFile(orphanFile(), 'файла нет в .codex\n')
-      // Vendor и Copilot-native соседи не должны пострадать от записи.
-      writeTextFile(skillFile('.github', 'speckit-plan'), 'вендорный spec-kit\n')
+      // Copilot-native соседи не должны пострадать от записи.
+      writeTextFile(skillFile('.github', 'copilot-local-plan'), 'Copilot-native планировщик\n')
       writeTextFile(skillFile('.github', 'copilot-only-helper'), 'скилл без оригинала\n')
     })
 
@@ -263,7 +263,7 @@ describe('sync-copilot-skills CLI', () => {
       expect(fs.existsSync(orphanFile())).toBe(false)
       // Каталог `legacy/` держался только сиротой — иначе `removeEmptyDirsUpTo` мёртв.
       expect(fs.existsSync(path.dirname(orphanFile()))).toBe(false)
-      expect(fs.readFileSync(skillFile('.github', 'speckit-plan'), 'utf8')).toBe('вендорный spec-kit\n')
+      expect(fs.readFileSync(skillFile('.github', 'copilot-local-plan'), 'utf8')).toBe('Copilot-native планировщик\n')
       expect(fs.readFileSync(skillFile('.github', 'copilot-only-helper'), 'utf8')).toBe('скилл без оригинала\n')
     })
 

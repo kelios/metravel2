@@ -108,8 +108,9 @@ locale, or accessibility copy changes.
 ### Modified Capabilities
 
 None. There is no existing OpenSpec capability for travel search-card media;
-the legacy `specs/001-search-card-image-loading/` draft is provenance only and
-is not a living OpenSpec spec.
+the legacy search-card draft in commit `7940944448e401cebe2731b366b923c602924b15`
+is historical provenance only, retained in Git history after #3309 removed
+Spec Kit tooling. It is not a living OpenSpec spec.
 
 ## Impact
 

@@ -98,8 +98,6 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   `scripts/sync-copilot-skills.js` — снимок `metravel-*` без объявления гейт
   считает ошибкой, а не новым скиллом. Расхождение ловят
   `npm run sync:copilot-skills:check` (входит в `npm run lint`) и `audit:prompts`.
-  `speckit-*` там vendor spec-kit
-  (`.specify/integrations/copilot.manifest.json`), руками не править.
 - `.claude/agents` — источник ролей; `.codex/agents/*.toml` — короткие adapters
   к matching `.claude/agents/<name>.md`, без отдельной копии role policy.
   `audit:prompts` проверяет delegation, metadata и существование источника.
