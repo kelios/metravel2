@@ -195,17 +195,41 @@ function findMeasuredScrollOwner(node: HTMLElement): HTMLElement | null {
   return owner
 }
 
-function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
-  const view = node.ownerDocument.defaultView
-  const owner = findMeasuredScrollOwner(node)
-  if (!view) return null
-  if (!owner || owner.clientHeight <= 0) return null
+// The part of the scroll owner the reader actually sees. On desktop it is shorter
+// than the window (header above, bottom bar below), so a `100vh` reserve can
+// cover it entirely.
+function ownerViewport(owner: HTMLElement, view: Window) {
   const ownerRect = owner.getBoundingClientRect()
   const top = Math.max(0, ownerRect.top + owner.clientTop)
   const bottom = Math.min(view.innerHeight, ownerRect.top + owner.clientTop + owner.clientHeight)
   const left = Math.max(0, ownerRect.left + owner.clientLeft)
   const right = Math.min(view.innerWidth, ownerRect.left + owner.clientLeft + owner.clientWidth)
-  if (bottom <= top || right <= left) return null
+  return bottom > top && right > left ? { top, bottom, left, right } : null
+}
+
+// #3430: a reserve covering the whole visible owner leaves no following frame to
+// anchor; releasing its visible slack then pulls the footer up into view (CLS
+// 0.72 on 390, 0.078 on 1280 — the owner is shorter than the `100vh` reserve).
+// Such a release waits until the slack leaves the viewport or a following frame
+// becomes visible: slack below the viewport moves nothing visible. A visible
+// following frame keeps the reading-line rule of `findMeasuredTransactionAnchor`.
+function isReserveSlackVisible(node: HTMLElement, runtime: HTMLElement, owner: HTMLElement): boolean {
+  const view = node.ownerDocument.defaultView
+  const viewport = view && owner.clientHeight > 0 && owner === findMeasuredScrollOwner(node) ? ownerViewport(owner, view) : null
+  if (!viewport) return false
+  const slackTop = runtime.getBoundingClientRect().bottom
+  const slackBottom = node.getBoundingClientRect().bottom
+  return slackBottom - slackTop > RUNTIME_SETTLE_HEIGHT_EPSILON_PX && slackBottom > viewport.top && slackTop < viewport.bottom
+}
+
+function findReserveReleaseAnchor(node: HTMLElement): ReserveReleaseAnchor | null {
+  const view = node.ownerDocument.defaultView
+  const owner = findMeasuredScrollOwner(node)
+  if (!view) return null
+  if (!owner || owner.clientHeight <= 0) return null
+  const viewport = ownerViewport(owner, view)
+  if (!viewport) return null
+  const { top, bottom, left, right } = viewport
 
   // The transition sits inside a section wrapper. Walk only within this owner
   // to the first visible following flow frame, never to the window/body.
@@ -378,7 +402,7 @@ export function TravelDetailsDeferredTransition({
   const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
   const transitionRef = useRef<ViewInstance>(null)
   const releaseAnchorRef = useRef<ReserveReleaseAnchor | null>(null)
-  const scrollActivityRef = useRef<{ owner: HTMLElement; lastActivity: number } | null>(null)
+  const scrollActivityRef = useRef<{ owner: HTMLElement; lastActivity: number; releaseHeld: boolean } | null>(null)
   const [releaseAttempt, setReleaseAttempt] = useState(0)
 
   useEffect(() => {
@@ -568,15 +592,26 @@ export function TravelDetailsDeferredTransition({
     const node = connectedDOMView(transitionRef.current)
     const owner = node && findMeasuredScrollOwner(node)
     if (!owner) return
-    const activity = { owner, lastActivity: -Infinity }
+    const activity = { owner, lastActivity: -Infinity, releaseHeld: false }
     scrollActivityRef.current = activity
+    const view = owner.ownerDocument.defaultView
+    let retryFrame: number | null = null
     const markActivity = (event: Event) => {
       if (event.type !== 'scroll' || event.target === owner) activity.lastActivity = Date.now()
+      // A release held for visible slack is retried after the scroll that may
+      // carry the slack out of view has been laid out.
+      if (activity.releaseHeld && event.type === 'scroll' && event.target === owner && view && retryFrame == null) {
+        retryFrame = view.requestAnimationFrame(() => {
+          retryFrame = null
+          setReleaseAttempt((attempt) => attempt + 1)
+        })
+      }
     }
     const events = ['wheel', 'touchmove', 'scroll'] as const
     for (const event of events) owner.addEventListener(event, markActivity, { capture: true, passive: true })
     return () => {
       for (const event of events) owner.removeEventListener(event, markActivity, true)
+      if (retryFrame != null) view?.cancelAnimationFrame(retryFrame)
       scrollActivityRef.current = null
     }
   }, [reserveHeight, reserveReleaseState])
@@ -592,6 +627,10 @@ export function TravelDetailsDeferredTransition({
       const capture = node ? findMeasuredTransactionAnchor(node) ??
         (reserveSlackRef.current ? findRuntimeReadingAnchor(node, runtime) : null) : null
       const activity = scrollActivityRef.current
+      // With no visible following frame the release would pull it into view.
+      if (activity) activity.releaseHeld = !capture && !!node && !!runtime &&
+        isReserveSlackVisible(node, runtime, activity.owner) && !findReserveReleaseAnchor(node)
+      if (activity?.releaseHeld) return undefined
       if (node && runtime && capture && activity?.owner === capture.owner &&
           node.getBoundingClientRect().height - runtime.getBoundingClientRect().height > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
         const wait = activity.lastActivity + RESERVE_RELEASE_SCROLL_QUIET_MS - Date.now()
