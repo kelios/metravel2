@@ -57,9 +57,11 @@ type CardProps = {
   slotWidth: number
   colors: ThemedColors
   styles: ReturnType<typeof createStyles>
+  /** Метка на обложке; по умолчанию — «Из ответа». План по дням (#3298) ставит сюда время на материал. */
+  markerLabel?: string
 }
 
-const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles }: CardProps) {
+const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles, markerLabel }: CardProps) {
   const router = useRouter()
   const { planTrip } = usePlanTripFromSource()
   const item = useMemo(() => toPickItem(source), [source])
@@ -71,8 +73,9 @@ const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles 
 
   const planQuest = useCallback(() => {
     track('plan')
-    planTrip(buildTripPlanCreateHrefFromQuest({ title: source.title, url: source.url, description: source.snippet }))
-  }, [planTrip, source.snippet, source.title, source.url, track])
+    // Координаты квеста едут в форму поездки: после создания квест встаёт точкой её маршрута (#3416 п.1).
+    planTrip(buildTripPlanCreateHrefFromQuest({ title: source.title, url: source.url, description: source.snippet, lat: coordinates?.lat, lng: coordinates?.lng }))
+  }, [coordinates?.lat, coordinates?.lng, planTrip, source.snippet, source.title, source.url, track])
   const trackPlan = useCallback(() => track('plan'), [track])
 
   const openMap = useCallback(() => {
@@ -90,7 +93,7 @@ const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles 
         item={item}
         slotWidth={slotWidth}
         compact
-        markerLabel={i18nT('aiAssistStatic:ask.recommendedBadge')}
+        markerLabel={markerLabel ?? i18nT('aiAssistStatic:ask.recommendedBadge')}
         analyticsBlock={ASSISTANT_CARDS_BLOCK}
         testID={`assistant-source-card-${source.type}-${source.source_id}`}
         actionSlot={
@@ -139,16 +142,20 @@ type Props = {
   colors: ThemedColors
   /** Узкая раскладка: карточка уже, ряд прокручивается внутри себя — страница вбок не едет. */
   narrow: boolean
+  /** Своя метка карточки вместо «Из ответа» (#3298: время на материал в плане по дням). */
+  markerOf?: (source: AiSource) => string
+  /** Свой testID ряда: в плане по дням рядов несколько. */
+  railTestID?: string
 }
 
-function AssistantSourceCardsComponent({ sources, colors, narrow }: Props) {
+function AssistantSourceCardsComponent({ sources, colors, narrow, markerOf, railTestID = 'assistant-source-cards' }: Props) {
   const styles = useMemo(() => createStyles(), [])
   if (!sources.length) return null
   const slotWidth = narrow ? SLOT_WIDTH_NARROW : SLOT_WIDTH
   return (
-    <CardRail gap={RAIL_GAP} contentPaddingVertical={4} accessibilityLabel={i18nT('aiAssistStatic:ask.sourcesTitle')} testID="assistant-source-cards">
+    <CardRail gap={RAIL_GAP} contentPaddingVertical={4} accessibilityLabel={i18nT('aiAssistStatic:ask.sourcesTitle')} testID={railTestID}>
       {sources.map((source) => (
-        <SourceCard key={`${source.type}-${source.source_id}`} source={source} slotWidth={slotWidth} colors={colors} styles={styles} />
+        <SourceCard key={`${source.type}-${source.source_id}`} source={source} slotWidth={slotWidth} colors={colors} styles={styles} markerLabel={markerOf?.(source)} />
       ))}
     </CardRail>
   )

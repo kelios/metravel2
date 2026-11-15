@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -7,7 +7,8 @@ import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
+import { buildTripPlanPrefill, buildTripPlanPrefillFromDraft, buildTripPlanRoutePrefill } from '@/utils/tripPlanLinks';
+import { buildTripPlanDraftHref, clearTripPlanDraft, draftRoutePoints, loadTripPlanDraft, TRIP_PLAN_DRAFT_SOURCE, type TripPlanDraft } from '@/utils/tripPlanDraft';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
@@ -35,12 +36,36 @@ function CreateTripScreenContent() {
   const params = useLocalSearchParams();
   const authReady = useAuthStore((s) => s.authReady);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const initialValues = useMemo(() => buildTripPlanPrefill(params), [params]);
+  // #3298: вход с черновиком плана ассистента — в адресе только идентификатор, сам план читается из
+  // хранилища. Форма берёт начальные значения один раз, поэтому рисуется после чтения черновика.
+  const draftId = params.source === TRIP_PLAN_DRAFT_SOURCE && typeof params.draft === 'string' ? params.draft : '';
+  const [draft, setDraft] = useState<TripPlanDraft | null | undefined>(draftId ? undefined : null);
+  // Черновик вошедшего принимается только им самим, гостевой — всеми; читаем после восстановления сессии,
+  // иначе свой черновик выглядел бы чужим и удалялся.
+  const viewer = useAuthStore((s) => (s.isAuthenticated && s.userId ? s.userId : null));
+  useEffect(() => {
+    let active = true;
+    if (!draftId) {
+      setDraft(null);
+      return undefined;
+    }
+    setDraft(undefined);
+    if (!authReady) return undefined;
+    void loadTripPlanDraft(draftId, viewer).then((loaded) => {
+      if (active) setDraft(loaded);
+    });
+    return () => {
+      active = false;
+    };
+  }, [authReady, draftId, viewer]);
+  const initialValues = useMemo(() => (draft ? buildTripPlanPrefillFromDraft(draft) : buildTripPlanPrefill(params)), [draft, params]);
+  // Точки маршрута: черновик плана либо одна точка материала из параметров ссылки (#3416 п.1).
+  const routeDraft = useMemo(() => (draft ? draftRoutePoints(draft.points) : buildTripPlanRoutePrefill(params)), [draft, params]);
   const header = useScreenHeader({
     title: i18nT('trips:components.trips.planning.TripCreateForm.novaya_poezdka_1901be53'),
   });
 
-  if (!authReady) {
+  if (!authReady || (isAuthenticated && draft === undefined)) {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <View style={[styles.inner, styles.state]}>
@@ -61,7 +86,7 @@ function CreateTripScreenContent() {
               onPress={() =>
                 router.push(
                   buildLoginHref({
-                    redirect: '/trips/plan/create',
+                    redirect: draftId ? buildTripPlanDraftHref(draftId) : '/trips/plan/create',
                     intent: 'plan-trip',
                   }) as never,
                 )
@@ -82,7 +107,11 @@ function CreateTripScreenContent() {
         <ScreenHeader header={header} />
         <TripCreateForm
           initialValues={initialValues}
-          onCreated={(trip) => router.replace(`/trips/plan/${trip.id}`)}
+          routeDraft={routeDraft}
+          onCreated={(trip, routeSaved) => {
+            if (routeSaved) void clearTripPlanDraft(draftId);
+            router.replace(`/trips/plan/${trip.id}`);
+          }}
         />
       </View>
     </ScrollView>

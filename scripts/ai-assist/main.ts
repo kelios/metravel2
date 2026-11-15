@@ -20,6 +20,7 @@ import { IndexModelMismatch, loadIndex } from './index.ts'
 import { createLexicalSearch } from './lexical.ts'
 import { AUTHOR_DRAFT_LIMITS_PREFIX } from './authorDraft.ts'
 import { INTENT_LIMITS_PREFIX } from './intent.ts'
+import { PLAN_LIMITS_PREFIX } from './plan.ts'
 import { AskLimits, createCounterStore, createDayClock } from './limits.ts'
 import { createRedisClient } from './redis.ts'
 import { createTagCatalog } from './suggestTags.ts'
@@ -88,6 +89,14 @@ async function main(): Promise<void> {
     strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
     prefix: INTENT_LIMITS_PREFIX,
   })
+  // #3298: план по дням — свой суточный счётчик на IP.
+  const planLimits = new AskLimits({
+    store: counterStore,
+    clock: dayClock,
+    dailyLimit: config.planDailyLimit,
+    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+    prefix: PLAN_LIMITS_PREFIX,
+  })
   // #3296: голоса за ответ — свой суточный счётчик на IP в том же хранилище: голос и уточнение причины на вопрос.
   const feedbackLimits = new AskLimits({
     store: counterStore,
@@ -111,6 +120,7 @@ async function main(): Promise<void> {
     log(`/ai/ask: строки подсказки #3289 — «Почему подходит» ${config.promptHints.whyFits ? 'вкл' : 'ВЫКЛ'}, «материала о месте нет» ${config.promptHints.noPlace ? 'вкл' : 'ВЫКЛ'}`)
   }
   if (!config.promptFocus) log('/ai/ask: сокращение подсказки до карточек, выделенных условиями вопроса (#3289), ВЫКЛ')
+  log(`/ai/plan: ${config.planDailyLimit}/сутки на IP, план собирает ${config.planModel ? 'модель с проверкой и доводкой кодом, запасной путь — код (AI_PLAN_MODEL=1)' : 'код; путь модели — AI_PLAN_MODEL=1'}`)
   if (config.helpMode === 'model') log('/ai/ask: справка о сайте (#3293) идёт через модель — AI_ASSIST_HELP_MODE=model; по умолчанию запись отдаётся без модели')
   // #3354: личный контекст вошедшего посетителя. Токен уходит только на бэкенд.
   const visitorProfile = config.promptProfile
@@ -157,6 +167,7 @@ async function main(): Promise<void> {
     promptFocus: config.promptFocus,
     authorDraft: { limits: authorDraftLimits },
     mapIntent: { limits: mapIntentLimits },
+    plan: { limits: planLimits, modelEnabled: config.planModel },
     feedback: { limits: feedbackLimits },
     suggestTags: { catalog: tagCatalog },
     log,

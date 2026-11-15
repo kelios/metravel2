@@ -4,16 +4,22 @@ import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 // Asserts consent-gate and validation errors — does NOT snapshot the full DOM.
 
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 // ── Module mocks (must precede imports of the component) ──────────────────────
 
 const mockMutate = jest.fn()
+// #3298: точки черновика маршрута сохраняются вторым запросом после создания поездки.
+const mockRouteMutate = jest.fn()
 
 jest.mock('@/hooks/usePlannedTripsApi', () => ({
   useCreateTrip: () => ({
     mutate: mockMutate,
+    isPending: false,
+  }),
+  useUpdateTripRoute: () => ({
+    mutate: mockRouteMutate,
     isPending: false,
   }),
 }))
@@ -121,6 +127,7 @@ beforeEach(() => {
   ;(Platform as { OS: string }).OS = 'web'
   mockResponsiveOverride = { isHydrated: true, isMobile: false }
   mockMutate.mockClear()
+  mockRouteMutate.mockClear()
 })
 
 // #1414 (TestFlight 1.0.5 (8)): «Я бы тут сделала компактнее с мобильной версии
@@ -433,3 +440,74 @@ describe('TripCreateForm — trip end date', () => {
     expect(mockMutate.mock.calls[0][0]).toMatchObject({ endDate: '2026-09-26' })
   })
 })
+
+// #3298 (план ассистента) и #3416 п.1 (квест точкой): форма приходит с точками маршрута и сохраняет их
+// сразу после создания поездки — тем же запросом, что конструктор маршрута.
+describe('TripCreateForm — черновик маршрута', () => {
+  const routeDraft = [
+    { id: 'draft-quest-246-0', type: 'custom' as const, name: 'Квест по Кракову', description: null, coordinates: [19.935, 50.054] as [number, number], placeId: null, dayNumber: 1 },
+    { id: 'draft-travel-636-1', type: 'place' as const, name: 'Вокруг Кракова', description: null, coordinates: [19.83, 50.2] as [number, number], placeId: 636, dayNumber: 2 },
+  ]
+  const trip = { id: 77, title: 'Два дня в Кракове' }
+
+  const submit = async (view: RenderedForm) => {
+    await fireEvent.press(view.getByTestId('trip-create-consent'))
+    await fireEvent.changeText(view.getByTestId('trip-create-title'), 'Два дня в Кракове')
+    await fireEvent.press(view.getByTestId('trip-create-submit'))
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
+  }
+
+  it('без черновика поездка открывается сразу, запроса маршрута нет', async () => {
+    const onCreated = jest.fn()
+    const view = await render(<TripCreateForm onCreated={onCreated} />)
+    expect(view.queryByTestId('trip-create-route-draft')).toBeNull()
+    await submit(view)
+    await act(async () => mockMutate.mock.calls[0][1].onSuccess(trip))
+    expect(mockRouteMutate).not.toHaveBeenCalled()
+    expect(onCreated).toHaveBeenCalledWith(trip, true)
+  })
+
+  it('с черновиком: строка о числе точек, после создания — сохранение маршрута с днями, затем вход в поездку', async () => {
+    const onCreated = jest.fn()
+    const view = await render(<TripCreateForm onCreated={onCreated} routeDraft={routeDraft} initialValues={{ title: 'План', endDate: '2026-12-06', startDate: '2026-12-05' }} />)
+    expect(view.getByTestId('trip-create-route-draft').props.children).toBe('В маршрут поездки встанут 2 точки')
+    await submit(view)
+    // Дата окончания черновика плана уходит в поездку.
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({ startDate: '2026-12-05', endDate: '2026-12-06' })
+    await act(async () => mockMutate.mock.calls[0][1].onSuccess(trip))
+    expect(onCreated).not.toHaveBeenCalled()
+    expect(mockRouteMutate).toHaveBeenCalledTimes(1)
+    expect(mockRouteMutate.mock.calls[0][0]).toEqual({ tripId: 77, route: routeDraft })
+    const saved = { ...trip, route: routeDraft }
+    await act(async () => mockRouteMutate.mock.calls[0][1].onSuccess(saved))
+    expect(onCreated).toHaveBeenCalledWith(saved, true)
+  })
+
+  it('стартовая точка созданной поездки остаётся первой: полный PUT маршрута её не стирает', async () => {
+    const view = await render(<TripCreateForm onCreated={jest.fn()} routeDraft={routeDraft} />)
+    await submit(view)
+    const start = { id: 'start', type: 'place' as const, name: 'Минск', description: null, coordinates: [27.56, 53.9] as [number, number], placeId: null }
+    await act(async () => mockMutate.mock.calls[0][1].onSuccess({ ...trip, route: [start] }))
+    expect(mockRouteMutate.mock.calls[0][0]).toEqual({ tripId: 77, route: [start, ...routeDraft] })
+  })
+
+  it('маршрут не сохранился: вторая поездка не создаётся — повтор сохранения точек либо вход без точек', async () => {
+    const onCreated = jest.fn()
+    const view = await render(<TripCreateForm onCreated={onCreated} routeDraft={routeDraft} />)
+    await submit(view)
+    await act(async () => mockMutate.mock.calls[0][1].onSuccess(trip))
+    await act(async () => mockRouteMutate.mock.calls[0][1].onError(new Error('500')))
+    expect(onCreated).not.toHaveBeenCalled()
+    expect(view.getByTestId('trip-create-route-draft-failed')).toBeTruthy()
+    expect(view.getByTestId('trip-create-submit').props.accessibilityState).toMatchObject({ disabled: true })
+
+    await fireEvent.press(view.getByTestId('trip-create-route-draft-retry'))
+    expect(mockMutate).toHaveBeenCalledTimes(1)
+    expect(mockRouteMutate).toHaveBeenCalledTimes(2)
+    expect(mockRouteMutate.mock.calls[1][0]).toEqual({ tripId: 77, route: routeDraft })
+
+    await fireEvent.press(view.getByTestId('trip-create-route-draft-skip'))
+    expect(onCreated).toHaveBeenCalledWith(trip, false)
+  })
+})
+

@@ -7,6 +7,7 @@
  *   POST /ai/suggest-tags {text, locale?} → {countries, categories, …, confidence, degraded} (suggestTags.ts, #2886)
  *   POST /ai/near-route {points: [{lat,lng}], limit?, locale?} → {items, took_ms} (nearRoute.ts, #2911)
  *   POST /ai/intent {q, locale?} → {categories, radius_km, center, constraints} (intent.ts, #2887)
+ *   POST /ai/plan {q, locale?} → {days, note, days_requested, assembled, remaining} (plan.ts, #3298)
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
  *   GET  /ai/health → {ok, model, dim, count, index_built_at, index_age_days, sources, rss_mb, …}
  *
@@ -16,11 +17,12 @@
 import http from 'node:http'
 
 import { type ChunkType, countSources, indexAgeDays } from '../ai-index/format.ts'
-import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
-import { mentionsAnyPlace } from '../../api/aiAssist/promptPlace.ts'
+import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_PLAN_DAILY_LIMIT, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
+import { matchPlaceSources, mentionsAnyPlace } from '../../api/aiAssist/promptPlace.ts'
 import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLine } from '../../api/aiAssist/sourceFacts.ts'
-import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
+import { judgeCard, parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
+import { namedDestinations } from '../../api/aiAssist/topicGate.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
 import { asksWhereToGo, demoteSeen, detectOwnPlacesQuestion, seenSourceKeys, visitorCandidateIds } from '../../api/aiAssist/visitorContext.ts'
 import { selectWorldTrails } from '../../api/aiAssist/worldTrails.ts'
@@ -34,6 +36,8 @@ import { createFeedbackHandler, FEEDBACK_LIMITS_PREFIX, FEEDBACK_REQUESTS_PER_QU
 import type { LexicalHit, LexicalSearch } from './lexical.ts'
 import { AskLimits, createDayClock, MemoryCounterStore } from './limits.ts'
 import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nearRoute.ts'
+import { createPlanHandler, PLAN_LIMITS_PREFIX, type PlanCandidates } from './plan.ts'
+import { PLAN_CANDIDATES_LIMIT, PLAN_MODEL_DEFAULT, PLAN_REGION_KM, type PlanCandidate, regionCandidates, regionCenter } from './planBuild.ts'
 import { bestPageRows, focusFragment, joinPageFragments, pageRows } from './page.ts'
 import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
@@ -100,6 +104,12 @@ export interface AppDeps {
    */
   mapIntent?: { limits: AskLimits }
   /**
+   * `/ai/plan` (#3298): свой счётчик на IP и выбор, кто собирает план. Необязателен для стендов и тестов
+   * других эндпоинтов — тогда квота живёт в памяти процесса с лимитом политики, а план собирает тот, кого
+   * называет `PLAN_MODEL_DEFAULT`.
+   */
+  plan?: { limits?: AskLimits; modelEnabled?: boolean }
+  /**
    * `/ai/feedback` (#3296): оценка ответа. Счётчик голосов на IP необязателен для стендов и тестов других
    * эндпоинтов — тогда он живёт в памяти процесса; `main.ts` передаёт счётчик на общем хранилище (redis).
    * `false` — оценки нет вовсе: `done` без `turn_id`, строки хода в журнал не пишутся, адрес отвечает 404.
@@ -122,6 +132,8 @@ export const DEFAULT_LIMIT = 10
 export const MAX_BODY_BYTES = 16 * 1024
 /** Сколько статей просим у лексики: с запасом относительно limit, но без лишней нагрузки на Django. */
 export const LEXICAL_LIMIT = 20
+/** Сколько источников подбор отдаёт кандидатами плана по дням (#3298) до отбора по месту. */
+export const PLAN_SEARCH_LIMIT = 20
 
 function readJsonBody(request: http.IncomingMessage, maxBytes: number = MAX_BODY_BYTES): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -497,6 +509,59 @@ export function createApp(deps: AppDeps): http.Server {
     }
   }
 
+  /** Карточка-кандидат плана (#3298): поля показа из индекса и строка фактов — её видит модель. */
+  const toPlanCandidate = (source: AiSource): PlanCandidate | null => {
+    if (source.type !== 'travel' && source.type !== 'quest') return null
+    const facts = source.facts ?? null
+    const place = { city: source.city ?? null, country: source.country ?? null }
+    return {
+      type: source.type,
+      source_id: Number(source.source_id),
+      title: source.title,
+      url: source.url,
+      path: source.path,
+      facts_line: facts?.type === 'quest' ? questFactsLine(facts, place) : travelFactsLine(facts?.type === 'travel' ? facts : null, { country: place.country }),
+      lat: source.lat ?? null,
+      lng: source.lng ?? null,
+      cover: source.cover ?? null,
+      city: place.city,
+      country: place.country,
+      facts,
+    }
+  }
+
+  /**
+   * Кандидаты плана по дням (#3298): карточки одного места и региона. Место — прежним отбором подбора
+   * (`arrangeSources`: название и город карточки, каталог квестов, упоминание в тексте); условия вопроса
+   * (дети, собака, число дней) отсеивают карточки тем же `judgeCard`. Затем география: всё, что дальше
+   * `PLAN_REGION_KM` от середины карточек места, в план не идёт, а материалы индекса в половине этого
+   * радиуса добавляются после найденных — подбор отдаёт восемь-шестнадцать карточек, а у города их десятки.
+   */
+  async function planCandidates(q: string, locale: Locale): Promise<PlanCandidates> {
+    const { items } = await hybrid({ q, locale, limit: PLAN_SEARCH_LIMIT })
+    const found = items.filter((item) => item.type !== 'help').map((item) => toSource(item))
+    const pool = questPool(locale)
+    const named = matchPlaceSources(q, found) !== null || matchPlaceSources(q, pool(), ['cities'], { strict: true }) !== null || namedDestinations(q).length > 0
+    if (!named) return { cards: [], place: false }
+    const arranged = arrangeSources(q, found, { pool, mentions: mentionsInIndex(locale), focus: false })
+    if (arranged.noPlace) return { cards: [], place: true }
+    const grouped = arranged.sources.some((source) => source.group !== undefined)
+    const ofPlace = (grouped ? arranged.sources.filter((source) => source.group === 'match') : arranged.sources).flatMap((source) => toPlanCandidate(source) ?? [])
+    const region = regionCandidates(ofPlace)
+    const center = regionCenter(region)
+    if (!center) return { cards: [], place: true }
+    const taken = new Set(region.map((card) => `${card.type}:${card.source_id}`))
+    const near = nearRouteItems(index, { points: [center], locale, limit: PLAN_SEARCH_LIMIT, corridorKm: PLAN_REGION_KM / 2 })
+      .filter((item) => item.type !== 'help' && !taken.has(`${item.type}:${item.source_id}`))
+      .map((item) => toSource(item))
+      .filter((source) => {
+        const verdict = judgeCard(arranged.conditions, source)
+        return !verdict.dropped && !verdict.unfit
+      })
+      .flatMap((source) => toPlanCandidate(source) ?? [])
+    return { cards: [...region, ...near].slice(0, PLAN_CANDIDATES_LIMIT), place: true }
+  }
+
   /**
    * Карточка страницы-источника (#2897) по ключу индекса `type:id`: фрагмент запрошенной
    * локали, если квест на ней есть, иначе первый; балл — `null`, как у лексики (карточка
@@ -551,6 +616,29 @@ export function createApp(deps: AppDeps): http.Server {
         prefix: INTENT_LIMITS_PREFIX,
       }),
     trustProxy: deps.ask.trustProxy,
+    now: deps.ask.now,
+    log,
+  })
+  // #3298: план по дням — подбор и очередь к модели общие с `/ai/ask`, свой счётчик на IP.
+  const plan = createPlanHandler({
+    candidates: planCandidates,
+    generator: deps.ask.generator,
+    modelEnabled: deps.plan?.modelEnabled ?? PLAN_MODEL_DEFAULT,
+    llmQueue,
+    queueTimeoutMs: deps.ask.queueTimeoutMs,
+    limits:
+      deps.plan?.limits ??
+      new AskLimits({
+        store: new MemoryCounterStore(),
+        clock: createDayClock(),
+        dailyLimit: AI_PLAN_DAILY_LIMIT,
+        strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+        prefix: PLAN_LIMITS_PREFIX,
+      }),
+    askLimits: deps.ask.limits,
+    demandLog: deps.ask.demandLog,
+    trustProxy: deps.ask.trustProxy,
+    evalTrace: Boolean(deps.ask.evalTrace),
     now: deps.ask.now,
     log,
   })
@@ -635,6 +723,12 @@ export function createApp(deps: AppDeps): http.Server {
       if (url.pathname === '/ai/intent') {
         if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/intent')
         const result = await mapIntent(request, response, await readJsonBody(request))
+        if (result) send(response, 200, result)
+        return
+      }
+      if (url.pathname === '/ai/plan') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/plan')
+        const result = await plan(request, response, await readJsonBody(request))
         if (result) send(response, 200, result)
         return
       }

@@ -26,6 +26,8 @@ jest.mock('@/hooks/useTheme', () => ({
 
 jest.mock('@/utils/tripPlanLinks', () => ({
   buildTripPlanPrefill: (...args: unknown[]) => mockBuildTripPlanPrefill(...args),
+  buildTripPlanPrefillFromDraft: (draft: { title: string }) => ({ title: draft.title }),
+  buildTripPlanRoutePrefill: () => [],
 }));
 
 jest.mock('@/components/trips/planning/TripCreateForm', () => {

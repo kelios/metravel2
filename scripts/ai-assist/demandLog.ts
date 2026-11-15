@@ -16,7 +16,10 @@
  *     по-прежнему пишется записью спроса, а не хода: строка на ход одна. Ход с блоком «Ещё в мире»
  *     (#3357) несёт ещё `world_ids` — показанные маршруты мира идентификаторами Wikidata;
  *   - **голос** `{ts, turn, vote, reason?}` — оценка хода посетителем (`POST /ai/feedback`): `up` или
- *     `down`, причина — `place`, `facts`, `no_answer`. С ходом голос связывает `turn`.
+ *     `down`, причина — `place`, `facts`, `no_answer`. С ходом голос связывает `turn`;
+ *   - **план** `{ts, plan, locale, q, days_requested, day_ids}` — план по дням (`POST /ai/plan`, #3298):
+ *     `plan` — кто собрал (`model` или `code`), `day_ids` — материалы по дням ключами индекса. Отдельный вид
+ *     записи: прежние виды и отчёт по ним не меняются.
  *
  * Чего в журнале нет: IP, идентификатора пользователя, текста ответа и истории диалога. `turn` — случайный
  * идентификатор хода, с посетителем он не связан. Вопрос обрезается до 300 знаков. Записи старше
@@ -77,7 +80,18 @@ export interface VoteEntry {
   reason?: FeedbackReason
 }
 
-export type DemandRecord = DemandEntry | TurnEntry | VoteEntry
+/** План по дням (#3298): кто собрал и какие материалы встали в какой день. */
+export interface PlanEntry {
+  ts: string
+  plan: 'model' | 'code'
+  locale: string
+  q: string
+  days_requested: number
+  /** Материалы по дням ключами индекса: `[['quest:13', 'travel:816'], ['travel:297']]`. */
+  day_ids: string[][]
+}
+
+export type DemandRecord = DemandEntry | TurnEntry | VoteEntry | PlanEntry
 
 export interface DemandLog {
   readonly path: string
@@ -86,6 +100,8 @@ export interface DemandLog {
   appendTurn(entry: Omit<TurnEntry, 'ts'>): Promise<void>
   /** Запись голоса посетителя (#3296). */
   appendVote(entry: Omit<VoteEntry, 'ts'>): Promise<void>
+  /** Запись плана по дням (#3298). */
+  appendPlan(entry: Omit<PlanEntry, 'ts'>): Promise<void>
   /** Удалить записи старше срока хранения; возвращает, сколько удалено. Не чаще раза в сутки, если не `force`. */
   prune(force?: boolean): Promise<number>
 }
@@ -171,6 +187,18 @@ export function createDemandLog(options: DemandLogOptions = {}): DemandLog {
     async appendVote(entry) {
       if (!entry.turn) return
       await write({ ts: now().toISOString(), turn: entry.turn, vote: entry.vote, ...(entry.reason ? { reason: entry.reason } : {}) })
+    },
+    async appendPlan(entry) {
+      const q = cleanQuestion(entry.q)
+      if (!q) return
+      await write({
+        ts: now().toISOString(),
+        plan: entry.plan,
+        locale: String(entry.locale ?? ''),
+        q,
+        days_requested: Math.max(1, Math.round(entry.days_requested)),
+        day_ids: entry.day_ids.map((day) => [...day]),
+      })
     },
     prune(force = false) {
       const at = now()

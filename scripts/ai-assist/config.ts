@@ -2,10 +2,11 @@
  * Конфигурация сервиса metravel-assist (#2456) из переменных окружения.
  * Все значения читаются один раз при старте; секретов здесь нет.
  */
-import { AI_ASK_DAILY_LIMIT, AI_AUTHOR_DRAFT_DAILY_LIMIT, AI_MAP_INTENT_DAILY_LIMIT } from '../../api/aiAssist/policy.ts'
+import { AI_ASK_DAILY_LIMIT, AI_AUTHOR_DRAFT_DAILY_LIMIT, AI_MAP_INTENT_DAILY_LIMIT, AI_PLAN_DAILY_LIMIT } from '../../api/aiAssist/policy.ts'
 import { defaultModelCacheDir } from '../ai-index/models.ts'
 import { DEFAULT_DEMAND_LOG_PATH } from './demandLog.ts'
 import { DEFAULT_DAY_TIME_ZONE } from './limits.ts'
+import { PLAN_MODEL_DEFAULT } from './planBuild.ts'
 import { ASK_FRAGMENT_CHARS } from './search.ts'
 import { DEFAULT_AUTH_COOKIE, DEFAULT_PROFILE_CACHE_SIZE, DEFAULT_PROFILE_TIMEOUT_MS, DEFAULT_PROFILE_TTL_SECONDS } from './visitorProfile.ts'
 
@@ -52,6 +53,14 @@ export interface AssistConfig {
   authorDraftDailyLimit: number
   /** Запросов фильтра карты (`/ai/intent`, #2887) в сутки на IP. */
   mapIntentDailyLimit: number
+  /** Планов по дням (`/ai/plan`, #3298) в сутки на IP. */
+  planDailyLimit: number
+  /**
+   * Кто собирает план по дням (#3298): `true` — модель выбирает материалы и дни, код проверяет и доводит;
+   * `false` — план сразу собирает код из тех же карточек. Значение по умолчанию — `PLAN_MODEL_DEFAULT`
+   * (`planBuild.ts`): код; `AI_PLAN_MODEL=1` включает путь модели. Правило включения по умолчанию — там же.
+   */
+  planModel: boolean
   /** Часовой пояс календарного дня лимитов (полночь — сброс). */
   dayTimeZone: string
   demandLogPath: string
@@ -123,6 +132,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AssistConfig {
     askDailyLimit: Math.max(1, envNumber(env, 'AI_ASK_DAILY_LIMIT', AI_ASK_DAILY_LIMIT)),
     authorDraftDailyLimit: Math.max(1, envNumber(env, 'AI_AUTHOR_DRAFT_DAILY_LIMIT', AI_AUTHOR_DRAFT_DAILY_LIMIT)),
     mapIntentDailyLimit: Math.max(1, envNumber(env, 'AI_MAP_INTENT_DAILY_LIMIT', AI_MAP_INTENT_DAILY_LIMIT)),
+    planDailyLimit: Math.max(1, envNumber(env, 'AI_PLAN_DAILY_LIMIT', AI_PLAN_DAILY_LIMIT)),
+    planModel: env.AI_PLAN_MODEL === '1' ? true : env.AI_PLAN_MODEL === '0' ? false : PLAN_MODEL_DEFAULT,
     dayTimeZone: env.AI_ASSIST_DAY_TZ || DEFAULT_DAY_TIME_ZONE,
     demandLogPath: env.AI_DEMAND_LOG || DEFAULT_DEMAND_LOG_PATH,
     trustProxy: env.AI_ASSIST_TRUST_PROXY !== '0',

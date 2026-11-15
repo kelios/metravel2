@@ -73,6 +73,9 @@ export const secondsToDayEnd = (now: Date = new Date(), timeZone: string = AI_AS
   return Math.max(1, SECONDS_PER_DAY - (hour * 3600 + minute * 60 + second))
 }
 
+/** Планов по дням (`POST /ai/plan`, #3298) в сутки на IP — свой счётчик службы, отдельно от вопросов ассистента. */
+export const AI_PLAN_DAILY_LIMIT = 10
+
 // Compatibility exports for existing feature and Node-service consumers.
 export {
   AI_AUTHOR_DRAFT_KINDS,

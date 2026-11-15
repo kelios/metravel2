@@ -2,6 +2,9 @@ import type { Travel } from '@/types/types';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { buildTravelPath, stripHtmlForSeo } from '@/utils/travelSeo';
 import { translate as i18nT } from '@/i18n'
+import type { RoutePoint } from '@/api/plannedTrips'
+import { cleanDraftPoint, draftRoutePoints, formatSourcePoint, parseSourcePoint, type TripPlanDraft } from '@/utils/tripPlanDraft'
+import { addCalendarDays } from '@/utils/tripDateTime'
 
 
 type TravelPlanSource = Pick<Travel, 'id' | 'slug' | 'name' | 'description'>;
@@ -10,6 +13,8 @@ export interface TripPlanPrefill {
   title?: string;
   description?: string;
   startDate?: string;
+  /** День окончания: у черновика плана на несколько дней — старт плюс число дней минус один (#3298). */
+  endDate?: string;
 }
 
 export type TripPlanSourceParams = Record<string, string | string[] | undefined>;
@@ -95,6 +100,9 @@ export interface TripPlanMaterialSource {
   /** Абсолютный адрес материала на сайте. */
   url: string;
   description?: string | null;
+  /** Координаты материала (#3416 п.1): есть — после создания поездки материал встаёт точкой её маршрута. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 /**
@@ -111,6 +119,8 @@ export function buildTripPlanCreateHrefFromQuest(quest: TripPlanMaterialSource):
   if (title) params.set('sourceTravelTitle', title);
   if (/^https?:\/\//i.test(quest.url)) params.set('sourceTravelUrl', quest.url);
   if (description) params.set('sourceTravelDescription', description);
+  const point = formatSourcePoint(quest.lat, quest.lng);
+  if (point) params.set('sourcePoint', point);
 
   return `/trips/plan/create?${params.toString()}`;
 }
@@ -134,5 +144,41 @@ export function buildTripPlanPrefill(params: TripPlanSourceParams): TripPlanPref
   return {
     title: clip(title, TITLE_MAX),
     description: descriptionParts.join('\n\n'),
+  };
+}
+
+/**
+ * Точки маршрута, с которыми открыта форма новой поездки по материалу (#3416 п.1): параметр
+ * `sourcePoint=<lat>,<lng>` и название материала из той же ссылки. Статья привязывается к месту по
+ * `sourceTravelId`, квест встаёт обычной точкой. Нет координат или названия — точек нет.
+ */
+export function buildTripPlanRoutePrefill(params: TripPlanSourceParams): RoutePoint[] {
+  const source = firstParam(params.source);
+  if (!TRIP_PLAN_SOURCES.includes(source)) return [];
+  const point = parseSourcePoint(params.sourcePoint);
+  const title = clip(firstParam(params.sourceTravelTitle), TITLE_MAX);
+  if (!point || !title) return [];
+  const travelId = Number(firstParam(params.sourceTravelId));
+  const url = firstParam(params.sourceTravelUrl);
+  // Параметры адреса — недоверенные данные: та же очистка, что у черновика из хранилища (длина подписи).
+  const cleaned = cleanDraftPoint({
+    type: source === 'travel' ? 'travel' : 'quest',
+    sourceId: Number.isInteger(travelId) && travelId > 0 ? travelId : null,
+    title,
+    lat: point.lat,
+    lng: point.lng,
+    note: /^https?:\/\//i.test(url) ? url : null,
+  });
+  return cleaned ? draftRoutePoints([cleaned]) : [];
+}
+
+/** Подстановка формы из черновика плана ассистента (#3298): название, описание по дням и дата окончания. */
+export function buildTripPlanPrefillFromDraft(draft: TripPlanDraft, startDate: string = getDefaultTripStartDate()): TripPlanPrefill {
+  const endDate = draft.days > 1 ? addCalendarDays(startDate, draft.days - 1) : null;
+  return {
+    title: clip(draft.title, TITLE_MAX),
+    description: draft.description,
+    startDate,
+    ...(endDate ? { endDate } : {}),
   };
 }

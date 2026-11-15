@@ -19,6 +19,7 @@ import type {
   TripVisibility,
 } from '@/api/plannedTrips';
 import { useCreateTrip } from '@/hooks/usePlannedTripsApi';
+import { TripRouteDraftNotice, useTripRouteDraftSave } from '@/components/trips/planning/TripRouteDraftNotice';
 import MapIcon from '@/components/MapPage/MapIcon';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -37,8 +38,11 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface Props {
-  onCreated?: (trip: PlannedTrip) => void;
+  /** `routeSaved` — точки черновика маршрута сохранены (либо черновика не было). */
+  onCreated?: (trip: PlannedTrip, routeSaved: boolean) => void;
   initialValues?: TripPlanPrefill;
+  /** Точки, которые встанут в маршрут сразу после создания поездки (#3298 — план ассистента, #3416 — материал). */
+  routeDraft?: readonly RoutePoint[];
 }
 
 const TRANSPORT_OPTIONS: TripTransport[] = ['car', 'bike', 'foot', 'public', 'mixed'];
@@ -179,7 +183,7 @@ const buildStartPoint = (values: FormValues): RoutePoint | null => {
   };
 };
 
-function TripCreateForm({ onCreated, initialValues }: Props) {
+function TripCreateForm({ onCreated, initialValues, routeDraft }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   // Режим берётся из вьюпорта, а не из `Platform.OS`: mobile web, Android и
@@ -213,13 +217,14 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
     [colors],
   );
   const create = useCreateTrip();
+  const routeSave = useTripRouteDraftSave(routeDraft, onCreated);
   const consent = useActionConsent(CONSENT_TYPES.TRIP_ORGANIZER);
 
   const [values, setValues] = useState<FormValues>({
     title: initialValues?.title ?? '',
     description: initialValues?.description ?? '',
     startDate: initialValues?.startDate ?? getDefaultTripStartDate(),
-    endDate: '',
+    endDate: initialValues?.endDate ?? '',
     startTime: '',
     transport: 'car',
     visibility: 'public',
@@ -296,7 +301,7 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         createTelegramGroup: false,
       };
       create.mutate(input, {
-        onSuccess: (trip) => onCreated?.(trip),
+        onSuccess: (trip) => routeSave.finish(trip),
         onError: () =>
           setSubmitError(i18nT('trips:components.trips.planning.TripCreateForm.ne_udalos_sozdat_poezdku_poprobuyte_esche_ra_f2723719')),
       });
@@ -744,11 +749,13 @@ function TripCreateForm({ onCreated, initialValues }: Props) {
         </Text>
       ) : null}
 
+      <TripRouteDraftNotice save={routeSave} />
+
       <Button
         label={i18nT('trips:components.trips.planning.TripCreateForm.zaplanirovat_poezdku_5e8537a1')}
         onPress={handleSubmit}
-        loading={create.isPending}
-        disabled={create.isPending || !consentChecked}
+        loading={create.isPending || (routeSave.pending && !routeSave.createdTrip)}
+        disabled={create.isPending || routeSave.pending || routeSave.createdTrip !== null || !consentChecked}
         fullWidth
         testID="trip-create-submit"
       />

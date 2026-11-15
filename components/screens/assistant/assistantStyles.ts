@@ -231,6 +231,26 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       color: colors.textMuted,
     },
     // Та же колонка, что у поля вопроса (`composerWrap`): на широком экране строка не уезжает к краю окна.
+    planBlock: {
+      gap: spacing.sm,
+    },
+    planDay: {
+      gap: spacing.xs,
+    },
+    planDayHead: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+    },
+    planDayTitle: {
+      ...typography.scale.label,
+      color: colors.text,
+    },
+    planDayHours: {
+      ...typography.scale.caption,
+      color: colors.textMuted,
+    },
     profileNotice: {
       ...typography.scale.caption,
       color: colors.textMuted,

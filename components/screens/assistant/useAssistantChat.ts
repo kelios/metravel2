@@ -19,6 +19,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { resolveAskAuth } from '@/api/aiAssist/askAuth'
+import { detectPlanIntent } from '@/api/aiAssist/planIntent'
+import { createPlanClient, type AiTripPlan, type PlanClient } from '@/api/aiAssist/planProvider'
 import { createAskClient, isAskError, type AskClient, type AskFeedbackReason, type AskFeedbackVote } from '@/api/aiAssist/askProvider'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
@@ -89,6 +91,11 @@ export type AssistantTurn = {
   world?: AiWorldTrail[]
   /** Адрес файла слоя OpenStreetMap под ODbL — ссылка под блоком «Ещё в мире»; служба отдаёт его, когда файл выложен. */
   worldLayerUrl?: string | null
+  /**
+   * План по дням (#3298): вопрос с намерением «план» служба `/ai/plan` отвечает днями с материалами сайта.
+   * Ход с планом текста ответа не несёт и в историю диалога не идёт. Только у провайдера `ask`.
+   */
+  plan?: AiTripPlan | null
 }
 
 export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
@@ -99,6 +106,11 @@ export type UseAssistantChatOptions = {
   generator?: Generator | null
   /** Подмена провайдера `ask` в тестах; задан — путь через сервер. */
   askClient?: AskClient
+  /**
+   * Клиент плана по дням (#3298) в тестах. С подменённым `askClient` и без него плана нет: тесты провайдера
+   * `ask` не ходят в `/ai/plan` настоящим `fetch`.
+   */
+  planClient?: PlanClient | null
   /** Страница, с которой открыт ассистент (#2897); `null`/нет — обычный вход. */
   source?: AiSourceRef | null
   /** Подмена загрузки карточки источника в тестах. */
@@ -124,17 +136,18 @@ export const buildHistoryFromTurns = (turns: readonly AssistantTurn[]): AiHistor
     ])
 
 type ResolvedProvider =
-  | { kind: 'ask'; client: AskClient }
+  | { kind: 'ask'; client: AskClient; plan: PlanClient | null }
   | { kind: 'llamacpp'; generator: Generator | null }
 
-const resolveProvider = (options: Pick<UseAssistantChatOptions, 'generator' | 'askClient'>): ResolvedProvider => {
-  if (options.askClient) return { kind: 'ask', client: options.askClient }
+const resolveProvider = (options: Pick<UseAssistantChatOptions, 'generator' | 'askClient' | 'planClient'>): ResolvedProvider => {
+  if (options.askClient) return { kind: 'ask', client: options.askClient, plan: options.planClient ?? null }
   if (options.generator !== undefined) return { kind: 'llamacpp', generator: options.generator }
   const provider: AiAssistantProvider = getAiAssistantProvider()
   if (provider === 'llamacpp') return { kind: 'llamacpp', generator: createGenerator(getAiAssistantBaseUrl()) }
   // Личный контекст (#3354) получает только провайдер `ask`: `llamacpp` ходит в модель напрямую, без службы.
   const baseUrl = getAiPicksBaseUrl()
-  return { kind: 'ask', client: createAskClient(baseUrl, { auth: () => resolveAskAuth(baseUrl) }) }
+  // План по дням (#3298) — тоже только у `ask`: его собирает служба.
+  return { kind: 'ask', client: createAskClient(baseUrl, { auth: () => resolveAskAuth(baseUrl) }), plan: options.planClient === undefined ? createPlanClient(baseUrl) : options.planClient }
 }
 
 export function useAssistantChat(options: UseAssistantChatOptions) {
@@ -174,10 +187,10 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
   const lastSearchQueryRef = useRef<string | null>(null)
 
   // Провайдер фиксируется подменами из тестов, иначе — конфигурацией сборки.
-  const { generator: generatorOverride, askClient: askClientOverride } = options
+  const { generator: generatorOverride, askClient: askClientOverride, planClient: planClientOverride } = options
   const provider = useMemo<ResolvedProvider>(
-    () => resolveProvider({ generator: generatorOverride, askClient: askClientOverride }),
-    [generatorOverride, askClientOverride],
+    () => resolveProvider({ generator: generatorOverride, askClient: askClientOverride, planClient: planClientOverride }),
+    [generatorOverride, askClientOverride, planClientOverride],
   )
   const serverSide = provider.kind === 'ask'
 
@@ -545,6 +558,24 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
     [clearFlush, finishOffTopic, finishQuota, locale, patchTurn],
   )
 
+  /**
+   * План по дням (#3298). `true` — ход закрыт: план показан либо вопрос отменён посетителем; `false` — плана
+   * нет (место не названо, материалов мало, служба отказала): вопрос идёт обычным путём `/ai/ask`.
+   */
+  const askPlan = useCallback(
+    async (client: PlanClient, id: string, question: string, controller: AbortController): Promise<boolean> => {
+      const outcome = await client.plan({ question, locale, signal: controller.signal })
+      if (outcome.aborted) {
+        patchTurn(id, { status: 'aborted' })
+        return true
+      }
+      if (!outcome.plan) return false
+      patchTurn(id, { status: 'done', answer: '', sources: [], removedLinks: 0, plan: outcome.plan })
+      return true
+    },
+    [locale, patchTurn],
+  )
+
   const ask = useCallback(
     async (rawQuestion: string): Promise<void> => {
       const question = String(rawQuestion ?? '').replace(/\s+/g, ' ').trim()
@@ -581,14 +612,18 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
       ])
 
       try {
-        if (provider.kind === 'ask') await askViaServer(provider.client, id, question, controller, history)
-        else await askViaLlamaCpp(provider.generator, id, question, controller, history)
+        if (provider.kind === 'ask') {
+          // Намерение «план» (#3298): сначала `/ai/plan`; любой его отказ — тот же вопрос обычным путём, без
+          // ошибки на экране. Со страницы материала (#2897) плана нет: вопрос читается как вопрос о странице.
+          const planned = provider.plan && !sourceRef && detectPlanIntent(question) ? await askPlan(provider.plan, id, question, controller) : false
+          if (!planned) await askViaServer(provider.client, id, question, controller, history)
+        } else await askViaLlamaCpp(provider.generator, id, question, controller, history)
       } finally {
         if (abortRef.current === controller) abortRef.current = null
         if (mountedRef.current) setActiveTurnId((current) => (current === id ? null : current))
       }
     },
-    [askViaLlamaCpp, askViaServer, commitTurns, provider, readBlocked, readRemaining, updateOffTopicBlocked, updateRemaining],
+    [askPlan, askViaLlamaCpp, askViaServer, commitTurns, provider, readBlocked, readRemaining, sourceRef, updateOffTopicBlocked, updateRemaining],
   )
 
   const stop = useCallback(() => {

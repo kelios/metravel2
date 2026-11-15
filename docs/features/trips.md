@@ -729,7 +729,23 @@ sequenceDiagram
    суббота, то следующая);
 4. валидация yup: `seatsTotal` 1..50, `visibility ∈ {public, private}`;
 5. `useCreateTrip` → `POST /trips/planned/` → `router.replace('/trips/plan/{id}')`;
-   при `visibility === 'public'` дополнительно инвалидируется `publicTripsAll`.
+   при `visibility === 'public'` дополнительно инвалидируется `publicTripsAll`;
+6. **приём точек маршрута** (#3298, #3416 п.1). Форма может прийти с точками, и тогда после создания
+   поездки они сохраняются её маршрутом вторым запросом — тем же, что у конструктора
+   (`useUpdateTripRoute` → `PUT /trips/planned/{id}/route/`); только после него открывается поездка.
+   Источников два, оба читает экран `plan/create.tsx`:
+   - **черновик плана ассистента** — `?source=plan&draft=<id>`: план лежит в `AsyncStorage`
+     (`utils/tripPlanDraft.ts`: одна запись, сутки), в адресе только идентификатор. Форма получает
+     название, описание по дням и дату окончания (`buildTripPlanPrefillFromDraft`), маршрут — точки в
+     порядке дней с номером дня (`dayNumber`, #1845): статья — «Место» с привязкой `placeId`, квест —
+     обычная точка. Черновик удаляется после сохранения маршрута. Владелец черновика — вошедший при сохранении (`owner`) либо гость: гостевой принимает и вошедший после входа, черновик одного аккаунта другой аккаунт и гость не получают, запись удаляется;
+   - **одна точка материала** — параметр `sourcePoint=<lat>,<lng>` рядом с `sourceTravelTitle`
+     (`buildTripPlanRoutePrefill`): квест из ответа ассистента встаёт точкой маршрута
+     (`buildTripPlanCreateHrefFromQuest` получает координаты карточки).
+   Над кнопкой формы стоит строка «В маршрут поездки встанут N точки» (`TripRouteDraftNotice`). Если
+   поездка создана, а маршрут не сохранился, вторая поездка не создаётся: кнопка отправки выключена,
+   вместо неё — «Сохранить точки ещё раз» и «Открыть поездку без точек». Гость с черновиком входит и
+   возвращается в ту же форму с тем же идентификатором.
 
 Точки и порядок (`RouteBuilder`):
 
@@ -1329,6 +1345,8 @@ Unit/component (Jest):
   `plannedTripsScreen.redirect` (редирект `/trips/plan` → `/trips/my`),
   `tripCreateScreen.authGate`, `tripDetailScreen.dockReserve`;
 - `__tests__/hooks/usePlannedTripsApi.transport.test.tsx`;
+- `__tests__/utils/tripPlanDraft.test.ts`, `__tests__/app/tripCreateScreen.planDraft.test.tsx` — приём
+  точек маршрута в форме новой поездки (#3298, #3416 п.1);
 - `__tests__/utils/tripPlanLinks.test.ts`, `shareTripPlan.test.ts`,
   `routeExport.test.ts`, `routeExportSave.test.ts`;
 - фикстура `__tests__/fixtures/tripRouteSummaryOrs.json`.

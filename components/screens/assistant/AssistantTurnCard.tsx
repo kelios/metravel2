@@ -12,6 +12,7 @@ import { translate as i18nT } from '@/i18n'
 
 import { hasDisplayFields, splitAnswerSources } from './answerSources'
 import { AssistantAnswerText } from './AssistantAnswerText'
+import { AssistantPlanDays } from './AssistantPlanDays'
 import { AssistantSourceCards } from './AssistantSourceCards'
 import { AssistantWorldTrails } from './AssistantWorldTrails'
 import type { AssistantStyles } from './assistantStyles'
@@ -191,8 +192,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
       noticeAction = 'retry'
       break
     case 'done':
-      // Запасной ответ стража (#3291) — не сбой модели: повтор не предлагается.
-      if (!turn.answer.trim() && !turn.fallback) {
+      // Запасной ответ стража (#3291) — не сбой модели: повтор не предлагается. План по дням (#3298) текста не несёт.
+      if (!turn.answer.trim() && !turn.fallback && !turn.plan) {
         notice = i18nT('aiAssistStatic:ask.emptyAnswer')
         noticeAction = 'retry'
       }
@@ -228,6 +229,8 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
             testID="assistant-answer-text"
           />
         ) : null}
+
+        {turn.status === 'done' && turn.plan ? <AssistantPlanDays plan={turn.plan} question={turn.question} styles={styles} colors={colors} narrow={narrow} /> : null}
 
         {isWorking ? (
           <View style={styles.statusRow} accessibilityLiveRegion="polite">
