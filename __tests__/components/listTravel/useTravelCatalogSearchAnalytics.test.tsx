@@ -3,8 +3,10 @@ import { Platform } from 'react-native'
 
 import { useTravelCatalogSearchAnalytics } from '@/components/listTravel/useTravelCatalogSearchAnalytics'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { readConsent } from '@/utils/consent'
 
 jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn() }))
+jest.mock('@/utils/consent', () => ({ readConsent: jest.fn() }))
 
 type Props = Parameters<typeof useTravelCatalogSearchAnalytics>[0]
 
@@ -26,6 +28,7 @@ describe('useTravelCatalogSearchAnalytics (#2908)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     ;(sendAnalyticsEvent as jest.Mock).mockClear()
+    jest.mocked(readConsent).mockReturnValue(null)
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' })
   })
 
@@ -54,6 +57,10 @@ describe('useTravelCatalogSearchAnalytics (#2908)', () => {
       query_len: 6,
       has_filters: false,
       search_term: 'гродно',
+      event_category: 'travel_catalog',
+      outcome: 'found',
+      results_count: 17,
+      relaxed_filters: false,
     })
     expect(sendAnalyticsEvent).toHaveBeenNthCalledWith(2, 'view_search_results', {
       source: 'travel_catalog',
@@ -100,7 +107,7 @@ describe('useTravelCatalogSearchAnalytics (#2908)', () => {
     expect(submits[1][1]).toMatchObject({ has_filters: true })
   })
 
-  it('never sends a phrase that looks like personal data and skips the outcome on error', async () => {
+  it('omits a private phrase and distinguishes an error from an empty result', async () => {
     await renderHook(() => useTravelCatalogSearchAnalytics({
       ...baseProps,
       query: 'me@example.com',
@@ -113,7 +120,82 @@ describe('useTravelCatalogSearchAnalytics (#2908)', () => {
       source: 'travel_catalog',
       query_len: 14,
       has_filters: false,
+      event_category: 'travel_catalog',
+      outcome: 'error',
     })
+  })
+
+  it('records a fast opening once and cancels duplicate counting by the timer', async () => {
+    const { result } = await renderHook(() => useTravelCatalogSearchAnalytics(baseProps))
+    await act(async () => {
+      result.current(78, 2)
+      result.current(90, 3)
+    })
+    await flush()
+    expect(sendAnalyticsEvent).toHaveBeenCalledTimes(3)
+    expect(sendAnalyticsEvent).toHaveBeenNthCalledWith(3, 'search_result_click', {
+      source: 'travel_catalog',
+      event_category: 'travel_catalog',
+      search_term: 'гродно',
+      travel_id: 78,
+      position: 2,
+      results_count: 17,
+      has_filters: false,
+      relaxed_filters: false,
+    })
+  })
+
+  it('ignores an old card during a pending query and a click with zero results', async () => {
+    const { result, rerender } = await renderHook((props: Props) => useTravelCatalogSearchAnalytics(props), {
+      initialProps: { ...baseProps, settled: false },
+    })
+    await act(async () => { result.current(78, 2) })
+    expect(sendAnalyticsEvent).not.toHaveBeenCalled()
+
+    await rerender({ ...baseProps, isZeroResults: true, resultsCount: 0 })
+    await act(async () => { result.current(78, 2) })
+    await flush()
+    expect(sendAnalyticsEvent).toHaveBeenCalledWith('search_submit', expect.objectContaining({
+      outcome: 'empty',
+      results_count: 0,
+    }))
+    expect(sendAnalyticsEvent).not.toHaveBeenCalledWith('search_result_click', expect.anything())
+  })
+
+  it('records a found attempt before opening a result after the same query was empty', async () => {
+    const { result, rerender } = await renderHook((props: Props) => useTravelCatalogSearchAnalytics(props), {
+      initialProps: { ...baseProps, isZeroResults: true, resultsCount: 0 },
+    })
+    await flush()
+    await rerender({ ...baseProps })
+    await act(async () => { result.current(78, 1) })
+    expect(sendAnalyticsEvent).toHaveBeenNthCalledWith(1, 'search_submit', expect.objectContaining({ outcome: 'empty' }))
+    expect(sendAnalyticsEvent).toHaveBeenNthCalledWith(3, 'search_submit', expect.objectContaining({ outcome: 'found' }))
+    expect(sendAnalyticsEvent).toHaveBeenNthCalledWith(5, 'search_result_click', expect.objectContaining({ travel_id: 78 }))
+  })
+
+  it('pairs the first post-consent result opening with a post-consent search', async () => {
+    const { result } = await renderHook(() => useTravelCatalogSearchAnalytics(baseProps))
+    await flush()
+    jest.mocked(sendAnalyticsEvent).mockClear()
+    jest.mocked(readConsent).mockReturnValue({ necessary: true, analytics: true, date: '2026-11-15' })
+    await act(async () => {
+      result.current(78, 1)
+      result.current(89, 2)
+    })
+    expect(jest.mocked(sendAnalyticsEvent).mock.calls.map(([name]) => name))
+      .toEqual(['search_submit', 'view_search_results', 'search_result_click'])
+  })
+
+  it('redacts an embedded phone number from both the search and click payloads', async () => {
+    const { result } = await renderHook(() => useTravelCatalogSearchAnalytics({
+      ...baseProps, query: 'тел. +375 (17) 123-45-67',
+    }))
+    await act(async () => { result.current(78, 1) })
+    expect(sendAnalyticsEvent).toHaveBeenCalledTimes(3)
+    for (const [, params] of (sendAnalyticsEvent as jest.Mock).mock.calls) {
+      expect(params).not.toHaveProperty('search_term')
+    }
   })
 
   it('stays silent outside site search and for an empty query', async () => {

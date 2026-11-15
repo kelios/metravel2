@@ -5,5 +5,5 @@
  */
 export function isAnalyticsSearchTerm(term: string): boolean {
   if (term.length < 2 || term.length > 100 || /@|https?:\/\/|www\./i.test(term)) return false
-  return !(/^[+\d\s().-]+$/.test(term) && term.replace(/\D/g, '').length >= 7)
+  return !/(?:\d[\s().-]*){7}/.test(term)
 }

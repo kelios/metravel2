@@ -70,9 +70,10 @@
 
 | Событие | Параметры | Смысл |
 |---|---|---|
-| `search_submit` | `source=travel_catalog`, `query_len`, `has_filters`, `search_term?` | устоявшийся запрос + фильтры |
-| `view_search_results` | + `results_count`, `relaxed_filters` | выдача непустая |
-| `search_zero_results` | как у `search_submit` | выдача пустая |
+| `search_submit` | `source=travel_catalog`, `event_category=travel_catalog`, `query_len`, `has_filters`, `search_term?`, `outcome` (`found` / `empty` / `error`), `results_count?`, `relaxed_filters?` | устоявшийся запрос с исходом. Число результатов есть при успешном ответе, включая 0 |
+| `search_result_click` | `source=travel_catalog`, `event_category=travel_catalog`, `search_term?`, `travel_id`, `position` (начиная с 1), `results_count`, `has_filters`, `relaxed_filters` | первое открытие карточки маршрута из выдачи данного запроса и фильтров |
+| `view_search_results` | параметры `search_zero_results` + `results_count`, `relaxed_filters` | выдача непустая |
+| `search_zero_results` | `source=travel_catalog`, `query_len`, `has_filters`, `search_term?` | выдача пустая |
 | `search_sort_change` | `sort` (`distance`, `relevance`, `newest`, …), `source=travel_catalog` | явный выбор сортировки каталога: тулбар, шторка фильтров, снятие чипа (#2903); координаты точки отсчёта не передаются |
 
 `search_term` уходит только через PII-фильтр `utils/analyticsSearchTerm.ts`.
@@ -81,6 +82,35 @@
 рекомендованное событие GA4; наши отличаются `ui_source = travel_catalog`, и
 отчёт по поиску маршрутов строится с этим фильтром. Автособытие можно выключить
 в настройках потока GA4 (owner action), тогда фильтр перестанет быть нужен.
+
+Для отчёта в GA4 выберите `search_submit` и `search_result_click` с
+`event_category=travel_catalog`, добавьте `search_term` и `outcome` из
+специальных измерений. Поисковая попытка с исходом `found` — знаменатель для
+доли попыток с открытием карточки. `empty` подсказывает, что проверить в
+каталоге или подборе. `error` указывает на техническую проблему. Выделяйте
+строки без фразы и `(other)` отдельно. Используйте окно после выката и
+совпадающие фильтры источников и устройств. Повторное открытие карточки в
+рамках той же попытки не увеличивает долю. После смены исхода при
+повторной загрузке фиксируется новая попытка. Открытие до таймера или
+сразу после согласия фиксирует попытку и переход одним действием. Клики по дополнительным блокам квестов и мест,
+показанным рядом с выдачей, ведутся отдельно.
+
+### Действия в статье о маршруте (`/travels/*`)
+
+| Событие | Параметры | Смысл |
+|---|---|---|
+| `travel_detail_action` | `event_category=travel_detail`, `event_label` (`section_description`, `section_map`, `section_points`, `contact_phone`), `travel_id` | Явный переход к описанию, карте или координатам, либо нажатие на телефонную ссылку в тексте |
+| `travel_navigator_open` | `travel_id`, `provider` | выбор навигатора и попытка его открытия |
+| `travel_gpx_download` | `travel_id`, `points` | браузер или платформа приняла файл маршрута к сохранению |
+
+В GA4 используйте путь страницы без параметров, `event_label`, источник
+сеанса и тип устройства. Для доли визитов с действием используйте число
+сеансов, в которых произошло действие, и число сеансов с просмотром той же
+страницы. Число действий может превышать число сеансов. Нажатие на ссылку
+телефона учитывается без передачи номера и показывает намерение связаться.
+Номера, опубликованные обычным текстом, такого события не дают. Метрика
+показывает параметры этих событий после настройки отдельных целей с
+идентификаторами `search_submit`, `search_result_click` и `travel_detail_action`.
 
 ### Карта (`/map`, #2908)
 

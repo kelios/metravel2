@@ -78,6 +78,7 @@ type RenderTravelItemProps = {
     /** List-wide feedback slots (`resolveListFeedbackSlots`) so footers share one floor. */
     authorFeedbackSlots?: number;
     onDeletePress?: (id: number) => void;
+    onOpenTravel?: (id: number, position: number) => void;
     isFirst?: boolean;
     isSingle?: boolean;
     selectable?: boolean;
@@ -102,7 +103,7 @@ const TravelListItemCompat = TravelListItem as React.ComponentType<TravelListIte
 
 function RenderTravelItem({
                               item,
-                              index: _index = 0,
+                              index = 0,
                               isMobile = false,
                               isSuperuser,
                               currentUserId,
@@ -110,6 +111,7 @@ function RenderTravelItem({
                               showAuthorModerationFeedback = false,
                               authorFeedbackSlots,
                               onDeletePress,
+                              onOpenTravel,
                               isFirst,
                               isSingle = false,
                               selectable = false,
@@ -149,6 +151,11 @@ function RenderTravelItem({
         ...(Platform.OS === 'web' ? { height: authorFeedbackVisible ? 'auto' : '100%' } : {}),
     }), [authorFeedbackVisible]);
 
+    const itemId = item?.id;
+    const handleOpen = useCallback(() => {
+        if (itemId != null) onOpenTravel?.(itemId, index + 1);
+    }, [index, itemId, onOpenTravel]);
+
     if (!item) return null;
 
     return (
@@ -159,6 +166,7 @@ function RenderTravelItem({
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
+                onOpen={onOpenTravel ? handleOpen : undefined}
                 renderAuthorFeedback={authorFeedbackVisible ? renderAuthorFeedback : undefined}
                 isFirst={isFirst}
                 isSingle={isSingle}
@@ -184,6 +192,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
 
     // 1. Самые частые изменения (при выборе/скролле)
     if (prev.isSelected !== next.isSelected) return false;
+    if (prev.onOpenTravel !== next.onOpenTravel || (next.onOpenTravel && prev.index !== next.index)) return false;
 
     // 2. Пропускаем refresh с новой ссылкой на item, если карточка визуально не меняется.
     if (prev.item !== next.item && !hasSameRenderedTravelSnapshot(prev.item, next.item)) return false;

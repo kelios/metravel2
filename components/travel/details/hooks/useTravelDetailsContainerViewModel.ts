@@ -6,6 +6,7 @@ import { useAiSimilarAvailability } from '@/hooks/useAiSimilarAvailability'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { noteTravelViewForAppInstall } from '@/utils/appInstallSignal'
 import { rIC } from '@/utils/rIC'
+import { getPublishedTravelAnalyticsId, trackTravelDetailAction } from '@/utils/travelDetailAnalytics'
 import {
   getTravelDetailsChromeReadyState,
   getTravelDetailsHeadKey,
@@ -157,8 +158,13 @@ export function useTravelDetailsContainerViewModel({
     postLcpRuntimeReady,
   })
 
+  const analyticsTravelId = getPublishedTravelAnalyticsId(travel)
+
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
+      if (analyticsTravelId != null && (key === 'description' || key === 'map' || key === 'points')) {
+        trackTravelDetailAction(analyticsTravelId, `section_${key}`)
+      }
       setActiveSection(key)
       openSection(key)
       // Lazy sections (map/points/excursions/near/popular/comments) may not be
@@ -177,7 +183,7 @@ export function useTravelDetailsContainerViewModel({
       scrollTo(key)
       if (isMobile) closeMenu()
     },
-    [scrollTo, isMobile, closeMenu, openSection, setActiveSection]
+    [analyticsTravelId, scrollTo, isMobile, closeMenu, openSection, setActiveSection]
   )
 
   const scrollToMapSection = useCallback(() => {

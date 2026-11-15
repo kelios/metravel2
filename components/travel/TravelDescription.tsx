@@ -21,6 +21,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { toInertHtml } from '@/utils/inertHtml';
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings';
 import { ensureRichTextImageAlt } from '@/utils/richTextImageAlt';
+import { trackTravelDetailAction } from '@/utils/travelDetailAnalytics';
 import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
 
@@ -33,6 +34,7 @@ interface TravelDescriptionProps {
     // #1256: индекс `media.article_body`. Есть только у тела статьи: у «Рекомендаций»,
     // «Плюсов» и «Минусов» манифеста нет, и они остаются на клиентской сборке URL.
     articleBodyMedia?: ArticleBodyMediaIndex | null;
+    analyticsTravelId?: number;
 }
 
 const HEAVY_HTML_REVEAL_ROOT_MARGIN = '0px 0px 400px 0px';
@@ -67,6 +69,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
                                                                  noBox = false,
                                                                  serverSanitized = false,
                                                                  articleBodyMedia = null,
+                                                                 analyticsTravelId,
                                                                  dimensions: { width, height },
                                                                  hasLoaderTravel,
                                                              }) => {
@@ -74,6 +77,23 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
     const colors = useThemedColors();
     const shouldUseFullWidthLayout = noBox && !isMobileLayout;
     const descriptionRef = useRef<ViewInstance | null>(null);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' || analyticsTravelId == null) return;
+        const root = resolveWebElement(descriptionRef.current);
+        if (!root) return;
+
+        const handleContactClick = (event: Event) => {
+            const anchor = event.target instanceof Element
+                ? event.target.closest('a[href^="tel:" i]')
+                : null;
+            if (anchor && root.contains(anchor)) trackTravelDetailAction(analyticsTravelId, 'contact_phone');
+        };
+
+        // The wrapper is shared by the SSR description and the deferred HTML.
+        root.addEventListener('click', handleContactClick, true);
+        return () => root.removeEventListener('click', handleContactClick, true);
+    }, [analyticsTravelId]);
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);

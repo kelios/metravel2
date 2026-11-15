@@ -4,7 +4,8 @@ let createElement: typeof import('react').createElement
 let act: typeof import('react').act
 let renderToString: typeof import('react-dom/server').renderToString
 let hydrateRoot: typeof import('react-dom/client').hydrateRoot
-let Description: React.ComponentType<{ htmlContent: string; serverSanitized: boolean; noBox: boolean }>
+let Description: React.ComponentType<{ htmlContent: string; serverSanitized: boolean; noBox: boolean; analyticsTravelId?: number }>
+const trackTravelDetailAction = jest.fn()
 let Provider: React.Provider<unknown>
 let rendererImports = 0
 let renderDeferredBody: () => React.ReactElement | null = () => null
@@ -12,6 +13,7 @@ let renderDeferredBody: () => React.ReactElement | null = () => null
 beforeAll(() => {
   jest.resetModules()
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  jest.doMock('@/utils/travelDetailAnalytics', () => ({ trackTravelDetailAction }))
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => ({ text: 'black', textMuted: 'gray', surface: 'white' }) }))
   jest.doMock('@/components/travel/DeferredStableContent', () =>
     jest.requireActual('@/components/travel/DeferredStableContent.web'))
@@ -126,10 +128,10 @@ it('loads the renderer at the readable server body and keeps its links while loa
     return createElement('div', { 'data-test-renderer': 'loaded' })
   }
 
-  const html = '<p><a href="/travels/example#route">Открыть маршрут</a></p>'
+  const html = '<p><a href="/travels/example#route">Открыть маршрут</a> <a href="tel:+12025550112"><span>Контакт</span></a></p>'
     + '<p>Канонический текст статьи.</p>'.repeat(400)
   const tree = createElement(Provider, { value: { travel: { id: 42 } } },
-    createElement(Description, { htmlContent: html, serverSanitized: true, noBox: true }))
+    createElement(Description, { htmlContent: html, serverSanitized: true, noBox: true, analyticsTravelId: 42 }))
   const container = document.createElement('div')
   container.innerHTML = renderToString(tree)
   document.body.appendChild(container)
@@ -148,6 +150,13 @@ it('loads the renderer at the readable server body and keeps its links while loa
     expect(container.querySelector('[data-ssr-html-island="description"] a')?.getAttribute('href'))
       .toBe('/travels/example#route')
     expect(container.querySelector('[data-testid="travel-description-fallback"]')).toBeNull()
+
+    const phoneLink = container.querySelector('a[href^="tel:"]')
+    expect(phoneLink).not.toBeNull()
+    phoneLink?.addEventListener('click', (event) => event.preventDefault(), { once: true })
+    phoneLink?.querySelector('span')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    expect(trackTravelDetailAction).toHaveBeenCalledTimes(1)
+    expect(trackTravelDetailAction).toHaveBeenCalledWith(42, 'contact_phone')
 
     await act(async () => {
       loading = false

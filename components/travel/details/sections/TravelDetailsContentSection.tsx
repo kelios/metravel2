@@ -28,6 +28,7 @@ import TravelPeerBadgePrompt from './TravelPeerBadgePrompt'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 import { buildTravelPath } from '@/utils/routePaths'
+import { getPublishedTravelAnalyticsId } from '@/utils/travelDetailAnalytics'
 
 
 // #1499: выбор web/native переехал в платформенную пару
@@ -151,7 +152,14 @@ export const TravelDetailsContentSection: React.FC<{
               <TravelQuestTeaserLine travel={travel} />
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
-              <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
+              <TravelDescription
+                title={travel.name}
+                htmlContent={descriptionContent.html}
+                serverSanitized={descriptionContent.serverSanitized}
+                articleBodyMedia={articleBodyMedia}
+                analyticsTravelId={getPublishedTravelAnalyticsId(travel)}
+                noBox
+              />
               <TravelColoringSlot key={travel.id} travelId={travel.id} />
 
               <TravelRegisterCtaSection

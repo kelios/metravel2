@@ -116,6 +116,7 @@ type Props = {
   isSuperuser?: boolean
   isMetravel?: boolean
   onDeletePress?: (id: number) => void
+  onOpen?: () => void
   renderAuthorFeedback?: (onEdit: () => void) => React.ReactNode
   isFirst?: boolean
   isSingle?: boolean
@@ -151,6 +152,7 @@ function TravelListItem({
   isSuperuser,
   isMetravel = false,
   onDeletePress,
+  onOpen,
   renderAuthorFeedback,
   isFirst = false,
   isSingle = false,
@@ -353,16 +355,18 @@ function TravelListItem({
   )
 
   const handleAnchorClick = useCallback(
-    (e: any) => {
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
       if (!isNavigable) return
       e.stopPropagation()
+      // Alt+click can save the linked page instead of opening the route.
+      if (!e.defaultPrevented && e.button === 0 && !e.altKey) onOpen?.()
       const openInNewWindow =
         e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey
       if (openInNewWindow) return
       e.preventDefault()
       handlePress()
     },
-    [isNavigable, handlePress],
+    [isNavigable, handlePress, onOpen],
   )
 
   const handleAnchorKeyDown = useCallback(
@@ -370,10 +374,11 @@ function TravelListItem({
       if (!isNavigable) return
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
+        onOpen?.()
         handlePress()
       }
     },
-    [isNavigable, handlePress],
+    [isNavigable, handlePress, onOpen],
   )
 
   const distanceOrigin = useTravelCardDistanceOrigin()
@@ -748,6 +753,9 @@ function TravelListItem({
         aria-label={a11yLabel}
         aria-disabled={!isNavigable}
         onClick={handleAnchorClick}
+        onAuxClick={onOpen && isNavigable ? (event) => {
+          if (event.button === 1) onOpen()
+        } : undefined}
         onKeyDown={handleAnchorKeyDown}
       >
         {card}
@@ -800,6 +808,7 @@ function areEqual(prev: Props, next: Props) {
   return (
     prev.currentUserId === next.currentUserId &&
     prev.onToggle === next.onToggle &&
+    prev.onOpen === next.onOpen &&
     prev.onDeletePress === next.onDeletePress &&
     prev.renderAuthorFeedback === next.renderAuthorFeedback &&
     prev.isSuperuser === next.isSuperuser &&

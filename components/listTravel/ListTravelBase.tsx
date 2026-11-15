@@ -466,6 +466,26 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       [isMeTravel, travels]
     );
 
+    const firstScreenReady =
+      !isInitialLoading &&
+      (hasDisplayedItems || showEmptyState || isError);
+
+    const searchAnalyticsFilters = useMemo(
+      () => (isSiteSearch ? buildSearchAnalyticsFilters(queryParams, filter) : null),
+      [isSiteSearch, queryParams, filter],
+    );
+    const trackSearchResultOpen = useTravelCatalogSearchAnalytics({
+      enabled: isSiteSearch && enabled,
+      query: debSearch,
+      filtersKey: searchAnalyticsFilters?.filtersKey ?? '',
+      hasFilters: searchAnalyticsFilters?.hasFilters ?? false,
+      settled: firstScreenReady && !isSearchPending,
+      isZeroResults: showEmptyState,
+      isError,
+      resultsCount: total,
+      relaxedFilters: showRelaxationNotice,
+    });
+
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number, hasUserScrolled = false) => {
         const mediaLoading = getCatalogCardMediaLoading(index, gridColumns, hasUserScrolled)
@@ -480,6 +500,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
             isMetravel={isMeTravel}
             authorFeedbackSlots={authorFeedbackSlots}
             onDeletePress={handleDeletePress}
+            onOpenTravel={isSiteSearch && debSearch.trim() ? trackSearchResultOpen : undefined}
             // Грузим весь начальный первый ряд eager/high-priority (а не только
             // index 0). После первого скролла все ремоунты переходят на lazy/low.
             isFirst={mediaLoading === 'eager'}
@@ -496,7 +517,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       },
       [
         authorFeedbackSlots,
+        debSearch,
         handleDeletePress,
+        isSiteSearch,
+        trackSearchResultOpen,
         isExport,
         isSelected,
         isMeTravel,
@@ -520,31 +544,12 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     // такой предикат. Атрибут, выставленный однажды, при смене фильтров не
     // снимается: шелл одноразовый, а повторное «не готово» относится уже не к
     // первому экрану.
-    const firstScreenReady =
-      !isInitialLoading &&
-      (hasDisplayedItems || showEmptyState || isError);
     const firstScreenCleanupRef = useRef<(() => void) | null>(null);
     useEffect(() => {
         if (!firstScreenReady || firstScreenCleanupRef.current) return;
         firstScreenCleanupRef.current = markSsgFirstScreenReady();
     }, [firstScreenReady]);
     useEffect(() => () => { firstScreenCleanupRef.current?.(); }, []);
-
-    const searchAnalyticsFilters = useMemo(
-      () => (isSiteSearch ? buildSearchAnalyticsFilters(queryParams, filter) : null),
-      [isSiteSearch, queryParams, filter],
-    );
-    useTravelCatalogSearchAnalytics({
-      enabled: isSiteSearch,
-      query: debSearch,
-      filtersKey: searchAnalyticsFilters?.filtersKey ?? '',
-      hasFilters: searchAnalyticsFilters?.hasFilters ?? false,
-      settled: firstScreenReady && !isSearchPending,
-      isZeroResults: showEmptyState,
-      isError,
-      resultsCount: total,
-      relaxedFilters: showRelaxationNotice,
-    });
 
     useEffect(() => {
         lastEndReachedAtRef.current = 0;
