@@ -4,8 +4,8 @@
 audit_mix.py <фильм.mp4> --segments <segments.json> --base <без_музыки.mov> [--music <музыка.wav>] [--voice <голос.wav>]
              [--words-root DIR] [--alias alias.json] [--out audit_mix.md]
 
-segments.json — таблица отрезков рендера (start, end, note, src, in, out): её пишет proxy_render.py рядом с фильмом.
---base — звук живых планов без музыки; --music / --voice — дорожки музыки и голоса за кадром (proxy_render.py пишет их рядом).
+segments.json — таблица отрезков рендера (start, end, note, src, in, out): её пишет render_plan.py рядом с фильмом.
+--base — звук живых планов без музыки; --music / --voice — дорожки музыки и голоса за кадром (render_plan.py пишет их рядом).
 --words-root — расшифровки исходников по словам (*.words.json): с ними проверяется разборчивость речи в готовом звуке.
 
 Находки:
