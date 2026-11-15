@@ -56,6 +56,15 @@ describe('e2e suite classification', () => {
     expect(getE2ESuiteSelection('production-smoke').testMatch).not.toContain(original)
   })
 
+  it('keeps real SSR body swaps out of the static fixture suite', () => {
+    const live = 'travel-body-island-production-smoke.spec.ts'
+    const fixture = 'travel-details-perf-budget.spec.ts'
+    expect(PRODUCTION_SMOKE_SPECS).toContain(live)
+    expect(PRODUCTION_SMOKE_SPECS).not.toContain(fixture)
+    expect(getE2ESuiteSelection('').testIgnore).toContain(live)
+    expect(getE2ESuiteSelection('').testIgnore).not.toContain(fixture)
+  })
+
   it('classifies unique, existing specs without overlap', () => {
     const all = [...LIVE_CONTRACT_SPECS, ...PRODUCTION_SMOKE_SPECS]
     expect(new Set(all).size).toBe(all.length)

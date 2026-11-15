@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { ARTICLE_REQUEST_BUDGETS } from './helpers/pagesPerfBudgets'
+import { createNetworkTracker } from './helpers/perfBudget'
 import { preacceptCookies } from './helpers/navigation'
 
 const imageVariants = (urls: readonly string[]) => {
@@ -32,6 +33,7 @@ for (const profile of [
 
     for (const [key, budget] of Object.entries(ARTICLE_REQUEST_BUDGETS)) {
       test(`${key}: canonical article requests @perf`, async ({ page }, testInfo) => {
+        const network = createNetworkTracker(page)
         const responses: { url: string; status: number }[] = []
         page.on('response', (response) => {
           if (new URL(response.url()).pathname.startsWith('/api/articles')) {
@@ -42,7 +44,11 @@ for (const profile of [
         await expect(page.locator('h1').first()).toBeVisible()
         if (key === 'ARTICLE_DETAIL') await expect(page.locator('.safe-html-rich-text img').first()).toBeVisible()
         await scrollPage(page)
+        const networkStats = network.getStats()
+        const transferKB = networkStats.totalKB
+        await testInfo.attach('article-requests', { body: JSON.stringify({ responses, transferKB, networkStats }), contentType: 'application/json' })
         expect(responses.length).toBeGreaterThan(0)
+        expect(responses.length).toBeLessThanOrEqual(budget.apiRequestsMax)
         expect(responses.filter(({ status }) => status >= 300 && status < 400)).toHaveLength(budget.redirectsMax)
         expect(responses.length - new Set(responses.map(({ url }) => url)).size).toBe(budget.duplicateUrlsMax)
         expect(responses.every(({ status }) => status === 200)).toBe(true)
@@ -53,10 +59,7 @@ for (const profile of [
           expect(sources.some((url) => new URL(url).pathname.startsWith('/media-resize/uploads/'))).toBe(true)
           expect(sources.some((url) => url.includes('amazonaws.com'))).toBe(false)
         }
-        const transferKB = await page.evaluate(() => performance.getEntriesByType('resource')
-          .reduce((bytes, entry) => bytes + (entry as PerformanceResourceTiming).transferSize, 0) / 1024)
         expect(transferKB).toBeLessThanOrEqual(budget.totalTransferKBMax)
-        await testInfo.attach('article-requests', { body: JSON.stringify({ responses, transferKB }), contentType: 'application/json' })
       })
     }
 

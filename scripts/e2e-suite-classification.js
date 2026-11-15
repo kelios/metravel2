@@ -22,6 +22,7 @@ const LIVE_CONTRACT_SPECS = [
 ]
 
 const PRODUCTION_SMOKE_SPECS = [
+  'travel-body-island-production-smoke.spec.ts',
   'media-resource-production-smoke.spec.ts',
   'google-signin.spec.ts',
   // #2094: thin companion over the shared e2e/helpers/mobileScreenBudget.ts —
