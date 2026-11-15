@@ -3,7 +3,6 @@ import { articleQueryOptions } from '@/api/articleQueries';
 import { fetchArticle, fetchArticleBySlug } from '@/api/articles';
 
 jest.mock('@/api/articles', () => ({
-  extractArticleIdFromParam: jest.requireActual('@/api/articles').extractArticleIdFromParam,
   fetchArticle: jest.fn(),
   fetchArticleBySlug: jest.fn(),
 }));
@@ -18,10 +17,16 @@ beforeEach(() => {
 afterEach(() => client.clear());
 
 it('shares an in-flight detail and its cache between the page and its breadcrumb', async () => {
+  let started!: () => void;
+  const requestStarted = new Promise<void>((resolve) => { started = resolve; });
   let release!: (article: Awaited<ReturnType<typeof fetchArticle>>) => void;
-  detail.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+  detail.mockImplementation(() => {
+    started();
+    return new Promise((resolve) => { release = resolve; });
+  });
   const page = client.fetchQuery(articleQueryOptions('rozygrysh-trekh-termosov-1'));
   const breadcrumb = client.fetchQuery(articleQueryOptions('rozygrysh-trekh-termosov-1'));
+  await requestStarted;
   expect(detail).toHaveBeenCalledTimes(1);
   release({ id: 1, name: 'Article' } as Awaited<ReturnType<typeof fetchArticle>>);
   expect(await page).toEqual(await breadcrumb);

@@ -1,4 +1,4 @@
-import { fetchArticle, fetchArticleBySlug, extractArticleIdFromParam } from '@/api/articles';
+import { extractArticleIdFromParam } from '@/utils/articleRouteParam';
 import { queryKeys } from '@/api/queryKeys';
 import { translate as i18nT } from '@/i18n';
 import type { Article } from '@/types/types';
@@ -18,6 +18,8 @@ export const articleQueryOptions = (param: string | null) => {
     networkMode: 'always' as const,
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
       if (!param) return null;
+      // Breadcrumbs run on every route; load article transport only for a detail.
+      const { fetchArticle, fetchArticleBySlug } = await import('@/api/articles');
       let article: Article;
       if (!id) {
         article = await fetchArticleBySlug(param, { signal, throwOnError: true });
