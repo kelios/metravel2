@@ -201,9 +201,19 @@ if cues:
     stem(lambda c: not c["file"].lower().endswith(".wav") or "пи" in c.get("name", "")[:3], "_музыка.wav")
     stem(lambda c: c["file"].lower().endswith(".wav") and not c.get("name", "").startswith("пи"), "_голос.wav")
     subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", "0:v", "-map", "[a]",
-                    "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
+                    "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
 else:
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
+# истинный пик ≤ −1 dBTP: ограничитель по сэмплам не видит межсэмпловых пиков после AAC (4K: −0,7 dBTP) — дожимаем звук без перекодирования видео
+def true_peak(pth):
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", pth, "-vn", "-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"], capture_output=True, text=True)
+    m = _re.findall(r"Peak:\s+(-?[\d.]+) dBFS", r.stderr); return float(m[-1]) if m else None
+tp = true_peak(out)
+if tp is not None and tp > -1.0:
+    fix = os.path.splitext(out)[0] + "_tp.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", out, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-af", f"volume={-1.2 - tp:.2f}dB",
+                    "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", fix], check=True, stdin=subprocess.DEVNULL)
+    os.replace(fix, out); print(f"истинный пик {tp} dBTP → звук {-1.2 - tp:+.2f} дБ, сейчас {true_peak(out)} dBTP", flush=True)
 # таблица таймкодов отрезков — по фактическим (до кадра) длинам кусков, как собран фильм: аудиты берут кадры по ней
 t = 0.0; rows = []
 for i, s in enumerate(plan["segments"]):
