@@ -7,17 +7,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   buildTripPlanDraftHref,
   clearTripPlanDraft,
-  draftRoutePoints,
-  formatSourcePoint,
   loadTripPlanDraft,
   parseSourcePoint,
   saveTripPlanDraft,
   TRIP_PLAN_DRAFT_KEY,
   TRIP_PLAN_DRAFT_MAX_AGE_MS,
+  TRIP_PLAN_DRAFT_MAX_DAY,
   TRIP_PLAN_DRAFT_MAX_POINTS,
   type TripPlanDraftInput,
 } from '@/utils/tripPlanDraft'
-import { buildTripPlanCreateHrefFromQuest, buildTripPlanPrefillFromDraft, buildTripPlanRoutePrefill } from '@/utils/tripPlanLinks'
+import { buildTripPlanPrefillFromDraft, buildTripPlanRoutePrefill, draftRoutePoints } from '@/utils/tripPlanDraftIntake'
+import { buildTripPlanCreateHrefFromQuest, formatSourcePoint } from '@/utils/tripPlanLinks'
+import { isValidCoordinate } from '@/utils/coordinates'
+import { MAX_ROUTE_DAY } from '@/utils/routePointDay'
 
 const INPUT: TripPlanDraftInput = {
   title: 'Спланируй два дня в Кракове',
@@ -169,3 +171,35 @@ describe('точки черновика → точки маршрута (#3298, 
     for (const value of ['', 'abc', '50', '50;19', '50,19,7', '95,19', '50,190', undefined]) expect(parseSourcePoint(value)).toBeNull()
   })
 })
+
+// 15.11.2026: статический импорт хранилища черновика из `utils/tripPlanLinks.ts` добавил странице статьи
+// лишний eager-запрос (19 при потолке 18), и выкат остановил страж бюджета бандла.
+describe('граф импортов: страница статьи не тянет черновик и маршрут поездки', () => {
+  const fs = require('fs') as typeof import('fs')
+  const path = require('path') as typeof import('path')
+  const importsOf = (file: string): string[] =>
+    [...fs.readFileSync(path.join(__dirname, '../..', file), 'utf8').matchAll(/^import\s+(type\s+)?[^'"]*['"]([^'"]+)['"]/gm)].filter((match) => !match[1]).map((match) => match[2])
+
+  it('сборка ссылки на форму поездки — без хранилища черновика и модулей маршрута', () => {
+    expect(importsOf('utils/tripPlanLinks.ts').sort()).toEqual(['@/i18n', '@/utils/seo', '@/utils/travelSeo'])
+  })
+
+  it('хранилище черновика — только AsyncStorage: общий чанк экрана ассистента и формы не несёт код планировщика', () => {
+    expect(importsOf('utils/tripPlanDraft.ts')).toEqual(['@react-native-async-storage/async-storage'])
+  })
+
+  it('приём точек грузит только форма новой поездки', () => {
+    const users = ['app/(tabs)/trips/plan/create.tsx', 'components/travel/CTASection.tsx', 'components/screens/assistant/AssistantPlanDays.tsx', 'components/screens/assistant/AssistantSourceCards.tsx', 'hooks/usePlanTripFromSource.ts']
+    expect(users.filter((file) => importsOf(file).includes('@/utils/tripPlanDraftIntake'))).toEqual(['app/(tabs)/trips/plan/create.tsx'])
+    expect(importsOf('components/travel/CTASection.tsx')).not.toContain('@/utils/tripPlanDraft')
+  })
+
+  it('свои копии проверок совпадают с общими: потолок дня и пределы координат', () => {
+    expect(TRIP_PLAN_DRAFT_MAX_DAY).toBe(MAX_ROUTE_DAY)
+    for (const [lat, lng] of [[50.06, 19.94], [90, 180], [-90, -180], [90.01, 0], [0, 180.01], [Number.NaN, 0]] as Array<[number, number]>) {
+      expect(parseSourcePoint(`${lat},${lng}`) !== null).toBe(isValidCoordinate(lat, lng))
+      expect(formatSourcePoint(lat, lng) !== '').toBe(isValidCoordinate(lat, lng))
+    }
+  })
+})
+

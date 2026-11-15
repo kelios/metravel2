@@ -1,9 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import type { RoutePoint } from '@/api/plannedTrips'
-import { isValidCoordinate } from '@/utils/coordinates'
-import { MAX_ROUTE_DAY } from '@/utils/routePointDay'
-
 /**
  * Черновик маршрута для формы новой поездки (#3298, #3416 п.1) — общий приём точек.
  *
@@ -20,12 +16,22 @@ import { MAX_ROUTE_DAY } from '@/utils/routePointDay'
  *
  * У точки маршрута есть день (`dayNumber`, #1845), поэтому разбивка плана по дням сохраняется в самом
  * маршруте; текст по дням дублируется в описании поездки — его видно до создания.
+ *
+ * Здесь только хранилище и проверка точек, без модулей планировщика: файл грузят экран ассистента (кнопка
+ * «Открыть в планировщике») и форма новой поездки, и общий для них чанк не должен тянуть за собой код
+ * маршрута. Превращение черновика в точки маршрута и подстановка формы — `utils/tripPlanDraftIntake.ts`
+ * (только форма); сборка ссылки с `sourcePoint` — чистая функция в `utils/tripPlanLinks.ts`.
  */
 export const TRIP_PLAN_DRAFT_KEY = 'metravel:tripPlanDraft'
 export const TRIP_PLAN_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000
 export const TRIP_PLAN_DRAFT_MAX_POINTS = 40
 /** Значение параметра `source` формы для входа с черновиком плана. */
 export const TRIP_PLAN_DRAFT_SOURCE = 'plan'
+/** Наибольший номер дня точки — тот же, что `MAX_ROUTE_DAY` в `utils/routePointDay.ts` (тест сверяет). */
+export const TRIP_PLAN_DRAFT_MAX_DAY = 60
+
+/** Широта и долгота в пределах — та же проверка, что `isValidCoordinate` (`utils/coordinates`), без его модуля. */
+const isCoordinate = (lat: number, lng: number): boolean => Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
 
 export type TripPlanDraftPoint = {
   /** Материал сайта, из которого точка: статья — «Место» с привязкой, квест — обычная точка. */
@@ -63,7 +69,7 @@ export const cleanDraftPoint = (raw: unknown): TripPlanDraftPoint | null => {
   const title = clip(point.title, 160)
   const lat = Number(point.lat)
   const lng = Number(point.lng)
-  if (!title || !isValidCoordinate(lat, lng)) return null
+  if (!title || !isCoordinate(lat, lng)) return null
   const day = Number(point.day)
   const sourceId = Number(point.sourceId)
   return {
@@ -72,7 +78,7 @@ export const cleanDraftPoint = (raw: unknown): TripPlanDraftPoint | null => {
     title,
     lat,
     lng,
-    day: Number.isInteger(day) && day >= 1 && day <= MAX_ROUTE_DAY ? day : null,
+    day: Number.isInteger(day) && day >= 1 && day <= TRIP_PLAN_DRAFT_MAX_DAY ? day : null,
     note: clip(point.note, 240) || null,
   }
 }
@@ -87,7 +93,7 @@ const cleanDraft = (raw: unknown): TripPlanDraft | null => {
     id: draft.id,
     title: clip(draft.title, 96),
     description: String(draft.description ?? '').trim().slice(0, 2000),
-    days: Number.isInteger(days) && days >= 1 && days <= MAX_ROUTE_DAY ? days : 1,
+    days: Number.isInteger(days) && days >= 1 && days <= TRIP_PLAN_DRAFT_MAX_DAY ? days : 1,
     points,
     createdAt: draft.createdAt,
     owner: typeof draft.owner === 'string' && draft.owner ? draft.owner : null,
@@ -150,33 +156,11 @@ export const clearTripPlanDraft = async (id: string | null | undefined): Promise
 /** Адрес формы новой поездки с черновиком: в адресе только идентификатор. */
 export const buildTripPlanDraftHref = (id: string): string => `/trips/plan/create?${new URLSearchParams({ source: TRIP_PLAN_DRAFT_SOURCE, draft: id }).toString()}`
 
-/** Координаты одной точки материала для параметра `sourcePoint`; кривые координаты — пустая строка. */
-export const formatSourcePoint = (lat: number | null | undefined, lng: number | null | undefined): string => {
-  const [latitude, longitude] = [Number(lat), Number(lng)]
-  if (lat === null || lat === undefined || lng === null || lng === undefined || !isValidCoordinate(latitude, longitude)) return ''
-  return `${latitude.toFixed(5)},${longitude.toFixed(5)}`
-}
-
 /** Разбор параметра `sourcePoint=<lat>,<lng>`; не координаты — `null`. */
 export const parseSourcePoint = (value: string | string[] | undefined): { lat: number; lng: number } | null => {
   const raw = Array.isArray(value) ? value[0] : value
   const match = /^\s*(-?\d{1,2}(?:\.\d{1,7})?),(-?\d{1,3}(?:\.\d{1,7})?)\s*$/.exec(String(raw ?? ''))
   if (!match) return null
   const [lat, lng] = [Number(match[1]), Number(match[2])]
-  return isValidCoordinate(lat, lng) ? { lat, lng } : null
+  return isCoordinate(lat, lng) ? { lat, lng } : null
 }
-
-/**
- * Точки черновика → точки маршрута поездки в порядке дней. Статья — «Место» с привязкой `placeId`, квест —
- * обычная точка (в домене точки квеста нет), как у блока «Рядом с маршрутом».
- */
-export const draftRoutePoints = (points: readonly TripPlanDraftPoint[]): RoutePoint[] =>
-  points.map((point, index) => ({
-    id: `draft-${point.type}-${point.sourceId ?? index}-${index}`,
-    type: point.type === 'travel' ? 'place' : 'custom',
-    name: point.title,
-    description: point.note ?? null,
-    coordinates: [point.lng, point.lat],
-    placeId: point.type === 'travel' && point.sourceId ? point.sourceId : null,
-    dayNumber: point.day ?? null,
-  }))
