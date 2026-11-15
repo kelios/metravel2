@@ -13,7 +13,7 @@
   ],
   "totals": {
     "styleCast": 1080,
-    "logicCast": 1004,
+    "logicCast": 1000,
     "tsIgnore": 23,
     "tsExpectError": 1,
     "eslintDisable": 23
@@ -28,7 +28,7 @@
     },
     "components": {
       "styleCast": 1000,
-      "logicCast": 857,
+      "logicCast": 853,
       "tsIgnore": 23,
       "tsExpectError": 1,
       "eslintDisable": 14
@@ -1099,13 +1099,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/MapPage/Map.tsx": {
-      "styleCast": 0,
-      "logicCast": 2,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/MapPage/Map.web.tsx": {
       "styleCast": 2,
       "logicCast": 16,
@@ -1879,13 +1872,6 @@
     "components/travel/details/sections/LazyYouTubeSection.native.tsx": {
       "styleCast": 0,
       "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/details/sections/LazyYouTubeSection.tsx": {
-      "styleCast": 0,
-      "logicCast": 2,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

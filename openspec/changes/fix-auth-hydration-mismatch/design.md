@@ -50,10 +50,9 @@ uses the project stub — the two graphs are built from different context module
     children are the loading block (L224-229) **and a raw `<div ref=…>`** (L230-243)
   - L56-57 carries a stale comment claiming the handoff happens "via
     `useSyncExternalStore`"; `useHydrationReady` is a `useState` + `useEffect` gate.
-- `components/auth/GoogleSignInButton.tsx` — the non-Metro fallback used by Jest
-  (L23-27 says so). Its web branch (L123-150) computes availability **without any
-  hydration gate**, so component tests that import this file do not exercise the
-  production code path.
+- The base `components/auth/GoogleSignInButton.tsx` was removed in #3309; Jest's
+  iOS preset resolves the bare import to `.native.tsx`, so component tests that
+  import the bare path do not exercise the production web code path.
 - `components/auth/GoogleSignInButton.native.tsx`, `components/auth/googleSignInButtonTheme.ts`.
 - `components/auth/FacebookSignInButton.web.tsx`
   - L50-51 `isFacebookLoginEnabled()` reads `EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED`
@@ -63,11 +62,9 @@ uses the project stub — the two graphs are built from different context module
     — added by commit `e980b5e9` "fix(web): stabilize auth hydration"
   - L183-214 the real control; L203 `<Feather name="facebook" … />`
   - L218-222 the placeholder style (`width: 100%`, `minHeight: 48`, radius)
-- `components/auth/FacebookSignInButton.tsx` (base, returns `null`),
-  `components/auth/FacebookSignInButton.native.tsx`,
+- `components/auth/FacebookSignInButton.native.tsx`,
   `components/auth/facebookLoginTypes.ts`.
-- `components/auth/FacebookAuthFlow.tsx` (base, returns `null`),
-  `components/auth/FacebookAuthFlow.web.tsx` / `.native.tsx` (re-export),
+- `components/auth/FacebookAuthFlow.web.tsx` / `.native.tsx` (re-export),
   `components/auth/FacebookAuthFlow.shared.tsx` — L326-348 the default branch is
   `<View>` + `FacebookSignInButton`; L196/L240 use `Feather` in the panels.
 
@@ -117,8 +114,8 @@ uses the project stub — the two graphs are built from different context module
 `EXPO_WEB_BUILD_MINIFY=true`, `EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false`, L105
 runs `scripts/build-web-safe.js -p web -c --output-dir .tmp/prod-web-export`, and
 L106-118 stages and swaps into `dist/prod`. `npm run build:web:prod`
-(`package.json` L79) is the entry point; `npm run serve:prod` (L80) serves
-`dist/prod` through `.claude/prod-server.js`, and `.claude/launch.json` L276-284 /
+(`package.json` L79) is the entry point; `node .claude/prod-server.js 8081` serves
+`dist/prod` (the unused `serve:prod` alias was removed in #3309), and `.claude/launch.json` L276-284 /
 L321-331 provide the `Prod Static` launches.
 
 Two config deltas matter and must not be printed as values:
@@ -336,9 +333,9 @@ Two layers, because either alone is insufficient.
   `components/auth/GoogleSignInButton.web` and
   `components/auth/FacebookSignInButton.web` modules. This is the "do not mock
   the primitive under investigation" rule: mocking the hydration boundary would
-  make the test pass on the broken code. Note the resolution gap — Jest resolves
-  `components/auth/GoogleSignInButton.tsx`, whose web branch (L123-150) has no
-  hydration gate — so the test must import the `.web` module explicitly, as the
+  make the test pass on the broken code. Note the resolution gap — Jest resolves the bare
+  import to `components/auth/GoogleSignInButton.native.tsx` (base removed in
+  #3309), which is not the web code path — so the test must import the `.web` module explicitly, as the
   existing `__tests__/components/auth/*.web.test.ts` files already do. Cover the
   three availability inputs that change structure: configured client id, empty
   client id, and Facebook rollout flag on/off.

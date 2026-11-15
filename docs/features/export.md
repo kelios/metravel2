@@ -107,7 +107,7 @@ premium-настройки обязан быть явный free-фолбэк**,
 
 Все печатные документы (план поездки, квест, книга) уходят в
 `printHtml(html, { title }) → 'printed' | 'cancelled' | 'unavailable'`
-(`utils/printHtml.ts` + `.web.ts` + `.native.ts`, типы — `printHtml.types.ts`):
+(`utils/printHtml.web.ts` / `.native.ts`, типы — `printHtml.types.ts`):
 
 - **web** — HTML пишется в окно браузера (`utils/openBookPreviewWindow.ts`), где
   пользователь печатает или сохраняет в PDF. Окно резервирует `beginPrint()`

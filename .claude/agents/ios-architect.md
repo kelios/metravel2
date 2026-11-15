@@ -68,8 +68,8 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
 - `docs/IOS_OWNER_GUIDE.md` — что физически делает владелец руками в Apple
   (членство, соглашения, App ID, доступы, устройство), чтобы не назначить это
   агенту;
-- реальные платформенные точки, а не абстракции: `components/MapPage/Map.tsx`
-  как диспетчер против `Map.ios.tsx`/`Map.android.tsx`/`Map.web.tsx`,
+- реальные платформенные точки, а не абстракции:
+  `components/MapPage/Map.ios.tsx`/`Map.android.tsx`/`Map.web.tsx`,
   `components/layout/NativeAppRuntime.native.tsx`, `utils/secureStorage.ts`.
 
 **Как воспроизвести**

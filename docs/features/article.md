@@ -36,7 +36,7 @@ HTML и отдаётся на трёх поверхностях — гидрат
 ## Ключевые компоненты
 
 ```
-<ArticleEditor>                      // components/article/ArticleEditor.tsx — диспетчер web/native
+<ArticleEditor>                      // components/article/ArticleEditor — platform resolution .web/.ios/.android
  ├─ ArticleEditor.web.tsx            // Quill-редактор
  │   ├─ QuillEditor.web.tsx
  │   ├─ ArticleEditor.web.effects.ts // автосейв, backoff, форс-синк
@@ -327,7 +327,7 @@ HTML и отдаётся на трёх поверхностях — гидрат
 ## Ключевые компоненты
 
 ```
-<ArticleEditor>                      // components/article/ArticleEditor.tsx — диспетчер web/native
+<ArticleEditor>                      // components/article/ArticleEditor — platform resolution .web/.ios/.android
  ├─ ArticleEditor.web.tsx            // Quill-редактор
  │   ├─ QuillEditor.web.tsx
  │   ├─ ArticleEditor.web.effects.ts // автосейв, backoff, форс-синк

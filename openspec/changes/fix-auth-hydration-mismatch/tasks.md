@@ -16,7 +16,7 @@
 
 ## 3. Lock the contract with a failing test
 
-- [ ] 3.1 Add a focused render-equality test that compares the project's server-rendered string for the auth social block with its first client render, importing the real `.web` modules explicitly (Jest otherwise resolves `components/auth/GoogleSignInButton.tsx`, whose web branch has no hydration gate).
+- [ ] 3.1 Add a focused render-equality test that compares the project's server-rendered string for the auth social block with its first client render, importing the real `.web` modules explicitly (Jest otherwise resolves the bare import to `components/auth/GoogleSignInButton.native.tsx`, not the web code path).
 - [ ] 3.2 Cover in that test the three availability inputs that change structure: a configured Google client id, an empty Google client id, and the Facebook rollout flag both enabled and disabled; assert identical element structure, order, types and text in every case.
 - [ ] 3.3 Confirm the new test fails on the current code for the confirmed cause and passes for the cases that already agree, so it is proven to be a real guard rather than a tautology.
 

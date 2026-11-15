@@ -29,7 +29,7 @@ resizable-window, portrait и landscape режимах.
   а разводить по файлам: `Component.web.tsx` + `Component.native.tsx`
   (или `.android.tsx`/`.ios.tsx`) — Metro сам выберет нужный. Примеры в репо:
   `Map.web.tsx`/`Map.android.tsx`, `usePushNotifications.web.ts`/`.native.ts`,
-  `LazyYouTubeSection.tsx`/`.native.tsx`.
+  `LazyYouTubeSection.web.tsx`/`.native.tsx`.
 - Порог выбора: расходится **одно свойство/строка** → точечный
   `Platform.OS === 'web'`-гейт допустим; расходится **структура, поведение или
   зависимости** → отдельные платформенные файлы, общую логику — в общий хук/утиль.

@@ -69,9 +69,9 @@ API key, WFS/Overpass/OWM provider либо корректную работу н
 | Embedded travel renderer | `components/MapPage/TravelMap.web.tsx`, `components/MapPage/TravelMap.native.tsx` | карта внутри travel details, отдельный platform adapter |
 
 `components/MapPage/Map.android.tsx` переэкспортирует `Map.ios.tsx`: обе native
-платформы используют один WebView renderer. `components/MapPage/Map.tsx` остаётся
-generic web fallback; platform resolution выбирает `.web`, `.ios` или `.android`
-файлы для соответствующей сборки.
+платформы используют один WebView renderer. Импорт `components/MapPage/Map`
+разрешается непосредственно в `.web`, `.ios` или `.android` renderer
+соответствующей сборки; отдельного generic fallback нет.
 
 ## Platform engines
 

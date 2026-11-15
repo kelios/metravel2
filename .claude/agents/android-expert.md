@@ -76,8 +76,8 @@ code-review pass и статуса `testing`.
   `MOBILE-INSETS-001`, `MAP-USER-LOCATION-MARKER-001`, `AUTH-001`,
   `OFFLINE-001`;
 - код целиком, а не совпавшую строку `grep`: `components/MapPage/Map.android.tsx`
-  против `Map.ios.tsx` и `Map.web.tsx`, `components/MapPage/Map.tsx` как
-  диспетчер, `components/layout/NativeAppRuntime.native.tsx`,
+  против `Map.ios.tsx` и `Map.web.tsx` (прямой platform resolution),
+  `components/layout/NativeAppRuntime.native.tsx`,
   `components/article/ArticleEditor.android.tsx`,
   `components/travel/ImageGalleryComponent.android.tsx`,
   `hooks/usePushNotifications.native.ts`, `services/notifications.ts`,
@@ -161,8 +161,8 @@ code-review pass и статуса `testing`.
 ## Зона ответственности
 
 - Platform-ветвление: файлы `*.native.tsx`, `*.android.tsx`, `*.ios.tsx`, `*.web.tsx` и `Platform.OS`-ветки в общих компонентах.
-- Карта на native: `components/MapPage/Map.android.tsx`, `Map.ios.tsx` (WebView + Leaflet/OSM), `Map.tsx` (диспетчер). На web — `Map.web.tsx`. **Не смешивай импорты**: `leaflet`/`react-leaflet` не должны попадать в native-файлы, `react-native-maps` — в web. Для карты/карточки подготовь parity scenario и `adb exec-out screencap` handoff; tester проверяет его только в `testing`.
-- Expo-модули: `expo-location`, `expo-image-picker` / `react-native-image-picker`, `expo-secure-store` (`utils/secureStorage.ts`), `expo-notifications`, `expo-local-authentication`, `expo-sharing`, `expo-web-browser`.
+- Карта на native: `components/MapPage/Map.android.tsx`, `Map.ios.tsx` (WebView + Leaflet/OSM); импорт `Map` выбирает платформенный файл. На web — `Map.web.tsx`. **Не смешивай импорты**: `leaflet`/`react-leaflet` не должны попадать в native-файлы, `react-native-maps` — в web. Для карты/карточки подготовь parity scenario и `adb exec-out screencap` handoff; tester проверяет его только в `testing`.
+- Expo-модули: `expo-location`, `expo-image-picker`, `expo-secure-store` (`utils/secureStorage.ts`), `expo-notifications`, `expo-local-authentication`, `expo-sharing`, `expo-web-browser`.
 - Push: `hooks/usePushNotifications.native.ts`, `hooks/usePushNotifications.web.ts` (stub), `services/notifications.ts` (регистрация токена, каналы Android, deep-link routing).
 - Навигация: `app/_layout.tsx`, `app/(tabs)/_layout.tsx` — таб-бар на native. Следи, чтобы web-only экраны (`cookies`, `privacy`, `metravel`) не попадали в native-навигацию.
 - Изображения на native — `expo-image` через `components/ui/ImageCardMedia.tsx`.
