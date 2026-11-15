@@ -29,6 +29,11 @@ VENC = (["-c:v", "h264_videotoolbox", "-b:v", _hwb, "-pix_fmt", "yuv420p", "-tag
 # а второе поколение h264 60 Мбит/с на глаз не видно. Без потерь — только если хватит места: --crf 0 без --hw.
 VENC += ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]   # YouTube читает метки цвета
 G = lambda o: ("," + o["grade"]) if o.get("grade") else ""
+# перекрытие, продлённое в запас перехода: нехватку исходника в начале/конце закрывает повтор крайнего кадра
+TP = lambda pre, post: (f",tpad=start_duration={pre:.3f}:start_mode=clone" if pre > 0.001 else "") + (f",tpad=stop_duration={post + 0.1:.3f}:stop_mode=clone" if post > 0.001 else "")
+# растворение перекрытия по альфе (время — от начала самого перекрытия)
+AF = lambda fi, fo, d: ("" if not (fi or fo) else ",format=yuva420p" + (f",fade=t=in:st=0:d={fi:.3f}:alpha=1" if fi else "")
+                        + (f",fade=t=out:st={max(0.0, d - fo):.3f}:d={fo:.3f}:alpha=1" if fo else ""))
 import hashlib as _h   # лук .cube меняется без смены пути — его содержимое входит в ключ кеша кусков
 LOOKSUM = _h.md5(open(plan["grade"]["look"], "rb").read()).hexdigest()[:8] if (plan.get("grade") or {}).get("look") and os.path.exists(plan["grade"]["look"]) else ""
 
@@ -67,7 +72,7 @@ for i, s in enumerate(SEG):
     nfL, nf, nfR = int(round(hL * FPS)), max(1, int(round(dur * FPS))), int(round(hR * FPS))
     hL, hR = nfL / FPS, nfR / FPS
     hand.append((hL, hR)); cores.append(nf / FPS)
-    h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
+    h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|edges2|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
     f = os.path.join(wd, f"{i:03d}_{h}.mov")   # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
     parts.append(f)
     if only is not None and i not in only and os.path.exists(f):
@@ -78,25 +83,40 @@ for i, s in enumerate(SEG):
     inputs = ["-ss", f"{a0:.3f}", "-t", f"{full + 0.1:.3f}", "-i", src]
     fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1[base0]"]
     cur = "base0"; k = 1
-    for o in s.get("broll", []) + s.get("cards", []):
+    OV = s.get("broll", []) + s.get("cards", [])
+    vids = [o for o in OV if not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))]
+    def neighbour(o, x):     # другое видео-перекрытие того же слоя (окошко/полный кадр) начинается или кончается в точке x
+        return any(q is not o and bool(q.get("pip")) == bool(o.get("pip")) and
+                   (abs(q["at"] - x) < 0.1 or abs(q["at"] + q["dur"] - x) < 0.1) for q in vids)
+    for o in OV:
         t0 = o["at"] - a0; d = min(o["dur"], s["out"] - o["at"])
         if d <= 0 or t0 + d <= hL or t0 >= hL + dur:
             continue
         is_img = o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
+        # перекрытие у края отрезка с переходом продлевается в запас перехода: иначе на 0,5 с до растворения
+        # мелькает кадр под перебивкой (рассказчик целиком) — «вспышка перед переходом» (владелец 15.11, 24:21)
+        eL = hL if o["at"] - s["in"] < 0.1 else 0.0
+        eR = hR if s["out"] - (o["at"] + d) < 0.1 else 0.0
+        t0 -= eL; d += eL + eR
+        # внутри отрезка видео-перекрытие входит и уходит растворением 0,3 с (не обрывом), если встык нет соседнего
+        XF = 0.3 if not is_img else 0.0
+        fin = XF if XF and not eL and o["at"] - s["in"] >= 0.1 and not neighbour(o, o["at"]) else 0.0
+        fout = XF if XF and not eR and s["out"] - (o["at"] + min(o["dur"], s["out"] - o["at"])) >= 0.1 and not neighbour(o, o["at"] + o["dur"]) else 0.0
         if is_img:
             inputs += ["-loop", "1", "-t", f"{d:.3f}", "-i", o["file"]]
         else:
-            inputs += ["-ss", f"{o.get('in', 0):.3f}", "-t", f"{d:.3f}", "-i", o["file"]]
+            ss = float(o.get("in", 0)) - eL; pre = max(0.0, -ss)
+            inputs += ["-ss", f"{max(0.0, ss):.3f}", "-t", f"{d:.3f}", "-i", o["file"]]
         lab = f"o{k}"
         pos = "0:0"
         if o.get("pip"):
             pw = int(W * float(o["pip"].get("scale", 0.3))) // 2 * 2
-            fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white{TP(pre, eR)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             pos = f"{float(o['pip'].get('x', 0.5)) * W:.0f}-w/2:{float(o['pip'].get('y', 0.5)) * H:.0f}-h/2"
         elif is_img:
             fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
         else:
-            fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eR)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
         fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
         cur = f"v{k}"; k += 1
     NF = nfL + nf + nfR                           # ровно NF кадров и NF*1600 сэмплов — звук и картинка куска одной длины
@@ -218,7 +238,7 @@ if tp is not None and tp > -1.0:
 t = 0.0; rows = []
 for i, s in enumerate(plan["segments"]):
     d = cores[i]; k_ = d / max(s["out"] - s["in"], 1e-6)
-    rows.append({"i": i, "start": round(t, 3), "end": round(t + d, 3), "note": s.get("note", ""), "src": plan["sources"][s["src"]],
+    rows.append({"i": i, "start": round(t, 3), "end": round(t + d, 3), "note": s.get("note", ""), "xfade": round(hand[i][1] + (hand[i + 1][0] if i + 1 < len(hand) else 0), 3), "src": plan["sources"][s["src"]],
                  "in": s["in"], "out": s["out"], "broll": [{"at_film": round(t + (o["at"] - s["in"]) * k_, 3), "dur": o["dur"], "file": o["file"], "in": o.get("in", 0)} for o in s.get("broll", [])]})
     t += d
 json.dump(rows, open(os.path.splitext(out)[0] + ".segments.json", "w"), ensure_ascii=False, indent=1)
