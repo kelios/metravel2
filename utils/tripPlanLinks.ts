@@ -22,6 +22,7 @@ export interface TripPlanShareSource {
 }
 
 const TITLE_MAX = 96;
+const SOURCE_URL_MAX = 500;
 const DESCRIPTION_MAX = 420;
 
 const firstParam = (value: string | string[] | undefined): string => {
@@ -143,7 +144,9 @@ export function buildTripPlanPrefill(params: TripPlanSourceParams): TripPlanPref
   if (!TRIP_PLAN_SOURCES.includes(firstParam(params.source))) return {};
 
   const sourceTitle = firstParam(params.sourceTravelTitle);
-  const sourceUrl = firstParam(params.sourceTravelUrl);
+  // Адрес приходит из строки запроса: в описание идёт только http(s)-ссылка разумной длины.
+  const rawSourceUrl = firstParam(params.sourceTravelUrl);
+  const sourceUrl = /^https?:\/\//i.test(rawSourceUrl) && rawSourceUrl.length <= SOURCE_URL_MAX ? rawSourceUrl : '';
   const sourceDescription = firstParam(params.sourceTravelDescription);
 
   const title = sourceTitle ? i18nT('trips:utils.tripPlanLinks.poezdka_po_marshrutu_value1_96b48431', { value1: sourceTitle }) : '';

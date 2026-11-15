@@ -62,6 +62,14 @@ describe('tripPlanLinks', () => {
     // Не адрес сайта в ссылку не идёт; неизвестный источник подстановки не даёт.
     expect(buildTripPlanCreateHrefFromQuest({ title: 'Квест', url: 'javascript:alert(1)' })).not.toContain('sourceTravelUrl')
     expect(buildTripPlanPrefill({ source: 'other', sourceTravelTitle: 'Квест' })).toEqual({})
+    // Адрес из строки запроса в описание формы идёт только как http(s)-ссылка разумной длины (#3298).
+    for (const sourceTravelUrl of ['javascript:alert(1)', 'data:text/html,x', `https://metravel.by/${'a'.repeat(600)}`]) {
+      const description = buildTripPlanPrefill({ source: 'quest', sourceTravelTitle: 'Квест', sourceTravelUrl }).description ?? ''
+      expect(description).toContain('Квест')
+      expect(description).not.toContain('javascript:')
+      expect(description).not.toContain('data:')
+      expect(description).not.toContain('https://metravel.by/')
+    }
   })
 
   it('builds a canonical planned-trip URL from numeric id only', () => {
