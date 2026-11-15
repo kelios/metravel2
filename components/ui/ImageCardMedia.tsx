@@ -143,7 +143,6 @@ type Props = {
   placeholderSrc?: string | null;
   priority?: Priority;
   loading?: 'lazy' | 'eager';
-  prefetch?: boolean;
   transition?: number;
   cachePolicy?: ExpoImageProps['cachePolicy'];
   imageProps?: Partial<ExpoImageProps>;
@@ -203,7 +202,6 @@ function ImageCardMedia({
   placeholderSrc,
   priority = 'normal',
   loading = 'lazy',
-  prefetch = false,
   transition,
   cachePolicy,
   imageProps,
@@ -815,68 +813,6 @@ function ImageCardMedia({
     );
     return () => clearTimeout(timer);
   }, [activeWebFailure]);
-
-  const prefetchHref = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (webOptimizedSource) return webOptimizedSource;
-    if (resolvedSource && typeof resolvedSource !== 'number') {
-      const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-      return uri || null;
-    }
-    return src ?? null;
-  }, [webOptimizedSource, resolvedSource, src]);
-
-  const canUseResourceHint = useMemo(() => {
-    if (Platform.OS !== 'web') return false;
-    if (!prefetchHref) return false;
-    if (typeof window === 'undefined') return false;
-    try {
-      const resolved = new URL(prefetchHref, window.location.origin);
-      return resolved.origin === window.location.origin;
-    } catch {
-      return false;
-    }
-  }, [prefetchHref]);
-
-  const shouldAddWebPrefetchHint = useMemo(() => {
-    if (Platform.OS !== 'web') return false;
-    if (!prefetch) return false;
-    if (resolvedLoading !== 'lazy') return false;
-    if (priority !== 'low') return false;
-    return true;
-  }, [prefetch, resolvedLoading, priority]);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (shouldDisableNetwork) return;
-    if (!shouldAddWebPrefetchHint) return;
-    if (!prefetchHref) return;
-    if (!canUseResourceHint) return;
-    if (typeof document === 'undefined') return;
-
-    // Keep this as a low-priority prefetch hint only for genuinely non-critical,
-    // lazily rendered same-origin images. Critical images are already requested
-    // by the actual <img> element via loading/fetchPriority and should not add
-    // extra head hints that can survive route changes and trigger browser warnings.
-    const rel = 'prefetch';
-    const id = `img-hint-${encodeURIComponent(prefetchHref)}`;
-    if (document.getElementById(id)) return;
-
-    const link = document.createElement('link');
-    link.id = id;
-    link.rel = rel;
-    // Атрибутом, а не свойством: для `rel=prefetch` `as` обязателен, иначе браузер
-    // кладёт ресурс в кэш без нужного destination и повторно скачивает его при показе.
-    link.setAttribute('as', 'image');
-    link.href = prefetchHref;
-    document.head.appendChild(link);
-
-    // Удаляем узел при unmount / смене prefetchHref — иначе в ленивых списках
-    // <head> копит по одному осиротевшему <link> на каждый уникальный URL.
-    return () => {
-      link.remove();
-    };
-  }, [shouldAddWebPrefetchHint, prefetchHref, shouldDisableNetwork, canUseResourceHint]);
 
   return (
     <View

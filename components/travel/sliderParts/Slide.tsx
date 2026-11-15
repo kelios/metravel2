@@ -402,7 +402,6 @@ const Slide = memo(function Slide({
             placeholderBlurhash={mediaPlaceholder.blurhash ?? undefined}
             placeholderColor={mediaPlaceholder.dominantColor}
             priority={mainPriority as any}
-            prefetch={Platform.OS === 'web' ? shouldPreloadAhead : false}
             loading={
               Platform.OS === 'web'
                 ? shouldEagerLoad

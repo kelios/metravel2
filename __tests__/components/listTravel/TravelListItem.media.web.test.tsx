@@ -196,7 +196,7 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.revealOnLoadOnly).toBe(true);
     expect(props.mediaProps?.priority).toBe('low');
     expect(props.mediaProps?.loading).toBe('eager');
-    expect(props.mediaProps?.prefetch).toBe(false);
+    expect(props.mediaProps).not.toHaveProperty('prefetch');
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
   });
 
@@ -206,7 +206,7 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.priority).toBe('high');
     expect(props.mediaProps?.loading).toBe('eager');
-    expect(props.mediaProps?.prefetch).toBe(false);
+    expect(props.mediaProps).not.toHaveProperty('prefetch');
   });
 
   it('applies the catalog lazy policy through the memo boundary after scrolling', async () => {
@@ -220,7 +220,6 @@ describe('TravelListItem media props on web', () => {
     expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.mediaProps).toMatchObject({
       loading: 'lazy',
       priority: 'low',
-      prefetch: false,
       retainWebRequestOnRecycle: true,
     });
   });

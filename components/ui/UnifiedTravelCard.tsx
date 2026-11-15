@@ -86,7 +86,6 @@ type Props = {
     recyclingKey?: string;
     priority?: 'low' | 'normal' | 'high';
     loading?: 'lazy' | 'eager';
-    prefetch?: boolean;
     showImmediately?: boolean;
     optimizeWeb?: boolean;
     transition?: number;
@@ -689,7 +688,6 @@ function UnifiedTravelCard({
             ]}
             loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
             priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
-            prefetch={mediaProps?.prefetch ?? false}
             showImmediately={mediaProps?.showImmediately ?? false}
             optimizeWeb={mediaProps?.optimizeWeb ?? true}
             transition={mediaProps?.transition}

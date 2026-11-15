@@ -728,7 +728,6 @@ function TravelListItem({
         // non-virtualized `map()` layout has no such ceiling — that screen must
         // pass `mediaLoading="lazy"` instead. See #1285.
         loading: IS_WEB ? mediaLoading : 'lazy',
-        prefetch: false,
         transition: Platform.OS === 'android' ? 0 : undefined,
         imageProps: ANDROID_LIST_IMAGE_PROPS,
         showLoadingIndicator: Platform.OS !== 'android',
