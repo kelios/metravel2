@@ -3,8 +3,14 @@ import { installReadOnlyTravelApi } from './readOnlyTravelApi';
 
 // #3419: статья с десятью GPX-файлами — профили высот приходят после показа
 // секции карты и растят её блок на тысячи пикселей, когда читатель уже ниже.
-const ARTICLE = '/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney';
-const ARTICLE_ID = 470;
+// #3430: обычная статья с одним GPX и пустым «Рядом» (`/near/` даёт 0): каркас
+// «Рядом» 338 px сменяется пустым состоянием 121 px у конца страницы.
+// `routeBlockMinPx` — высота блока карты с пришедшими профилями: ниже неё прогон
+// не прошёл поздний рост (без профилей блок 692 px на проде).
+const ARTICLES = [
+  { path: '/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney', id: 470, routeBlockMinPx: 2000 },
+  { path: '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg', id: 544, routeBlockMinPx: 1100 },
+] as const;
 // Протокол воспроизведения с прода 14.11.2026: около 1800 px/с. При шаге раз в
 // 450 мс хвост успевает разрешиться за экраном и сдвига нет.
 const STEP_PX = 400;
@@ -13,16 +19,13 @@ const STEP_MS = 220;
 // сдвиг не влияет — прогрев всех кадров его не убирал.
 const RUN_UP_PX = 6000;
 const SAMPLES = 3;
-// Высота блока карты без профилей — 692 px на проде; выше этого порога блок
-// вырос уже после показа, то есть прогон действительно прошёл поздний рост.
-const ROUTE_BLOCK_GROWN_MIN_PX = 2000;
 // Источники этого механизма: точки маршрута, въезжающие в экран, и профили высот,
 // нарисованные поверх них до публикации высоты блока.
 const FORBIDDEN_SOURCES = ['travel-details-points', 'route-elevation-profile'];
-// #3430: у самого конца страницы «Рядом», комментарии и футер ещё сдвигаются сами
-// (прод 14.11.2026: `travel-details-footer-resolved-frame` 0,12 в 1 прогоне из 10).
-// Это другая причина; её сдвиги пишутся в отчёт, но в бюджет этого контроля не
-// входят, пока #3430 не закрыта, — иначе контроль блока карты краснел бы случайно.
+// #3430: сдвиги секций хвоста («Рядом», комментарии, футер) входят в бюджет 0,1:
+// сжатие занятой высоты удерживается, пока не уйдёт из экрана или не найдёт якорь
+// в кадре без прокрутки, а каркас сайдбара держит место «Похожих». Запретными они
+// не стали — пишутся отдельно для разбора источника.
 const TAIL_SECTION_SOURCES = [
   'travel-details-sidebar-transition', 'travel-details-comments-transition', 'travel-details-footer-transition',
   'travel-details-footer-resolved-frame', 'travel-details-share', 'travel-details-telegram', 'travel-details-email-subscribe',
@@ -53,14 +56,15 @@ export async function assertTravelFastScrollCls(
   testInfo: TestInfo,
   viewport: { width: number; height: number },
 ) {
-  test.setTimeout(300_000);
+  // Бюджет прежних трёх прогонов одной статьи (до 60 с ждём подмену острова) — на каждую статью.
+  test.setTimeout(300_000 * ARTICLES.length);
   const results = [];
-  for (let sample = 1; sample <= SAMPLES; sample++) {
+  for (const article of ARTICLES) for (let sample = 1; sample <= SAMPLES; sample++) {
     const context = await browser.newContext({ viewport, baseURL, storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(`${error.name}: ${error.message}`));
-    const { unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: ARTICLE_ID });
+    const { unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: article.id });
     await page.addInitScript(() => localStorage.setItem('consent_v1', '1'));
     await page.addInitScript(() => {
       const state: Observation = {
@@ -98,7 +102,7 @@ export async function assertTravelFastScrollCls(
     }, delta);
     let observation: Observation | null = null, first = null, final = null, failure: string | null = null, steps = 0;
     try {
-      expect((await page.goto(ARTICLE, { waitUntil: 'load' }))?.ok()).toBe(true);
+      expect((await page.goto(article.path, { waitUntil: 'load' }))?.ok()).toBe(true);
       await observeWindow(6000);
       first = await page.evaluate(readFrame);
       expect(first, 'the real article scroll owner exists').not.toBeNull();
@@ -120,7 +124,7 @@ export async function assertTravelFastScrollCls(
       await observeWindow(5000);
       final = await page.evaluate(readFrame);
       observation = await page.evaluate(() => (window as ObservedWindow).__travelFastScrollCls ?? null);
-      await page.screenshot({ path: testInfo.outputPath(`travel-fast-scroll-${viewport.width}-${sample}-bottom.png`) });
+      await page.screenshot({ path: testInfo.outputPath(`travel-fast-scroll-${viewport.width}-${article.id}-${sample}-bottom.png`) });
     } catch (error) {
       failure = error instanceof Error ? `${error.name}: ${error.message}` : 'runtime-failure';
       observation = await page.evaluate(() => (window as ObservedWindow).__travelFastScrollCls ?? null).catch(() => null);
@@ -132,17 +136,17 @@ export async function assertTravelFastScrollCls(
     const isTailShift = (entry: Shift) => entry.sources.length > 0 &&
       entry.sources.every(source => source.testID !== null && TAIL_SECTION_SOURCES.includes(source.testID));
     const tailShifts = shifts.filter(isTailShift);
-    const cumulative = valid ? shifts.filter(entry => !isTailShift(entry)).reduce((sum, entry) => sum + entry.value, 0) : null;
+    const cumulative = valid ? shifts.reduce((sum, entry) => sum + entry.value, 0) : null;
     const forbidden = shifts.flatMap(entry => entry.sources.map(source => source.testID)).filter(testID => testID !== null && FORBIDDEN_SOURCES.includes(testID));
-    results.push({ sample, viewport, first, final, steps, cumulative, forbidden, shifts, tailShifts, errors, writes, failure,
+    results.push({ article: article.id, sample, viewport, first, final, steps, cumulative, forbidden, shifts, tailShifts, errors, writes, failure,
       pass: !failure && valid && cumulative !== null && cumulative <= 0.1 && forbidden.length === 0 &&
         final !== null && final.top + final.viewport >= final.height - 2 &&
-        (final.routeBlockHeight ?? 0) >= ROUTE_BLOCK_GROWN_MIN_PX && errors.length === 0 && writes.length === 0 });
+        (final.routeBlockHeight ?? 0) >= article.routeBlockMinPx && errors.length === 0 && writes.length === 0 });
   }
   await testInfo.attach(`travel-fast-scroll-cls${viewport.width}-raw`, { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
-  expect(results).toHaveLength(SAMPLES);
+  expect(results).toHaveLength(SAMPLES * ARTICLES.length);
   expect(results.filter(result => !result.pass).map(result => ({
-    sample: result.sample, cumulative: result.cumulative, forbidden: result.forbidden, failure: result.failure,
+    article: result.article, sample: result.sample, cumulative: result.cumulative, forbidden: result.forbidden, failure: result.failure,
     routeBlockHeight: result.final?.routeBlockHeight ?? null, errors: result.errors, writes: result.writes,
   }))).toEqual([]);
 }
