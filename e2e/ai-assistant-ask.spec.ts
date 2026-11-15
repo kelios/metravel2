@@ -1,7 +1,10 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { preacceptCookies } from './helpers/navigation';
 import { runtimeViewport } from './helpers/runtimeViewport';
+import { aiAssistStaticResources as ruAssist } from '@/i18n/locales/ru/static/ai_assist_static';
+import { aiAssistStaticResources as enAssist } from '@/i18n/locales/en/static/ai_assist_static';
 
 /**
  * #2884: экран `/assistant` ходит в серверный `POST /ai/ask` службы metravel-assist.
@@ -65,8 +68,8 @@ async function waitForLiveInput(page: Page): Promise<void> {
   ).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
 }
 
-async function openAssistant(page: Page, path = '/assistant'): Promise<void> {
-  await page.setViewportSize(VIEWPORT);
+async function openAssistant(page: Page, path = '/assistant', viewport = VIEWPORT): Promise<void> {
+  await page.setViewportSize(viewport);
   await preacceptCookies(page);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
   const screen = page.getByTestId('assistant-screen');
@@ -338,5 +341,96 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     await expect(page.getByTestId('assistant-offtopic')).toBeVisible();
     await expect(page.getByTestId('assistant-send')).toBeDisabled();
     expect(direct).toEqual([]);
+  });
+
+  // #3354: строка «Ассистент учитывает ваши статьи и сохранённое» — только вошедшему и только
+  // если служба в `done` подтвердила личный контекст (`profile: true`). Вход подменён
+  // фейковой сессией (cookie-проба), служба замокана; настоящих токенов и прода нет.
+  test.describe('profile notice (#3354)', () => {
+    const NOTICE_DIR = '.codex-temp/3354/e2e';
+    const widths = [390, 1280] as const;
+
+    const mockAsk = async (page: Page, done: Record<string, unknown>): Promise<void> => {
+      await page.route('**/ai/ask', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream; charset=utf-8',
+          body: sse(
+            ['sources', { sources, degraded: false, remaining: 19 }],
+            ['text', { text: answer }],
+            ['done', { status: 'done', removed_links: 0, remaining: 19, ...done }],
+          ),
+        });
+      });
+    };
+    const signIn = async (page: Page): Promise<void> => {
+      await mockFakeAuthApis(page);
+      await ensureAuthedStorageFallback(page, { userId: '3354', userName: 'E2E Profile User' });
+    };
+    const setLocale = (page: Page, locale: string): Promise<void> =>
+      page.addInitScript((value) => {
+        window.localStorage.setItem('@metravel/locale-preference:v1', JSON.stringify({ version: 1, mode: 'explicit', locale: value }));
+      }, locale);
+    const askOnce = async (page: Page, width: number): Promise<void> => {
+      await openAssistant(page, '/assistant', { width, height: width < 600 ? 844 : 720 });
+      await send(page, 'Какие квесты есть в Минске?');
+      await expect(page.getByTestId('assistant-turn-done')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
+    };
+    const noHorizontalScroll = (page: Page): Promise<boolean> =>
+      page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+
+    for (const width of widths) {
+      for (const scheme of ['light', 'dark'] as const) {
+      test(`signed in + done.profile: notice with the locale text, no overflow, ${width}px ${scheme}`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.addInitScript((value) => window.localStorage.setItem('theme', value), scheme);
+        await signIn(page);
+        await mockAsk(page, { profile: true });
+        await askOnce(page, width);
+
+        const notice = page.getByTestId('assistant-profile-notice');
+        await expect(notice).toBeVisible();
+        await expect(notice).toHaveText(ruAssist['ask.profileNotice']);
+        // Нет переполнения: строка в пределах окна, её содержимое не шире её самой, страница вбок не едет.
+        const fit = await notice.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          return { inside: box.left >= 0 && box.right <= window.innerWidth + 1, clipped: node.scrollWidth > node.clientWidth + 1 };
+        });
+        expect(fit).toEqual({ inside: true, clipped: false });
+        expect(await noHorizontalScroll(page)).toBe(true);
+        // Ответ остался на месте: строка не заменила и не сломала ход.
+        await expect(page.getByTestId('assistant-answer-text')).toContainText('квеста по Минску для семьи');
+
+        await page.screenshot({ path: `${NOTICE_DIR}/profile-notice-${width}-${scheme}.png`, fullPage: false });
+      });
+      }
+    }
+
+    test('signed in + done without profile: no notice', async ({ page }) => {
+      await signIn(page);
+      await mockAsk(page, {});
+      await askOnce(page, 1280);
+      await expect(page.getByTestId('assistant-composer-meta')).toContainText('19');
+      await expect(page.getByTestId('assistant-profile-notice')).toHaveCount(0);
+    });
+
+    // Экран не обещает гостю личный контекст, даже если ответ службы несёт `profile: true`:
+    // компонент гейтит строку по `authStore.isAuthenticated` (AssistantProfileNotice).
+    test('guest + done.profile: no notice', async ({ page }) => {
+      await mockAsk(page, { profile: true });
+      await askOnce(page, 1280);
+      await expect(page.getByTestId('assistant-composer-meta')).toContainText('19');
+      await expect(page.getByTestId('assistant-profile-notice')).toHaveCount(0);
+    });
+
+    test('signed in + done.profile in English: notice text comes from the en resource', async ({ page }) => {
+      await signIn(page);
+      await setLocale(page, 'en');
+      await mockAsk(page, { profile: true });
+      await askOnce(page, 390);
+      await expect(page.getByTestId('assistant-profile-notice')).toHaveText(enAssist['ask.profileNotice']);
+      expect(enAssist['ask.profileNotice']).not.toBe(ruAssist['ask.profileNotice']);
+      expect(await noHorizontalScroll(page)).toBe(true);
+    });
   });
 });

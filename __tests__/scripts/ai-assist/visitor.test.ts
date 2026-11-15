@@ -255,7 +255,8 @@ describe('metravel-assist: личный контекст в /ai/ask (#3354)', ()
       const saved = await post(server, { q: MINE, locale: 'ru' }, auth(TOKEN_A))
       expect(idsOf(saved)).toEqual(['761', '791'])
       const plans = await post(server, { q: 'Что у меня в планах на поездки?', locale: 'ru' }, auth(TOKEN_A))
-      expect(idsOf(plans)).toEqual(['791', '761'])
+      // Вопрос о планах — только запланированное: «хочу посетить» планом не называется.
+      expect(idsOf(plans)).toEqual(['791'])
       // Карточки подсказки — те же материалы; посещённое и материал вне индекса карточками не стали.
       expect(userMessage(prompts[0])).toMatch(/\[1\] Статья «Ойцувский парк»[\s\S]*\[2\] Статья «Беловежская пуща»/)
       expect(userMessage(prompts[0])).not.toContain('[3]')
