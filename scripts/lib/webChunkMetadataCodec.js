@@ -123,7 +123,7 @@ function prepareWebChunkMetadata(chunks, context, chunksByPath) {
         unstable_encodeAsyncPaths(module, actual) {
           const record = byChunk.get(chunk)?.get(module)
           if (!record) return undefined
-          const descriptor = [VERSION, codec.recordIds.get(record)]
+          const descriptor = [codec.recordIds.get(record)]
           if (filenames) {
             const expected = expandPaths(descriptor, getTable(filenames))
             if (JSON.stringify(actual) !== JSON.stringify(expected)) {

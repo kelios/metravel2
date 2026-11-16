@@ -4,7 +4,7 @@ import vm from 'node:vm'
 
 const { createCodec, prepareWebChunkMetadata, prelude, COMPLETION_KEY } = require('../../scripts/lib/webChunkMetadataCodec')
 const { expandPaths, VERSION } = require('../../scripts/lib/webChunkMetadataRuntime')
-const { readChunkMetadataRegistry, registryFromSources, stripCompactChunkMetadata } = require('../../scripts/lib/webChunkMetadataArtifact')
+const { readChunkMetadataRegistry, registryFromSources, stripCompactChunkMetadata, moduleDependencyMaps } = require('../../scripts/lib/webChunkMetadataArtifact')
 const { parseChunk, createChunkDependencyIndex } = require('../../scripts/lib/webChunkGraph')
 const expoRoot = path.dirname(require.resolve('@expo/metro-config/package.json'))
 const { createGranularChunkingStrategy } = require(path.join(expoRoot, 'build/serializer/chunking/createGranularChunkingStrategy'))
@@ -23,11 +23,13 @@ describe('compact web chunk metadata', () => {
     const table = codec.table((file: any) => `/${file.name}.js?revision=1`)
     expect(expandPaths([VERSION, codec.recordIds.get(records[0])], table)).toEqual({ 7: ['/a.js?revision=1', '/b.js?revision=1'] })
     expect(expandPaths([VERSION, codec.recordIds.get(records[1])], table)).toEqual({ 7: ['/b.js?revision=1'] })
+    expect(expandPaths([codec.recordIds.get(records[0])], table)).toBe(expandPaths([VERSION, codec.recordIds.get(records[0])], table))
+    expect(expandPaths([codec.recordIds.get(records[1])], table)).toEqual({ 7: ['/b.js?revision=1'] })
     expect(codec.recordIds.get(records[0])).toBe(codec.recordIds.get(records[3]))
     expect(createCodec(records.slice().reverse(), (file: any) => file.name).stable).toEqual(codec.stable)
   })
 
-  it.each([null, undefined, {}, { 4: '/worker.js' }, { 4: null }, { 4: [] }])('keeps the legacy shape and identity: %j', (paths) => {
+  it.each([null, undefined, '/worker.js', {}, { 4: '/worker.js' }, { 4: null }, { 4: [] }])('keeps the legacy shape and identity: %j', (paths) => {
     expect(expandPaths(paths)).toBe(paths)
   })
 
@@ -45,14 +47,35 @@ describe('compact web chunk metadata', () => {
     expect(() => expandPaths(descriptor, registry)).toThrow('Invalid web chunk metadata')
   })
 
-  it('reads only actual assignments/factories and strips only validated service data', () => {
+  it.each([
+    { label: 'empty', descriptor: [] },
+    { label: 'extra value', descriptor: [0, 1, 2] },
+    { label: 'negative', descriptor: [-1] },
+    { label: 'fractional', descriptor: [0.5] },
+    { label: 'unsafe', descriptor: [Number.MAX_SAFE_INTEGER + 1] },
+    { label: 'NaN', descriptor: [NaN] },
+    { label: 'infinite', descriptor: [Infinity] },
+    { label: 'string index', descriptor: ['0'] },
+    { label: 'missing map', descriptor: [1] },
+  ])('rejects an invalid singleton descriptor: $label', ({ descriptor }) => {
+    expect(() => expandPaths(descriptor, { v: VERSION, f: ['/a'], c: [[0]], m: [{ 7: 0 }], p: '' })).toThrow('Invalid web chunk metadata')
+  })
+
+  it('validates the registry version for an untagged singleton', () => {
+    expect(() => expandPaths([0], { v: 'mc2', f: ['/a'], c: [[0]], m: [{ 7: 0 }], p: '' })).toThrow('registry version')
+  })
+
+  it.each([
+    { format: 'singleton', descriptor: [0] },
+    { format: 'legacy tagged', descriptor: [VERSION, 0] },
+  ])('reads only actual factories and strips validated $format service data', ({ descriptor }) => {
     const table = { v: 'mc1', f: ['/a.js'], c: [[0]], m: [{ 7: 0 }], p: '' }
     const runtime = prelude(table)
     expect(readChunkMetadataRegistry(runtime)).toEqual(table)
     const misleading = `var text=${JSON.stringify(runtime + definition(999, ['mc1', 0]))};`
     expect(readChunkMetadataRegistry(misleading)).toBeNull()
     expect(parseChunk(misleading).size).toBe(0)
-    const source = definition(1, ['mc1', 0]) + `globalThis[${JSON.stringify(COMPLETION_KEY)}]();` + misleading
+    const source = definition(1, descriptor) + `globalThis[${JSON.stringify(COMPLETION_KEY)}]();` + misleading
     const stripped = stripCompactChunkMetadata(source, table)
     expect(stripped).toBe('__d(function(g,r,i,a,m,e,d){},1,{"0":7});' + misleading)
     expect(parseChunk(source, table).get(1)).toEqual({ deps: [], paths: new Map([[7, ['/a.js']]]) })
@@ -117,8 +140,14 @@ describe('installed granular serialization and hashing', () => {
     const table = registryFromSources(assets.map((asset: any) => asset.source))
     expect(table).not.toBeNull()
     let descriptors = 0
+    let compactMaps = 0
     for (const asset of assets) {
       const definitions = parseChunk(asset.source, table)
+      const emittedMaps = moduleDependencyMaps(asset.source).filter((module: any) => Array.isArray(module.map.paths))
+      for (const module of emittedMaps) {
+        expect(module.map.paths).toEqual([expect.any(Number)])
+        compactMaps += 1
+      }
       for (const [id, paths] of Object.entries(asset.metadata.paths)) {
         const actual = definitions.get(Number(id))?.paths
         for (const [target, files] of Object.entries(paths as object)) {
@@ -127,11 +156,12 @@ describe('installed granular serialization and hashing', () => {
         }
       }
       if (asset.originFilename === 'worker.js') {
-        expect(asset.source).not.toContain('"paths":["mc1"')
+        expect(emittedMaps).toHaveLength(0)
         expect(asset.source).not.toContain(COMPLETION_KEY)
       }
     }
     expect(descriptors).toBeGreaterThan(2)
+    expect(compactMaps).toBeGreaterThan(0)
     const legacy = await serialize({ codec: false, cycle: true, worker: true })
     const delivery = (items: any[]) => items.map((asset) => ({
       origin: asset.originFilename, modules: asset.metadata.modulePaths,

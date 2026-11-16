@@ -50,22 +50,22 @@ function validateRegistry(table) {
 function expandPaths(paths, table) {
   // Original Expo dependency-map objects, scalar worker targets and null are unchanged.
   if (!Array.isArray(paths)) return paths
-  if (paths.length !== 2 || paths[0] !== VERSION) invalid('descriptor version or shape')
+  const mapId = paths.length === 1 ? paths[0] : (paths.length === 2 && paths[0] === VERSION || invalid('descriptor version or shape'), paths[1])
   validateRegistry(table)
-  index(paths[1], table.m.length, 'map index')
+  index(mapId, table.m.length, 'map index')
   let maps = decoded.get(table)
   if (!maps) {
     maps = new Map()
     decoded.set(table, maps)
   }
-  if (!maps.has(paths[1])) {
+  if (!maps.has(mapId)) {
     const out = Object.create(null)
-    for (const [id, closure] of Object.entries(table.m[paths[1]])) {
+    for (const [id, closure] of Object.entries(table.m[mapId])) {
       out[id] = table.c[closure].map((file) => table.f[file])
     }
-    maps.set(paths[1], out)
+    maps.set(mapId, out)
   }
-  return maps.get(paths[1])
+  return maps.get(mapId)
 }
 
 function expandGlobalPaths(paths, globals, prefix) {

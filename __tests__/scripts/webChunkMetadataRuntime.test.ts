@@ -11,7 +11,9 @@ const prefix = 'qa_'
 const files = ['/_expo/static/js/web/shared.js?v=2', '/_expo/static/js/web/route.js?v=2']
 const registry = { v: 'mc1', f: files, c: [[0, 1]], m: [{ 7: 0 }], p: prefix }
 
-function harness(compact: boolean, { preload = false, unavailable = false } = {}) {
+type MetadataFormat = 'upstream' | 'tagged' | 'singleton'
+
+function harness(format: MetadataFormat, { preload = false, unavailable = false } = {}) {
   const context = vm.createContext({
     __DEV__: false, __METRO_GLOBAL_PREFIX__: prefix, URL, console,
     process: { env: { EXPO_OS: 'web', NODE_ENV: 'production' } },
@@ -96,7 +98,7 @@ function harness(compact: boolean, { preload = false, unavailable = false } = {}
   })
   return {
     context, globals, original, originalReturns, adapter, requests,
-    paths: compact ? ['mc1', 0] : { 7: files },
+    paths: format === 'singleton' ? [0] : format === 'tagged' ? ['mc1', 0] : { 7: files },
     fail() { failNext = true },
     completion(value: boolean) { omitCompletion = !value },
     async drainTransport() { await Promise.allSettled(flights) },
@@ -113,9 +115,9 @@ async function expectSyncFailure(call: () => unknown, message: string) {
   expect(await observed).toEqual([{ status: 'fulfilled', value: undefined }])
 }
 
-describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) => {
+describe.each(['upstream', 'tagged', 'singleton'] as const)('actual Expo loader parity, format=%s', (format) => {
   it('preserves concurrent loading, exact _result promises and one module execution', async () => {
-    const h = harness(compact)
+    const h = harness(format)
     const a = h.adapter(7, h.paths), b = h.adapter(7, h.paths)
     const observed = Promise.allSettled([a, b])
     expect(a).toBe(h.originalReturns[0])
@@ -139,7 +141,7 @@ describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) 
   })
 
   it('uses completions recorded before installing the loader and imports synchronously', async () => {
-    const h = harness(compact, { preload: true })
+    const h = harness(format, { preload: true })
     const result = h.adapter.unstable_importMaybeSync(7, h.paths)
     const observed = Promise.allSettled([result])
     expect(result.value).toBe(42)
@@ -149,13 +151,13 @@ describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) 
   })
 
   it('rejects before initial loader availability instead of falsely declaring readiness', async () => {
-    const h = harness(compact, { unavailable: true })
+    const h = harness(format, { unavailable: true })
     await expectSyncFailure(() => h.adapter.unstable_importMaybeSync(7, h.paths), 'async bundle loader is unavailable')
     expect(h.requests).toEqual([])
   })
 
   it('preserves failure cleanup and retry', async () => {
-    const h = harness(compact)
+    const h = harness(format)
     h.fail()
     await expect(h.adapter(7, h.paths)).rejects.toThrow('transport failure')
     expect((await h.adapter(7, h.paths)).value).toBe(42)
@@ -163,7 +165,7 @@ describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) 
   })
 
   it('does not accept a load event without a completed registration, and can retry', async () => {
-    const h = harness(compact)
+    const h = harness(format)
     h.completion(false)
     await expect(h.adapter(7, h.paths)).rejects.toThrow('did not finish registering')
     h.completion(true)
@@ -172,7 +174,7 @@ describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) 
   })
 
   it('keeps prefetch swallowing, retry and scalar worker resolution', async () => {
-    const h = harness(compact)
+    const h = harness(format)
     h.fail()
     const result = h.adapter.prefetch(7, h.paths)
     const observed = Promise.allSettled([result])
@@ -187,7 +189,7 @@ describe.each([false, true])('actual Expo loader parity, compact=%s', (compact) 
 })
 
 it('fails closed for a registry absent from the actual VM global before any transport', async () => {
-  const h = harness(true)
+  const h = harness('singleton')
   const key = `${prefix}__METRAVEL_CHUNK_METADATA__`
   // Node's context object is a sandbox, not the realm's global object. Deleting
   // only its property can leave the VM-global property visible to the adapter.
@@ -202,7 +204,7 @@ it('fails closed for a registry absent from the actual VM global before any tran
 })
 
 it('fails closed for an unknown descriptor version with a present registry', async () => {
-  const h = harness(true)
+  const h = harness('singleton')
   expect(h.globals[`${prefix}__METRAVEL_CHUNK_METADATA__`]).toEqual(registry)
   await expectSyncFailure(() => h.adapter(7, ['mc2', 0]), 'descriptor version')
   await expectSyncFailure(() => h.adapter.unstable_importMaybeSync(7, ['mc2', 0]), 'descriptor version')
@@ -210,7 +212,7 @@ it('fails closed for an unknown descriptor version with a present registry', asy
 })
 
 it('rejects a registry from a different Metro global prefix', async () => {
-  const h = harness(true)
+  const h = harness('singleton')
   h.context[`${prefix}__METRAVEL_CHUNK_METADATA__`] = { ...registry, p: 'other_' }
   await expectSyncFailure(() => h.adapter(7, h.paths), 'registry global prefix')
   expect(h.requests).toEqual([])
