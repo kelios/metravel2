@@ -1,5 +1,7 @@
 import type React from 'react'
 import type { Root } from 'react-dom/client'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
 let act: typeof import('react').act
 let createElement: typeof import('react').createElement
@@ -24,6 +26,27 @@ beforeAll(() => {
 })
 
 describe('QuestFullMapLazy platform wrappers', () => {
+  it('keeps the visibility hook behind the existing map import target', () => {
+    const { parse } = require('@babel/parser')
+    const traverse = require('@babel/traverse').default
+    const source = readFileSync(path.resolve(__dirname, '../../../components/quests/QuestFullMapLazy.tsx'), 'utf8')
+    const ast = parse(source, { sourceType: 'module', plugins: ['typescript', 'jsx'] })
+    const imports: string[] = []
+    const asyncTargets: string[] = []
+    traverse(ast, {
+      ImportDeclaration({ node }: { node: { source: { value: string }; importKind?: string } }) {
+        if (node.importKind !== 'type') imports.push(node.source.value)
+      },
+      CallExpression({ node }: { node: { callee: { type: string }; arguments: Array<{ type: string; value?: string }> } }) {
+        if (node.callee.type === 'Import' && node.arguments[0]?.type === 'StringLiteral') {
+          asyncTargets.push(node.arguments[0].value!)
+        }
+      },
+    })
+    expect(imports).not.toContain('@/hooks/useProgressiveLoading')
+    expect(asyncTargets).toEqual(['@/components/quests/QuestFullMap'])
+  })
+
   it('keeps the original external 300px skeleton during default cold suspension', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)

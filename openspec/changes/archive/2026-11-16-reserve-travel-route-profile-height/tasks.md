@@ -62,7 +62,7 @@ the same-origin cancellation ambiguity remains available to the auditor.
 
 - [x] 4.1 Review and validate the new real-GET SSR/API count cases for 544/470/967 in the existing production-smoke spec, with exact identity, integer/nonnegative count and equality; retain the target guard and require the actual app SHA.
 - [x] 4.2 Run only the focused new guard on published app4c1; record its separate as-tested source base/diff fingerprint. Do not redeploy or repeat45 for this test-only change.
-- [ ] 4.3 Obtain bounded final closure-metadata confirmation, commit/push explicit owned paths through normal hooks, record the immutable test/docs SHA separately from app4c1, and complete the board only after this publication gate passes.
+- [x] 4.3 Obtain bounded final closure-metadata confirmation, commit/push explicit owned paths through normal hooks, record the immutable test/docs SHA separately from app4c1, and complete the board only after this publication gate passes.
 
 Guard source audit/final gate PASS, findings0. Actual scoped E2E TypeScript,
 ESLint1file, OpenSpec strict, diffcheck and normal checkfast6/1lint+governance PASS.
@@ -79,10 +79,32 @@ durable-guard-worktree/.codex-temp/sprint35-3436-guard/checks-summary.json.
 The installed `openspec archive reserve-travel-route-profile-height --yes`
 synchronized the one added requirement into the existing canonical spec and
 archived this change as `2026-11-16-reserve-travel-route-profile-height`.
-It reported 10/11 tasks and one incomplete-task warning: future publication
-task4.3 remains unchecked; it was not marked complete to suppress that warning.
+At archive time it reported 10/11 tasks and one incomplete-task warning:
+publication task4.3 was intentionally left unchecked until its actual receipt,
+rather than marked complete to suppress that warning.
 No `--skip-specs` or `--no-validate` was used. Full e2e
 TypeScript remains NOT PASS: six existing diagnostics in three unchanged specs
 (`ai-assistant-ask`, `ai-assistant-plan`, `travel-full-flow`); scoped checks do
 not turn that result green. Live remains4c1; newer #3440 Map and #3442 API source
-is not described as deployed. The task remains testing until final closure.
+is not described as deployed. The task is now Done after the verified publication
+and board receipt below.
+
+## Publication completion receipt — 2026-11-16
+
+Published guard/test/docs SHA: `450cb78ccfbda2ca19dee0ad48ee12f3d9feb060`;
+production app SHA remains `4c1de3a60d4ecfbf62d2ae60f46f541b0d9f3532`.
+Both independent integrated14 confirmations and immutable postcommit gate PASS,
+findings0; official fingerprint
+`855a17598bcd1fb5b94077d924230287bed4df0ea168d85bbc130762450f3735`.
+Normal explicit-path commit/native pre-commit and native pre-push
+preflight/fast-scope/governance/complexity PASS; only the documented
+`PREFLIGHT_SKIP_E2E=1` mode was used. The normal branch-to-origin/main push
+completed exit0, and `git ls-remote` confirmed the immutable SHA above.
+
+Task3436 status `done` was returned by the board update and independently read
+back at server `updated_at=2026-11-16T17:03:04.174153Z`; prior description and
+all acceptance/capture-limit evidence were preserved. This completes task4.3
+after actual success. No new app deploy, GET/45 replay, or other runtime occurred.
+This one-file receipt is carried in the separately agreed next Map commit,
+without changing the published guard SHA or claiming unreleased Map/API source
+was accepted on app4c1.

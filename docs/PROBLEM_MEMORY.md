@@ -5249,6 +5249,34 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### ROUTE-BUNDLE-001 — eager-код маршрута это код, который маршруту нужен
 
+- **Повтор — 16.11.2026 (#3440/#3442):** canonical5345 иa774 остановлены до
+  publish при неизменных потолках. Вa774 entry232602/232602B проходит, home
+  482427/480437BrotliB иtravels573161/571443allowedB не проходят;
+  requests14/13 и19/18. Перенос HTTP formatter в уже-eager query utility
+  сохранил semantics, но не восстановил partition. Exact offline replay
+  сохранённыхa774 factories и cached async types воспроизвёл50/50 shared
+  partitions: неизменённый `useProgressiveLoading` получил новые sync owners
+  через `[questId].tsx` → `useQuestPrintLanding` → `questWizardHelpers` →
+  `questWizardMedia` → `QuestFullMapLazy` → hook. Небольшое новое ребро
+  перераспределило shared factories при уже почти исчерпанном128KiB foreign
+  budget. Это owner-graph regression, а не отдельный formatter chunk.
+- **Узкая source-коррекция:** тот же единственный visibility site перенесён
+  в named `QuestMapVisibilityGate` существующего async-entry `QuestFullMap`.
+  Wrapper использует один literal import target для gate и renderer; gate
+  получает только ref/enabled/onActivate и не монтирует карту. State latch,
+  renderer ancestry, reserve360/460/520, default cold skeleton300 и native
+  сохранены; ранний выход из mobile intro активирует renderer независимо от
+  pending gate. Hook, formatter, merger и budgets не меняются. Gate заранее
+  загружает Map UI module и его sync definitions (включая CSS-текст), но не
+  вызывает CSS/vendor loaders: эти effects запускает только renderer.
+- **Граница доказательства этой коррекции:** source/registry regressions
+  подготовлены, ещё не запущены. Удаление sync owner edge — гипотеза
+  восстановления partition, не byte PASS: после review/ресурсного окна нужны
+  owner-graph replay, canonical serialization с exact entry/home caps и все
+  route bytes/requests, затем проверка отсутствия Leaflet/tiles до proximity
+  и полной карты после scroll. Общий merger для одного нового ребра не
+  переписывается; caps и health controls не ослабляются.
+
 - **Инвариант:** модуль едет тегом `<script>` только на тех маршрутах, которым
   он действительно нужен. «Общий» чанк — это дедупликация, а не разрешение
   грузить фичу там, где её нет.
@@ -9272,9 +9300,12 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   побайтово совпадают, ещё4foreign factory AI availability/config и book
   preview/print добавляют5193rawB. Новый formatter —144rawB factory внутри
   существующего7e145 chunk, не самостоятельный chunk; этот chunk вырос
-  42962→43127rawB и10896→10937BrotliB. Единственный новый source-модуль
-  между baseline и5345 — `api/httpStatus.ts`: его leaf-стоимость изменила
-  решения byte-sensitive granular merge с128KiB foreign cap.
+  42962→43127rawB и10896→10937BrotliB. Гипотеза, что перенос одного leaf
+  восстановит упаковку, опровергнута canonicala774:482427/480437homeB,
+  573161/571443allowedtravelsB и прежние14/19requests. Подтверждённое новое
+  sync owner edge map-wrapper → visibility hook и узкая коррекция описаны в
+  `ROUTE-BUNDLE-001`; body formatter не является причиной подписи/locale
+  регрессии и остаётся единым.
 - **Коррекция слоя:** единственный formatter с тем же телом перенесён в уже
   импортируемый обоими query-модулями `api/travelQueryShared.ts`, отдельный
   leaf удалён. `Error.status`, reason phrase, ограниченный responseBody,
@@ -9283,9 +9314,10 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Почему семантических unit было мало:** они доказывают подпись ошибки,
   а не partition собранного графа. Штатный canonical prepublish budget
   сработал и не допустил регрессию на live; новый обход/ослабление guard не нужен.
-  Source/light repair ещё не доказывает восстановление метрик: требуются
-  прежние118/65 regression cases, review/gate и canonical rebuild после
-  resource lease; live после5345 не заявлен. Map3440 и его16paths неизменны.
+  Placement repair прошёл118/65 regression cases и source checks, но метрики
+  не восстановил. Для следующей map-only owner-edge коррекции нужны её
+  source regressions, review/gate и canonical rebuild после resource lease;
+  live после5345/a774 не заявлен. HTTP semantics и его tests не меняются.
 
 - **Цепочка:** #3389 → #3442; каноническое исправление подписи статуса — #3442.
 - **Подтверждённая причина:** три ошибки travel-запросов подставляли `Unknown error`

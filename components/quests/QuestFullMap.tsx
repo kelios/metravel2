@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useProgressiveLoad } from '@/hooks/useProgressiveLoading';
 import {
     isShareAvailable,
     resolveCacheDirectory,
@@ -151,6 +152,21 @@ function renderFullscreenOverlay(node: React.ReactNode): React.ReactNode {
         return createPortal(node, document.body);
     }
     return node;
+}
+
+// Keep the observer in this existing async entry: importing the eager wrapper
+// must not add quest routes to the shared visibility hook's synchronous owners.
+export function QuestMapVisibilityGate({ containerRef, enabled, onActivate }: {
+    containerRef: React.RefObject<unknown>;
+    enabled: boolean;
+    onActivate: () => void;
+}) {
+    const { shouldLoad, setElementRef } = useProgressiveLoad({
+        priority: 'low', rootMargin: '200px', disableFallbackOnWeb: true, enabled,
+    });
+    useEffect(() => { setElementRef(containerRef.current); }, [containerRef, setElementRef]);
+    useEffect(() => { if (enabled && shouldLoad) onActivate(); }, [enabled, onActivate, shouldLoad]);
+    return null;
 }
 
 function QuestFullMap({

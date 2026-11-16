@@ -265,9 +265,10 @@ describe('guard-web-deferred-loading', () => {
     })
 
     it('registers exactly one opt-in quest-map site and rejects another one', () => {
-      const filePath = 'components/quests/QuestFullMapLazy.tsx'
+      const filePath = 'components/quests/QuestFullMap.tsx'
       const source = tree.sources.find((entry: { filePath: string }) => entry.filePath === filePath)
       expect(APPROVED_DEFERRED_LOADING[filePath]).toBe(1)
+      expect(APPROVED_DEFERRED_LOADING['components/quests/QuestFullMapLazy.tsx']).toBeUndefined()
       expect(findDeferralSites({ content: source.content }).sites).toHaveLength(1)
       const result = evaluateGuard({ ...tree, sources: tree.sources.map((entry: { filePath: string; content: string }) =>
         entry.filePath === filePath ? { ...entry, content: `${entry.content}\nconst extra = useProgressiveLoad({ priority: 'low' })` } : entry) })

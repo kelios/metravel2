@@ -42,7 +42,7 @@ const APPROVED_DEFERRED_LOADING = Object.freeze({
   // секции и их данные
   'components/home/Home.tsx': 10,
   'components/quests/QuestNextStepSection.tsx': 1,
-  'components/quests/QuestFullMapLazy.tsx': 1,
+  'components/quests/QuestFullMap.tsx': 1,
   'components/travel/TravelDescription.tsx': 1,
   'components/travel/details/hooks/useTravelDeferredSectionsModel.ts': 1,
   'components/travel/details/hooks/useTravelDetailsContentSectionModel.ts': 1,

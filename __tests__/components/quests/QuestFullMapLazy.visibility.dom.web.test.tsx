@@ -10,14 +10,31 @@ let Map: React.ComponentType<Props>
 const mockMapRender = jest.fn()
 const mockMapMount = jest.fn()
 const mockMapUnmount = jest.fn()
+const mockLeafletLoad = jest.fn()
 const observers: Observed[] = []
 const originalObserver = window.IntersectionObserver
+let releaseVisibilityGate: () => void
+let releaseMapRenderer: () => void
 
 beforeAll(() => {
   jest.resetModules()
+  const gateReady = new Promise<void>((resolve) => { releaseVisibilityGate = resolve })
+  const rendererReady = new Promise<void>((resolve) => { releaseMapRenderer = resolve })
+  jest.doMock('react', () => {
+    const React = jest.requireActual('react')
+    return { ...React, lazy: (loader: () => Promise<unknown>) => {
+      // Hold the gate's lazy resolution independently of the renderer. The
+      // wrapper must still activate when the responsive opt-in ends meanwhile.
+      const source = loader.toString()
+      return React.lazy(source.includes('QuestMapVisibilityGate') ? () => gateReady.then(loader)
+        : source.includes('QuestFullMap') ? () => rendererReady.then(loader) : loader)
+    } }
+  })
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => ({ backgroundSecondary: '#eee' }) }))
+  jest.doMock('@/utils/loadLeafletRuntime', () => ({ loadLeafletRuntime: mockLeafletLoad }))
   jest.doMock('@/components/quests/QuestFullMap', () => ({
+    ...jest.requireActual('@/components/quests/QuestFullMap.tsx'),
     __esModule: true,
     default: function StatefulMap(props: Props) {
       const React = require('react')
@@ -53,6 +70,7 @@ describe('#3440 map visibility with the real hook and RNW DOM', () => {
     mockMapRender.mockClear()
     mockMapMount.mockClear()
     mockMapUnmount.mockClear()
+    mockLeafletLoad.mockClear()
     class Observer {
       observe = jest.fn()
       disconnect = jest.fn()
@@ -67,19 +85,34 @@ describe('#3440 map visibility with the real hook and RNW DOM', () => {
   })
 
   afterEach(async () => {
-    await act(async () => root.unmount())
+    await act(async () => { root.unmount(); releaseMapRenderer(); releaseVisibilityGate() })
     container.remove()
     window.IntersectionObserver = originalObserver
     jest.useRealTimers()
   })
 
-  it('holds the same slot while the lazy renderer import is pending', async () => {
-    await render({ deferUntilVisible: true, height: 460 })
-    act(() => observers[0].callback([{ isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry], {} as IntersectionObserver))
-    expect(container.querySelector<HTMLElement>('[data-testid="quest-map-deferred-slot"]')!.style.height).toBe('460px')
+  it('keeps its slot and activates before intersection while the gate import is pending', async () => {
+    await render({ deferUntilVisible: true, height: 360 })
+    const slot = container.querySelector<HTMLElement>('[data-testid="quest-map-deferred-slot"]')!
+    expect(slot.style.height).toBe('360px')
+    expect(observers).toHaveLength(0)
+    expect(mockMapRender).not.toHaveBeenCalled()
+    expect(mockLeafletLoad).not.toHaveBeenCalled()
+    act(() => root.render(createElement(Map, { steps: [{ lat: 53, lng: 27 }], deferUntilVisible: false, height: 520 })))
+    expect(slot.style.height).toBe('520px')
     expect(container.querySelector('[data-testid="quest-map-placeholder"]')).not.toBeNull()
     await act(async () => {})
+    expect(container.querySelector('[data-testid="map-renderer"]')).toBeNull()
+    expect(slot.style.height).toBe('520px')
+    await act(async () => { releaseMapRenderer() })
     expect(container.querySelector('[data-testid="map-renderer"]')).not.toBeNull()
+    expect(observers).toHaveLength(0)
+    await openMapState()
+    await render({ deferUntilVisible: true, height: 360 })
+    expectStatePreserved()
+    await act(async () => { releaseVisibilityGate() })
+    expectStatePreserved()
+    expect(observers).toHaveLength(0)
   })
 
   it.each([360, 460, 520])('reserves %ipx and never mounts an offscreen opt-in by timer', async (height) => {
@@ -89,6 +122,10 @@ describe('#3440 map visibility with the real hook and RNW DOM', () => {
     expect(observers).toHaveLength(1)
     expect(observers[0].observe).toHaveBeenCalledWith(slot)
     expect(observers[0].options).toMatchObject({ root: null, rootMargin: '200px', threshold: 0 })
+    expect(mockLeafletLoad).not.toHaveBeenCalled()
+    expect(document.getElementById('metravel-leaflet-css')).toBeNull()
+    expect(document.getElementById('metravel-markercluster-css')).toBeNull()
+    expect(document.getElementById('qpulse-style')).toBeNull()
     await intersect(false)
     jest.useFakeTimers()
     await act(async () => jest.advanceTimersByTime(60_000))
