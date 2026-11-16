@@ -218,6 +218,18 @@ describe('travel route loader', () => {
     expect(raw.media.gallery).toHaveLength(1)
   })
 
+  it.each([0, 1, 10])('retains route file count %s in initial SSR data without waiting for a background fetch (#3436)', (count) => {
+    const payload = projectTravelLoaderPayload({ ...article, route_track_files_count: count }, 'demo')
+    expect(JSON.parse(JSON.stringify(payload)).travel.route_track_files_count).toBe(count)
+  })
+
+  it.each([undefined, null, -1, 1.5, '1', Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    'omits missing or invalid route file count %s from initial SSR data (#3436)', (count) => {
+      const payload = projectTravelLoaderPayload({ ...article, route_track_files_count: count }, 'demo')
+      expect(JSON.parse(JSON.stringify(payload)).travel).not.toHaveProperty('route_track_files_count')
+    },
+  )
+
   it('keeps body image addresses for the server island and leaves the rest of the manifest to the background fetch (#3420)', () => {
     const cover = { id: 1, src: '/gallery/1?w=720' }
     const ladder = [480, 800].map((w) => `https://metravel.by/travel-description-image/a.webp?pv=2&w=${w} ${w}w`).join(', ')

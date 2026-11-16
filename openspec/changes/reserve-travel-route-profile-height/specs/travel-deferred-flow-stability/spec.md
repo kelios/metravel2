@@ -7,6 +7,10 @@ On web, an article with a positive integer `route_track_files_count` SHALL reser
 - **WHEN** the article declares route track files but neither the map section module nor its file list has loaded
 - **THEN** the map placeholder already includes the profile reserve, and the first route-block frame retains it
 
+#### Scenario: Initial server-rendered article data
+- **WHEN** the public API includes a valid route track file count and the background detail request has not completed
+- **THEN** the serialized initial article loader payload retains that count, including zero, through the shared article normalization contract
+
 #### Scenario: File list resolves before deferred parsing and chart code
 - **WHEN** the route list has resolved but parsing has not started or completed, or chart code is still loading
 - **THEN** the profile reserve remains occupied and does not disappear for an intermediate frame

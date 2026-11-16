@@ -21,7 +21,7 @@ const INITIAL_TRAVEL_FIELDS = [
   'comment_thread_id', 'gallery', 'travelAddress', 'userIds', 'year', 'monthName', 'number_days',
   'companions', 'coordsMeTravel', 'countryCode', 'user', 'created_at', 'updated_at', 'publish',
   'moderation', 'publication_status', 'engagementStats', 'authorName', 'date_create', 'date_update',
-  'datePublished', 'dateModified', 'media', 'content_updated_at',
+  'datePublished', 'dateModified', 'media', 'content_updated_at', 'route_track_files_count',
 ] as const
 
 export function resolveTravelLoaderSegment(value: string | string[] | undefined): string | null {
