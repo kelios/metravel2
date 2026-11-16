@@ -1,0 +1,186 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`quest QR print kit from actual published responses prints source facts and be labels without translating quest content 1`] = `
+[
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 120,
+      "isFree": true,
+    },
+    "locale": "be",
+    "questId": "krakow-dragon",
+    "text": {
+      "duration": "120 хв",
+      "kicker": "Квэст MeTravel",
+      "offer": "Бясплатна, без гіда",
+      "scan": "Навядзіце камеру, каб пачаць",
+      "title": "Квест по Кракову: Вавельский дракон",
+    },
+  },
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 45,
+      "isFree": true,
+    },
+    "locale": "be",
+    "questId": "minsk-cmok",
+    "text": {
+      "duration": "45 хв",
+      "kicker": "Квэст MeTravel",
+      "offer": "Бясплатна, без гіда",
+      "scan": "Навядзіце камеру, каб пачаць",
+      "title": "Квест по центру Минска: в поисках цмока",
+    },
+  },
+]
+`;
+
+exports[`quest QR print kit from actual published responses prints source facts and en labels without translating quest content 1`] = `
+[
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 120,
+      "isFree": true,
+    },
+    "locale": "en",
+    "questId": "krakow-dragon",
+    "text": {
+      "duration": "120 min",
+      "kicker": "MeTravel quest",
+      "offer": "Free, without a guide",
+      "scan": "Scan the code to begin",
+      "title": "Квест по Кракову: Вавельский дракон",
+    },
+  },
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 45,
+      "isFree": true,
+    },
+    "locale": "en",
+    "questId": "minsk-cmok",
+    "text": {
+      "duration": "45 min",
+      "kicker": "MeTravel quest",
+      "offer": "Free, without a guide",
+      "scan": "Scan the code to begin",
+      "title": "Квест по центру Минска: в поисках цмока",
+    },
+  },
+]
+`;
+
+exports[`quest QR print kit from actual published responses prints source facts and pl labels without translating quest content 1`] = `
+[
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 120,
+      "isFree": true,
+    },
+    "locale": "pl",
+    "questId": "krakow-dragon",
+    "text": {
+      "duration": "120 min",
+      "kicker": "Quest MeTravel",
+      "offer": "Bezpłatnie, bez przewodnika",
+      "scan": "Zeskanuj kod i zacznij",
+      "title": "Квест по Кракову: Вавельский дракон",
+    },
+  },
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 45,
+      "isFree": true,
+    },
+    "locale": "pl",
+    "questId": "minsk-cmok",
+    "text": {
+      "duration": "45 min",
+      "kicker": "Quest MeTravel",
+      "offer": "Bezpłatnie, bez przewodnika",
+      "scan": "Zeskanuj kod i zacznij",
+      "title": "Квест по центру Минска: в поисках цмока",
+    },
+  },
+]
+`;
+
+exports[`quest QR print kit from actual published responses prints source facts and ru labels without translating quest content 1`] = `
+[
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 120,
+      "isFree": true,
+    },
+    "locale": "ru",
+    "questId": "krakow-dragon",
+    "text": {
+      "duration": "120 мин",
+      "kicker": "Квест MeTravel",
+      "offer": "Бесплатно, без гида",
+      "scan": "Наведите камеру, чтобы начать",
+      "title": "Квест по Кракову: Вавельский дракон",
+    },
+  },
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 45,
+      "isFree": true,
+    },
+    "locale": "ru",
+    "questId": "minsk-cmok",
+    "text": {
+      "duration": "45 мин",
+      "kicker": "Квест MeTravel",
+      "offer": "Бесплатно, без гида",
+      "scan": "Наведите камеру, чтобы начать",
+      "title": "Квест по центру Минска: в поисках цмока",
+    },
+  },
+]
+`;
+
+exports[`quest QR print kit from actual published responses prints source facts and uk labels without translating quest content 1`] = `
+[
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 120,
+      "isFree": true,
+    },
+    "locale": "uk",
+    "questId": "krakow-dragon",
+    "text": {
+      "duration": "120 хв",
+      "kicker": "Квест MeTravel",
+      "offer": "Безкоштовно, без гіда",
+      "scan": "Наведіть камеру, щоб почати",
+      "title": "Квест по Кракову: Вавельский дракон",
+    },
+  },
+  {
+    "contentLocale": "ru",
+    "facts": {
+      "durationMin": 45,
+      "isFree": true,
+    },
+    "locale": "uk",
+    "questId": "minsk-cmok",
+    "text": {
+      "duration": "45 хв",
+      "kicker": "Квест MeTravel",
+      "offer": "Безкоштовно, без гіда",
+      "scan": "Наведіть камеру, щоб почати",
+      "title": "Квест по центру Минска: в поисках цмока",
+    },
+  },
+]
+`;

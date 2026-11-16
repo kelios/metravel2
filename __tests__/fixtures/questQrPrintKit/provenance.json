@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "actual-publication-response-snapshot",
+  "sources": [
+    {
+      "questId": "krakow-dragon",
+      "cityId": 1,
+      "url": "https://metravel.by/api/quests/web/detail/1/krakow-dragon/?lang=ru",
+      "capturedOn": "2026-11-16",
+      "publicationId": "b7f937126223a64990eb76bdeb580ecd7a81631e5b961f1acf409f63fbed3fc2",
+      "sha256": "b655cf4e870a176b97b79cdaec352771318a7f11b19dd81a6eecf7f8337d974a"
+    },
+    {
+      "questId": "minsk-cmok",
+      "cityId": 4,
+      "url": "https://metravel.by/api/quests/web/detail/4/minsk-cmok/?lang=ru",
+      "capturedOn": "2026-11-16",
+      "publicationId": "b7f937126223a64990eb76bdeb580ecd7a81631e5b961f1acf409f63fbed3fc2",
+      "sha256": "9b9ef133dfde3e2e027be88cce38fabbefb782b81144a941cfc8b25dbf9228a3"
+    }
+  ]
+}

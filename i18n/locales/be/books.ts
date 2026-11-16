@@ -1,4 +1,11 @@
 export const books = {
+  "questQrKicker": "Квэст MeTravel",
+  "questQrOffer": "Бясплатна, без гіда",
+  "questQrSelfGuided": "Без гіда",
+  "questQrDuration": "{{minutes}} хв",
+  "questQrDurationUnknown": "Час не пазначаны",
+  "questQrScan": "Навядзіце камеру, каб пачаць",
+
   "catalogCountry": "Краіна",
   "countryAll": "Усе краіны",
   "catalogStyles": "Стылі афармлення",

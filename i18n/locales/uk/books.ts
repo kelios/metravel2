@@ -1,4 +1,11 @@
 export const books = {
+  "questQrKicker": "Квест MeTravel",
+  "questQrOffer": "Безкоштовно, без гіда",
+  "questQrSelfGuided": "Без гіда",
+  "questQrDuration": "{{minutes}} хв",
+  "questQrDurationUnknown": "Час не вказано",
+  "questQrScan": "Наведіть камеру, щоб почати",
+
   "catalogCountry": "Країна",
   "countryAll": "Усі країни",
   "catalogStyles": "Стилі оформлення",

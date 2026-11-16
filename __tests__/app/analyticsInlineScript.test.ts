@@ -1,6 +1,8 @@
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
 import { SECRET_LINK_ROUTES } from '@/utils/secretLinkRoutes'
 import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
+import { buildQuestQrPrintModel } from '../../scripts/quests/qr-kit-model'
+import qrQuest from '../fixtures/questQrPrintKit/krakow-dragon.json'
 
 type Consent = { necessary: boolean; analytics: boolean }
 
@@ -300,12 +302,15 @@ describe('analytics inline script', () => {
     }
   })
 
-  it('reports the landing page before flushing product events, independently of late Metrika', () => {
+  it.each([
+    'https://metravel.by/quests?utm_source=mail&utm_medium=email',
+    buildQuestQrPrintModel(qrQuest, {questId: 'krakow-dragon', cityId: 1, locale: 'ru', campaign: 'park-start-01'}).targetUrl,
+  ])('reports landing %s before product events, independently of late Metrika', (landingUrl) => {
     jest.useFakeTimers()
     try {
       const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
       documentMock.referrer = 'https://www.google.com/'
-      windowMock.location.href = 'https://metravel.by/quests?utm_source=mail&utm_medium=email'
+      windowMock.location.href = landingUrl
       windowMock.dispatchEvent = jest.fn((event: Event) => {
         if (event.type === 'metravel:analytics-ready') windowMock.gtag('event', 'quest_view', { ui_source: 'quest_detail' })
       })
@@ -315,12 +320,12 @@ describe('analytics inline script', () => {
       windowMock.metravelLoadAnalytics()
       const commands = windowMock.dataLayer.map((entry: IArguments) => Array.from(entry))
       expect(commands[1]).toEqual(['set', {
-        page_location: windowMock.location.href, page_referrer: 'https://www.google.com/',
+        page_location: landingUrl, page_referrer: 'https://www.google.com/',
       }])
       expect(commands[2][0]).toBe('config')
       const events = () => windowMock.dataLayer.map((entry: IArguments) => Array.from(entry)).filter((entry: unknown[]) => entry[0] === 'event')
       expect(events()[0]).toEqual(['event', 'page_view', expect.objectContaining({
-        page_location: windowMock.location.href, page_referrer: 'https://www.google.com/',
+        page_location: landingUrl, page_referrer: 'https://www.google.com/',
       })])
       expect(events()[1][1]).toBe('quest_view')
       jest.runOnlyPendingTimers()

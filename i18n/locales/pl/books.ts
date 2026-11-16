@@ -1,4 +1,11 @@
 export const books = {
+  "questQrKicker": "Quest MeTravel",
+  "questQrOffer": "Bezpłatnie, bez przewodnika",
+  "questQrSelfGuided": "Bez przewodnika",
+  "questQrDuration": "{{minutes}} min",
+  "questQrDurationUnknown": "Czas nie został podany",
+  "questQrScan": "Zeskanuj kod i zacznij",
+
   "catalogCountry": "Kraj",
   "countryAll": "Wszystkie kraje",
   "catalogStyles": "Style graficzne",
