@@ -9,6 +9,7 @@ let renderToStaticMarkup: typeof import('react-dom/server').renderToStaticMarkup
 let Skeleton: React.ComponentType<{ travel: unknown }>
 let mockSidebarWidth = 390
 let mockSimilarEnabled = true
+let mockSidebarPlatform = 'web'
 
 beforeAll(() => {
   jest.resetModules()
@@ -20,6 +21,8 @@ beforeAll(() => {
       get: (target, key) =>
         key === 'useWindowDimensions'
           ? () => ({ width: mockSidebarWidth, height: 900, scale: 1, fontScale: 1 })
+          : key === 'Platform'
+            ? { ...target.Platform, OS: mockSidebarPlatform }
           : target[key],
     })
   })
@@ -38,6 +41,8 @@ const render = (travel: { id?: number } = { id: 544 }) => {
 }
 
 describe('SidebarSectionSkeleton keeps the «Похожие» place (#3430)', () => {
+  beforeEach(() => { mockSidebarPlatform = 'web' })
+
   it.each([[390, 3], [1280, 6]])('reserves the block with its own card count at %ipx', (width, cards) => {
     mockSidebarWidth = width
     mockSimilarEnabled = true
@@ -56,5 +61,18 @@ describe('SidebarSectionSkeleton keeps the «Похожие» place (#3430)', ()
     mockSidebarWidth = 390
     mockSimilarEnabled = true
     expect(render({}).querySelector('[data-testid="travel-sidebar-similar-skeleton"]')).toBeNull()
+  })
+
+  it.each(['android', 'ios'])('keeps the existing %s near/popular placeholders with AI enabled', (platform) => {
+    mockSidebarPlatform = platform
+    mockSidebarWidth = 390
+    mockSimilarEnabled = true
+    const host = render()
+
+    expect(host.querySelector('[data-testid="travel-sidebar-near-skeleton"]')).not.toBeNull()
+    expect(host.querySelector('[data-testid="travel-sidebar-popular-skeleton"]')).not.toBeNull()
+    expect(host.querySelectorAll('[data-testid="travel-sidebar-round-card-skeleton"]')).toHaveLength(2)
+    expect(host.querySelector('[data-testid="travel-sidebar-similar-skeleton"]')).toBeNull()
+    expect(host.querySelector('[data-testid="ai-pick-card-skeleton"]')).toBeNull()
   })
 })

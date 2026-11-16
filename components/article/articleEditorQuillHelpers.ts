@@ -5,6 +5,43 @@ import type { ArticleEditorSelection } from './articleEditor.types'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
 
+const generatedImageAlts = new WeakMap<HTMLImageElement, string>()
+
+export const hasGeneratedImageAlt = (image: HTMLImageElement): boolean => {
+  const generated = generatedImageAlts.get(image)
+  if (generated == null) return false
+  if (image.getAttribute('alt') === generated) return true
+  // Once the author changes it, returning to the same text is still editorial.
+  generatedImageAlts.delete(image)
+  return false
+}
+
+export const setGeneratedImageAlt = (image: HTMLImageElement, alt: string): void => {
+  image.setAttribute('alt', alt)
+  generatedImageAlts.set(image, alt)
+}
+
+export const clearGeneratedImageAlt = (image: HTMLImageElement): void => {
+  generatedImageAlts.delete(image)
+}
+
+// Export the editor DOM without its presentation-only image labels. Quill
+// callbacks, toolbar helpers and HTML/manual-save reads share this boundary.
+export const serializeQuillContent = (root: HTMLElement | null | undefined): string => {
+  if (!root) return ''
+  const html = String(root.innerHTML ?? '')
+  if (typeof root.querySelectorAll !== 'function') return html
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>('img'))
+  const generated = images.map(hasGeneratedImageAlt)
+  if (!generated.includes(true)) return html
+  const clone = root.cloneNode(true) as HTMLElement
+  const cloneImages = clone.querySelectorAll('img')
+  generated.forEach((isGenerated, index) => {
+    if (isGenerated) cloneImages[index]?.removeAttribute('alt')
+  })
+  return clone.innerHTML
+}
+
 
 type EditorGetter = () => any
 

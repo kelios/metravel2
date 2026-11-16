@@ -2665,6 +2665,16 @@ guard, падающий в CI на попытке обойти этот конт
   служебные alt из выдачи, изменение без отличия содержимого не эмитится;
   `QuillEditor.web.openWithoutInput.test.tsx` (настоящий Quill) и
   `useTravelFormData.test.ts` — открытие без ввода не пишет.
+- **Новая граница #3434 (16.11.2026):** WeakMap по DOM-узлу не переживал
+  пересоздание изображения из Quill Delta/history или HTML clipboard; родитель
+  также экспортировал `root.innerHTML` в ручном сохранении, HTML-режиме и панели.
+  Общая DOM-сериализация и provenance живут в `articleEditorQuillHelpers`;
+  image blot исключает только доказанно служебный alt из formats и clipboard.
+  Явный авторский alt, включая такой же текст, сохраняется. Старый контроль
+  проверял исходный узел, а не эти границы. Новые реальные Quill и toolbar
+  регрессии воспроизвели ошибку на исходном коде; на исправленном прошли
+  вместе с DOM/native-branch проверками (184 теста/8 наборов). Это source
+  evidence; реальная запись private draft104 и production-приёмка — в #3434.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence;
   `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).
@@ -8232,6 +8242,14 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   Отдельная диагностика не считается приёмкой; mandatory review, новый
   push/deploy, пять canonical проходов и PL320→390 ещё впереди.
   Evidence: `cls-responsive-source/` в `.codex-temp/publish-20261007/`.
+- **Удержанная высота #3434 (16.11.2026):** тихий повтор для стоящего читателя
+  уже существовал, но изменение окна/ориентации либо только scroll owner не
+  будило его при неизменном runtime. Добавлены wakeups прежней coalesced
+  транзакции и наблюдение текущего owner; видимый зазор без якоря сохраняется,
+  polling не добавлен. Три отдельные DOM-регрессии краснели на исходной ветке
+  и проходят на исправленной; прежние responsive/anchor/reserve контроли
+  сохранены. Native-компонент не менялся; принудительно включённые AI/native
+  branch-controls проверяют отсутствие web-каркаса, а не device performance.
 
 ## FE-TOOLING-PROD-TOKEN-FILE-STALE-001 — operator token authority
 

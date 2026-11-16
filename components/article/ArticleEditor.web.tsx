@@ -47,6 +47,7 @@ import {
     handleQuillHtmlChange,
     insertAnchorIntoEditor,
     rememberSelectionFromEditor as rememberEditorSelection,
+    serializeQuillContent,
 } from './articleEditorQuillHelpers';
 import type { ArticleEditorProps } from './articleEditor.types';
 import { getArticleEditorWebStyles } from './ArticleEditor.web.styles';
@@ -389,7 +390,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const fireChange = useCallback(
         (val: string, selection?: { index: number; length: number } | null, markUserEdited: boolean = true) => {
-            const raw = typeof val === 'string' ? val : '';
+            let raw = typeof val === 'string' ? val : '';
+            const root = quillRef.current?.getEditor?.()?.root as HTMLElement | undefined;
+            // Toolbar/media helpers can emit the live DOM directly. Only that
+            // exact export owns generated labels; separate HTML input is authored.
+            if (root && raw === root.innerHTML) raw = serializeQuillContent(root);
             if (raw === htmlRef.current) return;
 
             const cleanForEmit = restoreFaqMarkupIfLost(
@@ -454,7 +459,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             const viewport = editorViewportRef.current as HTMLElement | undefined;
             const root = viewport?.querySelector?.('.ql-editor') as HTMLElement | null | undefined;
             const fromDom = withFaq(
-                normalizeArticleEditorHtmlForOutput(String(root?.innerHTML ?? '')),
+                normalizeArticleEditorHtmlForOutput(serializeQuillContent(root)),
             );
             if (fromDom.trim().length > 0) return fromDom;
         } catch {

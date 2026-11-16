@@ -163,28 +163,6 @@ export function preloadResource(
 }
 
 /**
- * Prefetch ресурса
- */
-export function prefetchResource(href: string, as: 'image' | 'script' | 'style' | 'font'): void {
-  if (typeof document === 'undefined') return
-
-  const link = document.createElement('link')
-  link.rel = 'prefetch'
-  link.href = href
-  link.as = as
-  try {
-    const resolved = new URL(href, window.location.origin)
-    if (resolved.origin !== window.location.origin) {
-      link.crossOrigin = 'anonymous'
-    }
-  } catch {
-    // noop
-  }
-
-  document.head.appendChild(link)
-}
-
-/**
  * Отложенная инициализация функции
  */
 export function deferExecution(fn: () => void, delay = 1000): void {

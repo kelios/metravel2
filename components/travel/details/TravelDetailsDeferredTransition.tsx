@@ -446,7 +446,7 @@ export function TravelDetailsDeferredTransition({
     }
     // Releases a held shrink in a frame without an owner scroll: below the viewport
     // it moves nothing drawn; elsewhere the following frame keeps its place by the
-    // usual anchor transaction. Without an anchor the next owner scroll retries.
+    // usual anchor transaction. Without an anchor, scroll or geometry retries.
     const releaseHeldFlow = () => {
       const held = heldFlowRef.current
       if (held == null || !runtimeFrameReady || generationRef.current !== generation || !node?.isConnected || !runtime?.isConnected || !node.contains(runtime)) return
@@ -491,6 +491,8 @@ export function TravelDetailsDeferredTransition({
       watchOwnerScroll(heldReleaseOwner)
       heldReleaseOwner.addEventListener('scroll', scheduleHeldRelease, { passive: true })
     }
+    heldReleaseView?.addEventListener('resize', scheduleHeldRelease, { passive: true })
+    heldReleaseView?.addEventListener('orientationchange', scheduleHeldRelease, { passive: true })
     const commitMeasuredHeight = (inTask = false) => {
       if (!node || generationRef.current !== generation) return
       const nextFrame = node.isConnected && runtime?.isConnected && node.contains(runtime) ? runtime.getBoundingClientRect() : null
@@ -534,10 +536,13 @@ export function TravelDetailsDeferredTransition({
     scheduleHeldRelease()
     const observer = supportsResizeObservation && node && runtime && node.contains(runtime) ? new ResizeObserver(() => commitMeasuredHeight()) : null
     if (runtime) observer?.observe(runtime)
+    if (heldReleaseOwner) observer?.observe(heldReleaseOwner)
     return () => {
       generationRef.current++
       observer?.disconnect()
       heldReleaseOwner?.removeEventListener('scroll', scheduleHeldRelease)
+      heldReleaseView?.removeEventListener('resize', scheduleHeldRelease)
+      heldReleaseView?.removeEventListener('orientationchange', scheduleHeldRelease)
       if (heldReleaseFrame != null) heldReleaseView?.cancelAnimationFrame(heldReleaseFrame)
     }
   }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])

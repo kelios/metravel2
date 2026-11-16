@@ -12,11 +12,16 @@ let createRoot: typeof import('react-dom/client').createRoot
 let MeasuredFlow: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsMeasuredFlow
 
 let observerCallback: (() => void) | null = null
+const observedTargets = new Map<Element, () => void>()
 class ControlledResizeObserver {
-  constructor(callback: () => void) { observerCallback = callback }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  constructor(private callback: () => void) { observerCallback = callback }
+  observe(target: Element) { observedTargets.set(target, this.callback) }
+  unobserve(target: Element) { observedTargets.delete(target) }
+  disconnect() {
+    for (const [target, callback] of observedTargets) {
+      if (callback === this.callback) observedTargets.delete(target)
+    }
+  }
 }
 
 const OWNER_TOP = 54
@@ -51,18 +56,19 @@ function nearAboveCommentsFixture(nearTop: number) {
   const initialTop = 44560
   let top = initialTop
   let runtimeHeight = FULL
+  let ownerHeight = OWNER_HEIGHT
   const writes: number[] = []
   const frames: FrameRequestCallback[] = []
   const transition = () => mount.querySelector<HTMLElement>('[data-testid="near-transition"]')!
   const transitionTop = () => nearTop - (top - initialTop)
   const flowHeight = () => Number.parseFloat(transition()?.style.height || '0')
   Object.defineProperties(owner, {
-    clientHeight: { configurable: true, get: () => OWNER_HEIGHT },
+    clientHeight: { configurable: true, get: () => ownerHeight },
     clientWidth: { configurable: true, get: () => 390 },
     scrollHeight: { configurable: true, get: () => 48000 + flowHeight() },
     scrollTop: { configurable: true, get: () => top, set: (value: number) => { top = value; writes.push(value) } },
   })
-  owner.getBoundingClientRect = () => rect(OWNER_TOP, OWNER_HEIGHT)
+  owner.getBoundingClientRect = () => rect(OWNER_TOP, ownerHeight)
   comments.getBoundingClientRect = () => rect(transitionTop() + flowHeight(), 844)
   const originalRect = HTMLElement.prototype.getBoundingClientRect
   HTMLElement.prototype.getBoundingClientRect = function () {
@@ -110,6 +116,11 @@ function nearAboveCommentsFixture(nearTop: number) {
     const pending = frames.splice(0)
     for (const callback of pending) callback(performance.now() + 1)
   })
+  const resizeOwner = (height: number, signal: 'resize' | 'orientationchange' | 'owner-observer') => act(() => {
+    ownerHeight = height
+    if (signal === 'owner-observer') observedTargets.get(owner)?.()
+    else window.dispatchEvent(new Event(signal))
+  })
   const cleanup = () => {
     act(() => root.unmount())
     host.remove()
@@ -117,7 +128,7 @@ function nearAboveCommentsFixture(nearTop: number) {
     window.requestAnimationFrame = originalFrame
     delete (document as { timeline?: unknown }).timeline
   }
-  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveEmptyAfterPendingStep, resolveEmptyInCommit, quietFrame, cleanup, scrollTop: () => top }
+  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveEmptyAfterPendingStep, resolveEmptyInCommit, quietFrame, resizeOwner, pendingFrames: () => frames.length, cleanup, scrollTop: () => top }
 }
 
 it('holds a visible anchored shrink that arrives in a frame with an owner scroll', () => {
@@ -168,6 +179,47 @@ it('publishes the held shrink under the anchor in the next frame without an owne
     expect(f.transition().style.height).toBe(`${EMPTY}px`)
     expect(f.comments.getBoundingClientRect().top).toBe(before)
     expect(f.writes).toEqual([44560 - (FULL - EMPTY)])
+  } finally {
+    f.cleanup()
+  }
+})
+
+// #3434: a quiet attempt correctly stops while slack is visible and no following
+// anchor is drawn. Changing only the visible owner can then make it safe without
+// a runtime resize or another reader scroll; that geometry must wake the retry.
+it.each(['resize', 'orientationchange', 'owner-observer'] as const)('retries a retained height after %s makes its slack offscreen', (signal) => {
+  const f = nearAboveCommentsFixture(OWNER_TOP + OWNER_HEIGHT - EMPTY - 100)
+  try {
+    f.resolveEmptyWhileScrolling()
+    f.quietFrame()
+    expect(f.transition().style.height).toBe(`${FULL}px`)
+    expect(f.pendingFrames()).toBe(0)
+
+    f.resizeOwner(600, signal)
+    f.quietFrame()
+
+    expect(f.transition().style.height).toBe(`${EMPTY}px`)
+    expect(f.writes).toEqual([])
+    expect(f.comments.getBoundingClientRect().top).toBeGreaterThan(OWNER_TOP + 600)
+  } finally {
+    f.cleanup()
+  }
+})
+
+it('keeps visible unanchored slack after an unsafe resize without polling quiet frames', () => {
+  const f = nearAboveCommentsFixture(OWNER_TOP + OWNER_HEIGHT - EMPTY - 100)
+  try {
+    f.resolveEmptyWhileScrolling()
+    f.quietFrame()
+    const commentsTop = f.comments.getBoundingClientRect().top
+
+    f.resizeOwner(750, 'resize')
+    f.quietFrame()
+
+    expect(f.transition().style.height).toBe(`${FULL}px`)
+    expect(f.comments.getBoundingClientRect().top).toBe(commentsTop)
+    expect(f.writes).toEqual([])
+    expect(f.pendingFrames()).toBe(0)
   } finally {
     f.cleanup()
   }

@@ -114,6 +114,59 @@ describe('ArticleEditor.web link', () => {
     ;(globalThis as any).__quillReactRef__ = null;
   });
 
+  it.each([undefined, 'Озеро', 'Изображение'])(
+    'toolbar DOM exports preserve alt ownership (%s)',
+    async (authoredAlt) => {
+      const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+      const { applyQuillAccessibility } = jest.requireActual('@/components/article/QuillEditor.web');
+      const content = `<p>Текст</p><p><img src="https://example.com/photo.jpg"${authoredAlt === undefined ? '' : ` alt="${authoredAlt}"`}></p>`;
+      const onChange = jest.fn();
+      const { getByTestId } = await render(<ArticleEditor content={content} onChange={onChange} variant="compact" />);
+      await waitFor(() => expect(getByTestId('quill-mock')).toBeTruthy());
+      const editor = (globalThis as any).__quillEditor__;
+      const root = document.createElement('div');
+      root.innerHTML = content;
+      editor.root = root;
+      applyQuillAccessibility(editor, null, 'Изображение');
+      expect(onChange).not.toHaveBeenCalled();
+      editor.format.mockImplementationOnce(() => {
+        const changed = document.createElement('p');
+        changed.textContent = 'Правка ссылки';
+        root.append(changed);
+      });
+      const handler = (globalThis as any).__quillProps__.modules.toolbar.handlers.link;
+
+      await act(() => handler.call({ quill: editor }, false));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const html = onChange.mock.calls[0][0];
+      expect(html).toContain('Правка ссылки');
+      if (authoredAlt === undefined) expect(html).not.toContain('alt=');
+      else expect(html).toContain(`alt="${authoredAlt}"`);
+    },
+  );
+
+  it('preserves a separate authored HTML replacement while the live DOM has generated alt', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const { applyQuillAccessibility } = jest.requireActual('@/components/article/QuillEditor.web');
+    const content = '<p><img src="https://example.com/photo.jpg"></p>';
+    const onChange = jest.fn();
+    const { getByTestId } = await render(<ArticleEditor content={content} onChange={onChange} variant="compact" />);
+    await waitFor(() => expect(getByTestId('quill-mock')).toBeTruthy());
+    const editor = (globalThis as any).__quillEditor__;
+    const root = document.createElement('div');
+    root.innerHTML = content;
+    editor.root = root;
+    applyQuillAccessibility(editor, null, 'Изображение');
+    const replacement = '<p>Авторская замена</p><p><img src="https://example.com/photo.jpg" alt="Изображение"></p>';
+
+    await act(() => (globalThis as any).__quillProps__.onChange(replacement, null, 'api'));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toContain('Авторская замена');
+    expect(onChange.mock.calls[0][0]).toContain('alt="Изображение"');
+  });
+
   it('keeps the Safari file input attached until the picker returns', () => {
     const input = document.createElement('input');
     const clickSpy = jest.spyOn(input, 'click').mockImplementation(() => undefined);

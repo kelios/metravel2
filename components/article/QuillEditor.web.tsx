@@ -10,6 +10,14 @@ import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
 import { toInertHtml } from '@/utils/inertHtml'
+import {
+  clearGeneratedImageAlt,
+  hasGeneratedImageAlt,
+  serializeQuillContent,
+  setGeneratedImageAlt,
+} from './articleEditorQuillHelpers'
+
+export { serializeQuillContent } from './articleEditorQuillHelpers'
 
 
 type QuillInstance = any
@@ -433,7 +441,43 @@ const QUILL_PICKER_ACCESSIBLE_NAMES: Record<string, string> = {
   'ql-background': 'Background color',
   'ql-align': 'Text alignment',
 }
-const generatedImageAlts = new WeakMap<HTMLImageElement, string>()
+const presentationImageRegistrations = new WeakSet<object>()
+
+const ensurePresentationImageRegistered = (Quill: any) => {
+  if (presentationImageRegistrations.has(Quill)) return
+  try {
+    const Image = Quill.import('formats/image')
+    class PresentationImage extends Image {
+      static formats(image: HTMLImageElement) {
+        const formats = { ...super.formats(image) }
+        // #3434: keep generated alt out of Delta/history, so recreated images
+        // receive a fresh fallback with presentation-only provenance.
+        if (hasGeneratedImageAlt(image)) delete formats.alt
+        return formats
+      }
+
+      format(name: string, value: unknown) {
+        // Explicit formatting authors the value even if it equals the fallback.
+        if (name === 'alt') clearGeneratedImageAlt(this.domNode)
+        super.format(name, value)
+      }
+
+      html() {
+        const image = this.domNode as HTMLImageElement
+        if (!hasGeneratedImageAlt(image)) return image.outerHTML
+        // Quill's clipboard exports HTML as well as Delta. Serialize a DOM clone
+        // so internal copy/cut cannot turn presentation alt into article content.
+        const clone = image.cloneNode(true) as HTMLImageElement
+        clone.removeAttribute('alt')
+        return clone.outerHTML
+      }
+    }
+    Quill.register('formats/image', PresentationImage, true)
+    presentationImageRegistrations.add(Quill)
+  } catch (e) {
+    void e
+  }
+}
 
 export const applyQuillAccessibility = (
   quill: QuillInstance | null,
@@ -452,30 +496,9 @@ export const applyQuillAccessibility = (
   quill?.root?.querySelectorAll?.('img')?.forEach?.((image: HTMLImageElement) => {
     // Only untouched fallbacks generated for this node are app-owned. Existing
     // or subsequently edited alt text remains author/editorial content.
-    const previous = generatedImageAlts.get(image)
-    if (image.hasAttribute('alt') && (previous == null || image.getAttribute('alt') !== previous)) return
-    image.setAttribute('alt', fallbackImageAlt)
-    generatedImageAlts.set(image, fallbackImageAlt)
+    if (image.hasAttribute('alt') && !hasGeneratedImageAlt(image)) return
+    setGeneratedImageAlt(image, fallbackImageAlt)
   })
-}
-
-// #3427: the fallback alt is editor presentation, not article content. Quill
-// models `alt` as an image format, so setting it is a DOM mutation that Quill
-// reports as a `user` text-change; emitting it made merely opening an old
-// article (images without alt) write the description back to the server.
-export const serializeQuillContent = (root: HTMLElement | null | undefined): string => {
-  if (!root) return ''
-  const images = Array.from(root.querySelectorAll<HTMLImageElement>('img'))
-  const generated = images.map(
-    (image) => generatedImageAlts.has(image) && image.getAttribute('alt') === generatedImageAlts.get(image),
-  )
-  if (!generated.includes(true)) return String(root.innerHTML ?? '')
-  const clone = root.cloneNode(true) as HTMLElement
-  const cloneImages = clone.querySelectorAll('img')
-  generated.forEach((isGenerated, index) => {
-    if (isGenerated) cloneImages[index]?.removeAttribute('alt')
-  })
-  return clone.innerHTML
 }
 
 const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any) {
@@ -536,6 +559,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
       .then((Quill) => {
         if (cancelled) return
         ensureIdAttributeRegistered(Quill)
+        ensurePresentationImageRegistered(Quill)
 
         const quill = new Quill(containerEl, {
           theme: theme ?? 'snow',

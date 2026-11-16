@@ -5,6 +5,7 @@ import {
 
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { normalizeArticleEditorHtmlForOutput } from './articleEditorConfig'
+import { serializeQuillContent } from './articleEditorQuillHelpers'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
 import { buildTravelPath } from '@/utils/routePaths'
@@ -92,7 +93,7 @@ export function focusQuillEditor({
 export function getSafeEditorHtmlFrom(getEditor: () => any): string {
   try {
     const editor = getEditor()
-    return normalizeArticleEditorHtmlForOutput(String(editor?.root?.innerHTML ?? ''))
+    return normalizeArticleEditorHtmlForOutput(serializeQuillContent(editor?.root))
   } catch {
     return ''
   }

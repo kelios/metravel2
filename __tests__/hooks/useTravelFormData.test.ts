@@ -1425,7 +1425,8 @@ describe('useTravelFormData', () => {
 	  });
 
   describe('Edit flow - data initialization', () => {
-    // #3427: открытие существующей статьи без ввода не пишет на сервер.
+    // #3427: hook-only hydration/autosave baseline; no editor is mounted here.
+    // Real Quill callbacks are covered in QuillEditor.web.openWithoutInput.test.tsx.
     it('does not save an existing travel opened without user input', async () => {
       (fetchTravel as jest.Mock).mockResolvedValue({
         id: 123,
