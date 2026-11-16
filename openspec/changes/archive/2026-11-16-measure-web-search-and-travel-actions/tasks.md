@@ -7,4 +7,4 @@
 
 - [x] 2.1 Pass targeted regression checks and strict OpenSpec validation.
 - [x] 2.2 Complete independent review and repair.
-- [ ] 2.3 Verify the reviewed web revision and configure the corresponding provider reports.
+- [x] 2.3 Verify the reviewed web revision and configure the corresponding provider reports.

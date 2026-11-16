@@ -1,5 +1,8 @@
-## ADDED Requirements
+# web-search-and-travel-actions Specification
 
+## Purpose
+Measure whether catalog visitors select routes and which practical actions they take on published travel pages.
+## Requirements
 ### Requirement: Measure route search outcomes and result use
 The web site SHALL identify the terminal result of a settled nonempty catalog text search and report at most one first route selection per recorded search. It SHALL omit the search phrase if it fails the shared analytics privacy filter.
 
