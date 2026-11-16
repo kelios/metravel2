@@ -75,6 +75,12 @@ def src_dur(p):
 SEG = plan["segments"]
 def joined(i):   # стык после отрезка i с переходом
     return i + 1 < len(SEG) and float(SEG[i].get("xd_out") or 0) > 0
+# все входные файлы на месте — до рендера, а не на 55-м куске через полчаса (v16: не дорендерены копии «памяти»)
+_miss = sorted({p_ for s_ in SEG for p_ in [plan["sources"][s_["src"]]] + [o["file"] for o in s_.get("broll", []) + s_.get("cards", [])]
+                if not os.path.exists(p_)})
+if _miss:
+    print("ОШИБКА: нет входных файлов (" + str(len(_miss)) + "):"); [print("  " + x) for x in _miss[:20]]
+    print("  копии «памяти», вертикальные и размытые дорендерить: memory_grade.py / vertical_render.py / faces.py"); sys.exit(1)
 parts, hand, cores = [], [], []
 for i, s in enumerate(SEG):
     import hashlib
