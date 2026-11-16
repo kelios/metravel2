@@ -271,6 +271,10 @@ def main() -> None:
     os.makedirs(segdir, exist_ok=True)
     vcfg = {"width": 3840, "height": 2160, "fps": 30, "encoder": "h264_videotoolbox", "bitrate": "50M",
             **plan.get("video", {})}
+    if not args.dry_run:               # больше 640x360 — только по допуску рецензента, 4K — по слову владельца
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import film_gate
+        film_gate.require(args.plan, int(vcfg["width"]), int(vcfg["height"]))
     acfg = {"target_lufs": -14.0, "true_peak": -1.5, "leveler": 0.6, **plan.get("audio", {})}
     fps = vcfg["fps"]
     # правка фильтров в коде должна сбросить кеш кусков так же, как правка плана

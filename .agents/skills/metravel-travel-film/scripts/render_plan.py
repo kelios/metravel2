@@ -15,10 +15,21 @@ plan = json.load(open(sys.argv[1])); out = sys.argv[2]
 a = sys.argv[3:]
 wd = a[a.index("--workdir") + 1] if "--workdir" in a else os.path.splitext(out)[0] + "_parts"
 only = set(int(x) for x in a[a.index("--only") + 1].split(",")) if "--only" in a else None
-os.makedirs(wd, exist_ok=True)
 W, H, FPS = 640, 360, 30
 if "--size" in a:                      # полное качество: --size 1920x1080 (кадры перерендерятся в своей папке)
     W, H = (int(x) for x in a[a.index("--size") + 1].split("x"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import film_gate                       # больше 640x360 — только по допуску рецензента, 4K — по слову владельца
+film_gate.require(sys.argv[1], W, H)
+import fcntl                           # один рендер на машину: параллельные сессии ждут, а не делят CPU и диск
+_lockp = os.path.expanduser("~/.cache/metravel-film-render.lock"); os.makedirs(os.path.dirname(_lockp), exist_ok=True)
+_lock = open(_lockp, "w")
+try:
+    fcntl.flock(_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    print("жду: идёт другой рендер (render_plan.py), один рендер на машину", flush=True)
+    fcntl.flock(_lock, fcntl.LOCK_EX)
+os.makedirs(wd, exist_ok=True)
 CRF = a[a.index("--crf") + 1] if "--crf" in a else ("28" if W <= 640 else "18")
 PRESET = "veryfast" if W <= 640 else "fast"
 # --hw: аппаратный кодер Mac (4K за часы, а не сутки); 60 Мбит/с для 4K — с запасом для YouTube
