@@ -1599,7 +1599,8 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   Статьи идут секциями по 200 пунктов: бэкенд принимает не больше 256 на
   секцию. Index/noindex страны решает ОДНО правило —
   `questCountryHubIndexVerdict` (`utils/questCountryLanding.js`), его зовёт
-  проекция (`scoreCohort`, вид `country`): городов ≥ 2 (`single-city`),
+  проекция (`scoreCohort`, вид `country`) и клиентский экран страны
+  (`LazyInstantSEO.robots`, #3444): городов ≥ 2 (`single-city`),
   квестов ≥ `QUEST_COUNTRY_HUB_MIN_QUESTS` = 5 (`thin-hub`; на 12.11.2026
   порог проходят 17 стран из 47). Прозовый порог для страны снят в #3377:
   бэкенд (`quests/services/web_publication.py`) проверяет не менее двух

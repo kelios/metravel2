@@ -31,7 +31,7 @@ import { useLocale, useTranslation } from '@/i18n/LocaleProvider'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { resolveQuestCatalogAddressState } from '@/utils/questAddressState'
-import { buildQuestCountryLandingGroups } from '@/utils/questCountryLanding'
+import { buildQuestCountryLandingGroups, questCountryHubIndexVerdict } from '@/utils/questCountryLanding'
 
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
@@ -166,6 +166,7 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
           description={seoDescription}
           canonical={canonical}
           ogType="website"
+          robots={questCountryHubIndexVerdict(country).indexable ? 'index, follow' : 'noindex, follow'}
           image={buildOgImageUrl(QUESTS_OG_IMAGE_PATH)}
           additionalTags={structuredData}
         />

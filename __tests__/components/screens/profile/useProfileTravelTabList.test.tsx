@@ -256,7 +256,7 @@ describe('useProfileTravelTabList', () => {
     await waitFor(() => expect(result.current.travels).toHaveLength(1));
     status = 'published';
     await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
-    expect(result.current.travels).toEqual([]);
+    await waitFor(() => expect(result.current.travels).toEqual([]));
     expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(0);
     await rerender({ tab: 'publishedTravels' });
     await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));

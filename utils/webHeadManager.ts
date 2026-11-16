@@ -64,6 +64,7 @@ type State = {
   initialPath: string
   /** Ключи, которые стоят в head от экспорта первого URL. */
   exportKeys: Set<string>
+  exportRobots: string | null
   /** Ключи, записанные менеджером для текущего владельца. */
   ownedKeys: Set<string>
   owner: symbol | null
@@ -79,7 +80,8 @@ const getState = (): State => {
     const key = nodeKey(node)
     if (key) exportKeys.add(key)
   })
-  state = { initialPath: normalizePath(window.location.pathname), exportKeys, ownedKeys: new Set(), owner: null }
+  const exportRobots = document.head.querySelector('meta[name="robots"]:not([data-rh])')?.getAttribute('content') ?? null
+  state = { initialPath: normalizePath(window.location.pathname), exportKeys, exportRobots, ownedKeys: new Set(), owner: null }
   return state
 }
 
@@ -136,11 +138,19 @@ export function applyHeadTags(owner: symbol, tags: readonly HeadTag[]): void {
   const nextKeys = new Set(tags.map(tagKey))
   const onInitialPath = normalizePath(window.location.pathname) === current.initialPath
 
-  for (const key of current.ownedKeys) if (!nextKeys.has(key)) removeKey(key)
+  for (const key of current.ownedKeys) {
+    // SSR-документ квеста передаёт head экрану: его build-owned вердикт
+    // остаётся на первом URL, даже если экран не знает прозовую когорту (#3444).
+    const keepExportRobots = key === ROBOTS_KEY && onInitialPath && current.exportKeys.has(key)
+    if (!nextKeys.has(key) && !keepExportRobots) removeKey(key)
+  }
   current.owner = owner
   current.ownedKeys = nextKeys
   if (!onInitialPath) dropExportKeys(current)
   for (const tag of tags) writeTag(tag)
+  if (onInitialPath && current.exportKeys.has(ROBOTS_KEY) && !nextKeys.has(ROBOTS_KEY) && current.exportRobots !== null) {
+    writeTag({ kind: 'meta', attr: 'name', key: 'robots', content: current.exportRobots })
+  }
   if (current.exportKeys.size === 0) ensureDefaultRobots(current)
 
   // Эффект новой страницы может опередить запись history роутером: путь

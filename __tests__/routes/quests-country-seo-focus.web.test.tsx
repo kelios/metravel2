@@ -5,10 +5,18 @@
 import React from 'react'
 import { Platform } from 'react-native'
 import { render } from '@testing-library/react-native'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { resetHeadManagerForTests } from '@/utils/webHeadManager'
 
 const mockUseIsFocused = jest.fn(() => true)
 const mockReplace = jest.fn()
 let mockCountryParam = 'belarus'
+let mockLocale = 'ru'
+let mockUseRealSeo = false
+const mockCountryQuests = [
+  { id: 'minsk-center', cityId: '4', cityName: 'Минск', countryCode: 'BY', countryName: 'Беларусь', title: 'Минский центр' },
+]
+let mockQuests = mockCountryQuests
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
@@ -30,7 +38,16 @@ jest.mock('@/components/quests/QuestNotFoundScreen', () => {
   const { View } = require('react-native')
   return { __esModule: true, default: () => <View testID="quest-not-found" /> }
 })
-jest.mock('@/components/seo/LazyInstantSEO', () => ({ __esModule: true, default: () => null }))
+jest.mock('expo-router/head', () => {
+  const { Helmet, HelmetProvider } = require('expo-router/vendor/react-helmet-async/lib')
+  return { __esModule: true, default: ({ children }: { children?: React.ReactNode }) => (
+    <HelmetProvider><Helmet defer={false}>{children}</Helmet></HelmetProvider>
+  ) }
+})
+jest.mock('@/components/seo/LazyInstantSEO', () => {
+  const Actual = jest.requireActual('@/components/seo/LazyInstantSEO').default
+  return { __esModule: true, default: (props: React.ComponentProps<typeof Actual>) => mockUseRealSeo ? <Actual {...props} /> : null }
+})
 jest.mock('@/components/quests/QuestCountryLandingSections', () => ({
   __esModule: true,
   default: () => null,
@@ -43,20 +60,10 @@ jest.mock('@/screens/tabs/QuestsScreen.styles', () => ({
   getStyles: () => ({ root: {}, questsGrid: {} }),
 }))
 jest.mock('@/hooks/useQuestsApi', () => {
-  const quests = [
-    {
-      id: 'minsk-center',
-      cityId: '4',
-      cityName: 'Минск',
-      countryCode: 'BY',
-      countryName: 'Беларусь',
-      title: 'Минский центр',
-    },
-  ]
   return {
     // Keep the catalog reference stable so this regression really proves that
     // the route's SEO effect responds to focus, not to an incidental rerender.
-    useQuestsList: () => ({ loading: false, quests }),
+    useQuestsList: () => ({ loading: false, quests: mockQuests }),
   }
 })
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => undefined }))
@@ -78,7 +85,7 @@ jest.mock('@/i18n/LocaleProvider', () => {
     return key
   }
   return {
-    useLocale: () => ({ locale: 'ru' }),
+    useLocale: () => ({ locale: mockLocale }),
     useTranslation: () => ({ t }),
   }
 })
@@ -111,12 +118,15 @@ const expectSingleDescriptionSet = (content: string) => {
 
 describe('quest country SEO focus lifecycle', () => {
   const originalPlatform = Platform.OS
+  const originalCanUseDOM = HelmetProvider.canUseDOM
 
   beforeAll(() => {
+    HelmetProvider.canUseDOM = true
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
   })
 
   afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
     Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true })
   })
 
@@ -124,6 +134,11 @@ describe('quest country SEO focus lifecycle', () => {
     jest.useFakeTimers()
     mockUseIsFocused.mockReturnValue(true)
     mockCountryParam = 'belarus'
+    mockLocale = 'ru'
+    mockUseRealSeo = false
+    mockQuests = mockCountryQuests
+    resetHeadManagerForTests()
+    window.history.replaceState(null, '', '/quests/country/belarus')
     mockReplace.mockClear()
     document.head.innerHTML = [
       `<meta name="description" content="${GENERIC_DESCRIPTION}">`,
@@ -140,6 +155,52 @@ describe('quest country SEO focus lifecycle', () => {
   afterEach(() => {
     document.head.innerHTML = ''
     jest.useRealTimers()
+  })
+
+  it.each(['ru', 'be', 'uk', 'pl', 'en'])('keeps one robots through real Helmet and country navigation (%s, #3444)', async (locale) => {
+    mockLocale = locale
+    mockUseRealSeo = true
+    // Два города в обеих странах: Norway — тонкий хаб, Spain — ровно порог.
+    const { QUEST_COUNTRY_HUB_MIN_QUESTS, buildQuestCountryLandingGroups, questCountryHubIndexVerdict } = require('@/utils/questCountryLanding')
+    mockQuests = [
+      ...Array.from({ length: 2 }, (_, index) => ({ id: `no-${index}`, cityId: `no-${index}`, cityAlias: `norway-city-${index}`, cityName: `Norway city ${index}`, countryCode: 'NO', countryName: 'Norway', title: `Norway quest ${index}` })),
+      ...Array.from({ length: QUEST_COUNTRY_HUB_MIN_QUESTS }, (_, index) => ({ id: `es-${index}`, cityId: `es-${index % 2}`, cityAlias: `spain-city-${index % 2}`, cityName: `Spain city ${index % 2}`, countryCode: 'ES', countryName: 'Spain', title: `Spain quest ${index}` })),
+    ]
+    const groups = buildQuestCountryLandingGroups(mockQuests, { locale })
+    expect(questCountryHubIndexVerdict(groups.find((country: { countryCode: string }) => country.countryCode === 'NO')).reason).toBe('thin-hub')
+    expect(questCountryHubIndexVerdict(groups.find((country: { countryCode: string }) => country.countryCode === 'ES')).reason).toBe('hub')
+    mockCountryParam = 'norway'
+    window.history.replaceState(null, '', '/quests/country/norway')
+    document.head.innerHTML = '<meta data-rh="true" name="robots" content="noindex, follow">'
+    const screen = await render(<QuestsByCountryScreen />)
+    const expectRobots = (content: string) => {
+      const nodes = document.head.querySelectorAll('meta[name="robots"]')
+      expect(nodes).toHaveLength(1)
+      expect(nodes[0].getAttribute('content')).toBe(content)
+      expect(nodes[0].hasAttribute('data-rh')).toBe(false)
+    }
+    expectRobots('noindex, follow')
+
+    mockCountryParam = 'spain'
+    window.history.pushState(null, '', '/quests/country/spain')
+    await screen.rerender(<QuestsByCountryScreen />)
+    expectRobots('index, follow')
+
+    mockCountryParam = 'norway'
+    window.history.pushState(null, '', '/quests/country/norway')
+    await screen.rerender(<QuestsByCountryScreen />)
+    expectRobots('noindex, follow')
+  })
+
+  it('keeps the verdict when the SSR document hands head ownership to the country screen (#3444)', async () => {
+    mockUseRealSeo = true
+    document.head.innerHTML = '<meta name="robots" content="noindex, follow">'
+    const InstantSEO = jest.requireActual('@/components/seo/LazyInstantSEO').default
+    const screen = await render(<InstantSEO title="Server country" robots="noindex, follow" />)
+    await screen.rerender(<QuestsByCountryScreen />)
+    const robots = document.head.querySelectorAll('meta[name="robots"]')
+    expect(robots).toHaveLength(1)
+    expect(robots[0].getAttribute('content')).toBe('noindex, follow')
   })
 
   it('deduplicates country descriptions and restores the previous head on blur', async () => {

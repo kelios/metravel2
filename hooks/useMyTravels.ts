@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { notifyManager, useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
 import { blockHiddenCount, servedPageLength } from '@/api/blockSensitiveShapes';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -295,12 +295,18 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
+  const currentQuery = queryClient.getQueryCache().find({ queryKey, exact: true });
+  const currentQueryHash = currentQuery?.queryHash;
   const isInvalidated = useSyncExternalStore(
-    useCallback((notify) => queryClient.getQueryCache().subscribe(notify), [queryClient]),
+    useCallback((notify) => {
+      const batchedNotify = notifyManager.batchCalls(notify);
+      return queryClient.getQueryCache().subscribe((event) => {
+        if (event.query.queryHash === currentQueryHash) batchedNotify();
+      });
+    }, [queryClient, currentQueryHash]),
     useCallback(() => queryClient.getQueryState(queryKey)?.isInvalidated === true, [queryClient, queryKey]),
     () => false,
   );
-  const currentQuery = queryClient.getQueryCache().find({ queryKey, exact: true });
   const hasVisibleRows = query.data?.pages.some((page) => page.items.length > 0) ?? false;
   const paused = query.fetchStatus === 'paused' && (!hasVisibleRows || isInvalidated);
   const loadError = query.isError && (!query.isFetchNextPageError || !hasVisibleRows);

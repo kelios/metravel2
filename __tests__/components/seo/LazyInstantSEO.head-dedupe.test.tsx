@@ -11,6 +11,7 @@
 import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { Platform } from 'react-native'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
 import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 import { resetHeadManagerForTests } from '@/utils/webHeadManager'
 
@@ -22,7 +23,10 @@ jest.mock('expo-router', () => ({
 
 jest.mock('expo-router/head', () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ children }: { children?: React.ReactNode }) => {
+    const { Helmet, HelmetProvider } = require('expo-router/vendor/react-helmet-async/lib')
+    return <HelmetProvider><Helmet defer={false}>{children}</Helmet></HelmetProvider>
+  },
 }))
 
 const META_SELECTORS = [
@@ -58,14 +62,17 @@ const expectSingleHead = (title: string, description: string) => {
 
 describe('LazyInstantSEO head ownership (#2756)', () => {
   const originalPlatform = Platform.OS
+  const originalCanUseDOM = HelmetProvider.canUseDOM
   let container: HTMLDivElement
   let root: Root | null
 
   beforeAll(() => {
+    HelmetProvider.canUseDOM = true
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
   })
 
   afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
   })
 
@@ -160,5 +167,51 @@ describe('LazyInstantSEO head ownership (#2756)', () => {
     for (const selector of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
       expect(document.head.querySelectorAll(selector)).toHaveLength(0)
     }
+  })
+
+  it.each(['/quests/subotica', '/quests/217/subotica'])('сохраняет build-owned noindex на %s после обновлений Helmet (#3444)', async (path) => {
+    window.history.replaceState(null, '', path)
+    document.head.innerHTML = '<meta name="robots" content="noindex, follow">'
+    // Временный SSR-документ объявляет robots до передачи клиентскому экрану,
+    // который не может вычислить вердикт по всей прозовой когорте сборки.
+    await act(async () => {
+      root?.render(<LazyInstantSEO key="ssr" title="Server quest page" robots="noindex, follow" />)
+    })
+    for (const revision of [1, 2]) {
+      await act(async () => {
+        root?.render(<LazyInstantSEO key="client" title={`Quest page ${revision}`} additionalTags={
+          <script type="application/ld+json">{JSON.stringify({ '@type': 'WebPage', name: `Revision ${revision}` })}</script>
+        } />)
+      })
+      expect(document.head.querySelectorAll('script[data-rh="true"]')).toHaveLength(1)
+      const robots = document.head.querySelectorAll('meta[name="robots"]')
+      expect(robots).toHaveLength(1)
+      expect(robots[0].getAttribute('content')).toBe('noindex, follow')
+      expect(robots[0].hasAttribute('data-rh')).toBe(false)
+    }
+    window.history.pushState(null, '', '/quests')
+    await act(async () => {
+      root?.render(<LazyInstantSEO key="catalog" title="Quest catalog" />)
+    })
+    const { siteDefaultRobots } = require('@/utils/seo')
+    expect(document.head.querySelectorAll('meta[name="robots"]')).toHaveLength(1)
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(siteDefaultRobots())
+  })
+
+  it('возвращает исходный robots после временного noindex на том же URL (#3444)', async () => {
+    window.history.replaceState(null, '', '/quests/217/subotica')
+    document.head.innerHTML = '<meta name="robots" content="index, follow">'
+    await act(async () => {
+      root?.render(<LazyInstantSEO key="ssr" title="Server quest" robots="index, follow" />)
+    })
+    await act(async () => {
+      root?.render(<LazyInstantSEO key="offline" title="Temporarily unavailable" robots="noindex, follow" />)
+    })
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, follow')
+    await act(async () => {
+      root?.render(<LazyInstantSEO key="client" title="Available quest" />)
+    })
+    expect(document.head.querySelectorAll('meta[name="robots"]')).toHaveLength(1)
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('index, follow')
   })
 })
