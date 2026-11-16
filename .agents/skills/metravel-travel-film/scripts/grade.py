@@ -16,6 +16,7 @@ uv run --with numpy python grade.py <plan.json> <plan_graded.json> [--look look.
      и проект совпадёт с рендером. Лук ставится последним фильтром каждого плана.
 Пропускаются уже обработанные файлы: «память» (свой лук воспоминаний), титры, карты (--skip-dirs).
 Ручная покраска плана: ключ "grade" вместе с "grade_manual": true — перезапуск grade.py его не трогает.
+Ключ плана "grade_extra" — ручная поправка плана поверх автоматической (ставится перед луком).
 render_plan.py применяет "grade" плана сам; без этого ключа картинка идёт как есть.
 """
 import json, os, subprocess, sys, hashlib
@@ -183,13 +184,15 @@ for k_ in range(len(L) - 1):
     if not (a_ and b_ and ca and cb) or ca == cb or scene(L[k_][4]) != scene(L[k_ + 1][4]) or abs(a_["p50"] - b_["p50"]) < 0.12:
         continue
     m_ = (a_["p50"] + b_["p50"]) / 2
-    TG.setdefault(k_, []).append(a_["p50"] + (m_ - a_["p50"]) * 0.6 * STRENGTH)
-    TG.setdefault(k_ + 1, []).append(b_["p50"] + (m_ - b_["p50"]) * 0.6 * STRENGTH)
+    st_ = 0.75 if abs(a_["p50"] - b_["p50"]) > 0.18 else 0.6     # v13: резкий перепад (лес ↔ солнечное поле) тянем сильнее
+    TG.setdefault(k_, []).append(a_["p50"] + (m_ - a_["p50"]) * st_ * STRENGTH)
+    TG.setdefault(k_ + 1, []).append(b_["p50"] + (m_ - b_["p50"]) * st_ * STRENGTH)
 print(f"выравнивание камер на стыках: планов {len(TG)}")
 for k_, ((obj, p, _, _, _), st) in enumerate(zip(L, S)):
     if obj.get("grade_manual"):   # ручная покраска плана: ключ "grade" оставляем как есть
         continue
-    chain = (correction(st, film, float(np.mean(TG[k_])), (0.78, 1.25)) if k_ in TG else correction(st, film)) if st else []
+    chain = (correction(st, film, float(np.mean(TG[k_])), (0.70, 1.32)) if k_ in TG else correction(st, film)) if st else []
+    if obj.get("grade_extra"): chain.append(obj["grade_extra"])   # точечная ручная поправка плана (рецензент: «gamma 1.4 на перебивке»)
     chain.append(f"lut3d=file='{look_path}':interp=tetrahedral")
     obj["grade"] = ",".join(chain); n += 1
 plan.setdefault("grade", {})["look"] = look_path
