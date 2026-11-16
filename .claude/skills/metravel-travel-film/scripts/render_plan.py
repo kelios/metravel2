@@ -148,10 +148,11 @@ for i, s in enumerate(SEG):
         dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
         fc.append(f"[0:a:0]volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}[aout]")
     cmd += ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]",
-            ] + VENC + ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", f]
+            ] + VENC + ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", f + ".part.mov"]   # прерванный рендер не оставляет битый кусок под готовым именем
     r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True)
     if r.returncode != 0:
         print("ОШИБКА", i, s.get("note"), r.stderr[-500:]); sys.exit(1)
+    os.replace(f + ".part.mov", f)
     print(i, s.get("note", "")[:50], flush=True)
 
 # склейка: цепочка xfade/acrossfade (стык без перехода — concat); рендер блоками по 20 кусков, потом блоки встык
