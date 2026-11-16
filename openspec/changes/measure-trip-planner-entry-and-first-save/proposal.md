@@ -24,7 +24,7 @@ Task type: analytics feature. Task-owned paths: utils/tripPlannerAnalytics.ts, h
 Platform impact: desktop web | mobile web; shared consumers сохраняют поведение.
 Localization impact: none — новый текст интерфейса отсутствует.
 API/data: только конечные значения источника, auth_state, outcome и существующий trip_id; без содержимого поездки.
-SEO/accessibility: без изменений. Performance: runtime отложен до показа CTA или действия, без новых тяжёлых зависимостей. Security: согласие на аналитику соблюдается; в URL только конечный planner_source, случайный id и отпечаток цели остаются локально.
+SEO/accessibility: без изменений. Performance: runtime отложен до действия и использует существующий async-маршрут формы; показ CTA отправляет только лёгкое событие, без загрузки формы. Новых тяжёлых зависимостей нет. Security: согласие на аналитику соблюдается; в URL только конечный planner_source, случайный id и отпечаток цели остаются локально.
 Dependencies: none. Fallback/mock policy: недоступное хранилище — память текущей страницы, без блокировки действия; моки только в unit-тестах.
 Validation: Jest для переходов, ответа создания и первой сохранённой точки; scoped ESLint, TypeScript, strict OpenSpec; независимое review; один mobile web сценарий на разрешённых тестовых данных после публикации.
 Risk: повторный учёт при навигации/повторе мутации. Rollback: revert коммита, существующие API и UI сохраняются.

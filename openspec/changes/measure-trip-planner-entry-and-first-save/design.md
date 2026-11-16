@@ -19,7 +19,7 @@ Alternative: unrelated click events lose guest attribution and do not distinguis
 - Session storage denial → in-memory fallback; reload attribution can be incomplete and must be reported.
 - Consent changes and date-window edges → report stage ratios, not closed-cohort abandonment.
 - Retries/reloads → stage deduplication via the latest matching local target. Same-target forms in one tab share the latest journey; denied/unavailable storage cannot preserve context through a page reload. Error attempts remain separate counts.
-- Bundle budget → journey runtime loads on visible CTA/click from article and assistant, before attributed navigation; loading failure preserves the functional planner destination. Shared trip analytics does not import the journey runtime. No heavy draft imports at article entry.
+- Bundle budget → article/assistant impressions use the existing lightweight analytics transport. Only a click loads journey context through the already registered create-route async root, before attributed navigation; loading failure preserves the functional planner destination. This avoids a separate analytics async root and its global loader metadata in entry. The failed canonical candidate had identical normalized entry logic but +127 B delivered Brotli from loader metadata (+80 B over the unchanged cap). Shared trip analytics does not import journey context. Neither the form nor storage runtime is loaded for an impression or eagerly imported at article entry.
 
 ## Migration Plan
 

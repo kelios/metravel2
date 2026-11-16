@@ -19,6 +19,10 @@ import { translate as i18nT } from '@/i18n'
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
 import { getTripsRouteSeo } from '@/components/trips/TripsPageSeo'
 
+// Article clicks reuse the router's existing async root instead of adding a
+// journey-runtime root to the entry chunk's global loader metadata.
+export { beginTripPlannerEntry } from '@/utils/tripPlannerAnalytics';
+
 export default function CreateTripScreen() {
   return (
     <>

@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { useAuth } from '@/context/AuthContext'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
+import { sendAnalyticsEvent } from '@/utils/analytics'
 import type { TripPlannerSource } from '@/utils/tripPlannerAnalytics'
 
 /** Намерение входа для действия «организовать поездку»: после входа посетитель возвращается в форму поездки. */
@@ -27,9 +28,10 @@ export function usePlanTripFromSource(source?: TripPlannerSource, impressionKey 
 
   const plannerImpression = useTrackedImpression(`${source}:${impressionKey}:${authReady}:${isAuthenticated}`, () => {
     if (authReady && source) {
-      void import('@/utils/tripPlannerAnalytics')
-        .then(({ trackTripPlannerImpression }) => trackTripPlannerImpression(source, isAuthenticated))
-        .catch(() => { /* An unavailable analytics chunk must not affect the CTA. */ })
+      void sendAnalyticsEvent('trip_planner_impression', {
+        event_category: 'trip_planner', event_label: source, source,
+        auth_state: isAuthenticated ? 'authenticated' : 'guest', outcome: 'visible',
+      })
     }
   })
 
@@ -39,7 +41,7 @@ export function usePlanTripFromSource(source?: TripPlannerSource, impressionKey 
       let attributedHref = href
       if (Platform.OS === 'web') {
         try {
-          const { beginTripPlannerEntry } = await import('@/utils/tripPlannerAnalytics')
+          const { beginTripPlannerEntry } = await import('@/app/(tabs)/trips/plan/create')
           attributedHref = beginTripPlannerEntry(href, isAuthenticated, source)
         } catch { /* Analytics loading must not block functional navigation. */ }
       }

@@ -146,13 +146,6 @@ export function trackPlannerTripCreated(entryId: string | undefined, tripId: num
   return true;
 }
 
-export function trackTripPlannerImpression(source: TripPlannerSource, authenticated: boolean): void {
-  void sendAnalyticsEvent('trip_planner_impression', {
-    event_category: 'trip_planner', event_label: source, source,
-    auth_state: authenticated ? 'authenticated' : 'guest', outcome: 'visible',
-  });
-}
-
 export function trackPlannerCreateFailed(entryId?: string): void {
   const journey = readJourneys().find((item) => item.id === entryId);
   if (journey) emit(journey, 'trip_create_failed', 'error');

@@ -86,6 +86,31 @@ describe('web planner attribution across login', () => {
   })
   afterEach(() => Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs }))
 
+  it('reports one visible CTA impression without starting a planner journey', async () => {
+    const originalObserver = globalThis.IntersectionObserver
+    let notify: IntersectionObserverCallback = () => {}
+    globalThis.IntersectionObserver = jest.fn((callback: IntersectionObserverCallback) => {
+      notify = callback
+      return { observe: jest.fn(), disconnect: jest.fn() }
+    }) as unknown as typeof IntersectionObserver
+    try {
+      const { result } = await renderHook(() => usePlanTripFromSource('assistant'))
+      await act(async () => {
+        result.current.plannerImpression.ref({})
+        const visible = [{ isIntersecting: true, intersectionRatio: 0.6 } as IntersectionObserverEntry]
+        notify(visible, {} as IntersectionObserver)
+        notify(visible, {} as IntersectionObserver)
+      })
+      expect(mockAnalytics.mock.calls).toEqual([['trip_planner_impression', {
+        event_category: 'trip_planner', event_label: 'assistant', source: 'assistant',
+        auth_state: 'guest', outcome: 'visible',
+      }]])
+      expect(mockPush).not.toHaveBeenCalled()
+    } finally {
+      globalThis.IntersectionObserver = originalObserver
+    }
+  })
+
   it('assistant quest keeps assistant source and initial guest cohort through the login redirect', async () => {
     const { result } = await renderHook(() => usePlanTripFromSource('assistant'))
     await act(async () => { await result.current.planTrip(href) })
