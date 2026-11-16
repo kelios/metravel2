@@ -88,7 +88,7 @@ type Props = {
 }
 
 function AssistantPlanDaysComponent({ plan, question, styles, colors, narrow }: Props) {
-  const { planTrip } = usePlanTripFromSource()
+  const { planTrip, plannerImpression } = usePlanTripFromSource('assistant')
   // Владелец черновика: черновик вошедшего не подхватит другой аккаунт на том же устройстве; гостевой — общий.
   const owner = useAuthStore((s) => (s.isAuthenticated && s.userId ? s.userId : null))
   const [opening, setOpening] = useState(false)
@@ -110,7 +110,7 @@ function AssistantPlanDaysComponent({ plan, question, styles, colors, narrow }: 
       void sendAnalyticsEvent(ASSISTANT_PLAN_OPEN_EVENT, { days: plan.days.length, items: draft.points.length, assembled: plan.assembled })
       const id = await saveTripPlanDraft(draft, owner)
       // Хранилище недоступно — форма откроется пустой: посетитель не остаётся перед мёртвой кнопкой.
-      planTrip(id ? buildTripPlanDraftHref(id) : '/trips/plan/create')
+      await planTrip(id ? buildTripPlanDraftHref(id) : '/trips/plan/create')
     } finally {
       openingRef.current = false
       setOpening(false)
@@ -153,6 +153,7 @@ function AssistantPlanDaysComponent({ plan, question, styles, colors, narrow }: 
           loading={opening}
           disabled={opening || draft.points.length === 0}
           testID="assistant-plan-open"
+          ref={plannerImpression.ref}
         />
       </View>
     </View>

@@ -1,8 +1,13 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
+import { useAuthStore } from '@/stores/authStore';
+import { trackTripPlannerForm } from '@/utils/tripPlannerAnalytics';
 
 import MyTripsDashboard from '@/components/trips/MyTripsDashboard';
 
 const mockPush = jest.fn();
+const mockAnalytics = jest.fn();
+jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: (...args: unknown[]) => mockAnalytics(...args) }));
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -92,8 +97,29 @@ describe('MyTripsDashboard', () => {
     await fireEvent.press(getByTestId('my-trips-plan-cta'));
     await fireEvent.press(getByTestId('my-trips-find-cta'));
 
-    expect(mockPush).toHaveBeenNthCalledWith(1, '/trips/plan/create');
+    expect(mockPush).toHaveBeenNthCalledWith(1, '/trips/plan/create?planner_source=navigation');
     expect(mockPush).toHaveBeenNthCalledWith(2, '/trips');
+  });
+
+  it('keeps navigation attribution while authentication restores without recording an early guest entry', async () => {
+    const originalOs = Platform.OS;
+    const previousAuth = useAuthStore.getState();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    useAuthStore.setState({ isAuthenticated: false, authReady: false });
+    mockAnalytics.mockClear();
+    try {
+      const { getByTestId } = await render(<MyTripsDashboard />);
+      await fireEvent.press(getByTestId('my-trips-plan-cta'));
+      const href = String(mockPush.mock.calls[0][0]);
+      expect(href).toBe('/trips/plan/create?planner_source=navigation');
+      expect(mockAnalytics).not.toHaveBeenCalled();
+      trackTripPlannerForm(href, true, true);
+      expect(mockAnalytics.mock.calls.find(([name]) => name === 'trip_planner_entry')?.[1])
+        .toMatchObject({ source: 'navigation', auth_state: 'authenticated', outcome: 'opened' });
+    } finally {
+      useAuthStore.setState(previousAuth);
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs });
+    }
   });
 
   // #2114: блок «Обновления» не стоит над скелетоном списка — монтируется под

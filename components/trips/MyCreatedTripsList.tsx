@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { beginTripPlannerEntry } from '@/utils/tripPlannerAnalytics';
+import { useAuthStore } from '@/stores/authStore';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { PlannedTrip, TripPlanStatus, TripTransport } from '@/api/plannedTrips';
@@ -186,7 +188,7 @@ function MyCreatedTripsList({ role = 'organized' }: Props) {
           variant="empty"
           action={{
             label: role === 'organized' ? i18nT('trips:components.trips.MyCreatedTripsList.organizovat_poezdku_1dccaa27') : i18nT('trips:components.trips.MyCreatedTripsList.nayti_poezdku_4bd445a5'),
-            onPress: () => router.push(role === 'organized' ? '/trips/plan/create' : '/trips'),
+            onPress: () => router.push(role === 'organized' ? beginTripPlannerEntry('/trips/plan/create', useAuthStore.getState().isAuthenticated, 'navigation', useAuthStore.getState().authReady) as never : '/trips'),
           }}
           secondaryAction={
             role === 'organized'

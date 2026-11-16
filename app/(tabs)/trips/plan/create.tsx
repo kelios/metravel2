@@ -7,8 +7,9 @@ import TripsPageSeo from '@/components/trips/TripsPageSeo';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { useTripPlannerAnalytics } from '@/hooks/useTripPlannerAnalytics';
 import { buildTripPlanPrefill } from '@/utils/tripPlanLinks';
-import { buildTripPlanDraftHref, clearTripPlanDraft, loadTripPlanDraft, TRIP_PLAN_DRAFT_SOURCE, type TripPlanDraft } from '@/utils/tripPlanDraft';
+import { clearTripPlanDraft, loadTripPlanDraft, TRIP_PLAN_DRAFT_SOURCE, type TripPlanDraft } from '@/utils/tripPlanDraft';
 import { buildTripPlanPrefillFromDraft, buildTripPlanRoutePrefill, draftRoutePoints } from '@/utils/tripPlanDraftIntake';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
@@ -62,6 +63,15 @@ function CreateTripScreenContent() {
   const initialValues = useMemo(() => (draft ? buildTripPlanPrefillFromDraft(draft) : buildTripPlanPrefill(params)), [draft, params]);
   // Точки маршрута: черновик плана либо одна точка материала из параметров ссылки (#3416 п.1).
   const routeDraft = useMemo(() => (draft ? draftRoutePoints(draft.points) : buildTripPlanRoutePrefill(params)), [draft, params]);
+  const formParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'planner_entry') continue;
+    const first = Array.isArray(value) ? value[0] : value;
+    if (typeof first === 'string') formParams.set(key, first);
+  }
+  const formHref = `/trips/plan/create${formParams.size ? `?${formParams.toString()}` : ''}`;
+  const plannerEntryId = useTripPlannerAnalytics(formHref, authReady, isAuthenticated, draft !== undefined);
+  const loginRedirect = formHref;
   const header = useScreenHeader({
     title: i18nT('trips:components.trips.planning.TripCreateForm.novaya_poezdka_1901be53'),
   });
@@ -87,7 +97,7 @@ function CreateTripScreenContent() {
               onPress={() =>
                 router.push(
                   buildLoginHref({
-                    redirect: draftId ? buildTripPlanDraftHref(draftId) : '/trips/plan/create',
+                    redirect: loginRedirect,
                     intent: 'plan-trip',
                   }) as never,
                 )
@@ -107,6 +117,7 @@ function CreateTripScreenContent() {
       <View style={styles.inner}>
         <ScreenHeader header={header} />
         <TripCreateForm
+          plannerEntryId={plannerEntryId}
           initialValues={initialValues}
           routeDraft={routeDraft}
           onCreated={(trip, routeSaved) => {

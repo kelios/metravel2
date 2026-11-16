@@ -250,6 +250,56 @@ describe('analytics inline script', () => {
     jest.useRealTimers()
   })
 
+  it('keeps planner journey identifiers out of real page locations, history and referrers through login', () => {
+    jest.useFakeTimers()
+    const { Platform } = require('react-native')
+    const originalOs = Platform.OS
+    const previousConsent = window.localStorage.getItem('metravel_consent_v1')
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    window.localStorage.setItem('metravel_consent_v1', JSON.stringify({ necessary: true, analytics: true }))
+    window.sessionStorage.removeItem('metravel_trip_planner_v1')
+    try {
+      const { beginTripPlannerEntry, trackTripPlannerForm } = require('@/utils/tripPlannerAnalytics')
+      const { buildLoginHref } = require('@/utils/authNavigation')
+      const formHref = beginTripPlannerEntry('/trips/plan/create?source=quest', false, 'assistant')
+      const entryId = trackTripPlannerForm(formHref, false, false)
+      const local = JSON.parse(window.sessionStorage.getItem('metravel_trip_planner_v1')!)
+        .find((item: { id: string }) => item.id === entryId)
+      const loginHref = buildLoginHref({ redirect: formHref, intent: 'plan-trip' })
+      expect(formHref).toBe('/trips/plan/create?source=quest&planner_source=assistant')
+      expect(new URLSearchParams(loginHref.split('?')[1]).get('redirect')).toBe(formHref)
+
+      const { windowMock, documentMock, createdScripts, ymSpy } = setupDomEnv()
+      const originalPushState = windowMock.history.pushState
+      windowMock.location.href = 'https://metravel.by/assistant'
+      runAnalyticsSnippet(windowMock, documentMock)
+      windowMock.metravelLoadAnalytics()
+      createdScripts.find((script) => script.src === 'https://mc.yandex.ru/metrika/tag.js')?.onload?.()
+      jest.runOnlyPendingTimers()
+      for (const href of [loginHref, formHref, '/trips/plan/42']) {
+        windowMock.location.href = `https://metravel.by${href}`
+        windowMock.history.pushState({}, '', href)
+        jest.runOnlyPendingTimers()
+      }
+      const views = windowMock.dataLayer.map((entry: IArguments) => Array.from(entry))
+        .filter((entry: unknown[]) => entry[0] === 'event' && entry[1] === 'page_view')
+      expect(views).toHaveLength(4)
+      expect(views[3][2]).toMatchObject({ page_referrer: `https://metravel.by${formHref}` })
+      expect(ymSpy.mock.calls.filter((entry) => entry[1] === 'hit').at(-1))
+        .toEqual([Number(TEST_METRIKA_ID), 'hit', 'https://metravel.by/trips/plan/42', expect.objectContaining({ referer: `https://metravel.by${formHref}` })])
+      const providerAndHistory = JSON.stringify([windowMock.dataLayer.map((entry: IArguments) => Array.from(entry)), ymSpy.mock.calls, originalPushState.mock.calls])
+      expect(providerAndHistory).toContain('planner_source=assistant')
+      expect(providerAndHistory).toContain('planner_source%3Dassistant')
+      for (const privateValue of ['planner_entry', entryId, local.targetKey]) expect(providerAndHistory).not.toContain(privateValue)
+    } finally {
+      if (previousConsent === null) window.localStorage.removeItem('metravel_consent_v1')
+      else window.localStorage.setItem('metravel_consent_v1', previousConsent)
+      window.sessionStorage.removeItem('metravel_trip_planner_v1')
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs })
+      jest.useRealTimers()
+    }
+  })
+
   it('reports the landing page before flushing product events, independently of late Metrika', () => {
     jest.useFakeTimers()
     try {

@@ -1,14 +1,20 @@
 import { fireEvent, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 const mockPush = jest.fn();
+const mockAnalytics = jest.fn();
+let mockSearchParams: Record<string, string> = { title: 'prefill' };
 const mockBuildTripPlanPrefill = jest.fn(() => ({ title: 'prefill' }));
 let mockAuthState = { authReady: true, isAuthenticated: false };
 
 jest.mock('expo-router', () => ({
   useFocusEffect: (cb: () => void | (() => void)) => require('react').useEffect(cb, [cb]),
-  useLocalSearchParams: () => ({ title: 'prefill' }),
+  useLocalSearchParams: () => mockSearchParams,
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
 }));
+jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: (...args: unknown[]) => mockAnalytics(...args) }));
+jest.mock('@/utils/consent', () => ({ readConsent: () => ({ analytics: true }) }));
+jest.mock('@/components/trips/TripsPageSeo', () => () => null);
 
 jest.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: typeof mockAuthState) => unknown) => selector(mockAuthState),
@@ -36,10 +42,18 @@ jest.mock('@/components/trips/planning/TripCreateForm', () => {
 });
 
 describe('CreateTripScreen auth gate', () => {
+  const originalOs = Platform.OS;
   beforeEach(() => {
     mockPush.mockClear();
+    mockAnalytics.mockClear();
+    mockSearchParams = { title: 'prefill' };
+    window.sessionStorage.clear();
     mockBuildTripPlanPrefill.mockClear();
     mockAuthState = { authReady: true, isAuthenticated: false };
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs });
   });
 
   it('blocks direct trip creation route for guests', async () => {
@@ -51,7 +65,7 @@ describe('CreateTripScreen auth gate', () => {
 
     await fireEvent.press(getByTestId('trip-create-login-link'));
     // #2898: на устройстве без входа гостевое действие открывает регистрацию.
-    expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Ftrips%2Fplan%2Fcreate&intent=plan-trip');
+    expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Ftrips%2Fplan%2Fcreate%3Ftitle%3Dprefill&intent=plan-trip');
   });
 
   it('renders trip creation form for authenticated users', async () => {
@@ -72,5 +86,29 @@ describe('CreateTripScreen auth gate', () => {
 
     expect(getByTestId('trip-create-auth-loading')).toBeTruthy();
     expect(queryByTestId('trip-create-form')).toBeNull();
+  });
+
+  it.each(['direct', 'expired'])('reuses a local %s journey after guest login without writing identifiers to the URL', async (entry) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    mockSearchParams = { title: `prefill-${entry}` };
+    const href = `/trips/plan/create?title=prefill-${entry}`;
+    if (entry === 'expired') {
+      const { beginTripPlannerEntry } = require('@/utils/tripPlannerAnalytics');
+      const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
+      beginTripPlannerEntry(href, false);
+      now.mockReturnValue(1000 + 31 * 60 * 1000);
+      mockAnalytics.mockClear();
+    }
+    const CreateTripScreen = require('@/app/(tabs)/trips/plan/create').default;
+    const first = await render(<CreateTripScreen />);
+    await fireEvent.press(first.getByTestId('trip-create-login-link'));
+    expect(new URLSearchParams(String(mockPush.mock.calls[0][0]).split('?')[1]).get('redirect')).toBe(href);
+    expect(mockSearchParams).toEqual({ title: `prefill-${entry}` });
+    await first.unmount();
+    mockAuthState = { authReady: true, isAuthenticated: true };
+    await render(<CreateTripScreen />);
+    expect(mockAnalytics.mock.calls.filter(([name]) => name === 'trip_planner_entry')).toHaveLength(1);
+    expect(mockAnalytics.mock.calls.filter(([name]) => name === 'trip_planner_form_view').map(([, params]) => [params.auth_state, params.outcome]))
+      .toEqual([['guest', 'auth_required'], ['guest', 'ready']]);
   });
 });

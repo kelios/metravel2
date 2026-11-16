@@ -7,6 +7,7 @@
 //   node scripts/fetch-ga4-stats.js --channel-breakdown --days 30 --json
 //   node scripts/fetch-ga4-stats.js --channel-breakdown --start-date 2026-10-20 --end-date 2026-10-26
 //   node scripts/fetch-ga4-stats.js --quest-search --days 7   # фразы поиска по каталогу квестов (#3183)
+//   node scripts/fetch-ga4-stats.js --trip-planner --days 7 --json   # вход → форма → сохранение (#3449)
 //
 // Find the numeric property ID in GA4: Admin → Property settings → "Идентификатор ресурса".
 // Needs the service-account email added to the GA4 property (Admin → Property Access
@@ -14,6 +15,7 @@
 // Note: GA4 undercounts metravel traffic (consent banner + adblockers) — treat as secondary.
 const { getAccessToken } = require('./lib/google-token')
 const { SOURCE_EVENTS, sourceReportRequests, buildSourceBreakdown, sourceMetricCell } = require('./lib/ga4-source-breakdown')
+const { tripPlannerRequest, buildTripPlannerReport, formatTripPlannerReport } = require('./lib/trip-planner-funnel')
 
 const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly'
 
@@ -44,6 +46,7 @@ function parseArgs(argv) {
     else if (a === '--events') args.events = true
     else if (a === '--channel-breakdown') args.channelBreakdown = true
     else if (a === '--quest-search') args.questSearch = true
+    else if (a === '--trip-planner') args.tripPlanner = true
     else if (a === '--days') args.days = Number(argv[++i])
     else if (a === '--property') args.property = argv[++i]
     else if (a === '--start-date') args.startDate = argv[++i]
@@ -249,6 +252,11 @@ async function collectStats(args, report) {
     }))
   }
 
+  let tripPlanner
+  if (args.tripPlanner) {
+    tripPlanner = buildTripPlannerReport(await allRows(report, { dateRanges, ...tripPlannerRequest() }), period)
+  }
+
   let channelBreakdown, sourceBreakdown
   if (args.channelBreakdown) {
     const common = {
@@ -313,6 +321,7 @@ async function collectStats(args, report) {
     quality: { totals: totals.metadata || {}, channels: { ...byChannel, rows: undefined } },
     ...(events ? { events, eventsTruncated } : {}),
     ...(questSearch ? { questSearch } : {}),
+    ...(tripPlanner ? { tripPlanner } : {}),
     ...(channelBreakdown ? { channelBreakdown } : {}),
     ...(sourceBreakdown ? { sourceBreakdown } : {}),
   }
@@ -381,6 +390,7 @@ async function main() {
     if (!events.length) console.log('     (ни одного события за окно — проверить инициализацию GA4)')
   }
   if (result.questSearch) console.log(formatQuestSearch(result.questSearch))
+  if (result.tripPlanner) console.log(formatTripPlannerReport(result.tripPlanner))
   if (result.channelBreakdown) console.log(formatBreakdown(result.channelBreakdown))
   if (result.sourceBreakdown) console.log(formatSourceBreakdown(result.sourceBreakdown))
   console.log(`\n   Качество отчёта: ${JSON.stringify(result.quality)}`)

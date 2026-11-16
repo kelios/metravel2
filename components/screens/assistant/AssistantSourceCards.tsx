@@ -63,7 +63,7 @@ type CardProps = {
 
 const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles, markerLabel }: CardProps) {
   const router = useRouter()
-  const { planTrip } = usePlanTripFromSource()
+  const { planTrip, plannerImpression } = usePlanTripFromSource('assistant')
   const item = useMemo(() => toPickItem(source), [source])
   const coordinates = sourceCoordinates(source)
   const track = useCallback(
@@ -117,6 +117,7 @@ const SourceCard = memo(function SourceCard({ source, slotWidth, colors, styles,
                 icon={<Feather name="calendar" size={16} color={colors.primaryDark} />}
                 onPress={planQuest}
                 testID={`assistant-source-plan-${source.type}-${source.source_id}`}
+                ref={plannerImpression.ref}
               />
             )}
             {coordinates ? (

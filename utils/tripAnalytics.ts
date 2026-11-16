@@ -72,6 +72,7 @@ export function trackRoutePointAdded(tripId: number, pointType: string): void {
   void sendAnalyticsEvent(TRIP_EVENTS.routePointAdded, {
     trip_id: tripId,
     point_type: pointType,
+    outcome: 'draft',
   });
 }
 

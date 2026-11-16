@@ -50,6 +50,7 @@ import {
 } from '@/api/plannedTrips';
 
 import { queryKeys } from '@/api/queryKeys';
+import { trackPlannerCreateFailed, trackPlannerFirstSavedPoint, trackPlannerTripCreated } from '@/utils/tripPlannerAnalytics';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
 import { useAuthStore } from '@/stores/authStore';
 import {
@@ -221,13 +222,15 @@ export function useTripSuggestions(tripId: string | number | null | undefined) {
 
 // ── Mutations ──────────────────────────────────────────────────────────────────
 
-export function useCreateTrip() {
+export function useCreateTrip(plannerEntryId?: string) {
   const qc = useQueryClient();
   const owner = useQueryOwner();
   return useMutation<PlannedTrip, unknown, CreateTripInput>({
     mutationFn: createTrip,
+    onError: () => trackPlannerCreateFailed(plannerEntryId),
     onSuccess: (trip) => {
-      trackTripCreated(trip.id, trip.transport);
+      if (!trackPlannerTripCreated(plannerEntryId, trip.id, trip.transport)) trackTripCreated(trip.id, trip.transport);
+      trackPlannerFirstSavedPoint(trip.id, trip.route);
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });
       // Публичная поездка попадает в каталог «Поехали со мной» (BE отдаёт её сразу).
@@ -287,6 +290,7 @@ export function useUpdateTripRoute() {
   return useMutation<PlannedTrip, unknown, UpdateRouteInput>({
     mutationFn: updateTripRoute,
     onSuccess: (trip) => {
+      trackPlannerFirstSavedPoint(trip.id, trip.route);
       qc.setQueryData<PlannedTrip>(queryKeys.plannedTrip(trip.id), trip);
       invalidateRouteElevation(qc, trip.id);
       void qc.invalidateQueries({ queryKey: queryKeys.plannedTripsMine(owner) });

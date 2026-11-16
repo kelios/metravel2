@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { beginTripPlannerEntry } from '@/utils/tripPlannerAnalytics';
+import { useAuthStore } from '@/stores/authStore';
 import Feather from '@expo/vector-icons/Feather';
 
 import MyApplicationsList from '@/components/trips/MyApplicationsList';
@@ -86,7 +88,7 @@ export default function MyTripsDashboard() {
     primaryAction: {
       icon: 'plus',
       label: i18nT('trips:components.trips.MyTripsDashboard.organizovat_poezdku_2332a286'),
-      onPress: () => router.push('/trips/plan/create'),
+      onPress: () => router.push(beginTripPlannerEntry('/trips/plan/create', useAuthStore.getState().isAuthenticated, 'navigation', useAuthStore.getState().authReady) as never),
       testID: 'my-trips-plan-cta',
     },
   });

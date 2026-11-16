@@ -55,7 +55,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
   }, [travel, toggle, onFavoriteToggle]);
 
   // Одно действие со страницей ассистента (#3295): гость — на вход, вошедший — в форму новой поездки.
-  const { planTrip } = usePlanTripFromSource();
+  const { planTrip, plannerImpression } = usePlanTripFromSource('travel', String(travel.id));
   const handlePlanTripFromRoute = useCallback(() => {
     planTrip(buildTripPlanCreateHref(travel));
   }, [planTrip, travel]);
@@ -222,6 +222,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
           accessibilityLabel={i18nT('travel:components.travel.CTASection.organizovat_poezdku_po_etomu_marshrutu_otkro_4447378e')}
           testID="travel-plan-trip-cta"
+          ref={plannerImpression.ref}
         />
 
         <Button

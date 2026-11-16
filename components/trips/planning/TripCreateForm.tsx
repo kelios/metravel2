@@ -38,6 +38,7 @@ import { translate as i18nT } from '@/i18n'
 
 
 interface Props {
+  plannerEntryId?: string;
   /** `routeSaved` — точки черновика маршрута сохранены (либо черновика не было). */
   onCreated?: (trip: PlannedTrip, routeSaved: boolean) => void;
   initialValues?: TripPlanPrefill;
@@ -183,7 +184,7 @@ const buildStartPoint = (values: FormValues): RoutePoint | null => {
   };
 };
 
-function TripCreateForm({ onCreated, initialValues, routeDraft }: Props) {
+function TripCreateForm({ onCreated, initialValues, routeDraft, plannerEntryId }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   // Режим берётся из вьюпорта, а не из `Platform.OS`: mobile web, Android и
@@ -216,7 +217,7 @@ function TripCreateForm({ onCreated, initialValues, routeDraft }: Props) {
     }),
     [colors],
   );
-  const create = useCreateTrip();
+  const create = useCreateTrip(plannerEntryId);
   const routeSave = useTripRouteDraftSave(routeDraft, onCreated);
   const consent = useActionConsent(CONSENT_TYPES.TRIP_ORGANIZER);
 
