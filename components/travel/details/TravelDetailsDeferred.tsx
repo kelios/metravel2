@@ -18,6 +18,7 @@ import { useTravelDeferredSectionsModel } from './hooks/useTravelDeferredSection
 import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
 import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
+import { RouteElevationProfileReserve } from './sections/RouteElevationProfileReserve'
 import {
   TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT,
   TravelDetailsDeferredTransition,
@@ -44,7 +45,6 @@ const TravelDetailsMapSectionLazy = withLazy(() =>
 
 const AUTHOR_PLACEHOLDER = <AuthorSectionSkeleton />
 const RATING_PLACEHOLDER = <RatingSectionSkeleton />
-const MAP_PLACEHOLDER = <MapSectionSkeleton />
 const COMMENTS_PLACEHOLDER = <CommentsSkeleton />
 
 type FooterRuntimeFrameProps = {
@@ -129,6 +129,10 @@ export const TravelDeferredSections: React.FC<{
   const sidebarPlaceholder = <SidebarSectionSkeleton travel={travel} />
   const shouldLoadRatingSection = shouldLoadRating
   const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)
+  const mapPlaceholder = <>
+    <MapSectionSkeleton />
+    <RouteElevationProfileReserve count={travel.route_track_files_count} />
+  </>
   const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)
   const shouldLoadCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
   // Single source of truth for "the comments subtree may mount": the reserve
@@ -244,10 +248,10 @@ export const TravelDeferredSections: React.FC<{
           testID="travel-details-map-transition"
           isMobile={isMobile}
           pending={!shouldLoadMapSection}
-          placeholder={MAP_PLACEHOLDER}
+          placeholder={mapPlaceholder}
         >
           {shouldLoadMapSection ? (
-            <Suspense fallback={MAP_PLACEHOLDER}>
+            <Suspense fallback={mapPlaceholder}>
               <TravelDetailsMapSectionLazy
                 travel={travel}
                 anchors={anchors}

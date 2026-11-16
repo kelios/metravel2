@@ -547,11 +547,11 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.travel.id).toBe(7)
   })
 
-  it('keeps map navigation anchors and load conditions inside a measured child frame', async () => {
+  it.each([undefined, 0, 2])('reserves profiles before the map module, retaining navigation anchors (count=%s)', async count => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
     const anchors: any = Object.fromEntries(['comments', 'description', 'excursions', 'gallery', 'map', 'minus',
       'near', 'plus', 'points', 'popular', 'recommendation', 'video'].map(key => [key, { current: null }]))
-    const travel: any = { id: 3382, gallery: [] }
+    const travel: any = { id: 3382, gallery: [], route_track_files_count: count }
     const transitions = new Map<string, CapturedProps>()
     const scrollToMapSection = jest.fn()
     const sections = (forceOpenKey: string | null) => (
@@ -562,6 +562,9 @@ describe('TravelDeferredSections (web author defer)', () => {
     let tree: RenderResult
     tree = await renderTree(sections(null))
     expect(transitions.get('travel-details-map-transition')).toMatchObject({ pending: true })
+    const placeholder = await renderTree(<>{transitions.get('travel-details-map-transition')!.placeholder}</>)
+    if (count) expect(placeholder.getByTestId('route-elevation-profiles-reserve', { includeHiddenElements: true })).toHaveStyle({ height: 1120 })
+    else expect(placeholder.queryByTestId('route-elevation-profiles-reserve', { includeHiddenElements: true })).toBeNull()
     expect(mockMapSectionSpy).not.toHaveBeenCalled()
     await tree.rerender(sections('map'))
     const transition = transitions.get('travel-details-map-transition')!

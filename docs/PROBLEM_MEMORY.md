@@ -976,6 +976,23 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
 
+- **Causal delta #3436, 2026-11-15 (source; production acceptance pending):**
+  #3435 отдаёт `route_track_files_count` в detail/by-slug/upsert. Web резервирует
+  560 px на файл из данных статьи уже во внешнем deferred-placeholder,
+  placeholder ленивой секции карты и в
+  первом route-block кадре; 0/старый payload не добавляют слот. Список файлов
+  не служит источником резерва. Резерв держится до завершения парсинга текущего
+  travel/file snapshot и в Suspense графика; пришедшие профили видны сразу,
+  излишек снимает неизменённый measured-flow shrink (#3430), `overflow-y: clip`
+  сохранён. Пустой/ошибочный файл не оставляет постоянный слот. Контроль:
+  `useRouteFilePreviews.readiness.test.tsx` (реальный GPX parser),
+  `TravelRouteMapBlock.reserve.dom.web.test.tsx` (первый кадр, chart Suspense,
+  заполнение и безопасное сжатие), `TravelDetailsDeferred.web.test.tsx`.
+  У 544 в `travelFastScrollCls.ts` снято исключение: все route-block источники
+  снова запретны и входят в CLS. Ограничение API: файл может дать несколько
+  профилей — число файлов не является точным числом линий. Следующая проверка:
+  production-матрица #3436 на 544/470, медленный читатель и статья 967 без файлов;
+  source-тесты не заменяют этот Done gate.
 - **Инвариант:** deferred-placeholder остаётся в потоке до первого ненулевого
   layout разрешённого runtime-модуля, а его внешний reserve совпадает с
   runtime-геометрией. Узлы footer/runtime не должны попадать в

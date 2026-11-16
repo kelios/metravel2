@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react-native'
 
-import { TravelRouteMapBlock } from '@/components/travel/details/sections/TravelRouteMapBlock'
+import { TravelRouteMapBlock } from '@/components/travel/details/sections/TravelRouteMapBlock.tsx'
 
 const mockTravelMap = jest.fn((_props: any) => null)
 const mockToggleableMap = jest.fn(({ children }: any) => children)
@@ -77,6 +77,22 @@ const baseProps = {
 }
 
 describe('TravelRouteMapBlock', () => {
+  it.each([undefined, 0])('adds no profile slot for old/zero-count payload (%s)', async count => {
+    mockUseTravelRouteMapBlockModel.mockReturnValue({ routeProfiles: [], routeFileMarkers: [] })
+    await render(<TravelRouteMapBlock {...baseProps} travel={{ ...baseProps.travel, route_track_files_count: count }} />)
+    expect(screen.queryByTestId('route-elevation-profiles')).toBeNull()
+  })
+
+  it('reserves from the first route frame even before map data and file parsing', async () => {
+    mockUseTravelRouteMapBlockModel.mockReturnValue({ routeProfiles: [], routeFileMarkers: [], shouldShowMapLoadingState: true })
+    const tree = await render(<TravelRouteMapBlock {...baseProps} hasMapData={false}
+      travel={{ ...baseProps.travel, route_track_files_count: 2 }} isRoutePreviewReady={false} />)
+    expect(screen.getByTestId('route-elevation-profiles')).toHaveStyle({ minHeight: 1120 })
+    await tree.rerender(<TravelRouteMapBlock {...baseProps} hasMapData={false}
+      travel={{ ...baseProps.travel, route_track_files_count: 2 }} isRoutePreviewReady />)
+    expect(screen.getByTestId('route-elevation-profiles')).not.toHaveStyle({ minHeight: 1120 })
+  })
+
   beforeEach(() => {
     mockTravelMap.mockClear()
     mockToggleableMap.mockClear()

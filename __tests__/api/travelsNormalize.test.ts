@@ -13,6 +13,14 @@
 import { normalizeTravelItem } from '@/api/travelsNormalize';
 
 describe('normalizeTravelItem', () => {
+  it.each([0, 1, 10])('preserves detail route track-file count %s', count => {
+    expect(normalizeTravelItem({ id: 544, route_track_files_count: count }).route_track_files_count).toBe(count);
+  });
+
+  it.each([undefined, null, '2', -1, 1.5, NaN, Infinity])('ignores invalid/old route track-file count %s', count => {
+    expect(normalizeTravelItem({ id: 544, route_track_files_count: count }).route_track_files_count).toBeUndefined();
+  });
+
   describe('title normalization', () => {
     it('collapses consecutive spaces in name', () => {
       const out = normalizeTravelItem({ name: 'Модынь  -   одна' });

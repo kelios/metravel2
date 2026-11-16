@@ -34,6 +34,8 @@ export const TravelRouteMapBlock: React.FC<{
   highlightedPoint: { coord: string; key: string } | null
   isLoading: boolean
   isRoutePreviewLoading: boolean
+  /** Web reserve readiness; native keeps its existing rendering. */
+  isRoutePreviewReady?: boolean
   keyPointLabels: any
   mapOpenTrigger: number
   mapResizeTrigger: number

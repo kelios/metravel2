@@ -12,6 +12,7 @@ import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 const SUPPORTED_ROUTE_EXTENSIONS = new Set(['gpx', 'kml'])
+const EMPTY_ROUTE_FILES: TravelRouteFile[] = []
 
 export type RoutePreviewItem = {
   file: TravelRouteFile
@@ -95,6 +96,7 @@ export function useRouteFilePreviews({
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const [routeFilePoints, setRouteFilePoints] = useState<RouteFilePointItem[]>([])
   const [isParsingRouteFiles, setIsParsingRouteFiles] = useState(false)
+  const [parsedSource, setParsedSource] = useState<{ travelId: number; files: TravelRouteFile[] } | null>(null)
   const colors = useThemedColors()
 
   const routeColorPalette = useMemo(
@@ -116,12 +118,14 @@ export function useRouteFilePreviews({
   const routeFilesEnabled = Boolean(travelId) && canRenderHeavy
 
   const {
-    data: routeFiles = [],
+    data: routeFilesData,
     isLoading: isRouteFilesLoading = false,
     isFetching: isRouteFilesFetching = false,
+    error: routeFilesError,
   } = useTravelRouteFiles(travelId, {
     enabled: routeFilesEnabled,
   })
+  const routeFiles = routeFilesData ?? EMPTY_ROUTE_FILES
 
   const supportedFiles = useMemo(
     () =>
@@ -230,6 +234,7 @@ export function useRouteFilePreviews({
       } finally {
         if (active) {
           setIsParsingRouteFiles(false)
+          setParsedSource({ travelId, files: supportedFiles })
         }
       }
     }
@@ -261,5 +266,10 @@ export function useRouteFilePreviews({
     primaryRoutePreview: routePreviewItems[0]?.preview ?? null,
     hasSupportedRouteFiles: supportedFiles.length > 0,
     isRoutePreviewLoading: routeFilesEnabled && (isRouteFilesLoading || isRouteFilesFetching || isParsingRouteFiles),
+    // A settled list is not a settled preview: its parsing starts in a passive
+    // effect, possibly only after scrolling. Fence both that gap and navigation.
+    isRoutePreviewReady: routeFilesEnabled && !isRouteFilesLoading && !isRouteFilesFetching &&
+      (routeFilesData !== undefined || routeFilesError != null) &&
+      (supportedFiles.length === 0 || (parsedSource != null && parsedSource.travelId === travelId && parsedSource.files === supportedFiles)),
   }
 }

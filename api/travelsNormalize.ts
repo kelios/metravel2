@@ -149,6 +149,9 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     // `utils/mediaPlaceholderIndex.ts`). Экранам ниже больше нечего передавать.
     indexTravelMedia(t.media as TravelMedia | null | undefined);
     const out: Record<string, unknown> = { ...t };
+    if (typeof t.route_track_files_count !== 'number' || !Number.isSafeInteger(t.route_track_files_count) || t.route_track_files_count < 0) {
+        delete out.route_track_files_count;
+    }
     const mediaPathWithApiPrefix = /^\/api\/(travel-image|travel-description-image|address-image|gallery|uploads|media)(\/|$)/i;
     const firstPartyMediaUrl = /http:\/\/(?:metravel\.by|cdn\.metravel\.by|api\.metravel\.by)(\/(?:travel-image|travel-description-image|address-image|gallery|uploads|media)[^\s"'<>)]*)/gi;
 

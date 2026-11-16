@@ -7,15 +7,12 @@ import { installReadOnlyTravelApi } from './readOnlyTravelApi';
 // «Рядом» 338 px сменяется пустым состоянием 121 px у конца страницы.
 // `routeBlockMinPx` — высота блока карты с пришедшими профилями: ниже неё прогон
 // не прошёл поздний рост (без профилей блок 692 px на проде).
-// `routeBlockBudgeted: false` — сдвиги блока маршрута статьи не запретны и не идут
-// в бюджет, а пишутся отдельно (`routeShifts`): читатель на карте, у которого
-// профили растят блок, выталкивает видимые точки (ветка #3419, на Hexenstieg
-// редко) — до #3435/#3436 (число файлов маршрута в данных статьи даст резерв с
-// первого кадра). Смешанный сдвиг (хвост + блок маршрута) остаётся в бюджете.
+// #3436: обе статьи резервируют профили из данных статьи с первого кадра;
+// сдвиги блока маршрута снова входят в бюджет и запретные источники.
 // У 470 разгон 6000 px проходит блок до прихода GPX.
 const ARTICLES = [
-  { path: '/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney', id: 470, routeBlockMinPx: 2000, routeBlockBudgeted: true },
-  { path: '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg', id: 544, routeBlockMinPx: 900, routeBlockBudgeted: false },
+  { path: '/travels/tour-du-mont-blanc-vokrug-monblana-za-10-dney', id: 470, routeBlockMinPx: 2000 },
+  { path: '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg', id: 544, routeBlockMinPx: 900 },
 ] as const;
 // Протокол воспроизведения с прода 14.11.2026: около 1800 px/с. При шаге раз в
 // 450 мс хвост успевает разрешиться за экраном и сдвига нет.
@@ -27,7 +24,6 @@ const RUN_UP_PX = 6000;
 const SAMPLES = 3;
 // Источники этого механизма: точки маршрута, въезжающие в экран, и профили высот,
 // нарисованные поверх них до публикации высоты блока.
-const FORBIDDEN_SOURCES = ['travel-details-points', 'route-elevation-profile'];
 const ROUTE_BLOCK_SOURCE = /^(travel-details-points|travel-details-route-map-transition|route-elevation-)/;
 // #3430: сдвиги секций хвоста («Рядом», комментарии, футер) входят в бюджет 0,1:
 // сжатие занятой высоты удерживается, пока не уйдёт из экрана или не найдёт якорь
@@ -55,6 +51,8 @@ function readFrame() {
     island: Boolean(document.querySelector('[data-ssr-html-island="description"]')),
     mapTop: map ? map.getBoundingClientRect().top : null,
     routeBlockHeight: route ? route.getBoundingClientRect().height : null,
+    profileCount: document.querySelectorAll('[data-testid="route-elevation-profile"]').length,
+    pendingProfileReserves: document.querySelectorAll('[data-testid="route-elevation-profiles-reserve"]').length,
   };
 }
 
@@ -145,19 +143,20 @@ export async function assertTravelFastScrollCls(
     const tailShifts = shifts.filter(isTailShift);
     const isRouteShift = (entry: Shift) => entry.sources.length > 0 &&
       entry.sources.every(source => source.testID !== null && ROUTE_BLOCK_SOURCE.test(source.testID));
-    const routeShifts = article.routeBlockBudgeted ? [] : shifts.filter(isRouteShift);
-    const budgeted = shifts.filter(entry => !routeShifts.includes(entry));
-    const cumulative = valid ? budgeted.reduce((sum, entry) => sum + entry.value, 0) : null;
-    const forbidden = !article.routeBlockBudgeted ? [] : budgeted.flatMap(entry => entry.sources.map(source => source.testID)).filter(testID => testID !== null && FORBIDDEN_SOURCES.includes(testID));
+    const routeShifts = shifts.filter(isRouteShift);
+    const cumulative = valid ? shifts.reduce((sum, entry) => sum + entry.value, 0) : null;
+    const forbidden = shifts.flatMap(entry => entry.sources.map(source => source.testID)).filter(testID => testID !== null && ROUTE_BLOCK_SOURCE.test(testID));
     results.push({ article: article.id, sample, viewport, first, final, steps, cumulative, forbidden, shifts, tailShifts, routeShifts, errors, writes, failure,
       pass: !failure && valid && cumulative !== null && cumulative <= 0.1 && forbidden.length === 0 &&
         final !== null && final.top + final.viewport >= final.height - 2 &&
+        final.profileCount > 0 && final.pendingProfileReserves === 0 &&
         (final.routeBlockHeight ?? 0) >= article.routeBlockMinPx && errors.length === 0 && writes.length === 0 });
   }
   await testInfo.attach(`travel-fast-scroll-cls${viewport.width}-raw`, { body: JSON.stringify(results, null, 2), contentType: 'application/json' });
   expect(results).toHaveLength(SAMPLES * ARTICLES.length);
   expect(results.filter(result => !result.pass).map(result => ({
     article: result.article, sample: result.sample, cumulative: result.cumulative, forbidden: result.forbidden, failure: result.failure,
-    routeBlockHeight: result.final?.routeBlockHeight ?? null, errors: result.errors, writes: result.writes,
+    routeBlockHeight: result.final?.routeBlockHeight ?? null, profileCount: result.final?.profileCount ?? null,
+    pendingProfileReserves: result.final?.pendingProfileReserves ?? null, errors: result.errors, writes: result.writes,
   }))).toEqual([]);
 }

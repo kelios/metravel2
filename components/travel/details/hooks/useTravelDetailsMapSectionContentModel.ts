@@ -53,6 +53,7 @@ export function useTravelDetailsMapSectionContentModel({
     resetRoutePreviewItems,
     primaryRoutePreview,
     isRoutePreviewLoading,
+    isRoutePreviewReady,
   } = useRouteFilePreviews({
     travelId: travel?.id,
     canRenderHeavy,
@@ -115,6 +116,7 @@ export function useTravelDetailsMapSectionContentModel({
     hasMapData,
     isLoading,
     isRoutePreviewLoading,
+    isRoutePreviewReady,
     keyPointLabels,
     routeFilePoints,
     routePreviewItems,

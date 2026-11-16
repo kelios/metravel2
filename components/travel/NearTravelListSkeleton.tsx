@@ -1,5 +1,6 @@
 import React, { memo, useMemo, type ReactElement } from 'react'
 import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import type { Travel } from '@/types/types'
 
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import {
@@ -10,6 +11,7 @@ import {
   RatingSectionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import { TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT } from '@/components/travel/details/TravelDetailsDeferredTransition'
+import { RouteElevationProfileReserve } from '@/components/travel/details/sections/RouteElevationProfileReserve'
 import { createTravelDetailsSectionHeaderStyles } from '@/components/travel/details/styles/travelDetailsSectionHeaderStyles'
 import { createTravelTmlRoundStyles, TRAVEL_TML_ROUND_IMAGE_HEIGHT } from '@/components/travel/TravelTmlRound.styles'
 import { canShowNearTravelMapMode, getNearTravelMapOrigin, type NearTravelCoordinateSource } from '@/components/travel/utils/nearTravelMapAvailability'
@@ -143,7 +145,7 @@ const skeletonStyles = StyleSheet.create({
  */
 // The map toggle is reserved only where the loaded list can show it (#2382):
 // callers pass the travel, the coordinate rule lives in one place.
-type NearTravelSkeletonProps = { travel?: NearTravelCoordinateSource & { id?: number | string | null } }
+type NearTravelSkeletonProps = { travel?: NearTravelCoordinateSource & { id?: number | string | null } & Pick<Travel, 'route_track_files_count'> }
 
 export const NearTravelListSkeleton = memo(function NearTravelListSkeleton({ travel }: NearTravelSkeletonProps) {
   const canShowMapMode = !!travel && canShowNearTravelMapMode(getNearTravelMapOrigin(travel))
@@ -269,6 +271,7 @@ export function TravelDetailsDeferredSectionsSkeleton({ isMobile, travel }: { is
       </View>
       <View>
         <MapSectionSkeleton />
+        {Platform.OS === 'web' ? <RouteElevationProfileReserve count={travel?.route_track_files_count} /> : null}
       </View>
       <View>
         <SidebarSectionSkeleton travel={travel} />

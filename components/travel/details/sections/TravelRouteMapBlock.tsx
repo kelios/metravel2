@@ -14,6 +14,7 @@ import type { Travel } from '@/types/types'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useTravelRouteMapBlockModel } from '../hooks/useTravelRouteMapBlockModel'
 import { translate as i18nT } from '@/i18n'
+import { getRouteElevationProfilesReserveHeight, RouteElevationProfileReserve } from './RouteElevationProfileReserve'
 
 
 const TravelMap = React.lazy(() =>
@@ -50,6 +51,7 @@ export const TravelRouteMapBlock: React.FC<{
   highlightedPoint: { coord: string; key: string } | null
   isLoading: boolean
   isRoutePreviewLoading: boolean
+  isRoutePreviewReady?: boolean
   keyPointLabels: any
   mapOpenTrigger: number
   mapResizeTrigger: number
@@ -70,6 +72,7 @@ export const TravelRouteMapBlock: React.FC<{
   highlightedPoint,
   isLoading,
   isRoutePreviewLoading,
+  isRoutePreviewReady = false,
   keyPointLabels,
   mapOpenTrigger,
   mapResizeTrigger,
@@ -99,6 +102,8 @@ export const TravelRouteMapBlock: React.FC<{
     routePreviewItems,
   })
   const colors = useThemedColors()
+  const profileReserveHeight = getRouteElevationProfilesReserveHeight(travel.route_track_files_count)
+  const profilePlaceholder = <RouteElevationProfileReserve count={travel.route_track_files_count} />
   const travelMapPoints = React.useMemo(
     () => [
       ...(Array.isArray(travel.travelAddress) ? travel.travelAddress : []),
@@ -158,24 +163,6 @@ export const TravelRouteMapBlock: React.FC<{
                 <MapFallback />
               )}
             </ToggleableMap>
-            {routeProfiles.length > 0 ? (
-              <Suspense fallback={null}>
-                {routeProfiles.map((profile) => (
-                  <RouteElevationProfile
-                    key={profile.key}
-                    title={profile.title}
-                    lineColor={profile.lineColor}
-                    preview={profile.preview}
-                    canDownloadTrack
-                    onDownloadTrack={profile.onDownloadTrack}
-                    isDownloadPending={profile.isDownloadPending}
-                    placeHints={placeHints}
-                    transportHints={transportHints}
-                    keyPointLabels={profile.keyPointLabels}
-                  />
-                ))}
-              </Suspense>
-            ) : null}
           </>
         ) : shouldShowMapLoadingState ? (
           <MapFallback />
@@ -196,6 +183,31 @@ export const TravelRouteMapBlock: React.FC<{
               {i18nT('travel:components.travel.details.sections.TravelRouteMapBlock.avtor_ne_dobavil_liniyu_marshruta_dlya_etogo_636d4fc3')}</Text>
           </View>
         )}
+        {profileReserveHeight > 0 || routeProfiles.length > 0 ? (
+          <View
+            testID="route-elevation-profiles"
+            style={!isRoutePreviewReady && profileReserveHeight > 0 ? { minHeight: profileReserveHeight } : undefined}
+          >
+            {routeProfiles.length > 0 ? (
+              <Suspense fallback={profilePlaceholder}>
+                {routeProfiles.map((profile) => (
+                  <RouteElevationProfile
+                    key={profile.key}
+                    title={profile.title}
+                    lineColor={profile.lineColor}
+                    preview={profile.preview}
+                    canDownloadTrack
+                    onDownloadTrack={profile.onDownloadTrack}
+                    isDownloadPending={profile.isDownloadPending}
+                    placeHints={placeHints}
+                    transportHints={transportHints}
+                    keyPointLabels={profile.keyPointLabels}
+                  />
+                ))}
+              </Suspense>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </View>
   )

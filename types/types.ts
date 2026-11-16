@@ -147,6 +147,8 @@ export type Travel = TravelModerationMetadata & {
     // ✅ ИСПРАВЛЕНО: Поддержка обоих форматов для обратной совместимости
     gallery: GalleryItem[]
     travelAddress: TravelAddressItem[]
+    /** Detail-only track-file count (#3435); absent in older/SSR-cached payloads. */
+    route_track_files_count?: number
     // #715: backend media variants manifest; отсутствует на старом payload
     media?: TravelMedia | null
     userIds: string

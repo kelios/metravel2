@@ -63,6 +63,17 @@ describe('TravelDetailsPostLcpRuntime', () => {
     Platform.OS = originalPlatformOS
   })
 
+  it.each([undefined, 0, 2])('reserves profiles in the outer placeholder before the deferred chunk (count=%s)', async count => {
+    mockLoadDeferredSectionsComponent.mockReturnValue(new Promise(() => {}))
+    await render(<TravelDetailsPostLcpRuntime
+      travel={{ id: 544, name: 'GPX', slug: 'gpx', gallery: [], route_track_files_count: count } as any}
+      isMobile anchors={{} as any} forceOpenKey={null} scrollToMapSection={jest.fn()}
+    />)
+    if (count) expect(screen.getByTestId('route-elevation-profiles-reserve', INCLUDE_HIDDEN)).toHaveStyle({ height: 1120 })
+    else expect(screen.queryByTestId('route-elevation-profiles-reserve', INCLUDE_HIDDEN)).toBeNull()
+    expect(screen.queryByTestId('travel-deferred-sections', INCLUDE_HIDDEN)).toBeNull()
+  })
+
   it('does not treat a native-renderer web layout callback as connected measured DOM', async () => {
     await render(
       <TravelDetailsPostLcpRuntime
@@ -84,7 +95,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
 
     await render(
       <TravelDetailsPostLcpRuntime
-        travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
+        travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [], route_track_files_count: 2 } as any}
         isMobile
         anchors={{} as any}
         forceOpenKey={null}
@@ -97,6 +108,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
     })
 
     expect(screen.getByTestId('section-skeleton-reserved')).toBeTruthy()
+    expect(screen.queryByTestId('route-elevation-profiles-reserve', INCLUDE_HIDDEN)).toBeNull()
     expect(screen.queryByTestId('travel-details-deferred-load-error')).toBeNull()
     expect(screen.queryByTestId('travel-details-deferred-transition')).toBeNull()
   })

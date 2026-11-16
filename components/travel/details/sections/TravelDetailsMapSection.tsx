@@ -54,6 +54,7 @@ export const TravelDetailsMapSection: React.FC<{
     hasMapData,
     isLoading,
     isRoutePreviewLoading,
+    isRoutePreviewReady,
     keyPointLabels,
     routeFilePoints,
     routePreviewItems,
@@ -115,6 +116,7 @@ export const TravelDetailsMapSection: React.FC<{
             highlightedPoint={highlightedPoint}
             isLoading={isLoading}
             isRoutePreviewLoading={isRoutePreviewLoading}
+            isRoutePreviewReady={isRoutePreviewReady}
             keyPointLabels={keyPointLabels}
             mapOpenTrigger={mapOpenTrigger}
             mapResizeTrigger={mapResizeTrigger}
