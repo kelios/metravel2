@@ -5249,6 +5249,87 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### ROUTE-BUNDLE-001 — eager-код маршрута это код, который маршруту нужен
 
+- **Новый bounded repair — 16.11.2026 (#3440), source-only:** первый общий
+  one-cut selector прошёл63 unit cases, lint/checkfast, но actual replay с
+  filesystem policy выбрал постороннюю7-module группу: home482340/480437B и
+  travels573132/571443B остались без улучшения. Два отдельных natural controls
+  (максимальный raw relief и relief/byte allowance) выбрали13-module группу
+  и тоже не закрыли эти caps. Снимок17f150 и отрицательные receipts сохранены;
+  эти63 PASS не распространяются на новую async serialization архитектуру.
+- **Механизм исправления:** merge возвращает прежний f8 greedy+tiny baseline,
+  без немедленного raw-proxy split. В существующем Expo extension добавлен
+  отдельный `serializePlan` session; поздний refiner получает полный CURRENT
+  JS source с обычными filenames/codec/metadata, а не отчёт предыдущего SHA.
+  Price касается только metadata-derived eager Brotli/requests по source route
+  и layout chain. Обычный полный canonical guard по-прежнему проверяет entry,
+  named/deferred/TOTAL и все прочие caps; generated121HTML/86aliases ещё не
+  являются доказанным результатом этой сериализационной стадии.
+- **ID/state contract:** обычный baseline ОДИН раз выделяет реальные IDs через
+  transparent recorder на cloned options; sealing происходит после awaited
+  codec/hash/assets. Его home/initial/boundary priority vector фиксируется до
+  refinement. Split не добавляет modules; каждый probe использует strict
+  known-ID lookup, свежие graph/plan identity remap, strategy/chunks/required
+  sets, worker/preModule state и codec maps. Canonical allocator не вызывается
+  из probes. Неизвестный ID отклоняет candidate; fatal/cancellation/codec
+  failures не маскируются. Победившие измеренные assets возвращаются прямо,
+  без повторного emit. No-cut возвращает исходный baseline asset array.
+- **Controls/cost:** только целые ORIGINAL atoms, unique placement keys,
+  initial/named exclusion, максимум1 глобальный cut/+1 consumer request;
+  raw foreign не растёт и≤128KiB, packing2KiB/4KiB не меняется. Сначала
+  закрываются CURRENT нарушенные eager byte constraints, затем residual
+  overflow и generic relief/request. Кандидаты идут по secondary key;
+  ранний выход корректен лишь при закрытии ВСЕХ нарушений (достигнуты пределы
+  primary score и remaining secondary bound). Иначе перебираются все eligible
+  cuts. Q11 cache привязан к точным source bytes, не к filenames/moduleIDs.
+- **Поддерживаемая serialization surface:** перед первым probe исключаются
+  asset plugins, effective source maps, custom metadata hook и custom module
+  filter; обычный чистый Metro filter сверяется с текущим upstream default.
+  Run callbacks записываются baseline и replay не вызывает их повторно.
+  Missing source/layout mapping и duplicate filenames отклоняются до pricing,
+  поэтому пустой script set не может дать ложное улучшение.
+- **Новая валидация пока NOTRUN:** реальные installed-emitter regressions
+  подготовлены для baseline byte identity, violated-route vs unrelated relief,
+  ID sealing/receiver/unknown path, frozen priorities, exact winning assets,
+  codec/runtime/worker/closure, request/byte negatives и failed-trial isolation.
+  Shared `node_modules` не менялся. Будущий локальный check использует полную
+  private COW dependency tree с отдельным apply/check патча; canonical dependency
+  refresh и реальная сборка требуют собственного exclusive окна. Ни byte PASS,
+  ни новый production SHA/Map live acceptance пока не заявлены.
+
+- **Повтор после узкого Map fix — 16.11.2026 (#3440):** штатный canonical
+  `f8a387419a03d2074dbb0b0939aee7068c66ba5a` остановлен до публикации:
+  full entry232602/232602B PASS; home482340/480437B (+1903),
+  travels573132/571443allowedB (+1689). Map9 source/runtime contracts сохранены.
+  Удаление sync hook edge вернуло request headroom: home12/13 иtravels17/18
+  вместо14/13 и19/18. Все86 aliases имеют минимум1 свободный request;
+  это позволяет проверить более узкий приём, чем смена greedy merge/caps.
+- **Подтверждённая возможность, не canonical PASS:** cached4027/4027 factories
+  воспроизвели50/50 actual partitions. На всех121 retainedHTML/86 aliases
+  три owner-vs-foreign разреза ORIGINAL atoms дали fixed-ID projections под
+  прежними byte/request caps. Лучший прогноз: home478149/travels568941B
+  (−4191B каждый), raw foreign max131065≤131072B без роста. Новые имена,
+  codec/bridge/closure metadata и реальная компрессия сериализатора ещё не
+  измерены; expected entry delta0 не является доказанным exact-byte PASS.
+- **Bounded source-коррекция:** после неизменных greedy merge и tiny packing
+  разрешён максимум ОДИН глобальный split shared-файла. Кандидаты — все
+  owner signatures исходных atoms, без селекторов по filename/moduleID/SHA;
+  каждый atom остаётся целым. Initial/named entry modules исключены, новые
+  placement keys уникальны. Цена — foreign raw relief на добавленный request
+  всех actual codec consumers; tie-break по стабильным module paths.
+  Существующий `config/bundle-budget.json` задаёт request limits, неизвестный
+  route pin отключает split. Каждому consumer добавляется не более1 файла,
+  HTML caps соблюдаются, raw foreign не растёт и остаётся≤128KiB. Factory
+  ownership и upstream required-chunk closure не меняются; 2KiB/4KiB packing,
+  hook/formatter/Map9, guard и все ceilings сохранены. Caller `metro.config.js`
+  не изменён; optional requestPolicy нужен только для synthetic tests.
+- **Проверки этой новой коррекции пока NOTRUN:** prepared synthetic regressions
+  покрывают positive relief, negative no-gain/missing policy/tight cap,
+  original atoms, один cut, determinism, no module loss/duplication, closed
+  requirements и runtime registration без исполнения foreign factories.
+  Нужны независимый source review, focused checks, exact replay нового
+  selector и один штатный canonical build с полной metadata/byte проверкой.
+  Production остаётся4c1; Map live acceptance и новый budget PASS не заявлены.
+
 - **Повтор — 16.11.2026 (#3440/#3442):** canonical5345 иa774 остановлены до
   publish при неизменных потолках. Вa774 entry232602/232602B проходит, home
   482427/480437BrotliB иtravels573161/571443allowedB не проходят;

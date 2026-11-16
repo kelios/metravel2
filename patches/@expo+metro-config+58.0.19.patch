@@ -1,7 +1,7 @@
 diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js b/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
 --- a/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
 +++ b/node_modules/@expo/metro-config/build/serializer/chunking/createGranularChunkingStrategy.js
-@@ -71,11 +71,14 @@
+@@ -71,11 +71,22 @@
          async serializeAsync () {
              const entryModule = graph.dependencies.get(entryFile);
              (0, _assert().default)(entryModule, `Granular entry is missing from the export graph: ${entryFile}`);
@@ -14,21 +14,32 @@ diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/createGra
 +            // METRAVEL_MERGE_GRANULAR_PLAN (#2741): project pass merging shared groups (metro.config.js).
 +            const mergePlan = context.serializerConfig?.unstable_mergeGranularChunkPlan;
 +            const plan = typeof mergePlan === 'function' ? mergePlan(rawPlan, context) : rawPlan;
++            // Each probe owns its strategy closure and materialized chunks. Calling
++            // serializePlan directly never re-enters merge/refinement.
++            const emit = (candidate, candidateContext, priorities)=>createGranularChunkingStrategy(candidateContext).serializePlan(candidate, priorities);
++            const refine = mergePlan?.refine;
++            if (typeof refine === 'function') return refine(plan, context, emit);
++            return (await strategy.serializePlan(plan)).assets;
++        },
++        async serializePlan (plan, frozenPriorities) {
              const materializedPlan = materializeChunkPlan(context, strategy, plan);
              const { chunks, entryChunk } = materializedPlan;
              entryPathsByChunk = materializedPlan.entryPathsByChunk;
-@@ -98,7 +101,9 @@
+@@ -98,8 +109,11 @@
                      ...chunks
                  ].filter((chunk)=>chunk !== entryChunk).sort((a, b)=>a.name.localeCompare(b.name, 'en'))
              ]);
 -            assignModuleIds(orderedChunks, options.createModuleId);
+-            return (0, _chunkingStrategy.serializeChunksAsync)(orderedChunks, context);
 +            // METRAVEL_GRANULAR_ID_PRIORITIES: select before the first ID request/hash.
-+            const priorities = context.serializerConfig?.unstable_getGranularModuleIdPriorities?.(plan, context);
++            const priorities = frozenPriorities ? frozenPriorities.priorities : context.serializerConfig?.unstable_getGranularModuleIdPriorities?.(plan, context);
 +            assignModuleIds(orderedChunks, options.createModuleId, priorities);
-             return (0, _chunkingStrategy.serializeChunksAsync)(orderedChunks, context);
++            const assets = await (0, _chunkingStrategy.serializeChunksAsync)(orderedChunks, context);
++            return { assets, priorities: Array.isArray(priorities) ? Object.freeze([...priorities]) : priorities };
          },
          getAsyncChunkTargets (chunk) {
-@@ -259,7 +264,7 @@
+             const targets = new Set();
+@@ -259,7 +273,7 @@
          chunksByEntryPath: workerChunksByEntryPath
      };
  }
@@ -37,7 +48,7 @@ diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/createGra
      // Assign module IDs before serialization so chunk order does not determine them.
      // Keep previously assigned module IDs.
      const modulePaths = new Set();
-@@ -274,6 +279,17 @@
+@@ -274,6 +288,17 @@
              }
          }
      }
