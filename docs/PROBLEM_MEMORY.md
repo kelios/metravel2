@@ -5259,6 +5259,25 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### ROUTE-BUNDLE-001 — eager-код маршрута это код, который маршруту нужен
 
+- **Canonical restoration — 16.11.2026 (#3440/#3442):** штатный isolated
+  deploy `93e4d6dc9456affeb663a314b06ee22aef472315` завершён exit0 и опубликован.
+  Actual121HTML/86aliases прошли прежние byte/request caps: full entry
+  232602/232602 Brotli B (побайтно равен F8), home478017/480437 B и12/13requests,
+  travels568809/571443 B и17/18requests. Это результат нормальной awaited
+  serialization/canonical pipeline, а не успех прежнего formatter placement
+  или fixed-ID projection. Health/home/API200. Nonblocking native SEO warning:
+  timeout `sitemap.xml`, без retry; warning-free SEO не заявлен.
+  Реальная normal Quest4 приёмка на том же93e: два desktop1465KiB/75requests
+  (baseline1489/74, +1request явно сохранён), два mobile1386KiB/64requests
+  (baseline1695/74), CLS0. Метод — positive Content-Length sum/1024 rounded
+  после3squiet без scroll; CDP wire отдельно, без вычитания bytes/cap changes.
+  Mobile ниже fold: Leaflet/vendor/CSS/tiles0; видимая desktop map eager законна.
+  Подробнее — `QUEST-DETAIL-BELOW-FOLD-EAGER-001`, raw aggregate
+  `.codex-temp/sprint35-frontend-3440/live-acceptance-93e-final.json`.
+  Исторические NOTRUN/NOTDEPLOYED/fail snapshots ниже сохранены как история;
+  последующий93e не объявляет их pass задним числом. Full e2eTS по-прежнему
+  NOT PASS:6 legacy diagnostics в3 неизменённых specs.
+
 - **Новый bounded repair — 16.11.2026 (#3440), source-only:** первый общий
   one-cut selector прошёл63 unit cases, lint/checkfast, но actual replay с
   filesystem policy выбрал постороннюю7-module группу: home482340/480437B и
@@ -9388,7 +9407,59 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Постоянный контроль:** реальные Metro/Expo fixtures в webChunkMetadataCodec/Runtime/Resolver, guard-chunk-closure и exact byte tests. Исходная проба воспроизводит baseline побайтно и учитывает новый decoder: 232708 → 232602 Б; 140 дескрипторов, 252 артефакта и 18 отрицательных вариантов. Итог — только из нового канонического выката и live-проверки, записанных в #3451/#3449.
 - **Повторная жалоба:** сначала сравнить полный entry, runtime registry и нормализованную логику на сохранённых настоящих артефактах. Не переставлять индексы ради сжатия, не исключать metadata из полного лимита и не поднимать pins без отдельного измеренного продуктового решения. Новый формат доставляется связанной content-hashed парой; прежние артефакты остаются читаемыми.
 
+### QUEST-DETAIL-BELOW-FOLD-EAGER-001 — невидимая карта ждёт пользователя, lazy-prefetch не равен eager
+
+- **Canonical:** #3440; источник #3390, related #1053/#1238/MEDIA-001.
+  Mobile intro раньше монтировал карту до viewport и запрашивал6tiles.
+  Nearby covers уже были lazy: browser preload distance объяснял ранние GET,
+  а320CSS estimate×webDPRcap2 давал w640 при реальном356CSS; уменьшать качество
+  по одному числу640 было бы ложным исправлением.
+- **Source:** явный mobile-intro opt-in с резервом360/460/520; default/desktop/
+  current-step/native eager сохранены. Activation latch и stable ancestry
+  сохраняют state, отсутствие observer включает карту сразу. Единственный
+  visibility site — named gate в существующем async map entry; независимые
+  audit/gate и совместимые48 tests/sourceTS/lint/27sites17files guard PASS.
+- **Live93e:** четыре normal cold metric cases PASS в порядке D1/M1/D2/M2:
+  desktop1465KiB≤1489 (75requests, baseline74), mobile1386≤1600 (64requests).
+  Ниже fold mobile не грузит Leaflet/vendor/CSS/tiles; desktop карта видна
+  сразу. Реальный public8-point foot POST200/ORS/optimal/152points/2539m,
+  cachefalse на первом случае, затем true; другие writes запрещены.
+- **Функциональное evidence:** исходные4metric cases сохранены; два mobile
+  дополнения использовали последние slots7/8. В7 failed predicate ошибочно
+  брал raw420px Leaflet rect за реально видимую область360px clipped card.
+  Root независимо подтвердил одинаковые wrap overflow:hidden/mapBox min420
+  и прежний mobile360 в4c1→93e: это capture error, не новая source regression.
+  Failed raw7 не стёрт. Slot8 корректно пересёк8overflow ancestors и header/nav:
+  реальное usable body340×261,9/9hit-tests Leaflet, streets/tealroute/numbered
+  markers читаемы в full/crop PNG. Full420 или полностью unclipped8markers
+  не заявляются. Slot360 стабилен до/после map/nearby; CLS0.
+- **Covers:** все4 naturally scrolled/decoded/nonoccluded, loading=lazy,
+  client356/CDN640≤DPR2 slotbucket720, содержимое/качество не менялись.
+  Initial requests подписаны native lazy-browser-prefetch, а не eager;
+  partner iframe исключён только из cover sizing/eager scope. Console,
+  pageErrors, HTTP4xx/5xx, requestfailed и unexpectedwrites0 в принятом runtime.
+  Quota8/8 исчерпана: новых Quest views не разрешено. Evidence —
+  `.codex-temp/sprint35-frontend-3440/live-acceptance-93e-final.json`,
+  `acceptance-93e/`, `visual-completion-93e/`, `final-slot8-93e/`.
+- **Regression:** committed quest media spec и route budget не ослаблены;
+  native renderer/locales/API/content не менялись. Native canonical SEO
+  sitemap timeout и full e2eTS6legacy NOTPASS остаются отдельными caveats;
+  source/docs closure не требует ещё одного live/deploy/Quest прогона.
+
 ### TRAVEL-HTTP-STATUS-FALLBACK-001 — пустой statusText не добавляет английский текст
+
+- **Packaging closure — 16.11.2026:** исходный source-only Done boundary
+  #3442 был исполнен dcfa (118 API,558 i18n,65 caller, lint/sourceTS PASS).
+  Последующий placement-only a774 сохранил formatter body/locale/status/body
+  contracts и прошёл118/65/335/TS/lint, но НЕ восстановил eager budgets.
+  Теперь combined canonical93e фактически опубликован и прошёл все121HTML/
+  86aliases под прежними caps (см. ROUTE-BUNDLE-001). API a774 — ancestor93e;
+  `travelUserQueries`, `travelListQueries`, `travelQueryShared` побайтно те же.
+  HTTP5xx на проде не вызывался, нового device/runtime gate семантики нет.
+  Catalog trigger остаётся только N≥500 либо desktop /quests idle >1560КБ; сам каталог
+  и его budgets здесь не менялись. Нормальные native hooks/push/code reviews
+  исходников сохранены; текущая closure — только документы/receipt. Более ранние
+  NOTDEPLOYED/fail записи ниже относятся ко времени до93e.
 
 - **Payload follow-up — 16.11.2026 (#3442, связь ROUTE-BUNDLE-001):** canonical
   сборка5345f1c0b, clean/Node22, остановлена guard до publish: entry232602/232602B

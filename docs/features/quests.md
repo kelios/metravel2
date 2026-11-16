@@ -1477,6 +1477,25 @@ mobile390 DPR3 — 1735608 positive Content-Length B (1695 KiB), desktop1440 DPR
 performance-приёмка только на живых данных, mobile≤1600/desktop≤1489 KiB,
 без повышения `pagesPerfBudgets.ts`.
 
+Production acceptance93e (`93e4d6dc9456affeb663a314b06ee22aef472315`,16.11.2026):
+normal cold guest RU, noScroll3squiet, positive Content-Length sum/1024 rounded.
+Два mobile390 DPR3:1386/1386KiB≤1600,64requests; два desktop1440 DPR1:
+1465/1465KiB≤1489,75requests (baseline74, +1 явно сохранён). CDP wire отдельно;
+потолки/формула/данные не менялись. Mobile below-fold Leaflet/vendor/CSS/tiles0;
+видимая desktop map загружается eager. Natural scroll даёт реальные ORS route/
+tiles, stable360 slot и CLS0. В дополнительном slot8 actual visible body340×261
+проверен по всем overflow ancestors/header/nav и9/9elementFromPoint; full/crop
+показывают streets/tealroute/numberedmarkers. Это не claim full420/всех markers
+полностью unclipped: исходный clipping360/inner420 не менялся. Failed predicate
+slot7 сохранён и классифицирован root как ошибка capture, не regression.
+Все4nearby covers после natural scroll видны/decoded/lazy:356CSS/w640 приDPRcap2
+в slotbucket≤720; исходный Chromium lazy-prefetch не назван eager. Console/
+pageErrors/requestfailed/HTTPerrors/writes0; partner iframe вне media-assertion
+scope. Ledger8/8 исчерпан, новых Quest views нет. Raw/PNG/provenance:
+`.codex-temp/sprint35-frontend-3440/live-acceptance-93e-final.json`.
+Canonical publish121HTML/86aliases прошёл прежние budgets; nonblocking native
+SEO sitemap timeout сохранён. Full e2eTS6legacy errors остаётся NOT PASS.
+
 ## SEO и SSG
 
 ### Отдельная публикация данных и SSR (#2766 / #2771)
