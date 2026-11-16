@@ -7,6 +7,6 @@
 ## 2. Verification
 
 - [x] 2.1 Add model/CLI regression coverage and text snapshots from two actual published quest responses.
-- [ ] 2.2 Run selected source tests, i18n, lint and independent review/gate.
-- [ ] 2.3 Generate two real kits, inspect PDF rendering/text/fonts/boxes/links and decode every QR in color/grayscale300dpi.
-- [ ] 2.4 Verify canonical UTM target and analytics transport without fabricated gameplay starts; sync/archive final spec.
+- [x] 2.2 Run selected source tests, i18n, lint and independent review/gate.
+- [x] 2.3 Generate two real kits, inspect PDF rendering/text/fonts/boxes/links and decode every QR in color/grayscale300dpi.
+- [x] 2.4 Verify canonical UTM target and analytics transport without fabricated gameplay starts; sync/archive final spec.
