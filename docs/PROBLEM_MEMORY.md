@@ -9266,3 +9266,23 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Инвариант:** web-вход различает desktop_navigation, mobile_menu и direct; показ только у видимой ссылки. Поиск учитывает актуальный завершённый результат без текста, адреса, координат и URL. Неактивная сохранённая вкладка молчит; возврат начинает новое открытие. Подборка, карта и статья имеют отдельные события; пагинация и фоновое обновление не создают повторный поиск.
 - **Контроль:** PlacesScreen.analytics.test.tsx проверяет реальный controller/query слой, placeholder/отмену, ошибку и успешный повтор, фокус и приватность. usePlacesCatalogNavigation.test.tsx и placesCatalogNavigation.test.tsx проверяют видимость, настоящий href, один SPA-переход и native-/map-изоляцию. Существующий analytics.test.ts сохраняет гейт согласия и автоматизации.
 - **Граница вывода:** eventCount не заменяет сеансы; точная доля требует O∩A в одном сеансе. Параметры и ограничения — docs/features/places-catalog-funnel-report.md. SHA принятого выпуска, цели счётчика и начало наблюдения фиксируются только в #3448 после production-приёмки.
+
+### BUILD-ONLY-SSR-INPUTS-PARITY-001 — build-only мерил static против production SSR
+
+- **Каноническая задача:** #3433; связь с SSR byte pins #3374. Это другой
+  механизм, чем общие нарушения eager-бюджета ROUTE-BUNDLE-001/#3442.
+- **Причина:** `deploy-prod.sh` читал capability и выставлял три SSR-входа
+  только при DEPLOY=1; build-only оставлял static default. Старый shell-тест
+  прямо ожидал `web_output=unset`, поэтому закреплял расхождение.
+- **Исправляющий слой:** один общий fail-closed capability gate и три экспорта
+  перед вызовом build-prod для DEPLOY=0/1. Checkout guard и проверка live SHA
+  остаются у публикации. Статический preview без SSH — прямой build-prod.
+- **Постоянный контроль:** реальный wrapper в временном Git-репозитории;
+  одинаковые входы при конфликтующих caller flags, malformed/disabled/
+  unreachable capability в обоих режимах, отсутствие build/live-проверки при
+  отказе, cleanup и неизменный DEPLOY=0. Paired red/green воспроизводит старую
+  ветку; исправленный wrapper и webOutput проходят 37 тестов/2 набора.
+- **Граница доказательства:** байты сравниваются на одном SHA с совпадающими
+  effective inputs/toolchain/canonical worktree, не между новым main и другой
+  live-ревизией. Реальная capability, export и entry-сравнение фиксируются в
+  #3433; новые pins, подмена runtime и публикация в эту задачу не входят.

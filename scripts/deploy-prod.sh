@@ -8,7 +8,7 @@
 # идут детерминированно.
 #
 #   scripts/deploy-prod.sh [<commit>]   выкат коммита (по умолчанию origin/main)
-#   DEPLOY=0 scripts/deploy-prod.sh     build-only прогон в том же worktree
+#   DEPLOY=0 scripts/deploy-prod.sh     тот же production SSR export без публикации
 #   DEPLOY_QUIET=1 …                    в консоль — только этапы, итоги и ошибки;
 #                                       полный лог всегда в .codex-temp/deploy/
 #   ALLOW_DOWNGRADE=1 …                 явный откат: выкатить ревизию, которая не
@@ -172,16 +172,21 @@ fi
 
 if [[ "$DEPLOY" == "1" ]]; then
   check_prod_checkout_clean 2>&1 | tee -a "$LOG"
-  # Production publishes only the SSR release pair (#2766). The installed
-  # backend capability must report the quest SSR runtime: a missing, malformed
-  # or disabled capability refuses the deploy (scripts/lib/webOutput.js) instead
-  # of downgrading a live SSR release to a static build.
-  SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability 2> >(tee -a "$LOG" >&2))"
-  echo "SSR capability: $SSR_CAPABILITY" >>"$LOG"
-  node -e 'require(process.argv[1]).resolveDeployWebOutput(JSON.parse(process.argv[2]))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY" 2>&1 | tee -a "$LOG"
-  export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true
-  echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация' | tee -a "$LOG"
 fi
+# #3433: both wrapper modes measure the production SSR artifact. Missing,
+# malformed or disabled capability refuses either mode before the build;
+# build-only must never silently compare a static entry with the SSR byte pin.
+if ! SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability 2> >(tee -a "$LOG" >&2))"; then
+  echo '❌ Backend SSR: capability недоступна — сборка не начата' | tee -a "$LOG"
+  exit 1
+fi
+echo "SSR capability: $SSR_CAPABILITY" >>"$LOG"
+if ! node -e 'require(process.argv[1]).resolveDeployWebOutput(JSON.parse(process.argv[2]))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY" 2>&1 | tee -a "$LOG"; then
+  echo '❌ Backend SSR: capability не разрешает production SSR — сборка не начата' | tee -a "$LOG"
+  exit 1
+fi
+export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true
+echo "✅ Backend SSR готов: одинаковые входы production export (DEPLOY=$DEPLOY)" | tee -a "$LOG"
 BUILD_STARTED_AT="$(date +%s)"
 set +e
 if [[ "${DEPLOY_QUIET:-0}" == "1" ]]; then

@@ -18,6 +18,7 @@ import { liveOriginEnv } from './remote-deploy-test-utils'
 const { resolveLockRoot } = require('@/scripts/build-lock')
 
 const DEPLOY_SCRIPT = path.resolve(process.cwd(), 'scripts/deploy-prod.sh')
+const SSR_CAPABILITY = '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}'
 
 const GIT_ENV = {
   GIT_CONFIG_GLOBAL: '/dev/null',
@@ -52,6 +53,8 @@ const BUILD_STUB = [
   '  [[ -L .env.prod ]] && echo "env_prod=symlink"',
   '  echo "head=$(git rev-parse HEAD)"',
   '  echo "web_output=${METRAVEL_WEB_OUTPUT:-unset}"',
+  '  echo "web_runtime_ssr=${EXPO_PUBLIC_WEB_RUNTIME_SSR:-unset}"',
+  '  echo "quest_runtime_ssr=${EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR:-unset}"',
   '  echo "metro_cache=${METRAVEL_METRO_CACHE_DIR:-unset}"',
   '} > "$STUB_OUT"',
   'echo "▶ stub stage"',
@@ -85,6 +88,13 @@ const BUILD_STUB = [
   'exit "${STUB_EXIT:-0}"',
 ].join('\n')
 
+const CAPABILITY_STUB = [
+  '#!/bin/bash',
+  '[[ "${1:-}" == "capability" ]] || exit 99',
+  '[[ "${STUB_CAPABILITY_EXIT:-0}" == "0" ]] || exit "$STUB_CAPABILITY_EXIT"',
+  'printf \'%s\\n\' "$STUB_CAPABILITY"',
+].join('\n')
+
 type Fixture = { root: string; repo: string; worktree: string; stubOut: string }
 
 function git(cwd: string, args: string[]): string {
@@ -113,13 +123,14 @@ function makeFixture(): Fixture {
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
   // assert-deployable-source.js is the shipped live-revision gate (#3207).
   for (const script of ['assert-deployable-source.js', 'lib/buildStamp.js', 'lib/live-build-source.js', 'guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
-    'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js', 'lib/productionBundleEvidence.js', 'lib/metroCacheInputs.js']) {
+    'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js', 'lib/productionBundleEvidence.js', 'lib/metroCacheInputs.js', 'lib/webOutput.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.copyFileSync(path.join(process.cwd(), 'scripts', script), target)
   }
   fs.chmodSync(path.join(repo, 'scripts/deploy-prod.sh'), 0o755)
   writeFile(path.join(repo, 'scripts/run-with-build-lock.js'), LOCK_RUNNER_STUB)
+  writeFile(path.join(repo, 'scripts/web-ssr-publication.sh'), CAPABILITY_STUB)
   writeFile(path.join(repo, 'build-prod.sh'), BUILD_STUB, 0o755)
   writeFile(path.join(repo, '.gitignore'), 'node_modules\n.env\n.env.*\n.codex-temp/\ndist/')
   writeFile(path.join(repo, 'package.json'), '{"name":"evidence-fixture","version":"1.0.0","scripts":{}}')
@@ -150,6 +161,9 @@ function runDeploy(fixture: Fixture, args: string[], env: Record<string, string>
       DEPLOY: '0',
       STUB_OUT: fixture.stubOut,
       METRAVEL_WEB_OUTPUT: '',
+      EXPO_PUBLIC_WEB_RUNTIME_SSR: '',
+      EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: '',
+      STUB_CAPABILITY: SSR_CAPABILITY,
       ...env,
     },
   })
@@ -158,14 +172,12 @@ function runDeploy(fixture: Fixture, args: string[], env: Record<string, string>
 // What a real rollout touches besides the build: the production checkout over
 // ssh, the backend SSR capability and the final live check. Committed and
 // pushed, so the deployed commit is a descendant of the fixture's first one.
-const SSR_CAPABILITY = '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}'
-
 function addDeployStubs(fixture: Fixture): Record<string, string> {
   const bin = path.join(fixture.root, 'bin')
   writeFile(path.join(bin, 'ssh'), '#!/bin/bash\nprintf \'%s\' "$STUB_SSH_STATUS"', 0o755)
   writeFile(path.join(fixture.repo, 'scripts/deploy-target.sh'),
     'PROD_SSH_TARGET=stub@host\nPROD_REMOTE_DIR=/srv/stub\nrequire_deploy_target() { :; }')
-  writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), 'printf \'%s\\n\' "$STUB_CAPABILITY"')
+  writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), CAPABILITY_STUB)
   writeFile(path.join(fixture.repo, 'scripts/verify-live-release.sh'), 'echo "✅ stub live check $1"')
   fs.copyFileSync(path.join(process.cwd(), 'scripts/lib/webOutput.js'), path.join(fixture.repo, 'scripts/lib/webOutput.js'))
   git(fixture.repo, ['add', 'scripts'])
@@ -221,9 +233,9 @@ describe('scripts/deploy-prod.sh', () => {
       const deployEnv = addDeployStubs(fixture)
       const measured = git(fixture.repo, ['rev-parse', 'HEAD'])
       const ssr = { METRAVEL_WEB_OUTPUT: 'server', EXPO_PUBLIC_WEB_RUNTIME_SSR: 'true', EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true', STUB_PUBLIC_EVIDENCE: '1', RETAIN_BUNDLE_EVIDENCE: '1' }
-      const measure = runDeploy(fixture, [measured], { ...ssr, STUB_SSH_STATUS: ' M forbidden', STUB_CAPABILITY: 'unavailable' })
+      const measure = runDeploy(fixture, [measured], { ...ssr, STUB_SSH_STATUS: ' M forbidden' })
       expect(measure.status).toBe(0)
-      expect(measure.stdout).not.toContain('Backend SSR')
+      expect(measure.stdout).toContain('Backend SSR')
       expect(measure.stdout).not.toContain('stub live check')
       expect(readStubOut(fixture)).toMatchObject({ cwd: fixture.worktree, deploy: '0', lock_owned: '1' })
       const before = retainedManifest(fixture, measured).value
@@ -309,8 +321,10 @@ describe('scripts/deploy-prod.sh', () => {
         node_modules: 'symlink',
         env_prod: 'symlink',
         head: first,
-        // A build-only preview never asks the backend capability (#2766).
-        web_output: 'unset',
+        // Both production wrapper modes use the same capability-backed inputs.
+        web_output: 'server',
+        web_runtime_ssr: 'true',
+        quest_runtime_ssr: 'true',
         // The Metro transform cache outlives the removed worktree (#2982).
         metro_cache: path.join(fixture.root, 'worktrees', 'deploy-prod-metro-cache'),
       })
@@ -330,6 +344,45 @@ describe('scripts/deploy-prod.sh', () => {
     } finally {
       removeDir(fixture.root)
     }
+  })
+
+  it.each(['0', '1'])('uses capability-backed SSR inputs for DEPLOY=%s despite conflicting caller inputs (#3433)', (deploy) => {
+    const fixture = makeFixture()
+    try {
+      const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const deployEnv = addDeployStubs(fixture)
+      const sha = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const result = runDeploy(fixture, [sha], {
+        ...deployEnv, ...liveOriginEnv(fixture.root, live), DEPLOY: deploy,
+        METRAVEL_WEB_OUTPUT: 'static', EXPO_PUBLIC_WEB_RUNTIME_SSR: 'false', EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'false',
+        STUB_SSH_STATUS: deploy === '0' ? ' M must-not-be-read' : '',
+      })
+      expect(result.status).toBe(0)
+      expect(readStubOut(fixture)).toMatchObject({ head: sha, deploy, web_output: 'server', web_runtime_ssr: 'true', quest_runtime_ssr: 'true' })
+      expect(result.stdout.includes('stub live check')).toBe(deploy === '1')
+      expect(result.stdout.includes('Прод-чекаут бэкенда чистый')).toBe(deploy === '1')
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+    } finally { removeDir(fixture.root) }
+  })
+
+  it.each(['0', '1'].flatMap(deploy => [
+    { deploy, label: 'malformed', capability: 'not-json', exit: '0' },
+    { deploy, label: 'disabled', capability: '{"schema_version":1,"available":false,"enabled":false}', exit: '0' },
+    { deploy, label: 'unreachable', capability: SSR_CAPABILITY, exit: '23' },
+  ]))('refuses $label capability before building DEPLOY=$deploy (#3433)', ({ deploy, capability, exit }) => {
+    const fixture = makeFixture()
+    try {
+      const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const result = runDeploy(fixture, [], {
+        ...addDeployStubs(fixture), ...liveOriginEnv(fixture.root, live), DEPLOY: deploy,
+        STUB_CAPABILITY: capability, STUB_CAPABILITY_EXIT: exit,
+      })
+      expect(result.status).toBe(1)
+      expect(fs.existsSync(fixture.stubOut)).toBe(false)
+      expect(result.stdout).not.toContain('stub live check')
+      expect(result.stdout).toContain('Backend SSR')
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+    } finally { removeDir(fixture.root) }
   })
 
   it('reminds about a stale similar-articles snapshot without stopping the rollout (#3292)', () => {

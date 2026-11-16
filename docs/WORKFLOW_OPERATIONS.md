@@ -852,18 +852,25 @@ Worktree снимается на любом выходе: брошенный wor
 Для точного bundle-budget эталон — этот же фиксированный worktree и его реальные
 симлинк-зависимости, а не экспорт из основного checkout: Metro использует
 абсолютный порядок путей для module IDs и относительные пути для chunk metadata.
-Build-only измерение production SSR запускается существующим wrapper, с теми же
-тремя SSR-входами, которые DEPLOY=1 получает после capability gate:
+Build-only измерение production SSR запускается существующим wrapper. Оба режима
+DEPLOY=0/1 читают capability бэкенда и выставляют одинаковые три SSR-входа;
+недоступная, некорректная или выключенная capability останавливает сборку:
 
 ```bash
-METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true \
-  DEPLOY=0 DEPLOY_QUIET=1 RETAIN_BUNDLE_EVIDENCE=1 scripts/deploy-prod.sh <sha>
+DEPLOY=0 DEPLOY_QUIET=1 RETAIN_BUNDLE_EVIDENCE=1 scripts/deploy-prod.sh <sha>
 ```
 
-Обычный `DEPLOY=0` без этих входов остаётся static preview. Оба режима держат
+Для статического preview без SSH остаётся прямой `DEPLOY=0 ./build-prod.sh prod`;
+он не является сравнением с production SSR byte pins. Оба режима wrapper держат
 один глобальный lock от fetch до cleanup и компилируют в одном абсолютном
 `dirname(MT)/worktrees/deploy-prod`, независимо от sha и времени. AI/HUBS defaults
 и command-local minifier flags по-прежнему задаёт `build-prod.sh`.
+
+Паритет байтов проверяется на **одном SHA** при совпадающих toolchain, lockfile,
+эффективных флагах и пути worktree. Текущий main и иной опубликованный SHA не
+образуют такой пары: изменения приложения и другие budget breaches учитываются
+отдельно. `DEPLOY=0` не выполняет проверку грязного production checkout,
+публикацию, откат или финальную сверку опубликованной ревизии.
 
 До Expo `productionBundleEvidence` получает ту же effective env, что exporter,
 после defaults. Приватный context вне `dist/` хранит только известные безопасные
@@ -1017,7 +1024,8 @@ SSR-паре. `build-prod.sh` с `DEPLOY=1` без SSR-релиза отказы
 его исхода, как и на время `finalize-code`.
 Статический конвейер сущностей (v1-пакет квестов, режимы `ru-only`/`translations`,
 захват входов SEO, проверки статики) снят в #2766. `DEPLOY=0` через обёртку
-собирает без обращения к capability; превью без SSH — `DEPLOY=0 ./build-prod.sh prod`.
+проверяет capability и собирает production SSR без публикации (#3433);
+превью без SSH — `DEPLOY=0 ./build-prod.sh prod`.
 
 Бюджет выката от команды до отчёта (решение владельца 18.10.2026, #2448): не больше
 ~12 минут; выкат запускается только в фоне — foreground-Bash с таймаутом 600 с
