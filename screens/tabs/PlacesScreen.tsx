@@ -120,7 +120,7 @@ export default function PlacesScreen() {
     topBarHeight,
     totalCount,
     visiblePlaces,
-  } = usePlacesCatalogController({ isCompact: isSingleColumn, isWide, hasMeasuredWidth })
+  } = usePlacesCatalogController({ isCompact: isSingleColumn, isWide, hasMeasuredWidth, isFocused })
   const resultsTitle = showCategoryScope
     ? selectedCategories.length > 0
       ? formatList(selectedCategories)

@@ -9,6 +9,8 @@ import { handleHeaderNavPress } from './customHeaderNavModel';
 import NavigationIcon from './NavigationIcon';
 import { webDataSetProps } from '@/utils/webProps';
 import { useLocalizedNavHref } from '@/hooks/useLocalizedNavHref';
+import { usePlacesCatalogNavigation } from '@/hooks/usePlacesCatalogNavigation';
+import { placesCatalogHref } from '@/utils/placesCatalogAnalytics';
 
 type CustomHeaderNavSectionProps = {
   activePath: string;
@@ -22,12 +24,18 @@ export default function CustomHeaderNavSection({
   const router = useRouter();
   const colors = useThemedColors();
   const localizeHref = useLocalizedNavHref();
+  const placesNavigation = usePlacesCatalogNavigation('/places', 'desktop_navigation');
 
   const books = Platform.OS === 'web' ? DESKTOP_BAR_NAV_ITEMS.find(item => item.path === '/books') : undefined;
   const renderItem = (navItem: HeaderNavItem) => {
-    const item = navItem.external ? navItem : { ...navItem, path: String(localizeHref(navItem.path as Href)) };
+    const localizedPath = navItem.external ? navItem.path : String(localizeHref(navItem.path as Href));
+    const item = navItem.external ? navItem : { ...navItem, path: Platform.OS === 'web' && navItem.path === '/places'
+      ? placesCatalogHref(localizedPath, 'desktop_navigation') : localizedPath };
     const isActive = !navItem.external && activePath === navItem.path;
-    const navigate = () => handleHeaderNavPress(router, item.path, item.external);
+    const navigate = () => {
+      if (navItem.path === '/places') placesNavigation.onEntry();
+      handleHeaderNavPress(router, item.path, item.external);
+    };
     const children = (
       <>
         <View style={styles.iconSlot18} {...(Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}>
@@ -49,6 +57,7 @@ export default function CustomHeaderNavSection({
       return (
         <NavigationLink
           key={item.path}
+          ref={navItem.path === '/places' ? placesNavigation.ref : undefined}
           {...destination}
           style={[styles.navItem, isActive && styles.navItemActive]}
           selected={isActive}

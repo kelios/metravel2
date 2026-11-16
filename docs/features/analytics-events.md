@@ -195,6 +195,17 @@
   `runReport` отвечает 400 «is not a valid dimension».
 
 
+## Каталог «Места» (#3448)
+
+`places_catalog_impression`, `places_catalog_entry`, `places_catalog_opened`,
+`places_catalog_search`, `places_catalog_collection`, `places_catalog_open_map`
+и `places_catalog_open_travel` измеряют только web-каталог и видимые ссылки
+на него. Конечный `source=desktop_navigation|mobile_menu|direct` также лежит в
+`event_label`, `event_category=places_catalog`. Поиск передаёт только
+`outcome=found|empty|error` и безопасное число результатов. Полный контракт,
+ограничения согласия, запросы и сеансовые знаменатели:
+[вход и действия в каталоге](./places-catalog-funnel-report.md).
+
 ## Воронка планировщика поездки (#3449)
 
 Источники: `travel|quest|assistant|navigation|direct`. `auth_state=guest|authenticated`

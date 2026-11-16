@@ -12,6 +12,8 @@ import type { BottomDockMoreMenuItem } from './bottomDockModel'
 import { handleHeaderNavPress } from './customHeaderNavModel'
 import NavigationIcon from './NavigationIcon'
 import UnreadBadge from './UnreadBadge'
+import { usePlacesCatalogNavigation } from '@/hooks/usePlacesCatalogNavigation'
+import { placesCatalogHref } from '@/utils/placesCatalogAnalytics'
 
 type MoreItemStyles = {
   moreItem: StyleProp<ViewStyle>
@@ -42,6 +44,9 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const { logout } = useAuth()
+  const placesNavigation = usePlacesCatalogNavigation(item.route, 'mobile_menu')
+  const attributedRoute = Platform.OS === 'web' && typeof item.route === 'string'
+    ? placesCatalogHref(item.route, 'mobile_menu') as Href : item.route
 
   const handlePress = () => {
     // #2100/#2779: язык и тема — подэкраны этого же листа, лист не закрываем.
@@ -77,9 +82,10 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
       return
     }
     onClose()
+    placesNavigation.onEntry()
     const route = Platform.OS !== 'web' && item.route === '/articles'
       ? buildArticlesHrefFromSource(pathname)
-      : item.route
+      : attributedRoute
     if (typeof route === 'string') {
       handleHeaderNavPress(router, route, false, pathname)
       return
@@ -118,13 +124,14 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
   const externalHref = target?.kind === 'external' ? target.url : item.external ? String(item.route) : undefined
   const href = target?.kind === 'route' || target?.kind === 'register'
     ? target.path as Href
-    : item.route
+    : attributedRoute
   const destination = externalHref ? { external: true as const, href: externalHref } : href ? { href } : undefined
 
   if (Platform.OS === 'web' && destination && !item.action) {
     return (
       <NavigationLink
         {...destination}
+        ref={placesNavigation.ref}
         onNavigate={handlePress}
         style={styles.moreItem}
         accessibilityLabel={item.accessibilityLabel}

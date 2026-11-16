@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 
 import type { PlacesCatalogSort } from '@/api/places'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { usePlacesCatalogAnalytics } from '@/hooks/usePlacesCatalogAnalytics'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import type { CatalogPlace } from '@/utils/placesCatalog'
 import { normalizeRelatedTravelRoute } from '@/utils/relatedTravel'
@@ -28,16 +29,19 @@ type PlacesCatalogControllerInput = {
   isCompact: boolean
   isWide: boolean
   hasMeasuredWidth: boolean
+  isFocused?: boolean
 }
 
 const isBlankQuery = (value: string) => !value.trim()
 const allCategories: string[] = []
 const starterCategories = [...DEFAULT_CATEGORY_SELECTION]
 
-export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth }: PlacesCatalogControllerInput) {
+export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth, isFocused = true }: PlacesCatalogControllerInput) {
   const router = useRouter()
-  const params = useLocalSearchParams<{ category?: string; country?: string; q?: string }>()
-  const [urlParamsApplied, setUrlParamsApplied] = useState(Platform.OS !== 'web')
+  const params = useLocalSearchParams<{ category?: string; country?: string; q?: string; places_source?: string }>()
+  const urlParamsKey = JSON.stringify([params.category, params.country, params.q])
+  const [appliedUrlParamsKey, setAppliedUrlParamsKey] = useState<string | null>(() => Platform.OS !== 'web' ? urlParamsKey : null)
+  const urlParamsApplied = appliedUrlParamsKey !== null
   const [query, setQuery] = useState(() => Platform.OS !== 'web' && typeof params.q === 'string' ? params.q : '')
   // В запрос уходит значение после паузы ввода: `useDeferredValue` паузой не
   // был, и каждый набранный символ стоил бэкенду отдельного расчёта (#2184).
@@ -99,6 +103,21 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     [placesQuery.data],
   )
   const totalCount = placesQuery.data?.pages[0]?.count ?? 0
+  const trackAction = usePlacesCatalogAnalytics({
+    source: params.places_source,
+    searchKey: JSON.stringify([normalizedQuery, selectedCategories, selectedCountry, sortMode]),
+    hasSearch: Boolean(normalizedQuery),
+    // A retained tab can refocus with a new URL before the restoration effect
+    // commits its filters. Do not report the previous cached search as this visit.
+    openReady: appliedUrlParamsKey === urlParamsKey,
+    focused: isFocused,
+    ready: queryReady,
+    fetching: placesQuery.isFetching,
+    placeholder: placesQuery.isPlaceholderData,
+    success: placesQuery.isSuccess,
+    error: placesQuery.isError,
+    count: totalCount,
+  })
   const catalogTotal = scope?.count ?? 0
   const categoryFacets = useMemo(() => scope?.categoryFacets ?? [], [scope])
   const countryFacets = useMemo(() => scope?.countryFacets ?? [], [scope])
@@ -147,8 +166,8 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     setSelectedCountry((current) => (current === nextCountry ? current : nextCountry))
     const nextQuery = typeof params.q === 'string' ? params.q : ''
     setQuery((current) => (current === nextQuery ? current : nextQuery))
-    setUrlParamsApplied(true)
-  }, [params.category, params.country, params.q])
+    setAppliedUrlParamsKey(urlParamsKey)
+  }, [params.category, params.country, params.q, urlParamsKey])
 
   const canLoadMore = queryReady && !placesQuery.isPlaceholderData && placesQuery.hasNextPage
   const loadMorePlaces = useCallback(() => {
@@ -181,8 +200,9 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     handleClearCategories()
   }, [handleClearCategories, resetList])
   const selectCategoryCollection = useCallback((collection: CategoryCollection) => {
+    trackAction('collection')
     syncCategoryParams([...collection.categories])
-  }, [syncCategoryParams])
+  }, [syncCategoryParams, trackAction])
   const handleSelectCountry = useCallback((country: string | null) => {
     requestCatalogScope()
     setSelectedCountry(country)
@@ -198,6 +218,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   }, [normalizedQuery, resetList, sortMode])
   const openOnMap = useCallback((place: CatalogPlace) => {
     if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
+    trackAction('open_map')
     router.push({
       pathname: '/map',
       params: {
@@ -220,13 +241,18 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
         placeImageUrl: place.travelImageThumbUrl || place.imageUrl || '',
       },
     })
-  }, [router])
+  }, [router, trackAction])
   const openTravel = useCallback((url: string) => {
     if (!url) return
     const internalRoute = normalizeRelatedTravelRoute(url)
-    if (internalRoute) router.push(internalRoute as Href)
-    else void openExternalUrlInNewTab(url, { allowRelative: true, baseUrl: getSiteBaseUrl() })
-  }, [router])
+    if (internalRoute) {
+      trackAction('open_travel')
+      router.push(internalRoute as Href)
+    } else {
+      void openExternalUrlInNewTab(url, { allowRelative: true, baseUrl: getSiteBaseUrl() })
+        .then((opened) => { if (opened) trackAction('open_travel') })
+    }
+  }, [router, trackAction])
 
   const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(normalizedQuery)
   const resetAll = useCallback(() => {
