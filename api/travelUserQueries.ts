@@ -1,6 +1,5 @@
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { translate as i18nT } from '@/i18n';
-import { formatHttpStatus } from './httpStatus';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -12,6 +11,7 @@ import {
 import type { MyTravelsPayload } from './travelsNormalize';
 import {
     LONG_TIMEOUT,
+    formatHttpStatus,
     TOKEN_KEY,
     GET_TRAVELS,
     coerceTotal,

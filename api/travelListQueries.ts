@@ -21,9 +21,9 @@ import {
 import { normalizeTravelItem } from './travelsNormalize';
 import { takeTravelListPreload } from '@/utils/travelListPreload';
 import { translate as i18nT } from '@/i18n';
-import { formatHttpStatus } from './httpStatus';
 import {
     LONG_TIMEOUT,
+    formatHttpStatus,
     TOKEN_KEY,
     GET_TRAVELS,
     GET_RANDOM_TRAVELS,

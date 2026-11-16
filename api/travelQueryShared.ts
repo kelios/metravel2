@@ -21,6 +21,10 @@ if (!rawApiUrl) {
 const URLAPI = rawApiUrl;
 
 export const LONG_TIMEOUT = 30000;
+
+/** HTTP/2 can omit the reason phrase. Keep the code without inventing UI copy. */
+export const formatHttpStatus = (status: number, statusText: string): string =>
+    `${status} ${statusText}`.trim();
 // Ре-экспорт единственного объявления ключа (#1551) — см. `@/utils/authPlatform`.
 export { ACCESS_TOKEN_STORAGE_KEY as TOKEN_KEY } from '@/utils/authPlatform';
 export const GET_TRAVELS = `${URLAPI}/travels/`;

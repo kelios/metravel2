@@ -9209,10 +9209,35 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 
 ### TRAVEL-HTTP-STATUS-FALLBACK-001 — пустой statusText не добавляет английский текст
 
+- **Payload follow-up — 16.11.2026 (#3442, связь ROUTE-BUNDLE-001):** canonical
+  сборка5345f1c0b, clean/Node22, остановлена guard до publish: entry232602/232602B
+  проходит, но home482358BrotliB > exact480437 (+1921B); travels571504B
+  (558,1KiB) >558KiB, eager requests14>13 и19>18. Потолки не меняются.
+  В 4c1de3a60/b3ade977 requests13/18; совпадающие сохранённые9d47+ae24
+  chunks с12factory заменились наc4fb+0a228+82345 с16factory:12старых тел
+  побайтово совпадают, ещё4foreign factory AI availability/config и book
+  preview/print добавляют5193rawB. Новый formatter —144rawB factory внутри
+  существующего7e145 chunk, не самостоятельный chunk; этот chunk вырос
+  42962→43127rawB и10896→10937BrotliB. Единственный новый source-модуль
+  между baseline и5345 — `api/httpStatus.ts`: его leaf-стоимость изменила
+  решения byte-sensitive granular merge с128KiB foreign cap.
+- **Коррекция слоя:** единственный formatter с тем же телом перенесён в уже
+  импортируемый обоими query-модулями `api/travelQueryShared.ts`, отдельный
+  leaf удалён. `Error.status`, reason phrase, ограниченный responseBody,
+  `errorsStatic` и RU/BE/UK/PL/EN не меняются. `api/clientErrors.ts`, entry,
+  chunk merger и quality/config budgets не затрагиваются.
+- **Почему семантических unit было мало:** они доказывают подпись ошибки,
+  а не partition собранного графа. Штатный canonical prepublish budget
+  сработал и не допустил регрессию на live; новый обход/ослабление guard не нужен.
+  Source/light repair ещё не доказывает восстановление метрик: требуются
+  прежние118/65 regression cases, review/gate и canonical rebuild после
+  resource lease; live после5345 не заявлен. Map3440 и его16paths неизменны.
+
 - **Цепочка:** #3389 → #3442; каноническое исправление подписи статуса — #3442.
 - **Подтверждённая причина:** три ошибки travel-запросов подставляли `Unknown error`
   при пустом HTTP/2 `statusText`, внутри уже переведённого `errorsStatic` сообщения.
-- **Инвариант:** общий `api/httpStatus.ts` оставляет только числовой код без
+- **Инвариант:** единственный `formatHttpStatus` в `api/travelQueryShared.ts`
+  оставляет только числовой код без
   запасной фразы; непустой reason phrase, `Error.status` и отдельное ограниченное
   диагностическое тело сохраняются. Новые словари HTTP-статусов не нужны.
 - **Контроль:** регрессии трёх реальных API-функций на RU/BE/UK/PL/EN, отдельные

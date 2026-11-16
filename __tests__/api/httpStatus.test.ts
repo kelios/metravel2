@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { formatHttpStatus } from '@/api/httpStatus';
+import { formatHttpStatus } from '@/api/travelQueryShared';
 
 describe('formatHttpStatus', () => {
   it.each([500, 502, 503, 504, 599])('keeps only the %i code without a reason phrase', (status) => {
