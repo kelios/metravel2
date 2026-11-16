@@ -1,13 +1,12 @@
 import type { TravelModerationMetadata, TravelPublicationStatus } from '@/types/types';
 import { translate as i18nT } from '@/i18n';
 
-export { DRAFT_PUBLICATION_STATUSES, PUBLISHED_PUBLICATION_STATUSES, isTravelDraft } from './travelDraftStatus';
+import { resolveTravelPublicationStatus, type TravelPublicationFields } from './travelDraftStatus';
 
-export type TravelPublicationFields = {
-  publication_status?: string | null;
-  publish?: unknown;
-  moderation?: unknown;
-};
+export {
+  DRAFT_PUBLICATION_STATUSES, PUBLISHED_PUBLICATION_STATUSES, isTravelDraft, resolveTravelPublicationStatus,
+} from './travelDraftStatus';
+export type { TravelPublicationFields } from './travelDraftStatus';
 
 export type TravelPublicationCommand = 'save' | 'submit' | 'approve' | 'reject';
 
@@ -43,26 +42,6 @@ export function resolveTravelModerationFeedback(travel: TravelPublicationFields 
     reason: rejected && metadata.moderation_decision_reason.trim() ? metadata.moderation_decision_reason : '',
     decidedAt: hasCurrentDecision && timestamp && Number.isFinite(Date.parse(timestamp)) ? timestamp : null,
   };
-}
-
-const PUBLICATION_STATUSES: readonly TravelPublicationStatus[] = [
-  'draft', 'pending_review', 'approved', 'published',
-];
-
-const isTrueFlag = (value: unknown): boolean =>
-  value === true || value === 1 || value === '1' || value === 'true';
-
-/** Canonical values are authoritative, including invalid values. Only absence permits legacy fallback. */
-export function resolveTravelPublicationStatus(travel: TravelPublicationFields): TravelPublicationStatus | null {
-  if (travel.publication_status !== undefined) {
-    return PUBLICATION_STATUSES.includes(travel.publication_status as TravelPublicationStatus)
-      ? travel.publication_status as TravelPublicationStatus
-      : null;
-  }
-  const publish = isTrueFlag(travel.publish);
-  const moderation = isTrueFlag(travel.moderation);
-  if (publish) return moderation ? 'published' : 'pending_review';
-  return moderation ? 'approved' : 'draft';
 }
 
 export function requireTravelPublicationStatus(travel: TravelPublicationFields): TravelPublicationStatus {

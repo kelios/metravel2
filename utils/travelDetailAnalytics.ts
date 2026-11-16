@@ -2,16 +2,18 @@ import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import { sendAnalyticsEvent } from '@/utils/analytics'
-import { resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus'
+import { resolveTravelPublicationStatus } from '@/utils/travelDraftStatus'
 
 type TravelDetailAction = 'section_description' | 'section_map' | 'section_points' | 'contact_phone'
 
-export type TravelAnalyticsSource = Pick<Travel, 'id' | 'publish' | 'moderation' | 'publication_status'>
+export function getPublishedTravelAnalyticsId(
+  travel: Pick<Travel, 'id' | 'publish' | 'moderation' | 'publication_status'> | null | undefined,
+): number | undefined {
+  return travel && resolveTravelPublicationStatus(travel) === 'published' ? travel.id : undefined
+}
 
-export function trackTravelDetailAction(travel: TravelAnalyticsSource, action: TravelDetailAction) {
-  if (Platform.OS !== 'web' || resolveTravelPublicationStatus(travel) !== 'published') return
-  const travelId = travel.id
-  if (!Number.isSafeInteger(travelId) || travelId <= 0) return
+export function trackTravelDetailAction(travelId: number, action: TravelDetailAction) {
+  if (Platform.OS !== 'web' || !Number.isSafeInteger(travelId) || travelId <= 0) return
 
   void sendAnalyticsEvent('travel_detail_action', {
     source: 'travel_detail',
