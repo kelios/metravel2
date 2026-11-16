@@ -21,7 +21,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { toInertHtml } from '@/utils/inertHtml';
 import { demoteRichTextPageHeadings } from '@/utils/richTextHeadings';
 import { ensureRichTextImageAlt } from '@/utils/richTextImageAlt';
-import { trackTravelDetailAction } from '@/utils/travelDetailAnalytics';
+import type { TravelAnalyticsSource } from '@/utils/travelDetailAnalytics';
 import { useTravelLoaderPayload } from '@/components/travel/details/travelLoaderData';
 
 
@@ -34,7 +34,7 @@ interface TravelDescriptionProps {
     // #1256: индекс `media.article_body`. Есть только у тела статьи: у «Рекомендаций»,
     // «Плюсов» и «Минусов» манифеста нет, и они остаются на клиентской сборке URL.
     articleBodyMedia?: ArticleBodyMediaIndex | null;
-    analyticsTravelId?: number;
+    analyticsTravel?: TravelAnalyticsSource;
 }
 
 const HEAVY_HTML_REVEAL_ROOT_MARGIN = '0px 0px 400px 0px';
@@ -69,7 +69,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
                                                                  noBox = false,
                                                                  serverSanitized = false,
                                                                  articleBodyMedia = null,
-                                                                 analyticsTravelId,
+                                                                 analyticsTravel,
                                                                  dimensions: { width, height },
                                                                  hasLoaderTravel,
                                                              }) => {
@@ -79,7 +79,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
     const descriptionRef = useRef<ViewInstance | null>(null);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || analyticsTravelId == null) return;
+        if (Platform.OS !== 'web' || !analyticsTravel) return;
         const root = resolveWebElement(descriptionRef.current);
         if (!root) return;
 
@@ -87,13 +87,16 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
             const anchor = event.target instanceof Element
                 ? event.target.closest('a[href^="tel:" i]')
                 : null;
-            if (anchor && root.contains(anchor)) trackTravelDetailAction(analyticsTravelId, 'contact_phone');
+            if (!anchor || !root.contains(anchor)) return;
+            void import('@/utils/travelDetailAnalytics')
+                .then(({ trackTravelDetailAction }) => trackTravelDetailAction(analyticsTravel, 'contact_phone'))
+                .catch(() => undefined);
         };
 
         // The wrapper is shared by the SSR description and the deferred HTML.
         root.addEventListener('click', handleContactClick, true);
         return () => root.removeEventListener('click', handleContactClick, true);
-    }, [analyticsTravelId]);
+    }, [analyticsTravel]);
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);

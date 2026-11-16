@@ -6,7 +6,6 @@ import { useAiSimilarAvailability } from '@/hooks/useAiSimilarAvailability'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
 import { noteTravelViewForAppInstall } from '@/utils/appInstallSignal'
 import { rIC } from '@/utils/rIC'
-import { getPublishedTravelAnalyticsId, trackTravelDetailAction } from '@/utils/travelDetailAnalytics'
 import {
   getTravelDetailsChromeReadyState,
   getTravelDetailsHeadKey,
@@ -158,13 +157,8 @@ export function useTravelDetailsContainerViewModel({
     postLcpRuntimeReady,
   })
 
-  const analyticsTravelId = getPublishedTravelAnalyticsId(travel)
-
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
-      if (analyticsTravelId != null && (key === 'description' || key === 'map' || key === 'points')) {
-        trackTravelDetailAction(analyticsTravelId, `section_${key}`)
-      }
       setActiveSection(key)
       openSection(key)
       // Lazy sections (map/points/excursions/near/popular/comments) may not be
@@ -174,6 +168,11 @@ export function useTravelDetailsContainerViewModel({
       // find. Emitting `open-section` forces the section to mount (forceOpenKey)
       // so the mount-aware scroll retry can land on it.
       if (Platform.OS === 'web') {
+        if (travel && (key === 'description' || key === 'map' || key === 'points')) {
+          void import('@/utils/travelDetailAnalytics')
+            .then(({ trackTravelDetailAction }) => trackTravelDetailAction(travel, `section_${key}`))
+            .catch(() => undefined)
+        }
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
           window.dispatchEvent(new CustomEvent('open-section', { detail: { key } }))
         }
@@ -183,7 +182,7 @@ export function useTravelDetailsContainerViewModel({
       scrollTo(key)
       if (isMobile) closeMenu()
     },
-    [analyticsTravelId, scrollTo, isMobile, closeMenu, openSection, setActiveSection]
+    [travel, scrollTo, isMobile, closeMenu, openSection, setActiveSection]
   )
 
   const scrollToMapSection = useCallback(() => {

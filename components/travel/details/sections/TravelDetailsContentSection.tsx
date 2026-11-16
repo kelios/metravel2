@@ -28,7 +28,6 @@ import TravelPeerBadgePrompt from './TravelPeerBadgePrompt'
 import { translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles'
 import { buildTravelPath } from '@/utils/routePaths'
-import { getPublishedTravelAnalyticsId } from '@/utils/travelDetailAnalytics'
 
 
 // #1499: выбор web/native переехал в платформенную пару
@@ -157,7 +156,7 @@ export const TravelDetailsContentSection: React.FC<{
                 htmlContent={descriptionContent.html}
                 serverSanitized={descriptionContent.serverSanitized}
                 articleBodyMedia={articleBodyMedia}
-                analyticsTravelId={getPublishedTravelAnalyticsId(travel)}
+                analyticsTravel={travel}
                 noBox
               />
               <TravelColoringSlot key={travel.id} travelId={travel.id} />
