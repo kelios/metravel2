@@ -30,6 +30,9 @@ import {
 import { translate as i18nT } from '@/i18n'
 
 const CHART_RESERVE_STYLE = { height: CHART_HEIGHT } as const
+// The shared web media reset uses height:auto, which overrides SVG attributes.
+// Keep the rendered chart at the same height as its first-frame reserve.
+const WEB_CHART_SIZE_STYLE = { ...CHART_RESERVE_STYLE, minHeight: CHART_HEIGHT, flexShrink: 0 } as const
 
 type Props = {
   title?: string
@@ -287,7 +290,7 @@ export default function RouteElevationProfile({
             </View>
           ) : null}
           {width > 0 ? (
-            <Svg width={width} height={CHART_HEIGHT}>
+            <Svg width={width} height={CHART_HEIGHT} style={Platform.OS === 'web' ? [WEB_CHART_SIZE_STYLE] : undefined}>
               <ChartStaticLayers
                 width={width}
                 yAxisGuides={yAxisGuides}

@@ -1000,6 +1000,18 @@ guard, падающий в CI на попытке обойти этот конт
   `travelRouteLoader.test.ts` проверяет сериализованный initial payload для
   0/1/10 и отсутствие поля у старых/некорректных ответов. Production-приёмка
   обязана читать реальный embedded count до фоновой дозагрузки.
+- **Унаследованный SVG handoff #3436, 2026-11-16:** после прохождения count gate
+  raw CLS выявил внутренний `route-elevation-point-cards` source, без сдвига
+  `travel-details-points`/route-map-transition: общий media reset
+  `criticalCSSBuilder.ts` задаёт SVG `height:auto`, сильнее атрибута height.
+  Reserve 120 px сменялся SVG 108.3125 px при ширине 334 из заданных 370;
+  профиль сжимался 511 → 499.3125 px. Renderer унаследован из #3430
+  (`2db727518`). Web SVG теперь явно держит тот же `CHART_HEIGHT`, что reserve;
+  native и модель данных не меняются. `RouteElevationProfile.chartSize.dom.web.test.tsx`
+  использует настоящий DOM SVG и общий critical CSS, воспроизводит auto вместо
+  120 px до правки; targeted browser A/B подтверждает постоянные 511 px и
+  отсутствие internal-profile sources. Расширенный запрет route-elevation-* и
+  исходный points/map gate сохраняются; новый выкат требует fresh production матрицу.
 - **Инвариант:** deferred-placeholder остаётся в потоке до первого ненулевого
   layout разрешённого runtime-модуля, а его внешний reserve совпадает с
   runtime-геометрией. Узлы footer/runtime не должны попадать в

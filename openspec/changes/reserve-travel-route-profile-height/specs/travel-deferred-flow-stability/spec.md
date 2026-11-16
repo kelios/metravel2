@@ -19,6 +19,10 @@ On web, an article with a positive integer `route_track_files_count` SHALL reser
 - **WHEN** current-article track parsing and chart code finish while the reader is on the map
 - **THEN** the profiles are visible immediately and use the reserved space, without pushing already-visible route points out of the viewport
 
+#### Scenario: The SVG replaces the chart reserve under web media CSS
+- **WHEN** the profile measures its width and replaces its chart reserve with the real SVG while the reader can see the profile
+- **THEN** the SVG retains the reserve's chart height despite the shared responsive media reset, and internal profile cards do not shift
+
 #### Scenario: Track produces no drawable profile
 - **WHEN** a declared file cannot produce a profile or loading fails
 - **THEN** unused space is released when existing stable-shrink rules permit, without moving visible content or retaining a permanent guessed-height gap
