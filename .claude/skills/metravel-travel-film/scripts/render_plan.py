@@ -91,6 +91,9 @@ for i, s in enumerate(SEG):
     hand.append((hL, hR)); cores.append(nf / FPS)
     h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|edges2{'+3' if hL - hLa > 0.001 and hR - hRa > 0.001 else ''}|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
     f = os.path.join(wd, f"{i:03d}_{h}.mov")   # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
+    if not os.path.exists(f):   # кусок с тем же содержимым под другим номером (сцены переставлены) — взять его, а не рендерить заново
+        _old = [x for x in os.listdir(wd) if x.endswith(f"_{h}.mov") and not x.startswith("._")] if os.path.isdir(wd) else []
+        if _old: os.rename(os.path.join(wd, _old[0]), f)
     parts.append(f)
     if only is not None and i not in only and os.path.exists(f):
         continue
