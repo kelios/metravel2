@@ -31,9 +31,17 @@ changes, changing nginx/CSP, relaxing CLS or bundle caps, broad chunk-policy wor
 - Native placeholder premise is checked with forced AI/native component branches,
   not a new device build when no native implementation changes. This does not
   claim physical-device rendering or performance.
-- Cookie/footer/author and console causes remain unestablished until the selected
-  runtime measurement. Attribute third-party messages before changing first-party
-  code; backend policy changes use a separate confirmed backend task.
+- Cookie cause is now observed: production2f66, TMB470 fresh desktop1280 case2
+  shifted `consent-banner` by CLS0.08803 after fonts had settled. The late client
+  mount used the hydration-zero responsive snapshot until its low-priority
+  transition; it can become visible with the narrow layout on desktop. Use the
+  existing `clientOnly` responsive contract only in this effect-mounted banner.
+  A real-hook/RNW first-visible regression holds that transition: old desktop
+  is narrow (RED), repaired desktop is wide;320 remains a healthy mobile control.
+  No global hook/default, SSR, text, visibility delay or content hiding changes.
+- Footer/author and console still require the full selected runtime disposition.
+  Attribute third-party messages before changing first-party code; backend policy
+  changes use a separate confirmed backend task.
 
 ## Validation and delivery
 
@@ -54,3 +62,13 @@ Quill formatting can confuse generated and deliberately replaced alt; real histo
 clipboard and authored-same-text controls cover that boundary. Resize notifications
 can duplicate; one tracked frame coalesces them and unsafe geometry remains held.
 Global bundle repartitioning still requires canonical checks under unchanged caps.
+
+## Current acceptance checkpoint
+
+The first source18 release2f66 passed review/hooks/canonical121HTML/86aliases.
+Independent production QA stopped at the first failure after2/24 desktop loads:
+case1 CLS0.00102 (author), case2 cookie CLS0.08803. Remaining22 loads, mobile
+geometry/console and private QA104 editor/clipboard/save/finalGET were NOTRUN;
+fixtureID remains null. Local slider replay separately exposed a synthetic SSR
+loader bridge gap; its fixture-only repair/review is independent and the pair
+remains mandatory. Cookie source RED/GREEN is not a new production PASS.

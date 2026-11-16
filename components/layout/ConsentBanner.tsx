@@ -27,7 +27,8 @@ function ConsentBanner() {
   const keyboardInset = useWebKeyboardInset();
   const criticalOwner = useSyncExternalStore(subscribeBottomChromeReserve, getCriticalBottomChromeOwner, () => null);
   const suspendForOverlay = footerOverlayOpen || keyboardInset > 0 || criticalOwner !== null;
-  const { isMobile, width } = useResponsive();
+  // RootWebDeferredChrome mounts this banner only after its client effect.
+  const { isMobile, width } = useResponsive({ clientOnly: true });
   const isNarrowMobile = isMobile && width > 0 && width < 360;
   const anchorPx = useFloatingAnchorPx();
   const anchorGap = isMobile ? 8 : DESIGN_TOKENS.spacing.xs;
