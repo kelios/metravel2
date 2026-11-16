@@ -2,7 +2,9 @@
 """Покраска по плану: выравнивание планов между камерами + общий лук фильма.
 
 uv run --with numpy python grade.py <plan.json> <plan_graded.json> [--look look.cube] [--cache grade_stats.json]
-    [--strength 1.0] [--skip-dirs память,титры,карты] [--alias alias.json]
+    [--strength 1.0] [--skip-dirs память,титры,карты] [--alias alias.json] [--minimal]
+--minimal — только яркость на стыках разных камер и gamma из ручных поправок: без лука, баланса белого и насыщенности
+(владелец 16.11: полная покраска уводила цвета от того, что было на месте).
 --alias — {производный файл: [исходник, сдвиг]}: камера размытых и вертикальных копий берётся по исходнику.
 
 Что делает:
@@ -151,7 +153,8 @@ def shots():
     return out
 
 
-make_look(look_path)
+MINIMAL = "--minimal" in a          # владелец 16.11: лук «не те цвета, хуже непокрашенного» — по умолчанию для GR21 только яркость
+if not MINIMAL: make_look(look_path)
 L = shots()
 print(f"кусков для покраски: {len(L)}", flush=True)
 S = []                                   # один замер на план за запуск: сбой не повторяется вторым проходом
@@ -191,11 +194,23 @@ print(f"выравнивание камер на стыках: планов {len
 for k_, ((obj, p, _, _, _), st) in enumerate(zip(L, S)):
     if obj.get("grade_manual"):   # ручная покраска плана: ключ "grade" оставляем как есть
         continue
+    if MINIMAL:
+        # только яркость на стыках разных камер (eq=gamma — по яркости, оттенок и баланс белого не трогаются);
+        # ручные поправки — тоже только их gamma; без лука, уровней, баланса белого и насыщенности
+        ch = []
+        if st and k_ in TG and 0.05 < st["p50"] < 0.95:
+            g_ = float(np.clip(np.log(max(float(np.mean(TG[k_])), 1e-3)) / np.log(st["p50"]), 0.85, 1.2))
+            if g_ < 0.97: ch.append(f"eq=gamma={1 / g_:.3f}")   # только осветлить тёмный план до соседа; затемнять — нет (владелец: «хуже исходника»)
+        ch += [x for x in (obj.get("grade_extra") or "").split(",") if x.startswith("eq=gamma=")]
+        if ch: obj["grade"] = ",".join(ch); n += 1
+        else: obj.pop("grade", None)
+        continue
     chain = (correction(st, film, float(np.mean(TG[k_])), (0.70, 1.32)) if k_ in TG else correction(st, film)) if st else []
     if obj.get("grade_extra"): chain.append(obj["grade_extra"])   # точечная ручная поправка плана (рецензент: «gamma 1.4 на перебивке»)
     chain.append(f"lut3d=file='{look_path}':interp=tetrahedral")
     obj["grade"] = ",".join(chain); n += 1
-plan.setdefault("grade", {})["look"] = look_path
+plan.setdefault("grade", {})["look"] = None if MINIMAL else look_path
+plan["grade"]["mode"] = "minimal" if MINIMAL else "look"
 plan["grade"]["film"] = film
 json.dump(plan, open(dst_plan, "w"), ensure_ascii=False, indent=1)
-print(f"готово: {dst_plan}, планов с покраской {n}, лук {look_path}")
+print(f"готово: {dst_plan}, планов с покраской {n}, " + ("режим: только яркость" if MINIMAL else f"лук {look_path}"))
