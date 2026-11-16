@@ -17,6 +17,8 @@ import { webTouchScrollStyle } from '@/utils';
 import type { ProfileTabKey } from '@/components/profile/ProfileTabs';
 import type { createProfileScreenStyles } from '@/components/screens/profile/profileScreen.styles';
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
+import { translate as i18nT } from '@/i18n';
+import { useTranslation } from '@/i18n/LocaleProvider';
 
 type ProfileStyles = ReturnType<typeof createProfileScreenStyles>;
 
@@ -35,6 +37,8 @@ type Props = {
   isTravelsTabLoading: boolean;
   activeTab: ProfileTabKey;
   travelsLoadingMore: boolean;
+  nextPageError: string | null;
+  retryNextPage: () => Promise<void>;
   // grid + card props
   isCardsSingleColumn: boolean;
   gridColumns: number;
@@ -68,6 +72,8 @@ export function ProfileTravelListView({
   isTravelsTabLoading,
   activeTab,
   travelsLoadingMore,
+  nextPageError,
+  retryNextPage,
   isCardsSingleColumn,
   gridColumns,
   gapSize,
@@ -86,6 +92,7 @@ export function ProfileTravelListView({
   worldMapGestureActive,
   handleListEndReached,
 }: Props) {
+  useTranslation();
   const footer =
     isProfileTravelTab(activeTab) && travelsLoadingMore ? (
       <View style={styles.footerLoader}>
@@ -147,7 +154,23 @@ export function ProfileTravelListView({
             />
           </View>
         )}
-        {footer}
+        {isProfileTravelTab(activeTab) && !isSectionTab && !isTravelsTabLoading &&
+        currentData.length > 0 && nextPageError && !travelsLoadingMore ? (
+          <View style={styles.fullRow} testID="profile-next-page-error">
+            <EmptyState
+              icon="alert-triangle"
+              title={i18nT('sharedStatic:myTravels.nextPageFailedTitle')}
+              description={nextPageError}
+              variant="error"
+              density="compact"
+              action={{
+                label: i18nT('sharedStatic:myTravels.retryNextPage'),
+                onPress: () => { void retryNextPage(); },
+                testID: 'profile-next-page-retry',
+              }}
+            />
+          </View>
+        ) : footer}
       </ScrollView>
     );
   }

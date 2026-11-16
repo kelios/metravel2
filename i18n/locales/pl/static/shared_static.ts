@@ -123,6 +123,8 @@ export const sharedStaticResources = {
   "subscription.statusAction": "Sprawdź status obserwowania",
   "subscription.listLoadFailed": "Nie udało się wczytać listy",
   "myTravels.loadFailedTitle": "Nie udało się załadować tras",
+  "myTravels.nextPageFailedTitle": "Nie udało się wczytać kolejnej części tras",
+  "myTravels.retryNextPage": "Ponów wczytywanie",
   "profileTabs.countUnavailable": "liczba niedostępna",
   "article.loadFailed": "Nie udało się załadować artykułu",
   "article.checkLink": "Sprawdź link do artykułu.",

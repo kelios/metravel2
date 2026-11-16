@@ -54,6 +54,8 @@ const createAllTravels = (overrides: Partial<UseMyTravelsResult> = {}): UseMyTra
   removingTravelId: null,
   hasMore: true,
   error: null,
+  nextPageError: null,
+  retryNextPage: jest.fn(async () => {}),
   load: jest.fn(async () => {}),
   loadMore: jest.fn(async () => {}),
   remove: jest.fn(async () => true),
@@ -89,6 +91,53 @@ describe('useProfileTravelTabList', () => {
     expect(result.current.isFiltered).toBe(false);
     expect(result.current.travels).toBe(allTravels.myTravels);
     expect(mockFetchMyTravels).not.toHaveBeenCalled();
+  });
+
+  it('ошибка и retry общего списка берутся из активного источника', async () => {
+    const allTravels = createAllTravels({ nextPageError: 'Общий список: 503' });
+    const { result } = await renderTabList('travels', allTravels);
+    expect(result.current.nextPageError).toBe(allTravels.nextPageError);
+    await act(async () => { await result.current.retryNextPage(); });
+    expect(allTravels.retryNextPage).toHaveBeenCalledTimes(1);
+    expect(allTravels.load).not.toHaveBeenCalled();
+  });
+
+  it('повтор догрузки принадлежит выбранному срезу и не смешивает опубликованные с черновиками', async () => {
+    const failures = new Set(['draft', 'published']);
+    mockFetchMyTravels.mockImplementation(async params => {
+      const status = params.publicationStatus?.includes('draft') ? 'draft' : 'published';
+      if (params.page === 2 && failures.has(status)) throw new Error(`${status}: 503`);
+      const offset = status === 'draft' ? 0 : 100;
+      return page([offset + (params.page === 2 ? 2 : 1)], 2, status) as any;
+    });
+    const allTravels = createAllTravels({ nextPageError: 'Общий список: 502' });
+    const { result, rerender } = await renderTabList('draftTravels', allTravels);
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toBe('draft: 503'));
+
+    await rerender({ tab: 'publishedTravels' });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    expect(result.current.nextPageError).toBeNull();
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toBe('published: 503'));
+    const publishedReads = mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published')).length;
+
+    await rerender({ tab: 'draftTravels' });
+    expect(result.current.nextPageError).toBe('draft: 503');
+    failures.delete('draft');
+    await act(async () => { await result.current.retryNextPage(); });
+    await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([1, 2]));
+    expect(result.current.nextPageError).toBeNull();
+    expect(mockFetchMyTravels.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({
+      page: 2, publicationStatus: ['draft', 'pending_review'],
+    }));
+    expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(publishedReads);
+    expect(allTravels.retryNextPage).not.toHaveBeenCalled();
+    expect(allTravels.load).not.toHaveBeenCalled();
+    await rerender({ tab: 'publishedTravels' });
+    expect(result.current.nextPageError).toBe('published: 503');
+    expect(result.current.travels.map(t => t.id)).toEqual([101]);
   });
 
   it('открытие «Черновиков» стоит одного запроса со своим фильтром', async () => {

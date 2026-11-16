@@ -26,6 +26,8 @@ export type ProfileTravelListSource = {
   isLoadingMore: boolean
   hasMore: boolean
   error: string | null
+  nextPageError: string | null
+  retryNextPage: () => Promise<void>
   removingTravelId: number | null
   reload: () => Promise<void>
   loadMore: () => Promise<void>
@@ -120,6 +122,8 @@ export function useProfileTravelTabList({
     isLoadingMore: source.isLoadingMore,
     hasMore: source.hasMore,
     error: source.error,
+    nextPageError: source.nextPageError,
+    retryNextPage: source.retryNextPage,
     removingTravelId: source.removingTravelId,
     reload,
     loadMore: source.loadMore,

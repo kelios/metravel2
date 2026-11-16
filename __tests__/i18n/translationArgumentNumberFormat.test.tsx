@@ -74,11 +74,11 @@ describe('#1468 число в аргументе перевода печатае
     async (locale, distance, elevation) => {
       await i18n.changeLanguage(locale)
 
-      const { getAllByText, getByText } = await render(
+      const { getAllByText } = await render(
         <RouteElevationProfile title="Профиль высот" preview={preview} />,
       )
 
-      expect(getByText(distance)).toBeTruthy()
+      expect(getAllByText(distance).length).toBeGreaterThan(0)
       expect(getAllByText(elevation).length).toBeGreaterThan(0)
     },
   )

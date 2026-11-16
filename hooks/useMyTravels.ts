@@ -60,6 +60,9 @@ export interface UseMyTravelsResult {
   hasMore: boolean;
   /** Текст ошибки первой страницы. null — данные актуальны либо ещё грузятся. */
   error: string | null;
+  /** Ошибка догрузки при сохранённых карточках; принадлежит текущей области. */
+  nextPageError: string | null;
+  retryNextPage: () => Promise<void>;
   load: () => Promise<void>;
   loadMore: () => Promise<void>;
   /** true — маршрут удалён (или его уже не было на сервере). false — отмена или сбой. */
@@ -261,7 +264,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
   }, [owner]);
   const activated = activation.owner === owner && activation.scopes.has(scope);
   const [refreshing, setRefreshing] = useState<{ scope: string; query: unknown; operation: symbol } | null>(null);
-  const [paginationStopped, setPaginationStopped] = useState<Set<string>>(() => new Set());
+  const [paginationStopped, setPaginationStopped] = useState<Map<string, { query: unknown; error: unknown }>>(() => new Map());
   const [removing, setRemoving] = useState<{ scope: string; query: unknown; id: number; operation: symbol } | null>(null);
   const loadInFlightRef = useRef<{ scope: string; query: unknown; promise: Promise<void> } | null>(null);
   const nextPageInFlightRef = useRef<{ query: unknown; operation: symbol } | null>(null);
@@ -327,7 +330,16 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     : null;
   const publicationCountsUnavailable = !error && ownsBreakdown &&
     (hiddenWindowIncomplete || (!hasHiddenRows && pages?.[0]?.draftsCount === 'failed'));
-  const hasMore = Boolean(usableData && !error && !paginationStopped.has(scope) && !query.isFetchNextPageError && query.hasNextPage);
+  // A background refetch can succeed for page 1 without retrying failed page 2.
+  // Its success clears Query.error, but the user's recovery action must survive.
+  const stoppedPage = paginationStopped.get(scope);
+  const currentPageFailure = query.hasNextPage && stoppedPage?.query === currentQuery ? stoppedPage : null;
+  const nextPageError = targetUser && activated && hasVisibleRows && !error && query.hasNextPage
+    ? currentPageFailure
+      ? getLoadErrorMessage(currentPageFailure.error)
+      : query.isFetchNextPageError ? getLoadErrorMessage(query.error) : null
+    : null;
+  const hasMore = Boolean(usableData && !error && !currentPageFailure && !query.isFetchNextPageError && query.hasNextPage);
   const isLoading = Boolean(targetUser && !error && (!activated || query.isPending ||
     (!hasVisibleRows && hasMore) || (refreshing?.scope === scope && refreshing.query === currentQuery)));
 
@@ -361,7 +373,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     const operation = Symbol('author-list-refresh');
     ++requestSeqRef.current;
     setRefreshing({ scope, query: originQuery, operation });
-    setPaginationStopped((current) => new Set([...current].filter((key) => key !== scope)));
+    setPaginationStopped((current) => new Map([...current].filter(([key]) => key !== scope)));
     const promise: Promise<void> = Promise.resolve().then(async () => {
       try {
         if (!isCurrentScope(originQuery)) return;
@@ -396,17 +408,21 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
   }, [targetUser, scope, queryClient, queryKey, isCurrentScope, owner, refetch]);
 
   const fetchNextPage = query.fetchNextPage;
-  const loadMore = useCallback(async () => {
-    if (!targetUser || isLoading || !hasMore || query.isFetching || !myTravels.length) return;
+  const requestNextPage = useCallback(async (retry: boolean) => {
+    if (!targetUser || isLoading || query.isFetching || !query.hasNextPage || !myTravels.length) return;
+    if (retry ? !nextPageError : !hasMore) return;
     const originQuery = queryClient.getQueryCache().find({ queryKey, exact: true });
     if (!isCurrentScope(originQuery) || nextPageInFlightRef.current?.query === originQuery) return;
     const sequence = ++requestSeqRef.current;
     const operation = Symbol('author-list-next-page');
     nextPageInFlightRef.current = { query: originQuery, operation };
+    if (retry) {
+      setPaginationStopped((current) => new Map([...current].filter(([key]) => key !== scope)));
+    }
     try {
       const result = await fetchNextPage({ cancelRefetch: false });
       if (!isCurrentScope(originQuery) || requestSeqRef.current !== sequence || !result.isError) return;
-      setPaginationStopped((current) => new Set([...current, scope]));
+      setPaginationStopped((current) => new Map(current).set(scope, { query: originQuery, error: result.error }));
       void showToastMessage({
         type: 'error',
         text1: i18nT('sharedStatic:myTravels.loadFailedTitle'),
@@ -416,7 +432,9 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     } finally {
       if (nextPageInFlightRef.current?.operation === operation) nextPageInFlightRef.current = null;
     }
-  }, [targetUser, isLoading, hasMore, query.isFetching, myTravels.length, queryClient, queryKey, isCurrentScope, fetchNextPage, scope]);
+  }, [targetUser, isLoading, hasMore, nextPageError, query.isFetching, query.hasNextPage, myTravels.length, queryClient, queryKey, isCurrentScope, fetchNextPage, scope]);
+  const loadMore = useCallback(() => requestNextPage(false), [requestNextPage]);
+  const retryNextPage = useCallback(() => requestNextPage(true), [requestNextPage]);
 
   const remove = useCallback(async (travelId: number): Promise<boolean> => {
     const originQuery = queryClient.getQueryCache().find({ queryKey, exact: true });
@@ -502,6 +520,6 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
     myTravels, engagementSummary, publicationCounts, publicationCountsUnavailable,
     isLoading, isLoadingMore: query.isFetchingNextPage,
     removingTravelId: removing?.scope === scope && removing.query === currentQuery ? removing.id : null,
-    hasMore, error, load, loadMore, remove,
+    hasMore, error, nextPageError, retryNextPage, load, loadMore, remove,
   };
 }

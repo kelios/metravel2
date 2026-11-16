@@ -73,6 +73,7 @@ describe('useMyTravels — состояние ошибки первой стра
       expect(result.current.error).toBe('Не удалось загрузить ваши маршруты: 502 Bad Gateway');
     });
     expect(result.current.myTravels).toEqual([]);
+    expect(result.current.nextPageError).toBeNull();
     expect(result.current.hasMore).toBe(false);
     expect(result.current.isLoading).toBe(false);
     // #1871: ноль здесь выдавал сбой сети за пустой профиль — счётчик потерян,
@@ -113,16 +114,157 @@ describe('useMyTravels — состояние ошибки первой стра
       await result.current.loadMore();
     });
 
-    // Список остаётся, автоподгрузка глушится, причина уходит в тост.
+    // Список остаётся, автоподгрузка глушится, причина доступна и после тоста.
     expect(result.current.myTravels).toHaveLength(2);
     expect(result.current.hasMore).toBe(false);
     expect(result.current.error).toBeNull();
+    expect(result.current.nextPageError).toContain('503 Service Unavailable');
     expect(mockShowToastMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'error',
         text2: 'Не удалось загрузить ваши маршруты: 503 Service Unavailable',
       })
     );
+  });
+
+  it('повторяет ту же страницу после повторного 503 и продолжает пагинацию после успеха', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 6) as any);
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    expect(result.current.nextPageError).toBeNull();
+
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.retryNextPage(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+    expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2]);
+    expect(result.current.hasMore).toBe(false);
+
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([3, 4], 6) as any);
+    await act(async () => { await result.current.retryNextPage(); });
+    await waitFor(() => expect(result.current.nextPageError).toBeNull());
+    expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2, 3, 4]);
+    expect(result.current.hasMore).toBe(true);
+    expect(mockFetchMyTravels.mock.calls.map(([p]) => p.page)).toEqual([1, 2, 2, 2]);
+
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([5, 6], 6) as any);
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.myTravels).toHaveLength(6));
+    expect(mockFetchMyTravels.mock.calls.at(-1)?.[0].page).toBe(3);
+  });
+
+  it('сохраняет причину и retry страницы 2 после успешной фоновой invalidation страницы 1', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+
+    // Real active-query invalidation refetches only successful saved pages.
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
+    expect(mockFetchMyTravels.mock.calls.at(-1)?.[0].page).toBe(1);
+    expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2]);
+    expect(result.current.nextPageError).toContain('503');
+    expect(result.current.hasMore).toBe(false);
+    const calls = mockFetchMyTravels.mock.calls.length;
+    await act(async () => { await result.current.loadMore(); });
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(calls);
+
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([3, 4], 4) as any);
+    await act(async () => { await result.current.retryNextPage(); });
+    await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2, 3, 4]));
+    expect(result.current.nextPageError).toBeNull();
+    expect(mockFetchMyTravels.mock.calls.map(([p]) => p.page)).toEqual([1, 2, 1, 2]);
+  });
+
+  it('не оставляет неработающий retry, если background refresh уже вернул полный список', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+
+    // Other routes were deleted; the refreshed first page is now complete.
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 2) as any);
+    await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
+    await waitFor(() => expect(result.current.nextPageError).toBeNull());
+    expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2]);
+    expect(result.current.hasMore).toBe(false);
+    const calls = mockFetchMyTravels.mock.calls.length;
+    await act(async () => { await result.current.retryNextPage(); });
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(calls);
+  });
+
+  it('новый экземпляр Query того же scope не наследует старую остановку', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result, rerender } = await renderHook(
+      ({ userId }: { userId: string }) => useMyTravels({ userId, perPage: 2 }),
+      { initialProps: { userId: 'u-1' } },
+    );
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+    await rerender({ userId: 'u-2' });
+    await act(async () => { [...queryClients].at(-1)!.removeQueries(); });
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([10, 20], 4) as any);
+    await rerender({ userId: 'u-1' });
+    await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([10, 20]));
+    expect(result.current.nextPageError).toBeNull();
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it('не начинает два запроса при двойном нажатии retry и не повторяет здоровую страницу', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    await act(async () => { await result.current.retryNextPage(); });
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(1);
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+
+    let finish!: (value: any) => void;
+    mockFetchMyTravels.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await act(async () => {
+      const first = result.current.retryNextPage();
+      const second = result.current.retryNextPage();
+      expect(mockFetchMyTravels).toHaveBeenCalledTimes(3);
+      finish(travelPayload([3, 4], 4));
+      await Promise.all([first, second]);
+    });
+    await waitFor(() => expect(result.current.myTravels).toHaveLength(4));
+    expect(result.current.nextPageError).toBeNull();
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(3);
+  });
+
+  it('не переносит ошибку или устаревшее действие retry в область другого пользователя', async () => {
+    mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
+    const { result, rerender } = await renderHook(
+      ({ userId }: { userId: string }) => useMyTravels({ userId, perPage: 2 }),
+      { initialProps: { userId: 'u-1' } },
+    );
+    await act(async () => { await result.current.load(); });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
+    await act(async () => { await result.current.loadMore(); });
+    await waitFor(() => expect(result.current.nextPageError).toContain('503'));
+    const oldRetry = result.current.retryNextPage;
+    await rerender({ userId: 'u-2' });
+    expect(result.current.nextPageError).toBeNull();
+    const calls = mockFetchMyTravels.mock.calls.length;
+    await act(async () => { await oldRetry(); });
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(calls);
   });
 
   it('сбрасывает error, когда пользователь разлогинился', async () => {

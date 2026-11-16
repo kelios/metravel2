@@ -141,7 +141,7 @@ describe('каркас списка маршрутов профиля (#2176)', 
 
     it('карточки встают на место каркаса: обёртка списка одна и без своего отступа', () => {
       const styles = screenStyles(gapSize)
-      const render = (loading: boolean, count = 2) =>
+      const render = (loading: boolean, count = 2, nextPageError: string | null = null, activeTab = 'travels', travelsLoadingMore = false) =>
         toHost(
           createElement(ProfileTravelListView, {
             styles,
@@ -152,8 +152,10 @@ describe('каркас списка маршрутов профиля (#2176)', 
             currentData: loading ? [] : travels(count),
             isSectionTab: false,
             isTravelsTabLoading: loading,
-            activeTab: 'travels',
-            travelsLoadingMore: false,
+            activeTab,
+            travelsLoadingMore,
+            nextPageError,
+            retryNextPage: jest.fn(async () => {}),
             ...grid,
             isMobileDevice: isCardsSingleColumn,
             userId: '1',
@@ -193,6 +195,21 @@ describe('каркас списка маршрутов профиля (#2176)', 
       const empty = render(false, 0).querySelector('[data-screen-content="first"]')!
       expect(empty).not.toBeNull()
       expect(geometryOf(empty)).toBe(geometryOf(reference(styles.fullRow)))
+
+      // #3441: failure occupies one footer after preserved cards; other tabs
+      // and an empty first page must not gain a second retry control.
+      const failed = render(false, 2, '503 Service Unavailable')
+      expect(failed.querySelectorAll('[data-testid="profile-next-page-retry"]')).toHaveLength(1)
+      expect(failed.querySelectorAll('[data-testid^="card-"]')).toHaveLength(2)
+      const errorFooter = failed.querySelector('[data-testid="profile-next-page-error"]')!
+      expect(errorFooter.textContent).toContain('503 Service Unavailable')
+      expect(errorFooter.textContent).toContain('Повторить подгрузку')
+      expect(errorFooter.previousElementSibling?.getAttribute('data-testid')).toBe('profile-travel-list')
+      for (const host of [render(false), render(false, 0, '503'), render(true, 0, '503'),
+        render(false, 2, '503', 'favorites'), render(false, 2, '503', 'travels', true)]) {
+        expect(host.querySelector('[data-testid="profile-next-page-retry"]')).toBeNull()
+      }
+
     })
   })
 

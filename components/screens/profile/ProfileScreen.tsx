@@ -836,6 +836,8 @@ export default function ProfileScreen() {
         isTravelsTabLoading={isTravelsTabLoading}
         activeTab={activeTab}
         travelsLoadingMore={listLoadingMore}
+        nextPageError={travelList.nextPageError}
+        retryNextPage={travelList.retryNextPage}
         isCardsSingleColumn={isCardsSingleColumn}
         gridColumns={gridColumns}
         gapSize={gapSize}

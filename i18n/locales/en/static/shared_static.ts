@@ -123,6 +123,8 @@ export const sharedStaticResources = {
   "subscription.statusAction": "Check follow status",
   "subscription.listLoadFailed": "Could not load the list",
   "myTravels.loadFailedTitle": "Couldn't load your routes",
+  "myTravels.nextPageFailedTitle": "Could not load the next set of routes",
+  "myTravels.retryNextPage": "Retry loading more",
   "profileTabs.countUnavailable": "count unavailable",
   "article.loadFailed": "Failed to load article",
   "article.checkLink": "Check the link to the article.",

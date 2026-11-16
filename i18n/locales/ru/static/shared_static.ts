@@ -123,6 +123,8 @@ export const sharedStaticResources = {
   "subscription.statusAction": "Проверить статус подписки",
   "subscription.listLoadFailed": "Не удалось загрузить список",
   "myTravels.loadFailedTitle": "Не удалось загрузить маршруты",
+  "myTravels.nextPageFailedTitle": "Не удалось загрузить следующую часть маршрутов",
+  "myTravels.retryNextPage": "Повторить подгрузку",
   "profileTabs.countUnavailable": "количество недоступно",
   "article.loadFailed": "Не удалось загрузить статью",
   "article.checkLink": "Проверьте ссылку на статью.",
