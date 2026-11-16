@@ -107,8 +107,14 @@ for i, s in enumerate(SEG):
         t0 -= eL; d += eL + eR
         # внутри отрезка видео-перекрытие входит и уходит растворением 0,3 с (не обрывом), если встык нет соседнего
         XF = 0.3 if not is_img else 0.0
-        fin = XF if XF and not eL and o["at"] - s["in"] >= 0.1 and not neighbour(o, o["at"]) else 0.0
-        fout = XF if XF and not eR and s["out"] - (o["at"] + min(o["dur"], s["out"] - o["at"])) >= 0.1 and not neighbour(o, o["at"] + o["dur"]) else 0.0
+        # перебивки встык (рецензия v12, «впечатления» 29:59): предыдущая продлевается на XF, следующая проявляется поверх —
+        # растворение между ними, без жёсткой склейки и без мелькания кадра под ними
+        same = [q for q in vids if q is not o and bool(q.get("pip")) == bool(o.get("pip"))]
+        next_adj = any(abs(q["at"] - (o["at"] + o["dur"])) < 0.1 for q in same)
+        fin = XF if XF and not eL and o["at"] - s["in"] >= 0.1 else 0.0
+        fout = XF if XF and not eR and s["out"] - (o["at"] + min(o["dur"], s["out"] - o["at"])) >= 0.1 and not next_adj else 0.0
+        tail = XF if XF and not eR and next_adj and o["at"] + o["dur"] + XF < s["out"] else 0.0
+        d += tail; eRp = eR + tail
         if is_img:
             inputs += ["-loop", "1", "-t", f"{d:.3f}", "-i", o["file"]]
         else:
@@ -118,12 +124,12 @@ for i, s in enumerate(SEG):
         pos = "0:0"
         if o.get("pip"):
             pw = int(W * float(o["pip"].get("scale", 0.3))) // 2 * 2
-            fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white{TP(pre, eR)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             pos = f"{float(o['pip'].get('x', 0.5)) * W:.0f}-w/2:{float(o['pip'].get('y', 0.5)) * H:.0f}-h/2"
         elif is_img:
             fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
         else:
-            fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eR)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
         fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
         cur = f"v{k}"; k += 1
     NF = nfL + nf + nfR                           # ровно NF кадров и NF*1600 сэмплов — звук и картинка куска одной длины
@@ -137,6 +143,8 @@ for i, s in enumerate(SEG):
         fades = ""
         if s.get("fade_in") and not hL: fades += f",afade=t=in:d={float(s['fade_in']):.3f}"
         if s.get("fade_out") and not hR: fades += f",afade=t=out:st={max(0.0, full - float(s['fade_out'])):.3f}:d={float(s['fade_out']):.3f}"
+        if s.get("audio_cut_out"):   # речь продолжается за склейкой: звук гаснет на склейке (не уезжает в запас растворения)
+            _d = float(s["audio_cut_out"]); fades += f",afade=t=out:st={max(0.0, (nfL + nf) / FPS - _d):.3f}:d={_d:.3f}"
         dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
         fc.append(f"[0:a:0]volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}[aout]")
     cmd += ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]",

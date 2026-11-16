@@ -2,7 +2,8 @@
 """Покраска по плану: выравнивание планов между камерами + общий лук фильма.
 
 uv run --with numpy python grade.py <plan.json> <plan_graded.json> [--look look.cube] [--cache grade_stats.json]
-    [--strength 1.0] [--skip-dirs память,титры,карты]
+    [--strength 1.0] [--skip-dirs память,титры,карты] [--alias alias.json]
+--alias — {производный файл: [исходник, сдвиг]}: камера размытых и вертикальных копий берётся по исходнику.
 
 Что делает:
   1. По 3 кадрам каждого используемого куска (главная дорожка и перебивки) меряет яркость (p1/p50/p99),
@@ -43,19 +44,21 @@ def make_look(path, n=33):
     y = rgb @ np.array([0.2126, 0.7152, 0.0722])
     # S-кривая по яркости: контраст +12% в середине, мягкий откат светов (без жёсткого клиппинга)
     def curve(x):
-        s = x + 0.12 * (x - 0.5) * (1 - np.abs(2 * x - 1))     # добавка в середине, ноль на краях
+        s = x + 0.08 * (x - 0.5) * (1 - np.abs(2 * x - 1))     # добавка в середине, ноль на краях (рецензия v12: 0.12 топил тени)
+        s = 0.015 + s * (1 - 0.015)                             # чёрное чуть приподнято: детали в тенях контрового света
         return np.clip(np.where(s > 0.9, 0.9 + (s - 0.9) * 0.7, s), 0, 1)
     y2 = curve(y)
     out = rgb + (y2 - y)[:, None]
     # сплит-тон: света теплее, тени чуть холоднее (едва заметно)
     hi = np.clip((y - 0.55) / 0.45, 0, 1)[:, None]; lo = np.clip((0.4 - y) / 0.4, 0, 1)[:, None]
-    out = out + hi * np.array([0.018, 0.006, -0.016]) + lo * np.array([-0.008, 0.0, 0.012])
+    out = out + hi * np.array([0.010, 0.004, -0.010]) + lo * np.array([-0.004, 0.0, 0.006])   # рецензия v12: мягче, кожа не краснеет
     # насыщенность +10%, но тон кожи (оранжевый сектор) почти не трогаем
     yo = out @ np.array([0.2126, 0.7152, 0.0722])
     r, gg, bb = out[:, 0], out[:, 1], out[:, 2]
     hue = (np.degrees(np.arctan2(np.sqrt(3) * (gg - bb), 2 * r - gg - bb)) + 360) % 360
-    skin = np.exp(-((hue - 25) / 18) ** 2)                      # кожа ~ 15–35°
-    sat = 1.10 - 0.08 * skin
+    skin = np.exp(-((hue - 15) / 28) ** 2)                      # кожа ~ 0–45° (контровой свет уводит её в красное)
+    s_in = (out.max(1) - out.min(1)) / np.maximum(out.max(1), 1e-3)
+    sat = 1 + 0.10 * np.clip(1 - s_in / 0.6, 0, 1) - 0.08 * skin   # +10% только бледным цветам: яркое (двигатель, дроны) не «горит»
     out = yo[:, None] + (out - yo[:, None]) * sat[:, None]
     out = np.clip(out, 0, 1)
     with open(path, "w") as f:
@@ -97,7 +100,7 @@ def skip(path):
 
 
 # ---------- поправка плана ----------
-def correction(st, film):
+def correction(st, film, target=None, gl=(0.85, 1.18)):
     """Цепочка фильтров ffmpeg: уровни → баланс белого → гамма → насыщенность. Все поправки ограничены."""
     k = STRENGTH
     f = []
@@ -125,12 +128,12 @@ def correction(st, film):
             f.append(f"colorchannelmixer=rr={gr:.3f}:gg=1:bb={gb:.3f}")
     # экспозиция: медиана к медиане фильма, на треть пути, гамма в пределах 0.85–1.18
     if 0.05 < st["p50"] < 0.95:
-        target = st["p50"] + (film["p50"] - st["p50"]) * 0.35 * k
-        gamma = float(np.clip(np.log(max(target, 1e-3)) / np.log(st["p50"]), 0.85, 1.18))
+        if target is None: target = st["p50"] + (film["p50"] - st["p50"]) * 0.35 * k
+        gamma = float(np.clip(np.log(max(target, 1e-3)) / np.log(st["p50"]), *gl))
         if abs(gamma - 1) > 0.02: f.append(f"eq=gamma={1 / gamma:.3f}")
     # насыщенность: к медиане фильма на 40% пути, 0.88–1.2
     if st["sat"] > 0.02:
-        s = float(np.clip(1 + (film["sat"] / st["sat"] - 1) * 0.4 * k, 0.88, 1.2))
+        s = float(np.clip(1 + (film["sat"] / st["sat"] - 1) * 0.4 * k, 0.80, 1.12))   # рецензия v12: 1.2 перенасыщал дроны
         if abs(s - 1) > 0.02: f.append(f"eq=saturation={s:.3f}")
     return f
 
@@ -140,10 +143,10 @@ def shots():
     out = []
     for s in plan["segments"]:
         p = plan["sources"][s["src"]]
-        if not skip(p): out.append((s, p, s["in"], s["out"]))
+        if not skip(p): out.append((s, p, s["in"], s["out"], s.get("note", "")))
         for o in s.get("broll", []):
             if o.get("file") and not skip(o["file"]):
-                t0 = float(o.get("in", 0)); out.append((o, o["file"], t0, t0 + float(o["dur"])))
+                t0 = float(o.get("in", 0)); out.append((o, o["file"], t0, t0 + float(o["dur"]), s.get("note", "")))
     return out
 
 
@@ -151,7 +154,7 @@ make_look(look_path)
 L = shots()
 print(f"кусков для покраски: {len(L)}", flush=True)
 S = []                                   # один замер на план за запуск: сбой не повторяется вторым проходом
-for i, (obj, p, t0, t1) in enumerate(L):
+for i, (obj, p, t0, t1, _) in enumerate(L):
     S.append(stats(p, t0, t1))
     if i % 20 == 19:
         json.dump(cache, open(cache_path, "w")); print(f"  замерено {i + 1}", flush=True)
@@ -164,10 +167,29 @@ print(f"цель фильма: медиана яркости {film['p50']:.2f}, 
 failed = sum(1 for x in S if not x)
 if failed: print(f"не удалось замерить {failed} планов: у них только лук, перезапусти grade.py (кеш удачных замеров сохранён)")
 n = 0
-for (obj, p, _, _), st in zip(L, S):
+# соседние планы одной сцены с разных камер (Pocket ↔ ZV-E1 ↔ iPhone ↔ дрон) тянутся к среднему пары, а не к медиане фильма:
+# рецензия v12 — 10 скачков яркости на стыках камер (порог рубрики 3)
+ALIAS = json.load(open(opt("--alias"))) if opt("--alias") else {}
+def cam(p):
+    p = ALIAS.get(p, [p])[0]
+    for k_, v_ in (("/pocket/", "pocket"), ("/zv-e1/", "zv-e1"), ("/телефон/", "iphone"), ("Медиатека", "iphone"), ("/drone/", "drone"), ("/ДРОН/", "drone")):
+        if k_ in p: return v_
+    return None
+scene = lambda n: n.split(".")[0].strip() if "." in n[:4] else n[:12]
+TG = {}
+for k_ in range(len(L) - 1):
+    a_, b_ = S[k_], S[k_ + 1]
+    ca, cb = cam(L[k_][1]), cam(L[k_ + 1][1])
+    if not (a_ and b_ and ca and cb) or ca == cb or scene(L[k_][4]) != scene(L[k_ + 1][4]) or abs(a_["p50"] - b_["p50"]) < 0.12:
+        continue
+    m_ = (a_["p50"] + b_["p50"]) / 2
+    TG.setdefault(k_, []).append(a_["p50"] + (m_ - a_["p50"]) * 0.6 * STRENGTH)
+    TG.setdefault(k_ + 1, []).append(b_["p50"] + (m_ - b_["p50"]) * 0.6 * STRENGTH)
+print(f"выравнивание камер на стыках: планов {len(TG)}")
+for k_, ((obj, p, _, _, _), st) in enumerate(zip(L, S)):
     if obj.get("grade_manual"):   # ручная покраска плана: ключ "grade" оставляем как есть
         continue
-    chain = correction(st, film) if st else []
+    chain = (correction(st, film, float(np.mean(TG[k_])), (0.78, 1.25)) if k_ in TG else correction(st, film)) if st else []
     chain.append(f"lut3d=file='{look_path}':interp=tetrahedral")
     obj["grade"] = ",".join(chain); n += 1
 plan.setdefault("grade", {})["look"] = look_path
