@@ -73,6 +73,7 @@ export function QuestDesktopMapPanel({
   closeLoopRoute = false,
   routeMode,
   sharedRoute,
+  deferMapUntilVisible = false,
 }: SharedProps & {
   currentStep: PointLike
   steps: PointLike[]
@@ -89,7 +90,10 @@ export function QuestDesktopMapPanel({
   closeLoopRoute?: boolean
   routeMode?: QuestRouteMode
   sharedRoute?: import('./useQuestRouteGeometry').QuestRouteGeometryState
+  deferMapUntilVisible?: boolean
 }) {
+  const mapHeight = useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360
+  const fallback = <QuestMapSkeleton height={deferMapUntilVisible ? mapHeight : undefined} />
   return (
     <View
       style={[
@@ -156,11 +160,12 @@ export function QuestDesktopMapPanel({
       {routeMode ? (
         <Suspense fallback={<QuestMapSkeleton />}>
           <QuestFullMapLazy
+            {...(deferMapUntilVisible ? { deferUntilVisible: true } : {})}
             steps={steps}
             closeLoop={closeLoopRoute}
             routeMode={routeMode}
             sharedRoute={sharedRoute}
-            height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
+            height={mapHeight}
             title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
             activeStepIndex={activeStepIndex}
             // На native превью-карта внутри вертикального ScrollView не должна
@@ -170,7 +175,7 @@ export function QuestDesktopMapPanel({
           />
         </Suspense>
       ) : (
-        <QuestMapSkeleton />
+        fallback
       )}
     </View>
   )
@@ -682,10 +687,10 @@ export function QuestFinalePanel({
   )
 }
 
-function QuestMapSkeleton() {
+function QuestMapSkeleton({ height = 300 }: { height?: number }) {
   const colors = useThemedColors()
   return (
-    <View style={{ height: 300, borderRadius: 16, backgroundColor: colors.backgroundSecondary, overflow: 'hidden' }}>
+    <View style={{ height, borderRadius: 16, backgroundColor: colors.backgroundSecondary, overflow: 'hidden' }}>
       <View style={{ flex: 1, opacity: 0.6, backgroundColor: colors.borderLight }} />
     </View>
   )

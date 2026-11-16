@@ -832,6 +832,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, durationM
                                 steps={steps}
                                 compactDesktopLayout={compactDesktopLayout}
                                 useWideInlineLayout={useWideInlineLayout}
+                                deferMapUntilVisible={Platform.OS === 'web' && isMobile && currentStep.id === 'intro'}
                                 desktopNavExpanded={desktopNavExpanded}
                                 setDesktopNavExpanded={setDesktopNavExpanded}
                                 showMap={showMap}

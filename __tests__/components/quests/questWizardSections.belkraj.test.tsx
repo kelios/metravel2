@@ -1,7 +1,8 @@
 import React from 'react'
+import { StyleSheet } from 'react-native'
 import { render } from '@testing-library/react-native'
 
-const mockQuestFullMapLazy = jest.fn(() => null)
+const mockQuestFullMapLazy = jest.fn((_props: Record<string, unknown>) => null)
 let mockBelkrajRenderable = true
 
 // Гейт рендера Belkraj открыт только в production-сборке; в jest управляем им явно.
@@ -119,6 +120,22 @@ describe('QuestDesktopMapPanel route classification', () => {
 
   beforeEach(() => {
     mockQuestFullMapLazy.mockClear()
+  })
+
+  it('forwards deferral only when explicitly requested', async () => {
+    const { rerender } = await render(<QuestDesktopMapPanel {...mapProps} routeMode="foot" />)
+    expect(mockQuestFullMapLazy.mock.calls[0][0]).not.toHaveProperty('deferUntilVisible')
+    await rerender(<QuestDesktopMapPanel {...mapProps} routeMode="foot" deferMapUntilVisible />)
+    expect(mockQuestFullMapLazy).toHaveBeenLastCalledWith(expect.objectContaining({ deferUntilVisible: true, height: 360 }))
+  })
+
+  it.each([
+    [false, false, 360], [true, true, 460], [true, false, 520],
+  ])('reserves the selected map height before route tags arrive', async (wide, compact, height) => {
+    const { container } = await render(<QuestDesktopMapPanel {...mapProps}
+      useWideInlineLayout={Boolean(wide)} compactDesktopLayout={Boolean(compact)} deferMapUntilVisible />)
+    expect(container.queryAll((node) => StyleSheet.flatten(node.props.style)?.height === height).length).toBeGreaterThan(0)
+    expect(mockQuestFullMapLazy).not.toHaveBeenCalled()
   })
 
   it('does not build a pedestrian route while quest tags are still loading', async () => {

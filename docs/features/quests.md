@@ -1437,7 +1437,7 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
 | --- | --- | --- |
 | Карта квеста | `QuestFullMap.tsx` — React Leaflet поверх `MapCanvas` | `QuestFullMap.native.tsx` — Leaflet в `react-native-webview`, HTML из `questNativeMapHtml.ts` |
 | Bridge карты | нет | `questMapBridge.ts`: `quest-map-png`, `quest-map-nav`, `quest-map-status`, `OPEN_URL` |
-| Ленивая загрузка карты | `QuestFullMapLazy.tsx` = `React.lazy` | `QuestFullMapLazy.native.tsx` = прямой ре-экспорт (чанков нет) |
+| Ленивая загрузка карты | `QuestFullMapLazy.tsx` = `React.lazy`; только mobile intro явно ждёт viewport (`200px`) с точной резервной высотой (#3440) | `QuestFullMapLazy.native.tsx` = прямой ре-экспорт (чанков нет) |
 | Компас до точки | `QuestPointNavigator.web.tsx` — `null` (никаких sensor-API) | `QuestPointNavigator.native.tsx` — heading + дистанция |
 | Напоминания | `useQuestReminder.web.ts` — no-op | `useQuestReminder.native.ts` → локальное уведомление «продолжить квест» |
 | Печать | `generatePrintableQuest` работает | ранний `return` при `Platform.OS !== 'web'` |
@@ -1448,6 +1448,34 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
 Поле `geo_verify {enabled, radius_m}` присутствует в типе `ApiQuestStep`, но в
 коде фронтенда не читается: проверка «игрок на месте» на клиенте не реализована,
 native-геозоны используют только координаты шага (см. «Открытые вопросы»).
+
+### Media детали квеста (#3440)
+
+Web mobile intro явно включает отложенный mount карты через
+`QuestWizard` → `QuestDesktopMapPanel` → `QuestFullMapLazy`.
+`useProgressiveLoad` ждёт приближения на 200 px без fallback-таймера;
+placeholder и внутренний Suspense сохраняют переданную высоту360/460/520.
+Desktop-карта в первом экране, текущие шаги и default consumers сохраняют
+прежний прямой eager mount без observer/новой рамки/внутреннего fallback;
+при cold import остаётся прежний внешний skeleton300. Режим фиксируется при
+первом mount: initially default не входит в opt-in при later mobile. Только
+initially opt-in сессия сохраняет рамку и ancestry renderer, а активация запоминается: rotation/смена шага не сбрасывает fullscreen/export state;
+переход в eager-режим до visibility включает карту сразу. Native re-export
+и renderer не меняются. Без IntersectionObserver
+карта доступна сразу.
+
+Свежий live baseline `4c1de3a60` (16.11.2026, guest RU, 3squiet без scroll):
+mobile390 DPR3 — 1735608 positive Content-Length B (1695 KiB), desktop1440 DPR1 —
+1524408 B (1489 KiB). Шесть same-origin OSM tiles — 241813 B.
+Четыре nearby covers уже lazy: mobile356 CSS px/w640, desktop249.75/w320;
+размеры и качество сохраняются. Chromium lazy preload distance не считается eager.
+Регрессия `e2e/quest-detail-media-loading.spec.ts` проверяет eagerbelowfold0,
+реальное появление карты/обложек после scroll, высоту слота и CLS≤0,1.
+Все видимые тайлы должны декодироваться; console.error/pageerror/requestfailed
+и HTTP4xx/5xx делают проверку красной. Все write-methods блокируются, кроме
+точного публичного quest4 routing POST с согласованными8координатами;
+performance-приёмка только на живых данных, mobile≤1600/desktop≤1489 KiB,
+без повышения `pagesPerfBudgets.ts`.
 
 ## SEO и SSG
 
