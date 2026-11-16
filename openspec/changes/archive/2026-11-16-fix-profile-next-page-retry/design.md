@@ -29,3 +29,15 @@
 ## Migration Plan
 
 No data migration. Validate planning before apply; focused hook/adapter/DOM and i18n checks after source lease; independent review-auditor then code-review-gate. Publish reviewed explicit paths only after coordinator's slot. Local browser acceptance mobile web then desktop uses API8000 and browser-only page 2 503→200: footer >4 seconds, 20→40 cards, repeated503, empty-list retry, screenshots and console/network. Normal repo web deploy and narrow live identity/profile smoke remain mandatory; no production fault injection. Rollback is the task-owned diff. Heavy/runtime/deploy execution is deferred until the coordinator grants the lease.
+
+## Delivered render-safety guard
+
+Real acceptance also exposed an inherited invalidation subscription: it notified
+the profile synchronously on unrelated QueryCache events emitted while a newly
+loaded card created its QueryObserver. The first healthy author snapshot had
+already cleared invalidation, while the last committed snapshot was still
+pending. The repair filters notifications by the current query hash and uses
+`notifyManager.batchCalls`, matching the query adapter's scheduling model. The
+real DOM regression was red before the repair and green afterwards; local
+mobile/desktop acceptance on published4c1 has no cross-render or unexpected
+console errors. This changes neither request data nor native list layout.

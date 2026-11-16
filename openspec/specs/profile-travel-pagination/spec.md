@@ -1,8 +1,10 @@
+# profile-travel-pagination Specification
+
 ## Purpose
 
 Позволяет автору продолжить неполный список маршрутов после отказа следующей страницы без перезагрузки профиля и потери уже загруженных карточек.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Persistent next-page failure recovery
 
@@ -44,3 +46,11 @@ The profile SHALL preserve the distinct empty first-page failure and its existin
 #### Scenario: Empty list failure
 - **WHEN** page 1 fails before any rows are loaded
 - **THEN** the first-page error offers its existing retry and no next-page footer appears
+
+### Requirement: Loaded cards remain free of render-cycle errors
+
+The web profile SHALL show newly loaded cards without runtime or render-cycle errors.
+
+#### Scenario: First healthy snapshot replaces a pending load
+- **WHEN** the first successful author-list response makes cards visible after a pending load
+- **THEN** the cards appear without a cross-component render-cycle error

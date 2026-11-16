@@ -9206,3 +9206,30 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 - **Исправляющий слой:** encoder выпускает [mapId], runtime читает и его, и прежний ['mc1', mapId]. Версия/префикс реестра, безопасные индексы, отдельные карты вызывающих модулей, порядок файлов, кэш, worker identity и completion сохраняются. Пределы и полный учёт служебных байтов не меняются.
 - **Постоянный контроль:** реальные Metro/Expo fixtures в webChunkMetadataCodec/Runtime/Resolver, guard-chunk-closure и exact byte tests. Исходная проба воспроизводит baseline побайтно и учитывает новый decoder: 232708 → 232602 Б; 140 дескрипторов, 252 артефакта и 18 отрицательных вариантов. Итог — только из нового канонического выката и live-проверки, записанных в #3451/#3449.
 - **Повторная жалоба:** сначала сравнить полный entry, runtime registry и нормализованную логику на сохранённых настоящих артефактах. Не переставлять индексы ради сжатия, не исключать metadata из полного лимита и не поднимать pins без отдельного измеренного продуктового решения. Новый формат доставляется связанной content-hashed парой; прежние артефакты остаются читаемыми.
+
+### TRAVEL-HTTP-STATUS-FALLBACK-001 — пустой statusText не добавляет английский текст
+
+- **Цепочка:** #3389 → #3442; каноническое исправление подписи статуса — #3442.
+- **Подтверждённая причина:** три ошибки travel-запросов подставляли `Unknown error`
+  при пустом HTTP/2 `statusText`, внутри уже переведённого `errorsStatic` сообщения.
+- **Инвариант:** общий `api/httpStatus.ts` оставляет только числовой код без
+  запасной фразы; непустой reason phrase, `Error.status` и отдельное ограниченное
+  диагностическое тело сохраняются. Новые словари HTTP-статусов не нужны.
+- **Контроль:** регрессии трёх реальных API-функций на RU/BE/UK/PL/EN, отдельные
+  тесты пустой/пробельной подписи и Jest-скан `api/` на английский status fallback.
+  Диагностика нечитаемого тела ответа — отдельный механизм.
+- **Маршрутизация:** возврат этого запасного текста в подпись статуса — reopen
+  #3442; проблемы тела ответа и загрузки данных проверяются отдельно.
+
+### MYTRAVELS-NEXT-PAGE-FAILURE-FROZEN-001 — неполный список имеет постоянный retry
+
+- **Инвариант:** ошибка страницы 2+ (включая последующую успешную фоновую invalidation страницы 1) сохраняет карточки и оставляет в web ровно один footer причины и «Повторить подгрузку» без таймера; explicit retry запрашивает ту же страницу того же author/publication scope. Повторный 503 сохраняет восстановление, успешный ответ добавляет карточки.
+- **Цепочка:** #3389 (первая страница сохраняется и ошибка отличима от пустоты) → #3441 (у замороженной догрузки отсутствовал способ продолжить); #1865/#1871 принадлежат другому механизму счётчиков.
+- **Подтверждённая причина:** `hooks/useMyTravels.ts` добавлял scope в `paginationStopped` и показывал только 4s toast; `ProfileTravelListView` умел показывать только footer-loader. Единственный reset был в refresh `load()`.
+- **Корректирующий слой:** общий guarded next-page request хука + scoped `nextPageError/retryNextPage`, сохранённая причина остановки связана с Query identity и переживает фоновое обновление; `useProfileTravelTabList` выбирает правильный источник общего/published/draft списка; web footer переиспользует compact EmptyState. API, native layout/pull-to-refresh и счётчики неизменны.
+- **Новый постоянный control:** `__tests__/hooks/useMyTravels.error.test.tsx` (503/repeated503/retry/same page/scope/dedup), `__tests__/components/screens/profile/useProfileTravelTabList.test.tsx` (независимые статусные срезы), existing DOM list test (один footer и отсутствие на empty/other-tab), committed `e2e/profile-next-page-retry-3441.spec.ts` (mobile→desktop, footer >4s, 20→40, empty-list retry; browser-only own-list injection на API8000).
+- **Решение при повторе:** тот же исчезающий/неработающий retry или смешанный source — reopen #3441; иной layer/причина — create-linked с проверенным delta. Приёмка16.11.2026 на published4c1: local4/4 и healthyproduction/profile104 PASS; source65/i18n558/reviews/normalhooks PASS.
+
+- **Выявленная при реальной приёмке связанная причина:** inherited `useMyTravels` подписывался синхронно на весь QueryCache. При первом здоровом snapshot invalidation менялась до commit; создание QueryObserver карточек во время render вызывало обновление ProfileScreen из FavoriteButton/TravelStatusButton. Реальная DOM-регрессия сначала воспроизвела предупреждение, затем own-query hash filter + notifyManager.batchCalls устранили его. Ошибки не добавлялись в allowlist.
+- **Постоянный console control:** `__tests__/hooks/useMyTravels.subscription.dom.web.test.tsx`; actual local mobile/desktop4/4 на4c1 без cross-render warnings, unexpected console/page errors. Fixture auth/profile prerequisites диагностировались отдельно, не выдавались за дефект footer.
+- **Принятый runtime SHA:** `4c1de3a60d4ecfbf62d2ae60f46f541b0d9f3532`; evidence `.codex-temp/sprint35-frontend/qa-slot-final4c1.json`.

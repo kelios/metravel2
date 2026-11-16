@@ -1,5 +1,6 @@
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { translate as i18nT } from '@/i18n';
+import { formatHttpStatus } from './httpStatus';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -22,7 +23,7 @@ import {
 const ERROR_BODY_LIMIT = 300;
 
 const createMyTravelsError = (status: number, statusText: string, body: string) => {
-    const details = `${status} ${statusText || 'Unknown error'}`.trim();
+    const details = formatHttpStatus(status, statusText);
     const error = new Error(
         i18nT('errorsStatic:api.myTravels.loadFailed', { details })
     ) as Error & { status?: number; responseBody?: string };

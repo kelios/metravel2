@@ -21,6 +21,7 @@ import {
 import { normalizeTravelItem } from './travelsNormalize';
 import { takeTravelListPreload } from '@/utils/travelListPreload';
 import { translate as i18nT } from '@/i18n';
+import { formatHttpStatus } from './httpStatus';
 import {
     LONG_TIMEOUT,
     TOKEN_KEY,
@@ -341,7 +342,7 @@ export const fetchTravels = async (
                 return { data: [], total: 0 };
             }
             throw createTravelQueryError(
-                i18nT('errorsStatic:api.travelList.loadFailed', { details: `${res.status} ${res.statusText || 'Unknown error'}`.trim() }),
+                i18nT('errorsStatic:api.travelList.loadFailed', { details: formatHttpStatus(res.status, res.statusText) }),
                 res.status
             );
         }
@@ -454,7 +455,7 @@ export const fetchRandomTravels = async (
                 return { data: [], total: 0 };
             }
             throw createTravelQueryError(
-                i18nT('errorsStatic:api.travelList.randomLoadFailed', { details: `${res.status} ${res.statusText || 'Unknown error'}`.trim() }),
+                i18nT('errorsStatic:api.travelList.randomLoadFailed', { details: formatHttpStatus(res.status, res.statusText) }),
                 res.status
             );
         }

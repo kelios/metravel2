@@ -862,7 +862,7 @@ describe('src/api/travelsApi.ts', () => {
       const error = await fetchMyTravels({ user_id: 1, throwOnError: true }).catch((e) => e);
 
       expect(error).toMatchObject({
-        message: 'Не удалось загрузить ваши маршруты: 503 Unknown error',
+        message: 'Не удалось загрузить ваши маршруты: 503',
         status: 503,
       });
       expect(error.responseBody).toBeUndefined();

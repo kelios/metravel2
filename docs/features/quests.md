@@ -1613,6 +1613,13 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   Контроль — `__tests__/utils/questCountryLanding.test.ts` (причины вердикта) и
   `__tests__/scripts/questWebProjection.test.ts` (в странице страны все города,
   квесты и статьи страны, секции ≤ 256 пунктов).
+- Приёмка #3444 (16.11.2026, published app `4c1de3a60`): Norway и Spain
+  в raw HTML и после8s hydration содержат ровно один robots, соответственно
+  `noindex, follow` и `index, follow`; ошибок страницы и записей API нет.
+  Передача build-owned noindex городов/деталей покрыта настоящим Helmet
+  regression control38/38PASS: live fixture для этого условного сценария
+  не заявляется проверенной (Subotica индексируется, деталь217/subotica404;
+  неверное noindex-ожидание optional Oslo сохранено отдельно).
 - Внутренняя навигация на страну от индексируемости НЕ зависит:
   `questCountryLandingIsLinkable` (городов ≥ 2, #1762) по-прежнему решает, попадёт
   ли страна в блок «Квесты по странам» на `/quests` и в ссылку вверх с посадочной
