@@ -976,7 +976,7 @@ guard, падающий в CI на попытке обойти этот конт
 
 ### TRAVEL-DEFERRED-RESERVE-CLS-001 — placeholder и первый runtime-кадр имеют одну внешнюю геометрию
 
-- **Causal delta #3436, 2026-11-15 (source; production acceptance pending):**
+- **Causal delta #3436, 2026-11-15:**
   #3435 отдаёт `route_track_files_count` в detail/by-slug/upsert. Web резервирует
   560 px на файл из данных статьи уже во внешнем deferred-placeholder,
   placeholder ленивой секции карты и в
@@ -990,9 +990,8 @@ guard, падающий в CI на попытке обойти этот конт
   заполнение и безопасное сжатие), `TravelDetailsDeferred.web.test.tsx`.
   У 544 в `travelFastScrollCls.ts` снято исключение: все route-block источники
   снова запретны и входят в CLS. Ограничение API: файл может дать несколько
-  профилей — число файлов не является точным числом линий. Следующая проверка:
-  production-матрица #3436 на 544/470, медленный читатель и статья 967 без файлов;
-  source-тесты не заменяют этот Done gate.
+  профилей — число файлов не является точным числом линий. Source-тесты сами
+  по себе не заменяют production-матрицу, slow-reader и zero-file Done gate.
 - **Приёмка #3436, 2026-11-16:** SSR `travelRouteLoader` проецирует данные
   статьи через явный список полей: новый count отсутствовал в initial loader
   payload, хотя detail API его возвращал. Фоновый fetch скрывал разрыв.
@@ -1011,7 +1010,62 @@ guard, падающий в CI на попытке обойти этот конт
   использует настоящий DOM SVG и общий critical CSS, воспроизводит auto вместо
   120 px до правки; targeted browser A/B подтверждает постоянные 511 px и
   отсутствие internal-profile sources. Расширенный запрет route-elevation-* и
-  исходный points/map gate сохраняются; новый выкат требует fresh production матрицу.
+  исходный points/map gate сохраняются; изменение этого layout-контракта требует
+  fresh production-матрицу.
+- **Production runtime gate #3436, 2026-11-16:** app/test snapshot
+  `4c1de3a60d4ecfbf62d2ae60f46f541b0d9f3532`, scratch harness SHA256
+  `57c8ac8cd51577a2bc3e239d7b0b68620c2f18663c42cd26904f650a57255aa5`.
+  Реальные 45 fresh-guest полных проходов от TOP, шаг 400 px: 544 mobile/desktop
+  12/12 при 220 ms; 470 mobile 5 при 220 ms и desktop 8/8 при 220/450 ms.
+  Каждый CLS ≤0.1, max `0.009893247492972202`; исходных points/map и расширенных
+  `route-elevation-*` sources 0, profiles >0, reserve отсутствует, реальный низ
+  достигнут, embedded count равен live API. Протокол остановлен при чужом Jest:
+  после полной peer chronology исходные 43/45 признаны resource-invalid,
+  остальные 43 валидны; две новые uncontended замены тем же harness PASS.
+  Все исходные 45 raw JSON и 44 PNG сохранены неизменными в read-only архиве;
+  aggregate перечисляет точные выбранные файлы/хеши и исключения. Это не retry
+  product FAIL и не переиспользование старых частичных приёмок.
+  Slow390 показывает реальный профиль после GPX, natural surplus снимается;
+  у реальной 967 count 0, reserve/profile не появляются. Live touch 2→3→2 и
+  vertical scroll PASS; обновлённые slider 2/2 и slider-perf 37/37 PASS,
+  retries/skipped/flaky 0, pageErrors/unexpected writes 0. Console не нулевая:
+  216 unknown-feature policy warnings, 355 unload-policy errors, 19
+  NotSameOrigin resource errors; у case18 внешний Instagram embed вернул 500.
+  Единственный HTTP ≥400 в выбранных 45 — этот сторонний GET, не API/GPX
+  проекта. В controls сохранены ещё 2 NotSameOrigin console errors. Эти raw
+  записи не скрыты и не выданы за console/network-zero. Request-failure ledger
+  также содержит 324 same-origin tile GET `net::ERR_ABORTED` на 24 URL
+  `/proxy/tiles/osm/9/*` в 27 desktop случаях; retained initiator — `img`, но
+  причина отмены этим снимком не доказана. NotSameOrigin точно записан для
+  внешнего `tripvenue.com/sites/default/files/belkraj/logo.png`. Request
+  resourceType и console location.url harness не сохранял: их не
+  восстанавливаем предположением. Ownership table —
+  `fresh45-console-network-ownership-4c1.json`; неоднозначность tile cancellation
+  передана координатору/auditor, новых runtime повторов нет. Координатор признал
+  эти сохранённые наблюдения неблокирующими для неизменённого контракта
+  CLS/профили/count/резерв/bottom/pageErrors0/writes0; он не требует blanket
+  console0. Причина отмены tiles не оценена, их полное здоровье не заявлено;
+  native/Leaflet cancellation code эта задача не меняла.
+  Evidence:
+  `.codex-temp/sprint35-frontend/fresh45-aggregate-4c1.json`,
+  `controls-runtime-4c1.json`. Durable real-GET SSR/API count guard для
+  544/470/967 в существующем production-smoke spec прошёл independent
+  audit/final gate, scoped TS/ESLint/OpenSpec strict/diffcheck/checkfast и
+  actual GET 3/3: SSR/API counts 1/1, 1/1, 0/0. App4c1 проверен до/после
+  каждого случая; guest request contexts, без browser/hydration/data injection.
+  As-tested source base `eb4f7e25e909b5f4b36c92aea64f1849ca3ad1cd`, diff
+  fingerprint `706e47d83f1139a16d36c002a80093e2460d69aa8cd542c7d605966ec90b2da3`.
+  Первоначальный npm runner отказался от `--grep` до Playwright (exit2/NOTRUN);
+  его документированный direct-Playwright вызов через обычный quality wrapper
+  сохранил targets/production opt-in/classifier и прошёл 3/3, retries/skipped0.
+  Evidence: durable-guard-worktree/.codex-temp/sprint35-3436-guard/checks-summary.json.
+  Принятое требование синхронизировано, change штатно архивирован как
+  `2026-11-16-reserve-travel-route-profile-height` (10/11 tasks, future
+  publication task оставлен незавершённым с явным предупреждением CLI).
+  Test/docs publication и board closure ещё pending, task не Done; committed
+  test SHA фиксируется после обычных hooks отдельно от app4c1.
+  Live остаётся 4c1: более новые Map/API #3440/#3442 не объявлены deployed.
+  Полный e2e TS NOT PASS (6 прежних ошибок в 3 неизменённых specs).
 - **Инвариант:** deferred-placeholder остаётся в потоке до первого ненулевого
   layout разрешённого runtime-модуля, а его внешний reserve совпадает с
   runtime-геометрией. Узлы footer/runtime не должны попадать в

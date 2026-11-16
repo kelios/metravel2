@@ -559,6 +559,51 @@ fallback. Backend blockers оформляются как `area=back` задач�
 Канонические UI-правила находятся в [docs/RULES.md](../RULES.md), map ownership —
 в [map feature map](./map.md).
 
+### Ранний резерв GPX-профилей (#3436)
+
+Web использует валидный `route_track_files_count` из initial SSR loader и
+нормализованных данных статьи: deferred-placeholder и первый кадр карты
+резервируют 560 px на файл до загрузки списка/парсинга. Отсутствующий,
+некорректный или нулевой count не добавляет слот. Резерв сохраняется через
+парсинг и Suspense графика; готовые профили видны сразу, а существующий
+measured-flow снимает излишек. Один файл может содержать несколько профилей:
+count не подменяет фактический результат парсинга. Web SVG держит
+`CHART_HEIGHT` и при общем `height:auto` для media. Native, timing запросов и
+геометрия данных не меняются.
+
+На production `4c1de3a60d4ecfbf62d2ae60f46f541b0d9f3532` прошли 45 полных
+fresh-guest прокруток от начала статьи шагом 400 px: 544 — mobile/desktop
+12/12 при 220 ms; 470 — mobile 5 при 220 ms, desktop 8/8 при 220/450 ms.
+Max CLS `0.009893247492972202`, источников points/map и `route-elevation-*` — 0;
+достигнут реальный низ, профили загружены, резерв убран. После подтверждённого
+пересечения чужой нагрузки исходные случаи 43/45 исключены и заменены двумя
+новыми тем же harness: итог — 43 чистых исходных + 2 замены. Slow-reader,
+реальная статья 967 без файлов, natural surplus и touch/swipe прошли;
+`verify:slider` 2/2 и `verify:slider-perf` 37/37 обновлены на том же app SHA.
+Raw/provenance: `.codex-temp/sprint35-frontend/fresh45-aggregate-4c1.json` и
+`controls-runtime-4c1.json`.
+Console/network raw не объявлены чистыми: сохранены policy/Tripvenue/Instagram
+наблюдения и same-origin tile `ERR_ABORTED` без доказанной причины отмены.
+Они не блокируют неизменённый CLS/profile/count/reserve/bottom gate по
+классификации координатора; причина tile cancellation не оценена и не исправлена.
+Точная таблица и ограничения capture —
+`.codex-temp/sprint35-frontend/fresh45-console-network-ownership-4c1.json`.
+
+Guard `@route-profile-ssr-count` в существующем
+`e2e/travel-cls-production-smoke.spec.ts` сверяет id/slug и целочисленный
+неотрицательный count исходного HTML 544/470/967 с настоящим detail API.
+Он использует только GET, без hydration, подмены данных и новой allowlist;
+запуск требует `ROUTE_PROFILE_EXPECTED_SOURCE_SHA`. Его test SHA отделён от
+app SHA. Guard прошёл независимое ревью/финальный gate, scoped TS/ESLint,
+OpenSpec strict, diffcheck и checkfast (6 paths/1 lint target). Три новых
+GET-only случая прошли 3/3: 544 SSR/API 1/1, 470 1/1, 967 0/0, с pin4c1
+до и после каждого случая. As-tested source base —
+`eb4f7e25e909b5f4b36c92aea64f1849ca3ad1cd`, diff fingerprint —
+`706e47d83f1139a16d36c002a80093e2460d69aa8cd542c7d605966ec90b2da3`;
+коммит test/docs и закрытие борда фиксируются отдельно после обычных hooks.
+Это не означает выкат более новых Map/API изменений. Полный e2e TypeScript остаётся NOT PASS:
+6 прежних ошибок в 3 неизменённых specs; он не заменён scoped проверкой.
+
 ## Проверки по scope
 
 Ближайшие test surfaces:
