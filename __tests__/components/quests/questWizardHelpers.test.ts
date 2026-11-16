@@ -10,9 +10,14 @@ jest.mock('@/utils/toast', () => ({
   showToastMessage: (...args: unknown[]) => mockShowToastMessage(...args),
 }))
 
-jest.mock('@/components/quests/questWizardMedia', () => ({
-  getQuestClipboard: async () => ({ setStringAsync: (value: string) => mockSetStringAsync(value) }),
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: (value: string) => mockSetStringAsync(value),
 }))
+
+// Importing coordinate/confirmation helpers must not initialize map media.
+jest.mock('@/components/quests/questWizardMedia', () => {
+  throw new Error('Quest helpers crossed the lazy media boundary')
+})
 
 import { Alert, Platform } from 'react-native'
 import { confirmQuestAsync, copyQuestCoords, openQuestMap } from '@/components/quests/questWizardHelpers'

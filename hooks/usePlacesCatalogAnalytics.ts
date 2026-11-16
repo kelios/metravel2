@@ -2,12 +2,18 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import {
   placesCatalogSource,
-  trackPlacesCatalogAction,
-  trackPlacesCatalogOpened,
-  trackPlacesCatalogSearch,
+  emitPlacesCatalogEvent,
   type PlacesCatalogAction,
   type PlacesCatalogSearchOutcome,
 } from '@/utils/placesCatalogAnalytics'
+
+// Catalog-only event details stay in the existing route chunk, rather than
+// following the shared navigation links into home/article eager scripts.
+const ACTION_EVENTS = {
+  collection: 'places_catalog_collection',
+  open_map: 'places_catalog_open_map',
+  open_travel: 'places_catalog_open_travel',
+} as const
 
 type SearchState = {
   source: unknown
@@ -40,7 +46,7 @@ export function usePlacesCatalogAnalytics(state: SearchState) {
     openedSource.current = source
     firstAction.current = true
     search.current = { key: '' }
-    trackPlacesCatalogOpened(source)
+    emitPlacesCatalogEvent('places_catalog_opened', source)
   }, [source, state.openReady, state.focused])
 
   useEffect(() => {
@@ -52,12 +58,15 @@ export function usePlacesCatalogAnalytics(state: SearchState) {
     // manufacture another search. A successful manual retry can recover an error.
     if (search.current.outcome && search.current.outcome !== 'error') return
     search.current.outcome = outcome
-    trackPlacesCatalogSearch(source, outcome, state.count)
+    emitPlacesCatalogEvent('places_catalog_search', source, {
+      outcome,
+      ...(outcome !== 'error' && Number.isSafeInteger(state.count) && state.count >= 0 ? { results_count: state.count } : {}),
+    })
   }, [source, state.focused, state.openReady, state.searchKey, state.hasSearch, state.ready, state.fetching, state.placeholder, state.error, state.success, state.count])
 
   return useCallback((action: PlacesCatalogAction) => {
     if (!state.focused || !state.openReady) return
-    trackPlacesCatalogAction(source, action, firstAction.current)
+    emitPlacesCatalogEvent(ACTION_EVENTS[action], source, { action, first_action: firstAction.current ? 1 : 0 })
     firstAction.current = false
   }, [source, state.focused, state.openReady])
 }

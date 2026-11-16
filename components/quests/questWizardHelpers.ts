@@ -12,7 +12,6 @@ import {
 
 import { confirmAction } from '@/utils/confirmAction'
 
-import { getQuestClipboard } from './questWizardMedia'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -122,7 +121,8 @@ export const openQuestMap = async (point: QuestMapPoint, app: QuestMapApp) => {
 }
 
 export const copyQuestCoords = async (point: Pick<QuestMapPoint, 'lat' | 'lng'>) => {
-  const Clipboard = await getQuestClipboard()
+  // Clipboard callers must not traverse the map/widget media barrel.
+  const Clipboard = await import('expo-clipboard')
   await Clipboard.setStringAsync(`${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`)
   notifyQuest(i18nT('quests:components.quests.questWizardHelpers.koordinaty_skopirovany_38015d96'))
 }

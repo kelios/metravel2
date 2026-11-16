@@ -23,6 +23,21 @@ Non-Goals: a new analytics provider, persistent journey IDs, global URL attribut
 - Query placeholder/refetch → gate on matching committed query and terminal state; regression tests cover stale data, pagination and retries.
 - Bundle entry/chunk budgets → reuse existing modules and no new dynamic import root; canonical deployment retains unchanged budgets.
 
+## Release budget repair
+
+The first canonical deployment stopped before publication on home/article Brotli
+budgets. Earlier incorporated revisions also failed these caps before publication;
+the last published revision passed. Retained failing artifacts are diagnostic only
+(`reference_eligible=false`), not new byte pins.
+Source inspection found `questWizardHelpers → questWizardMedia → QuestFullMapLazy
+→ useProgressiveLoad`: a clipboard helper unnecessarily traversed map media after
+the visibility wrapper was introduced. Load the existing `expo-clipboard` target
+directly from its sole caller and remove the barrel edge; map visibility behavior
+and dynamic import targets stay intact. Route-only catalog event bodies also stay
+inside the existing catalog hook. Raising budgets, undoing map deferral, and a new
+analytics dynamic root were rejected. Risk is chunk redistribution; exact recovery
+is accepted only by the next canonical build. Rollback is the reviewed source diff.
+
 ## Migration Plan
 
 Ship only after review/gate and explicit-path push. Verify published SHA and new intent payloads, provider metadata/goals and organic report query. Record first complete observation day for #3450. Rollback is reverting task-owned source/spec/docs via normal reviewed release; old events and /map remain unchanged.
