@@ -331,6 +331,15 @@ const QUESTS = [
     { questId: 'lida-kids-castle-squire', dir: 'lidaKidsCastleSquire', finaleId: 345 },
     { questId: 'mozyr-kids-castle-hill', dir: 'mozyrKidsCastleHill', finaleId: 346 },
     { questId: 'nesvizh-kids-park-page', dir: 'nesvizhKidsParkPage', finaleId: 347 },
+    // Волны F3/D6 — finaleId сверен по точному уникальному тексту финала 2026-11-16 (#3182)
+    { questId: 'vienna-kids-schonbrunn-eaglet', dir: 'viennaKidsSchonbrunnEaglet', finaleId: 348 },
+    { questId: 'prague-kids-golem', dir: 'pragueKidsGolem', finaleId: 349 },
+    { questId: 'bielsko-biala-kids-lost-frame', dir: 'bielskoBialaKidsLostFrame', finaleId: 350 },
+    { questId: 'sandomierz-seven-hills', dir: 'sandomierzSevenHills', finaleId: 351 },
+    { questId: 'geneva-escalade-marmite', dir: 'genevaEscaladeMarmite', finaleId: 352 },
+    { questId: 'trondheim-olav-nidaros', dir: 'trondheimOlavNidaros', finaleId: 353 },
+    { questId: 'valencia-grail-bat', dir: 'valenciaGrailBat', finaleId: 354 },
+    { questId: 'pskov-olga-dovmont', dir: 'pskovOlgaDovmont', finaleId: 355 },
     // Легенды, рождественская волна и Выборг (237–284, 289–290) — finaleId сверен по тексту финала 2026-11-08 (#3184)
     { questId: 'vitebsk-dark-chronicle', dir: 'vitebskDarkChronicle', finaleId: 237 },
     { questId: 'grodno-royal-shadows', dir: 'grodnoRoyalShadows', finaleId: 238 },
