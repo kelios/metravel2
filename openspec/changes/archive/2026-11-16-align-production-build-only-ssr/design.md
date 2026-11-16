@@ -44,3 +44,9 @@ existing related webOutput tests; independent auditor and formal gate before
 explicit-path commit/push. In testing, one canonical DEPLOY=0 build of the frozen
 published source and exact entry comparison with its published artifact/report.
 Other dirty tasks stay excluded. No browser/native/locale matrix is justified.
+
+## Observed acceptance — 2026-11-16
+
+Reviewed wrapper driver c20bf4105 (functional SHA-256 08c7b39de4cacb7db3b1fea83673dfac61cf3914b1a3865964a10ea309dac8cf) dispatched the existing fixed worktree for published application source 4c1de3a60d4ecfbf62d2ae60f46f541b0d9f3532. The wrapper is not compiled into the application entry. One canonical DEPLOY=0 returned exit 0 in 30 seconds; its complete budget report passed with zero breaches or measurement errors. The full raw entry was byte-for-byte equal to the actual published reference: 1085572 bytes, SHA-256 0e0da6d971f78c175601dfb12b5f262aa9e8ca23483cc9f954bce85f6446fa25; both canonical Brotli q11 outputs were 232602 bytes. Real backend capability and all three SSR flags were recorded. Live remained 4c1 before/after; no publication or rollback ran.
+
+This proves observed artifact equality, not reconstruction of the complete historical environment. Historical compiled-env, prod-env and Expo-config fingerprints are UNKNOWN; current-run context is retained. No pins or caps changed. The separate f8/global packaging failure remains a failure. Evidence is retained in .codex-temp/3433/artifact-parity-result.json and artifact-parity/; the source regression suites passed 37 tests.

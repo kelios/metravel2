@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Production build-only SSR parity Specification
+
+## Purpose
+
+Ensure canonical production build-only exports select the validated SSR inputs used by publication while preserving a non-publishing artifact measurement path.
+
+## Requirements
 
 ### Requirement: Production wrapper modes select the same SSR inputs
 The canonical production wrapper SHALL require the backend SSR capability and set

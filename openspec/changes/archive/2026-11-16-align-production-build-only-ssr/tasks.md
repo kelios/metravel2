@@ -7,7 +7,7 @@
 ## 2. Verification and delivery
 
 - [x] 2.1 Run selected red/green, bash syntax, scoped lint and strict spec checks.
-- [ ] 2.2 Complete independent source review/final gate and explicit-path commit/push.
-- [ ] 2.3 Run one canonical non-publishing build for the same frozen published source.
-- [ ] 2.4 Compare exact entry bytes and complete guard report; record capability/source identity and unchanged live release.
-- [ ] 2.5 Record permanent control, sync/archive accepted spec and complete #3433.
+- [x] 2.2 Complete independent source review/final gate and explicit-path commit/push.
+- [x] 2.3 Run one canonical non-publishing build for the same frozen published source.
+- [x] 2.4 Compare exact entry bytes and complete guard report; record capability/source identity and unchanged live release.
+- [x] 2.5 Record the permanent control and sync the accepted living spec for archival.
