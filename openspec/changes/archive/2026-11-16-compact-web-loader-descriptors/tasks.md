@@ -7,5 +7,5 @@
 ## 2. Validation and delivery
 
 - [x] 2.1 Run targeted codec/runtime/resolver/closure tests, scoped lint and strict OpenSpec.
-- [ ] 2.2 Complete independent review/gate, explicit-path commit and main push.
-- [ ] 2.3 Publish canonical same-run artifacts with unchanged caps, verify live web boot/planner and cleanup with #3449.
+- [x] 2.2 Complete independent review/gate, explicit-path commit and main push.
+- [x] 2.3 Publish canonical same-run artifacts with unchanged caps, verify live web boot/planner and cleanup with #3449.

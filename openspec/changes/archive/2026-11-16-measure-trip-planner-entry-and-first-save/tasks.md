@@ -7,5 +7,5 @@
 ## 2. Validation and delivery
 
 - [x] 2.1 Run focused regression tests, scoped ESLint, TypeScript and strict OpenSpec validation.
-- [ ] 2.2 Complete independent review and review gate; commit explicit paths and push main.
-- [ ] 2.3 Deploy, verify live SHA and one private test-trip flow with cleanup; confirm report metadata and close board acceptance.
+- [x] 2.2 Complete independent review and review gate; commit explicit paths and push main.
+- [x] 2.3 Deploy, verify live SHA and one private test-trip flow with cleanup; confirm report metadata and close board acceptance.
