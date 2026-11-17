@@ -93,3 +93,32 @@ technical draft to its two no-alt project PNGs. The empty-scaffold remount is a
 source-backed explanation, not a captured runtime instance trace. This source
 repair and its scoped regressions passed; new review/publication/acceptance and the
 separate mandatory LOCAL pair remain pending.
+
+### Initial-sync and the delayed parent acknowledgement
+
+The8c4 production editor stopped at the first0-image wait after the native cut;
+Undo had not run. The exact own save confirmed the empty draft placeholder.
+There was no DOM timeline, so reinsertion by initial-sync remains a source-backed
+candidate. The earlier32-test evidence covered direct Quill/ensure, without the
+full controlled ArticleEditor and its250ms parent acknowledgement.
+
+Use the existing last-emitted HTML and force-synced refs. Initial-sync marks an
+already healthy Quill complete. Before timeout work and again before idle work,
+captured external HTML must still equal the latest accepted/emitted HTML and be
+unsynced. A local edit invalidates old work synchronously. Only the existing
+accepted external-content branch resets completion; echo updates retain local
+ownership. Keep the scheduler, debounce, history, native and SSR unchanged.
+Do not introduce a second editor session state machine or disable initial repair.
+
+Prepared controls mount the actual ArticleEditor, real Quill and a stateful
+parent. They retain both initially pending work and a healthy completed mount,
+cut all content while the prop still contains images, flush idle repair before
+the real debounce, and check empty DOM, same instance, parent echo and Undo/redo.
+Initial-empty and genuinely new external nonempty content are positive controls.
+With the exact three8c4 production files, both cut controls failed at the
+intended assertion (2 images instead of0), while both genuine-external controls
+passed. The repaired real-Quill/full-parent and parent-link suites passed36/36,
+with scoped checkfast/lint, production TypeScript, complexity and strict OpenSpec.
+This confirms the source path in the full parent; the original runtime still has
+no frame timeline. Canonical budgets and new production editor acceptance remain
+mandatory after independent review and normal publication.

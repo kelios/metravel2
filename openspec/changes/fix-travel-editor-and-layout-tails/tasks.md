@@ -34,3 +34,10 @@ images/no-alt persistence and native HTML copy passed, then cut/Undo timed out.
 The same private technical body was restored under a fresh hash/version fence.
 Empty-scaffold history repair passed its separate scoped source checks. Final
 independent gate, containing release and remaining editor acceptance are pending.
+
+## Initial-sync recurrence after8c4
+
+- [x] Record actual first cut0-image wait failure separately from Undo and retain the original runtime/restore evidence.
+- [x] Prepare the bounded initial-sync completion/current-HTML fence and full controlled-parent/real-Quill regression source.
+- [x] Establish full-parent RED on exact8c4 production3:2 intended cut DOM failures/2healthy external passes; repaired suites36/36 and scoped checks passed.
+- [ ] Complete scoped checks and independent review; normal publication/canonical and real private973 acceptance remain required.

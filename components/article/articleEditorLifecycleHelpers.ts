@@ -135,7 +135,10 @@ export const syncInitialQuillContent = ({
   const editor = quillRef.current?.getEditor?.()
   if (!editor) return
 
-  if (hasQuillRenderableContent(editor)) return
+  if (hasQuillRenderableContent(editor)) {
+    refs.lastForceSyncedContentRef.current = next
+    return
+  }
 
   const prevSanitized = refs.lastSanitizedForceSyncRef.current
   const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeArticleEditorHtml(next)

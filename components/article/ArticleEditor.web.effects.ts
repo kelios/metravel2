@@ -264,6 +264,7 @@ export function runInitialForceSyncEffect({
     attemptRef: { current: number }
     lastForceSyncedContentRef: { current: string }
     lastSanitizedForceSyncRef: { current: { raw: string; clean: string } | null }
+    lastEmittedHtmlRef: { current: string }
   }
 }): (() => void) | undefined {
   if (!isWeb) return
@@ -271,6 +272,11 @@ export function runInitialForceSyncEffect({
   if (!shouldLoadQuill) return
   const next = typeof content === 'string' ? content : ''
   if (next.trim().length === 0) return
+  // Parent acknowledgement is debounced. A local edit invalidates the captured
+  // external HTML immediately, including work already queued for an idle frame.
+  const isCurrent = () => refs.lastEmittedHtmlRef.current === next
+    && refs.lastForceSyncedContentRef.current !== next
+  if (!isCurrent()) return
 
   const MAX_ATTEMPTS = 20
   const ATTEMPT_DELAY_MS = 50
@@ -281,6 +287,7 @@ export function runInitialForceSyncEffect({
   })
 
   const attempt = () => {
+    if (!isCurrent()) return
     clearPending()
     refs.attemptRef.current += 1
 
@@ -295,6 +302,7 @@ export function runInitialForceSyncEffect({
     if (refs.lastForceSyncedContentRef.current === next) return
 
     scheduleForceSyncWork(() => {
+      if (!isCurrent()) return
       try {
         syncInitialQuillContent({
           next,

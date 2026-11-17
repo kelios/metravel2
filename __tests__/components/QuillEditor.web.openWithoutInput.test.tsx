@@ -22,7 +22,9 @@ let createElement: typeof import('react').createElement
 let createRef: typeof import('react').createRef
 let act: typeof import('react').act
 let createRoot: typeof import('react-dom/client').createRoot
+let useState: typeof import('react').useState
 let QuillEditorWeb: React.ComponentType<EditorProps>
+let ArticleEditorWeb: typeof import('@/components/article/ArticleEditor.web').default
 let getSafeEditorHtmlFrom: typeof import('@/components/article/ArticleEditor.web.effects').getSafeEditorHtmlFrom
 let buildHtmlModeToggleHandler: typeof import('@/components/article/articleEditorQuillHelpers').buildHtmlModeToggleHandler
 let ensureQuillContent: typeof import('@/components/article/articleEditorQuillHelpers').ensureQuillContent
@@ -42,8 +44,22 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
   beforeAll(() => {
     jest.resetModules()
     jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+    jest.doMock('@/context/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true }) }))
+    jest.doMock('@/hooks/useTheme', () => {
+      const colors = require('@/constants/designSystem').getThemedColors(false)
+      return { useThemedColors: () => colors }
+    })
+    jest.doMock('@/hooks/useResponsive', () => ({
+      useResponsive: () => ({ width: 1280, height: 800, isHydrated: true, isMobile: false }),
+    }))
+    jest.doMock('@/utils/growthFunnelAnalytics', () => ({
+      trackArticleEditorViewed: jest.fn(),
+      trackArticleEditorAutosaveSucceeded: jest.fn(),
+      trackArticleEditorAutosaveFailed: jest.fn(),
+      trackArticleEditorPreviewClicked: jest.fn(),
+    }))
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-    ;({ createElement, createRef, act } = require('react'))
+    ;({ createElement, createRef, act, useState } = require('react'))
     ;({ createRoot } = require('react-dom/client'))
     previousQuill = (window as { Quill?: unknown }).Quill
     ;(window as { Quill?: unknown }).Quill = require('quill/dist/quill.js')
@@ -51,6 +67,7 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
     ;({ getSafeEditorHtmlFrom } = require('@/components/article/ArticleEditor.web.effects'))
     ;({ buildHtmlModeToggleHandler, ensureQuillContent } = require('@/components/article/articleEditorQuillHelpers'))
     ;({ getQuillModulesForVariant } = require('@/components/article/articleEditorConfig'))
+    ArticleEditorWeb = require('@/components/article/ArticleEditor.web').default
   })
 
   afterAll(() => {
@@ -73,6 +90,131 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
     }
     return { onChange, editor: () => ref.current?.getEditor(), unmount, remount: (nextValue: string) => { generation += 1; render(nextValue) } }
   }
+
+  // Exercise the actual parent debounce/external-echo and scheduled initial-sync
+  // effects. Only environment ports are mocked; ArticleEditor and Quill are real.
+  const mountControlledParent = async (initial: string) => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const ref = createRef<{ getEditor: () => any }>()
+    const idleDescriptor = Object.getOwnPropertyDescriptor(window, 'requestIdleCallback')
+    const cancelDescriptor = Object.getOwnPropertyDescriptor(window, 'cancelIdleCallback')
+    const idle = new Map<number, IdleRequestCallback>()
+    let nextIdle = 0
+    Object.defineProperty(window, 'requestIdleCallback', { configurable: true, value: (callback: IdleRequestCallback) => {
+      const id = ++nextIdle
+      idle.set(id, callback)
+      return id
+    } })
+    Object.defineProperty(window, 'cancelIdleCallback', { configurable: true, value: (id: number) => idle.delete(id) })
+    let parentValue = initial
+    let replaceExternal: (html: string) => void = () => { throw new Error('Parent not mounted') }
+    const changes: string[] = []
+    const Parent = () => {
+      const [value, setValue] = useState(initial)
+      parentValue = value
+      replaceExternal = setValue
+      return createElement(ArticleEditorWeb, { content: value, variant: 'default', ref,
+        onChange: (html: string) => { changes.push(html); setValue(html) },
+      })
+    }
+    const unmount = async () => {
+      try { await act(async () => root.unmount()) } finally {
+        host.remove()
+        if (idleDescriptor) Object.defineProperty(window, 'requestIdleCallback', idleDescriptor)
+        else Reflect.deleteProperty(window, 'requestIdleCallback')
+        if (cancelDescriptor) Object.defineProperty(window, 'cancelIdleCallback', cancelDescriptor)
+        else Reflect.deleteProperty(window, 'cancelIdleCallback')
+      }
+    }
+    try {
+      await act(async () => root.render(createElement(Parent)))
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await flushMutations()
+        if (ref.current?.getEditor()?.root && (!initial || idle.size > 0)) break
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)) })
+      }
+      expect(ref.current?.getEditor()?.root).toBeInstanceOf(HTMLElement)
+      return {
+        editor: () => ref.current!.getEditor(),
+        parentValue: () => parentValue,
+        changes,
+        replaceExternal,
+        idleCount: () => idle.size,
+        flushIdle: async () => {
+          const pending = Array.from(idle.values())
+          idle.clear()
+          await act(async () => pending.forEach(callback => callback({ didTimeout: false, timeRemaining: () => 50 })))
+          await flushMutations()
+        },
+        flushParentEcho: async () => {
+          const { ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS } = require('@/components/article/articleEditorConfig')
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS + 20)) })
+          await flushMutations()
+        },
+        unmount,
+      }
+    } catch (error) { await unmount(); throw error }
+  }
+
+  it.each(['pending initial work', 'healthy initial work completed'])(
+    'full controlled ArticleEditor keeps a user cut empty before the delayed parent echo: %s',
+    async (initialPhase) => {
+      const value = '<p>Own text</p><p><img src="https://metravel.by/a.jpg"></p><p><img src="https://metravel.by/b.jpg"></p>'
+      const parent = await mountControlledParent(value)
+      try {
+        const quill = parent.editor()
+        jest.spyOn(quill, 'scrollSelectionIntoView').mockImplementation(() => {})
+        expect(quill.root.querySelectorAll('img')).toHaveLength(2)
+        expect(parent.idleCount()).toBeGreaterThan(0)
+        if (initialPhase === 'healthy initial work completed') await parent.flushIdle()
+        await act(async () => quill.deleteText(0, quill.getLength() - 1, 'user'))
+        await flushMutations()
+        // The prop still contains two images during the real 250ms debounce.
+        expect(parent.parentValue()).toBe(value)
+        await parent.flushIdle()
+        expect(parent.editor().root.querySelectorAll('img')).toHaveLength(0)
+        await parent.flushParentEcho()
+        expect(parent.parentValue()).toBe('')
+        expect(parent.changes).toEqual([''])
+        expect(parent.editor()).toBe(quill)
+        expect(quill.root.querySelectorAll('img')).toHaveLength(0)
+        await act(async () => quill.getModule('history').undo())
+        await flushMutations()
+        expect(parent.editor()).toBe(quill)
+        expect(quill.root.querySelectorAll('img')).toHaveLength(2)
+        expect(getSafeEditorHtmlFrom(() => quill)).not.toContain('alt=')
+        await act(async () => quill.getModule('history').redo())
+        await flushMutations()
+        expect(quill.root.querySelectorAll('img')).toHaveLength(0)
+      } finally { await parent.unmount() }
+    },
+  )
+
+  it.each(['', '<p>Original text</p>'])(
+    'full parent accepts genuinely new nonempty content after initial content %j',
+    async (initial) => {
+      const parent = await mountControlledParent(initial)
+      try {
+        await parent.flushIdle()
+        if (initial) {
+          const quill = parent.editor()
+          jest.spyOn(quill, 'scrollSelectionIntoView').mockImplementation(() => {})
+          await act(async () => quill.deleteText(0, quill.getLength() - 1, 'user'))
+          await parent.flushParentEcho()
+          expect(parent.parentValue()).toBe('')
+        }
+        const external = '<p>New external text</p><p><img src="https://metravel.by/external.jpg"></p>'
+        await act(async () => parent.replaceExternal(external))
+        await flushMutations()
+        await parent.flushIdle()
+        expect(parent.parentValue()).toBe(external)
+        expect(parent.editor().root.querySelectorAll('img')).toHaveLength(1)
+        expect(parent.editor().getText()).toContain('New external text')
+      } finally { await parent.unmount() }
+    },
+  )
 
   it('не сообщает об изменении, когда редактор лишь проставил фолбэк-alt картинке', async () => {
     const { onChange, editor, unmount } = await mount(OLD_ARTICLE_HTML)

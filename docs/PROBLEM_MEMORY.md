@@ -2691,6 +2691,27 @@ guard, падающий в CI на попытке обойти этот конт
   вместо2), а healthy repair прошёл. После guard обе затронутые suites прошли
   (32 тестов), вместе с scoped checks. Unit подтверждает путь remount;
   новая live приёмка Undo ещё NOTRUN, старые184 её не заменяют.
+- **Вторая граница #3434 (17.11.2026, reuse):** на release8c4 реальная
+  private973 прошла открытие/no-alt и native HTML copy, но остановилась уже
+  на первом ожидании0 изображений после cut; Undo ещё не нажимался. Own-save
+  подтвердил пустой draft placeholder, console/pageerror отсутствовали. Отдельный
+  source-backed кандидат: initial-sync смотрит на внешний `content`, который
+  ещё250мс содержит старое тело; healthy Quill не отмечался завершённым,
+  а изменение локального HTML снова запускало timeout/idle repair. Это могло
+  тихо вернуть старые изображения до следующего browser frame. Зафиксированного
+  DOM timeline пока нет, поэтому это не доказательство исполнения ветки в raw.
+  Initial-sync теперь завершает здоровую инициализацию и проверяет существующий
+  `lastEmittedHtmlRef` перед timeout/idle работой; настоящее внешнее обновление
+  сбрасывает completion, собственное echo не перевзводит repair. Подготовлены
+  full ArticleEditor/real-Quill контроли pending/healthy initial-sync → user cut
+  до250мс parent echo → сохранение пустого DOM/identity → Undo/redo, плюс
+  initial-empty и late external nonempty. На точных трёх production-файлах8c4
+  оба cut-контрола дали ожидаемый RED:2 изображения вместо0; оба healthy external
+  контрола прошли. На исправлении две затронутые suites дали36/36PASS, вместе
+  с scoped lint/checkfast, productionTS, complexity и strict OpenSpec. Unit
+  подтверждает stale initial-sync при delayed echo; в исходном runtime timeline
+  не снимался. Предыдущие32 проверяли direct Quill + manual ensure и этот
+  родительский путь не покрывали. Новая production editor-приёмка остаётся нужна.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence;
   `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).

@@ -304,6 +304,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             return;
         }
 
+        // A genuine external replacement starts a new initial-sync generation.
+        lastForceSyncedContentRef.current = '';
         setHtml(prev => (prev === next ? prev : next));
         htmlRef.current = next;
         lastExternalContentRef.current = next;
@@ -335,6 +337,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 attemptRef: forceSyncAttemptRef,
                 lastForceSyncedContentRef,
                 lastSanitizedForceSyncRef,
+                lastEmittedHtmlRef,
             },
         });
     }, [content, html, showHtml, shouldLoadQuill]);
