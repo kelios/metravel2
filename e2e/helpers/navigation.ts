@@ -1,11 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 import { seedNecessaryConsent, hideRecommendationsBanner } from './storage';
 import { getTravelsListPath } from './routes';
+import { installLocalCanonicalReplayBoundary, isLocalCanonicalReplay, LOCAL_REPLAY_TRAVEL_ID, mockLocalFixtureLoaderFallback } from './localCanonicalReplay';
 
 const TRAVEL_DETAILS_LOAD_ERROR_PATTERN = /не удалось загрузить путешествие|требуется авторизация/i;
 const FALLBACK_IMAGE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8ZKfkAAAAASUVORK5CYII=';
-export const FALLBACK_TRAVEL_ID = 990081;
+export const FALLBACK_TRAVEL_ID = LOCAL_REPLAY_TRAVEL_ID;
 export const FALLBACK_TRAVEL_SLUG = 'e2e-stable-travel-details';
 
 /**
@@ -104,6 +105,12 @@ export async function mockFallbackTravelDetails(
   page: Page,
   overrides: Partial<typeof fallbackTravelPayload> = {},
 ): Promise<void> {
+  if (isLocalCanonicalReplay()) {
+    await installLocalCanonicalReplayBoundary(page.context(), { baseURL: process.env.BASE_URL, travelId: FALLBACK_TRAVEL_ID });
+  }
+  // Production client bytes retain SSR loaders. This exact LOCAL fixture uses
+  // their supported null/client-query fallback, not a fabricated SSR projection.
+  await mockLocalFixtureLoaderFallback(page, `/(tabs)/travels/${FALLBACK_TRAVEL_SLUG}`);
   const travelPayload = { ...fallbackTravelPayload, ...overrides };
   const routeHandler = async (route: any) => {
     const request = route.request();

@@ -25,7 +25,9 @@
  *   PERF_LCP_MAX_MS=2500  PERF_TBT_MAX_MS=300  PERF_CLS_MAX=0.10
  */
 
-import { test, expect, devices, type Page } from '@playwright/test';
+import { devices, type Page } from '@playwright/test';
+import { test, expect } from './fixtures/localCanonicalReplay';
+import { localCanonicalReplayContextOptions } from './helpers/localCanonicalReplay';
 import {
   FALLBACK_TRAVEL_ID,
   FALLBACK_TRAVEL_SLUG,
@@ -984,7 +986,7 @@ test.describe('@perf Travel Details — Main-thread blocking (prod build, mobile
       // Дескриптор берётся из Playwright, а не переписывается руками: ручная
       // копия расходится с ним по вьюпорту и вшивает версию Chrome в UA, из-за
       // чего замер тихо уезжает от реального устройства при обновлении браузера.
-      const context = await browser.newContext({ ...devices['Pixel 7'] });
+      const context = await browser.newContext({ ...devices['Pixel 7'], ...localCanonicalReplayContextOptions() });
       const page = await context.newPage();
 
       try {

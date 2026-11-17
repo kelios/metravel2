@@ -1,4 +1,5 @@
-import { test, expect, devices, type Page, type CDPSession } from '@playwright/test';
+import { devices, type Page, type CDPSession } from '@playwright/test';
+import { test, expect } from './fixtures/localCanonicalReplay';
 import { deviceScreen, mobileProfile } from './helpers/mobileProfile';
 
 import {

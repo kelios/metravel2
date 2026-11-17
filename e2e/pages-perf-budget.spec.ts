@@ -17,7 +17,9 @@
  * (#1287). Снять baseline можно `PERF_BUDGET_BASELINE=1` — в CI запрещено.
  */
 
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
+import { test, expect } from './fixtures/localCanonicalReplay'
+import { mockLocalFixtureLoaderFallback } from './helpers/localCanonicalReplay'
 import type { ApiQuestBundle, ApiQuestMeta } from '../api/quests'
 import {
   injectPerfObservers,
@@ -507,6 +509,10 @@ async function installDeterministicQuestDetailApi(
 ): Promise<QuestDetailFixtureCounters> {
   const counters: QuestDetailFixtureCounters = { detail: 0, list: 0 }
   if (target.key !== 'QUEST_DETAIL') return counters
+
+  // Only this synthetic LOCAL quest selects the nullable client fallback;
+  // production publication/SSR is accepted separately against real data.
+  await mockLocalFixtureLoaderFallback(page, `/(tabs)${PERF_QUEST_PATH}`)
 
   // #2151: without the quest_start consent the route renders QuestConsentGate,
   // not the wizard that is measured here.

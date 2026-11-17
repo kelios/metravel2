@@ -3,11 +3,11 @@ import { FALLBACK_TRAVEL_ID, FALLBACK_TRAVEL_SLUG, mockFallbackTravelDetails } f
 
 jest.mock('@playwright/test', () => ({ expect: jest.fn() }))
 
-async function requestThroughDetailOwner(pattern: string, pathname: string, method = 'GET', origin = 'https://example.test') {
+async function requestThroughDetailOwner(pattern: string, pathname: string, method = 'GET', origin = 'https://example.test', pageOrigin = 'https://example.test') {
   const handlers = new Map<string, (route: Route) => Promise<unknown>>()
   const page = {
     route: async (matcher: string, handler: (route: Route) => Promise<unknown>) => { handlers.set(matcher, handler) },
-    url: () => `https://example.test/travels/${FALLBACK_TRAVEL_SLUG}`,
+    url: () => `${pageOrigin}/travels/${FALLBACK_TRAVEL_SLUG}`,
   } as unknown as Page
   const unexpected: string[] = []
   // This lower-priority owner represents a scenario's read/mutation sentinel.
@@ -78,4 +78,51 @@ it.each([
   expect(result.unexpected).toEqual([`${method} ${new URL(pathname, origin).pathname}`])
   expect(result.fulfill).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }))
   expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+const loaderOwner = '**/_expo/loaders/**'
+const loaderPath = `/_expo/loaders/(tabs)/travels/${FALLBACK_TRAVEL_SLUG}`
+const localOrigin = 'http://127.0.0.1:8085'
+
+it('gives only the exact LOCAL synthetic SSR loader the supported null/client fallback', async () => {
+  const result = await requestThroughDetailOwner(loaderOwner, loaderPath, 'GET', localOrigin, localOrigin)
+  expect(result.fulfill).toHaveBeenCalledWith({ status: 200, contentType: 'application/json', body: 'null' })
+  expect(result.unexpected).toEqual([])
+  expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['POST', loaderPath, localOrigin, localOrigin],
+  ['HEAD', loaderPath, localOrigin, localOrigin],
+  ['OPTIONS', loaderPath, localOrigin, localOrigin],
+  ['GET', `${loaderPath}?extra=1`, localOrigin, localOrigin],
+  ['GET', `${loaderPath}?`, localOrigin, localOrigin],
+  ['GET', `${loaderPath}/`, localOrigin, localOrigin],
+  ['GET', '/_expo/loaders/(tabs)/travels/470', localOrigin, localOrigin],
+  ['GET', loaderPath, 'http://localhost:8085', localOrigin],
+  ['GET', loaderPath, 'https://metravel.by', 'https://metravel.by'],
+])('does not fake undeclared SSR data for %s %s from %s with page %s', async (method, pathname, origin, pageOrigin) => {
+  const result = await requestThroughDetailOwner(loaderOwner, pathname, method, origin, pageOrigin)
+  expect(result.unexpected).toEqual([`${method} ${new URL(pathname, origin).pathname}`])
+  expect(result.fulfill).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }))
+  expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+it('rejects a shared-navigation consumer without the replay fixture owner before routing or navigation', async () => {
+  const previous = process.env.E2E_CANONICAL_CLIENT_REPLAY
+  process.env.E2E_CANONICAL_CLIENT_REPLAY = '1'
+  const contextRoute = jest.fn(), pageRoute = jest.fn(), pageUrl = jest.fn(), goto = jest.fn()
+  const page = {
+    context: () => ({ route: contextRoute }), route: pageRoute, url: pageUrl, goto,
+  } as unknown as Page
+  try {
+    await expect(mockFallbackTravelDetails(page)).rejects.toThrow(/active fixture lifecycle owner/)
+    expect(contextRoute).not.toHaveBeenCalled()
+    expect(pageRoute).not.toHaveBeenCalled()
+    expect(pageUrl).not.toHaveBeenCalled()
+    expect(goto).not.toHaveBeenCalled()
+  } finally {
+    if (previous === undefined) delete process.env.E2E_CANONICAL_CLIENT_REPLAY
+    else process.env.E2E_CANONICAL_CLIENT_REPLAY = previous
+  }
 })
