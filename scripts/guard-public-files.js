@@ -56,6 +56,7 @@ const PUBLIC_FILES = Object.freeze({
   'og-home.jpg': 'Home social preview',
   'og-map.png': 'Map social preview',
   'og/quests.jpg': 'Quests social preview',
+  'llms.txt': 'Public Markdown index of MeTravel content hubs',
   'quill.snow.css': 'Editor stylesheet',
   'robots.txt': 'Crawler directives',
   'static/quests/quest-default-cover.svg': 'Quest fallback cover',

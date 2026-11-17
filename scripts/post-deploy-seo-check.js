@@ -9,6 +9,7 @@
  * - robots rules
  * - travel page SSR markers (H1 + Article JSON-LD)
  * - mobile icon / manifest presence on home
+ * - plain-text discovery index at /llms.txt
  *
  * `--help` prints USAGE below; every flag goes through the shared SEO CLI
  * contract (#1391). The hand-rolled `args.indexOf('--url')` this replaced answered
@@ -522,6 +523,36 @@ function validateSitemapResponse(result) {
   }
 }
 
+function validateLlmsResponse({ url, finalUrl, status, headers, body }) {
+  const issues = []
+  const contentType = getHeaderValue(headers, 'content-type')
+
+  if (status !== 200 || finalUrl !== url) {
+    issues.push({
+      severity: 'error',
+      code: 'llms.status',
+      message: `Expected HTTP 200 without a redirect, got HTTP ${status} at ${finalUrl}`,
+    })
+  } else {
+    if (!/^text\/plain(?:\s*;|$)/i.test(contentType)) {
+      issues.push({
+        severity: 'error',
+        code: 'llms.content_type',
+        message: `Expected text/plain, got "${contentType}"`,
+      })
+    }
+    if (!/^# MeTravel\r?\n/.test(body) || !/^- \[[^\]\r\n]+\]\(https:\/\/[^\s)]+\)/m.test(body)) {
+      issues.push({
+        severity: 'error',
+        code: 'llms.body.invalid',
+        message: 'Expected a MeTravel Markdown heading and absolute hub links',
+      })
+    }
+  }
+
+  return { url, finalUrl, pageType: 'llms', title: '', issues }
+}
+
 function getTravelSsgH1Tag(html) {
   const tags = String(html || '').match(/<h1\b[^>]*>/gi) || []
   return tags.find((tag) => {
@@ -850,7 +881,7 @@ async function main() {
   const { sitemapResponse, urls } = await loadTargetUrls()
   if (!JSON_OUTPUT) {
     console.log(`🌐 Post-deploy SEO check against ${SITE}`)
-    console.log(`📄 Queue: ${urls.length + 1} pages`)
+    console.log(`📄 Queue: ${urls.length + NOT_FOUND_PROBE_PATHS.length + 2} pages`)
   }
 
   const pageChecks = await checkPagesWithOverloadRetry(urls, {
@@ -876,7 +907,10 @@ async function main() {
       return fetchFailedResult(url, 'not-found-probe', error)
     }
   })
-  const checked = [validateSitemapResponse(sitemapResponse), ...pageChecks, ...notFoundChecks]
+  const llmsUrl = `${SITE}/llms.txt`
+  const llmsCheck = await fetchUrl(llmsUrl)
+    .then(validateLlmsResponse, (error) => fetchFailedResult(llmsUrl, 'llms', error))
+  const checked = [validateSitemapResponse(sitemapResponse), llmsCheck, ...pageChecks, ...notFoundChecks]
 
   const summary = {
     site: SITE,
@@ -905,6 +939,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseArgs,
     detectPageType,
     hasCatalogDecidedIndexability,
+    validateLlmsResponse,
     extractTitle,
     extractCanonical,
     extractMetaContents,

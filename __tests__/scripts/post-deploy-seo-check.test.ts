@@ -10,6 +10,7 @@ const {
   validateCorePageH1,
   validateDescription,
   validateHomeAssets,
+  validateLlmsResponse,
   validatePageResult,
   validateRobots,
   validateSitemapResponse,
@@ -20,6 +21,33 @@ const {
 } = require('@/scripts/post-deploy-seo-check')
 
 describe('post-deploy SEO check helpers', () => {
+  describe('/llms.txt', () => {
+    const url = 'https://metravel.by/llms.txt'
+    const response = {
+      url,
+      finalUrl: url,
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      body: fs.readFileSync(path.join(process.cwd(), 'public', 'llms.txt'), 'utf8'),
+    }
+
+    it('accepts the public index served directly as plain text', () => {
+      expect(validateLlmsResponse(response).issues).toEqual([])
+    })
+
+    it.each([
+      [{ status: 404 }, 'llms.status'],
+      [{ finalUrl: 'https://metravel.by/' }, 'llms.status'],
+      [{ headers: { 'content-type': 'text/html' }, body: '<html></html>' }, 'llms.content_type'],
+      [{ body: '<html></html>' }, 'llms.body.invalid'],
+      [{ body: '# MeTravel\n\n- [Hub](https://' }, 'llms.body.invalid'],
+    ])('rejects an incorrect response (%j)', (override, code) => {
+      expect(validateLlmsResponse({ ...response, ...override }).issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ severity: 'error', code })]),
+      )
+    })
+  })
+
   // #2896: неизвестный slug квеста обязан отвечать 404 без редиректа.
   it('requires the unknown quest slug probe to answer 404 in place', () => {
     const url = 'https://metravel.by/quests/this-quest-does-not-exist-404'

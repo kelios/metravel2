@@ -24,6 +24,7 @@ const publicDir = path.join(__dirname, '..', 'public');
 const filesToCopy = [
   'manifest.json',
   'robots.txt',
+  'llms.txt',
   // Expo's public/ copy skips dot-directories, so this is the only path that
   // puts assetlinks.json in the bundle. Without it Android App Links stay unverified.
   '.well-known/assetlinks.json',
