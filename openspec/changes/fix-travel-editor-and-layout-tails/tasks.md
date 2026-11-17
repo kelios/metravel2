@@ -5,6 +5,7 @@
 - [x] 1.3 Remove unconsumed prefetchResource; retain real preload/idle consumers.
 - [x] 1.4 Clarify hook-test contract and assess native placeholder premise at its branch.
 - [x] 1.5 Reproduce the late-banner first-visible viewport race (desktop RED,320 healthy) and use the existing clientOnly contract; focused GREEN is source evidence.
+- [x] 1.6 Validate empty-scaffold repair with real Quill delete-all/Undo: old helper1FAIL/healthy1PASS, repaired suites32PASS; scoped source checks passed.
 
 ## 2. Review and release
 
@@ -26,3 +27,10 @@ stopped at TMB470 case2 cookie CLS0.08803 (1PASS/1FAIL of24); remaining runtime
 and private fixture/editor checks are NOTRUN. New cookie source review, normal
 publication/canonical release and full accepted runtime remain required for2.2–3.4.
 The separate mandatory LOCAL slider/slider-perf pair is also not yet accepted.
+
+Cookie release22f69 later passed canonical gates and24/24 desktop loads; mobile
+resize/rotation passed, held-gap coverage remains NOT TESTED. Private973 initial
+images/no-alt persistence and native HTML copy passed, then cut/Undo timed out.
+The same private technical body was restored under a fresh hash/version fence.
+Empty-scaffold history repair passed its separate scoped source checks. Final
+independent gate, containing release and remaining editor acceptance are pending.

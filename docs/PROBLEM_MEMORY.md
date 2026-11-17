@@ -2675,6 +2675,22 @@ guard, падающий в CI на попытке обойти этот конт
   регрессии воспроизвели ошибку на исходном коде; на исправленном прошли
   вместе с DOM/native-branch проверками (184 теста/8 наборов). Это source
   evidence; реальная запись private draft104 и production-приёмка — в #3434.
+- **Recurrence Log #3434 (17.11.2026, reuse):** реальная private973 на
+  release22f69 открыла две картинки без записи служебных alt, native HTML copy
+  сохранил обе без alt; после удаления всего содержимого toolbar Undo не
+  восстановил картинки. Исходный source-backed путь: `<p><br></p>` не пуст
+  как строка, но не содержит осмысленного контента; `ensureQuillContent`
+  выполнял repair и запрашивал remount, который уничтожает history. Identity
+  экземпляра в том runtime не записана, поэтому исполнение именно этой ветки
+  остаётся inference до реального regression. Новый контроль использует
+  настоящий Quill с production history options: delete-all → empty scaffold →
+  настоящий callback React-remount → Undo/две картинки/export без служебного alt;
+  положительный repair непустого ожидаемого HTML остаётся. Старый контроль
+  удалял одну картинку при остающемся тексте и не проходил repair/remount.
+  На точном старом helper новый real-Quill контроль дал1 Undo FAIL (0 картинок
+  вместо2), а healthy repair прошёл. После guard обе затронутые suites прошли
+  (32 тестов), вместе с scoped checks. Unit подтверждает путь remount;
+  новая live приёмка Undo ещё NOTRUN, старые184 её не заменяют.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence;
   `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).

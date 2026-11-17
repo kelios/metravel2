@@ -4,6 +4,7 @@ import { normalizeAnchorId, escapeHtml, normalizeHtmlForQuill } from '@/utils/ht
 import type { ArticleEditorSelection } from './articleEditor.types'
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize'
 
 const generatedImageAlts = new WeakMap<HTMLImageElement, string>()
 
@@ -369,6 +370,8 @@ export const ensureQuillContent = ({
   if (nextHtml.trim().length === 0) return
 
   if (hasQuillRenderableContent(editor)) return
+  // Quill's empty paragraph is intentional content; remounting discards Undo.
+  if (!sanitizeArticleEditorHtml(nextHtml)) return
 
   try {
     editor.setText?.('', 'silent')

@@ -42,6 +42,15 @@ changes, changing nginx/CSP, relaxing CLS or bundle caps, broad chunk-policy wor
 - Footer/author and console still require the full selected runtime disposition.
   Attribute third-party messages before changing first-party code; backend policy
   changes use a separate confirmed backend task.
+- An intentionally empty Quill paragraph must not enter the missing-content
+  repair path. Its HTML string is nonempty, while the real editor has no
+  meaningful content; the old repair can request a remount and discard Undo.
+  Reuse the existing article sanitizer's semantic-empty result before any
+  setText/paste/remount. Keep nonempty expected-content repair. The new real-Quill
+  control deletes all text and two images, invokes the actual repair/remount
+  boundary and checks real Undo plus generated-alt-free export. Old-helper RED
+  failed Undo with0 images while healthy repair passed; repaired real-Quill and
+  parent-link suites passed32 tests with scoped checks. This does not change global history, native behavior or SSR.
 
 ## Validation and delivery
 
@@ -72,3 +81,15 @@ geometry/console and private QA104 editor/clipboard/save/finalGET were NOTRUN;
 fixtureID remains null. Local slider replay separately exposed a synthetic SSR
 loader bridge gap; its fixture-only repair/review is independent and the pair
 remains mandatory. Cookie source RED/GREEN is not a new production PASS.
+
+The containing cookie release22f69 subsequently passed canonical gates and24/24
+fresh desktop loads (CLS0.00102 from author; no cookie/footer/unknown sources).
+Real mobile resize/rotation was healthy; a positive held-gap state was not
+reached and remains NOT TESTED. Private draft973 was created and verified under
+production104. Two decoded image elements, unchanged no-alt server content and
+native HTML clipboard copy passed. The following all-content cut/toolbar Undo
+timed out; a separate fresh-version-fenced restore returned the same private
+technical draft to its two no-alt project PNGs. The empty-scaffold remount is a
+source-backed explanation, not a captured runtime instance trace. This source
+repair and its scoped regressions passed; new review/publication/acceptance and the
+separate mandatory LOCAL pair remain pending.

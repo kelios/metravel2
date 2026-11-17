@@ -12,6 +12,7 @@ type EditorProps = {
   value?: string
   onChange?: (html: string, delta: unknown, source: unknown) => void
   ref?: React.Ref<{ getEditor: () => any }>
+  modules?: Record<string, unknown>
 }
 
 const OLD_ARTICLE_HTML =
@@ -24,6 +25,8 @@ let createRoot: typeof import('react-dom/client').createRoot
 let QuillEditorWeb: React.ComponentType<EditorProps>
 let getSafeEditorHtmlFrom: typeof import('@/components/article/ArticleEditor.web.effects').getSafeEditorHtmlFrom
 let buildHtmlModeToggleHandler: typeof import('@/components/article/articleEditorQuillHelpers').buildHtmlModeToggleHandler
+let ensureQuillContent: typeof import('@/components/article/articleEditorQuillHelpers').ensureQuillContent
+let getQuillModulesForVariant: typeof import('@/components/article/articleEditorConfig').getQuillModulesForVariant
 
 const flushMutations = async () => {
   for (let i = 0; i < 3; i += 1) {
@@ -46,28 +49,29 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
     ;(window as { Quill?: unknown }).Quill = require('quill/dist/quill.js')
     QuillEditorWeb = require('@/components/article/QuillEditor.web').default
     ;({ getSafeEditorHtmlFrom } = require('@/components/article/ArticleEditor.web.effects'))
-    ;({ buildHtmlModeToggleHandler } = require('@/components/article/articleEditorQuillHelpers'))
+    ;({ buildHtmlModeToggleHandler, ensureQuillContent } = require('@/components/article/articleEditorQuillHelpers'))
+    ;({ getQuillModulesForVariant } = require('@/components/article/articleEditorConfig'))
   })
 
   afterAll(() => {
     ;(window as { Quill?: unknown }).Quill = previousQuill
   })
 
-  const mount = async (value: string) => {
+  const mount = async (value: string, modules?: Record<string, unknown>) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
     const onChange = jest.fn()
     const ref = createRef<{ getEditor: () => any }>()
-    await act(async () => {
-      root.render(createElement(QuillEditorWeb, { value, onChange, ref }))
-    })
+    let generation = 0
+    const render = (nextValue: string) => root.render(createElement(QuillEditorWeb, { key: generation, value: nextValue, onChange, ref, modules }))
+    await act(async () => { render(value) })
     await flushMutations()
     const unmount = async () => {
       await act(async () => root.unmount())
       host.remove()
     }
-    return { onChange, editor: () => ref.current?.getEditor(), unmount }
+    return { onChange, editor: () => ref.current?.getEditor(), unmount, remount: (nextValue: string) => { generation += 1; render(nextValue) } }
   }
 
   it('не сообщает об изменении, когда редактор лишь проставил фолбэк-alt картинке', async () => {
@@ -140,6 +144,56 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
       await flushMutations()
       expect(onChange).toHaveBeenCalledTimes(1)
       expect(onChange.mock.calls[0][0]).toContain('alt="Озеро"')
+    } finally {
+      await unmount()
+    }
+  })
+
+  it('keeps real Undo history after user deletion leaves only the empty Quill scaffold', async () => {
+    const value = '<p>Own technical text</p><p><img src="https://metravel.by/a.jpg"></p><p><img src="https://metravel.by/b.jpg"></p>'
+    const { editor, remount, unmount } = await mount(value, getQuillModulesForVariant('default'))
+    try {
+      const initialEditor = editor()
+      // jsdom has no layout; model deletion/history and the React remount are real.
+      jest.spyOn(initialEditor, 'scrollSelectionIntoView').mockImplementation(() => {})
+      await act(async () => initialEditor.deleteText(0, initialEditor.getLength() - 1, 'user'))
+      await flushMutations()
+      const scaffold = initialEditor.root.innerHTML
+      expect(scaffold).toBe('<p><br></p>')
+      expect(initialEditor.root.querySelectorAll('img')).toHaveLength(0)
+
+      await act(async () => ensureQuillContent({ editor: initialEditor, html: scaffold, remountQuill: () => remount(scaffold) }))
+      await flushMutations()
+      const activeEditor = editor()
+      jest.spyOn(activeEditor, 'scrollSelectionIntoView').mockImplementation(() => {})
+      expect(activeEditor.root.querySelectorAll('img')).toHaveLength(0)
+      await act(async () => activeEditor.getModule('history').undo())
+      await flushMutations()
+      expect(activeEditor.root.querySelectorAll('img')).toHaveLength(2)
+      expect(activeEditor).toBe(initialEditor)
+      for (const image of activeEditor.root.querySelectorAll('img')) expect(image.getAttribute('alt')).toBe('Изображение')
+      const exported = getSafeEditorHtmlFrom(() => activeEditor)
+      expect(exported).toContain('https://metravel.by/a.jpg')
+      expect(exported).toContain('https://metravel.by/b.jpg')
+      expect(exported).not.toContain('alt=')
+    } finally {
+      await unmount()
+    }
+  })
+
+  it('still repairs an empty real editor when the expected HTML contains actual text and images', async () => {
+    const { editor, remount, unmount } = await mount('', getQuillModulesForVariant('default'))
+    try {
+      const initialEditor = editor()
+      const value = '<p>Expected restored text</p><p><img src="https://metravel.by/a.jpg"></p><p><img src="https://metravel.by/b.jpg"></p>'
+      const remountQuill = jest.fn(() => remount(value))
+      jest.spyOn(initialEditor, 'scrollSelectionIntoView').mockImplementation(() => {})
+      await act(async () => ensureQuillContent({ editor: initialEditor, html: value, remountQuill }))
+      await flushMutations()
+      expect(editor()).toBe(initialEditor)
+      expect(editor().root.querySelectorAll('img')).toHaveLength(2)
+      expect(editor().getText()).toContain('Expected restored text')
+      expect(remountQuill).not.toHaveBeenCalled()
     } finally {
       await unmount()
     }
