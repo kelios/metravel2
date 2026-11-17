@@ -32,3 +32,21 @@ Web editor and article layout; no API, publication-status or translation changes
 Native article rendering is unchanged and assessed at its existing branch boundary.
 Production acceptance follows reviewed push and canonical deployment; the existing
 packaging blocker #3442 is a separate release dependency, not proof of these fixes.
+
+
+## Completion boundary — 17.11.2026
+
+The containing42b release and actual V10 editor acceptance completed the selected
+production gate. Earlier #3442 packaging dependency and pre42 failures are retained
+in design history and are not current blockers. Internal focus moves now preserve
+the native toolbar click; intentional empty content and local edits retain history
+through delayed parent acknowledgement. The late client-only consent banner uses
+its actual first-visible viewport. No public data/API, publication, analytics,
+SEO contract or translation resources changed. Accessibility alt remains visible
+while generated labels stay out of editorial content.
+
+Platform impact: desktop web and mobile web; native article implementation
+unchanged, assessed by forced-AI branch controls rather than a new device build.
+Localization impact: none; existing RU/BE/UK/PL/EN labels and providers unchanged.
+The positive production held-gap state was not observed; the documented
+real-DOM/healthy-resize acceptance is explicit and does not claim that result.

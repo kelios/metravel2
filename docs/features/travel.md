@@ -367,6 +367,32 @@ QueryClient cache становятся видимыми после гидрат�
 центрального `fireChange` применяется только к точной копии текущего DOM;
 отдельная авторская HTML-замена сохраняет свой alt.
 
+Намеренно пустой Quill scaffold — результат редактирования, а не пропавшее
+начальное содержимое (#3434). Он не запускает setText/paste/remount и не
+уничтожает Undo. Здоровая инициализация завершается один раз; отложенный
+initial-sync проверяет актуальное принятое/эмитированное HTML перед timeout
+и idle работой. Локальная правка делает прежнюю работу неактуальной, тогда
+как настоящее внешнее обновление по-прежнему проходит synchronization/repair.
+Это проверяется настоящим ArticleEditor/Quill с controlled parent и задержанным
+acknowledgement, включая positive initial-empty/late-nonempty controls.
+
+Граница немедленного focusout flush — весь существующий ArticleEditorShell,
+включая свой toolbar. Переход к собственной Undo/HTML/media-кнопке не отправляет
+pending parent change до native click: ранняя валидация могла передвинуть кнопку
+между down/up. Переход наружу или null destination сразу flush'ит изменение,
+в том числе при уходе из toolbar. Ref следует normal/fullscreen Shell без нового
+wrapper; viewport для content/media helpers, history и IconButton не меняются.
+Real-parent/real-Quill boundary tests и настоящий production cut/Undo/redo на42b
+подтвердили неизменный DOM и стабильную цель native down/up/click.
+
+Resize/orientation и изменение одного scroll owner будят прежнюю coalesced
+safe-release транзакцию удержанной высоты статьи без polling. Видимый запас без
+безопасного якоря остаётся удержанным. Положительные retained-slack сценарии
+проверены19 real-DOM controls; живая mobile приёмка подтвердила healthy resize,
+но положительное physical-held состояние в ней NOT_OBSERVED. Это явный предел
+production evidence, а не основание снимать высоту без проверки. Native branch
+controls не заявляют физическую device/performance-проверку.
+
 ### Помощник автора: заголовок, лид, SEO-описание (#2885)
 
 Под `EXPO_PUBLIC_AI_ASSISTANT` (`utils/aiAssistantConfig.ts:isAiAssistantEnabled`)

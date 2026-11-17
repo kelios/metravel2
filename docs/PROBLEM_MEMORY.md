@@ -2730,6 +2730,23 @@ guard, падающий в CI на попытке обойти этот конт
   и пропущенный emit при уходе из toolbar;3healthy контрола прошли. После fix
   две suites дали41/41PASS вместе с scoped checks. Unit проверяет контракт
   событий; browser geometry и production-приёмка после boundary fix ещё NOTRUN.
+- **Финальная приёмка #3434 (17.11.2026, reuse):** V10 на опубликованном42b
+  завершил14/14 editor controls: genuine copy1/cut1/Undo2/redo1, исходный Quill
+  DOM сохранялся. Native Undo остался наy660 при down/focusout/up/click, все
+  четыре события попали в ту же кнопку; прежний121px focus/validation сдвиг
+  отсутствовал. Generated alt не попал в clipboard/HTML/save; authored alt,
+  включая равный fallback, сохранился после reload; real bold/link/media exports
+  прошли. Пять собственных PUT200 private973 подтверждены по id/body/version;
+  blocked/failed/console/pageerrors0. Отдельный strict post-browser GET подтвердил
+  private104, две approved project PNG/noalt и последнюю own-version
+  2026-11-17T03:31:07.517118Z; physical RELEASE03:31:09.958Z.
+  Приёмка закрывает pending runtime прежних checkpoint'ов, не превращая их
+  source inference в доказанную причину старого raw. V9 установил именно
+  viewport focusflush→validation121px→nativeclickcancel. Unit `.click()` и
+  сохранённая history сами по себе не доказывают native hit geometry: source
+  regression проверяет момент parent emit, runtime — реальную цель down/up/click.
+  Исходные184/8 и поздние32/36/41 controls остаются отдельными результатами;
+  повтор184 на42 не заявляется. Raw run SHA255e0787e3e73adb64819319b7b9e7db39c2311e85f6f5ce4d6bedfb028a488c.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence;
   `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).
@@ -8324,6 +8341,11 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   и проходят на исправленной; прежние responsive/anchor/reserve контроли
   сохранены. Native-компонент не менялся; принудительно включённые AI/native
   branch-controls проверяют отсутствие web-каркаса, а не device performance.
+  Итоговая приёмка17.11.2026:19 real-DOM controls и здоровый live mobile
+  resize390→844 landscape приняты; положительное physical-held состояние на
+  production NOT_OBSERVED и не выдаётся за live positive-release PASS.
+  Root принял этот явный предел покрытия; нового geometry retry или native
+  device/performance evidence не заявляется.
 
 ## FE-TOOLING-PROD-TOKEN-FILE-STALE-001 — operator token authority
 
