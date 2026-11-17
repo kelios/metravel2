@@ -20,7 +20,7 @@ The web client SHALL measure an entry impression only when at least half of the 
 - **THEN** opening and subsequent events use direct without forwarding the supplied value
 
 #### Scenario: Retained inactive tab
-- **WHEN** the catalog tab stays mounted but loses focus and later regains it
+- **WHEN** the catalog screen stays mounted while navigation focuses another app screen and later returns to the catalog
 - **THEN** it emits nothing while inactive and starts a new opening and first-action context on return
 
 ### Requirement: Catalog searches describe settled results without private values
@@ -35,7 +35,7 @@ The client SHALL emit one terminal search result per committed nonblank search/f
 - **THEN** the first terminal outcome is reported once, pagination/refetch adds no duplicate, and successful retry adds one recovered terminal outcome
 
 ### Requirement: Catalog actions remain separate and private
-The client SHALL distinguish collection, open_map and open_travel actions and mark the first action of the current catalog opening. Invalid navigation targets MUST NOT count as actions. Event payloads MUST NOT contain raw search text, category names, country names, raw URLs, titles, addresses, coordinates or local deduplication keys. Catalog events MUST NOT be emitted by /map or native screens.
+The client SHALL distinguish collection, open_map and open_travel actions and mark the first action of the current catalog opening. Invalid navigation targets MUST NOT count as actions. Event payloads MUST NOT contain raw search text, category names, country names, raw URLs, titles, addresses, coordinates or local deduplication keys. Catalog opening, search and action events MUST NOT be emitted by /map, /places/help or an inactive catalog screen. Visible global navigation impressions and activations remain separate from that catalog context. Native screens MUST NOT emit the new catalog events.
 
 #### Scenario: Collection and valid outgoing navigation
 - **WHEN** a visitor chooses a collection or activates a valid map/article target
@@ -46,7 +46,7 @@ The client SHALL distinguish collection, open_map and open_travel actions and ma
 - **THEN** existing transport policy prevents provider delivery; local intent observation remains available for web acceptance
 
 ### Requirement: Comparison documents its denominator and coverage
-Reports SHALL provide source/device opening-session denominators separately from event counts and useful-action session aggregates. Unmeasured or empty denominators MUST remain unknown. Event-count ratios MUST NOT be presented as closed session-cohort conversions.
+Reports SHALL provide source/device opening-session denominators separately from event counts and useful-action session aggregates. Useful-action conversion SHALL use catalog-opening sessions O as its denominator and the same-session intersection O∩A, where A is map-or-travel action, as its numerator. Independent A and O aggregates MUST NOT be divided to claim this conversion. Unmeasured or empty denominators and unavailable intersections MUST remain unknown. Event-count ratios MUST NOT be presented as closed session-cohort conversions.
 
 #### Scenario: No organic observations after release
 - **WHEN** a full API response contains no observations
