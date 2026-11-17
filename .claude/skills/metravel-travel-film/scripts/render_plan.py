@@ -190,7 +190,7 @@ def chain(idx, outp):
         if d >= 2 / FPS:
             off = L - d
             fc.append(f"[{vcur}][v{j}]xfade=transition=fade:duration={d:.4f}:offset={off:.4f}[x{j}]")
-            fc.append(f"[{acur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2=log[y{j}]")
+            fc.append(f"[{acur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2={'nofade' if SEG[i].get('audio_in_hard') else 'log'}[y{j}]")   # audio_in_hard: речь входящего отрезка с первого слова на полной громкости
         else:
             fc.append(f"[{vcur}][{acur}][v{j}][a{j}]concat=n=2:v=1:a=1[c{j}][y{j}];[c{j}]settb=AVTB,fps={FPS}[x{j}]"); d = 0.0
         vcur, acur = f"x{j}", f"y{j}"
