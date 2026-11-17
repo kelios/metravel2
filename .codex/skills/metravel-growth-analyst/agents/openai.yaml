@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Growth Analyst"
-  short_description: "Analyze growth, funnels, SEO, and user behavior."
-  default_prompt: "Use $metravel-growth-analyst to analyze metravel growth, GA4/GSC stats, registration and content-creation funnels, and produce prioritized product or analytics actions without exposing secrets."
+  short_description: "Prepare growth digests and analyze funnels and SEO."
+  default_prompt: "Use $metravel-growth-analyst to prepare the weekly metravel growth digest or analyze growth, GA4/GSC stats, registration and content-creation funnels, and produce prioritized product or analytics actions without exposing secrets."

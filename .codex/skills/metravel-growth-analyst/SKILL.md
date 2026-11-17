@@ -1,6 +1,6 @@
 ---
 name: metravel-growth-analyst
-description: Analyze metravel growth, traffic, SEO, GA4/GSC/Yandex stats, registration/auth/content-creation funnels, user drop-off, and monetization signals. Use when Codex is asked to analyze statistics, user behavior, why users leave, why they do not register, why they do not add routes/articles, monthly growth review, event-tracking gaps, or growth recommendations.
+description: Analyze metravel growth, traffic, SEO, GA4/GSC/Yandex stats, registration/auth/content-creation funnels, user drop-off, and monetization signals. Use when Codex is asked to analyze statistics, user behavior, why users leave, why they do not register, why they do not add routes/articles, weekly growth digest, monthly growth review, event-tracking gaps, or growth recommendations.
 ---
 
 # Metravel Growth Analyst
@@ -23,6 +23,16 @@ heading required by the requested metric.
 - Yandex Metrika and affiliate dashboards do not have automatic local access unless
   the user provides manual numbers. Never print OAuth tokens, `.secrets`, `.env`,
   `.env.e2e`, cookies, or auth headers.
+
+## Weekly Growth Digest
+
+Use the weekly mode in `.claude/agents/growth-analyst.md` and the cadence and
+source rules in `docs/GROWTH_PLAN.md` → «Еженедельный дайджест роста».
+For this mode the role's one-page format replaces the general analysis
+template below. Use `stats:summary` for dated monthly context and report the
+actual `quest:funnel` query window. Record missing inputs for #3245/#3246 in
+the digest. Share the release privately with the owner and record acceptance
+only from an explicit reply about that week.
 
 ## Workflow
 
@@ -74,7 +84,8 @@ Blockers / unknowns:
 - Prefer current data over memory. Use absolute dates in the answer.
 - Do not write to production, create accounts, submit forms, publish content, or
   mutate API state during analysis.
-- Do not create one-off local reports unless the user asks; summarize in the chat
-  or update `docs/GROWTH_PLAN.md` only when explicitly requested.
+- Save weekly digests in the private location defined in the growth plan.
+  For other analysis, summarize in the chat unless the user requests a report
+  or an update to `docs/GROWTH_PLAN.md`.
 - If the analysis finds a concrete code bug, name the file and route it to the
   implementation skill instead of burying it in generic product advice.
