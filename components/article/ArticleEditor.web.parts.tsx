@@ -16,18 +16,20 @@ export const ArticleEditorShell = ({
   children,
   dynamicStyles,
   fullscreen,
+  boundaryRef,
 }: {
   children: ReactNode
   dynamicStyles: any
   fullscreen: boolean
+  boundaryRef?: (node: unknown) => void
 }) => fullscreen ? (
   <Modal visible animationType="slide">
     <SafeAreaView style={dynamicStyles.fullWrap}>
-      <View style={dynamicStyles.fullInner}>{children}</View>
+      <View ref={boundaryRef} style={dynamicStyles.fullInner}>{children}</View>
     </SafeAreaView>
   </Modal>
 ) : (
-  <View style={dynamicStyles.wrap}>{children}</View>
+  <View ref={boundaryRef} style={dynamicStyles.wrap}>{children}</View>
 )
 
 

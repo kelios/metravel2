@@ -122,3 +122,34 @@ with scoped checkfast/lint, production TypeScript, complexity and strict OpenSpe
 This confirms the source path in the full parent; the original runtime still has
 no frame timeline. Canonical budgets and new production editor acceptance remain
 mandatory after independent review and normal publication.
+
+### Whole-editor focus boundary
+
+Release533f V9 supplied the missing native pointer proof. Cut left the original
+Quill node with undoDepth1/redoDepth0. Pointer-down hit the enabled Undo button at
+y660; focus moved from Quill to this own toolbar control. The viewport listener
+flushed the pending empty description before click. Touched validation mounted a
+23px local error and98px summary; the same button moved to y781 before pointer-up.
+The original point then hit outside the editor, and no Undo click/handler ran.
+This is a focus/layout boundary failure. Tooltip had no pointer events or focus;
+no further history repair is justified by this evidence.
+
+Attach the focusout listener to the existing ArticleEditorShell wrap/fullInner
+DOM node via a stable callback ref with cleanup. The callback also handles an
+asynchronously mounted fullscreen container without a new wrapper or state.
+Skip flush only when relatedTarget is contained in that same whole-editor node.
+Null or external destinations retain immediate flush, including leaving the
+toolbar. Keep the viewport ref for content reads and media/drag helpers.
+No global IconButton, history, scheduler, debounce, validation or layout change.
+
+The old533f native clipboard/DOM-toolbar unit diagnostic passed2/2 without real
+hit geometry. The updated full-parent control checks the causal event boundary:
+focus on own Undo must not emit the empty value before click; real Undo/redo and
+DOM identity remain required. External/null and toolbar-to-external transitions
+are positive flush controls. On the exact three533f production files, the new
+boundary controls gave2 intended failures (premature empty emit inside, missed
+toolbar-to-external emit) and3healthy passes. The fix passed41/41 across the
+real-Quill/full-parent and parent-link suites, normal scoped checkfast/lint,
+production TypeScript, complexity, diff and strict OpenSpec checks. Unit evidence
+checks the event boundary; corrected browser geometry is not yet measured.
+Final review/publication/canonical and real native click acceptance remain.

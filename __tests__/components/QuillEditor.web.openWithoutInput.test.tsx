@@ -137,6 +137,7 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
       }
       expect(ref.current?.getEditor()?.root).toBeInstanceOf(HTMLElement)
       return {
+        host,
         editor: () => ref.current!.getEditor(),
         parentValue: () => parentValue,
         changes,
@@ -156,6 +157,14 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
         unmount,
       }
     } catch (error) { await unmount(); throw error }
+  }
+
+  const toolbarButton = (host: HTMLElement, key: string) => {
+    const label = require('@/i18n').translate(key)
+    const matches = Array.from(host.querySelectorAll<HTMLElement>('[aria-label]'))
+      .filter(node => node.getAttribute('aria-label') === label && (node.getAttribute('role') === 'button' || node.tagName === 'BUTTON'))
+    expect(matches).toHaveLength(1)
+    return matches[0]
   }
 
   it.each(['pending initial work', 'healthy initial work completed'])(
@@ -215,6 +224,103 @@ describe('QuillEditor.web — открытие без ввода (#3427)', () =>
       } finally { await parent.unmount() }
     },
   )
+
+  it.each(['internal focus before echo', 'after debounced echo'])(
+    'native clipboard cut and the actual toolbar restore both images without clearing initial history: %s',
+    async (timing) => {
+      const value = '<p>Own text</p><p><img src="https://metravel.by/a.jpg"></p><p><img src="https://metravel.by/b.jpg"></p>'
+      const parent = await mountControlledParent(value)
+      try {
+        await parent.flushIdle()
+        const quill = parent.editor()
+        jest.spyOn(quill, 'scrollSelectionIntoView').mockImplementation(() => {})
+        expect(quill.history).toBe(quill.getModule('history'))
+        // Do not clear/cutoff history: retain the actual initial paste and alt path.
+        const undo = jest.spyOn(quill.history, 'undo')
+        const redo = jest.spyOn(quill.history, 'redo')
+        const clipboard = new Map<string, string>()
+        const cut = new Event('cut', { bubbles: true, cancelable: true })
+        Object.defineProperty(cut, 'clipboardData', { value: { setData: (type: string, html: string) => clipboard.set(type, html) } })
+        await act(async () => {
+          quill.root.focus()
+          const range = document.createRange()
+          range.selectNodeContents(quill.root)
+          const selection = window.getSelection()!
+          selection.removeAllRanges()
+          selection.addRange(range)
+          document.dispatchEvent(new Event('selectionchange'))
+        })
+        await flushMutations()
+        await act(async () => { quill.root.dispatchEvent(cut) })
+        await flushMutations()
+        expect(cut.defaultPrevented).toBe(true)
+        const copied = document.createElement('div')
+        copied.innerHTML = clipboard.get('text/html') ?? ''
+        expect(copied.querySelectorAll('img')).toHaveLength(2)
+        expect(Array.from(copied.querySelectorAll('img')).every(image => !image.hasAttribute('alt'))).toBe(true)
+        expect(quill.root.querySelectorAll('img')).toHaveLength(0)
+        if (timing === 'after debounced echo') await parent.flushParentEcho()
+        else expect(parent.parentValue()).toBe(value)
+        const undoButton = toolbarButton(parent.host, 'shared:components.article.articleEditorUiHelpers.otmenit_poslednee_deystvie_0195723d')
+        await act(async () => { undoButton.focus() })
+        // Internal focus must not publish the empty draft between down and click:
+        // the real form's touched validation would move this same button.
+        if (timing === 'internal focus before echo') expect(parent.changes).toEqual([])
+        await act(async () => { undoButton.click() })
+        await flushMutations()
+        expect(undo).toHaveBeenCalledTimes(1)
+        expect(parent.editor()).toBe(quill)
+        expect(quill.root.querySelectorAll('img')).toHaveLength(2)
+        expect(getSafeEditorHtmlFrom(() => quill)).not.toContain('alt=')
+        const redoButton = toolbarButton(parent.host, 'shared:components.article.articleEditorUiHelpers.povtorit_deystvie_198fd1da')
+        await act(async () => { redoButton.focus(); redoButton.click() })
+        await flushMutations()
+        expect(redo).toHaveBeenCalledTimes(1)
+        expect(parent.editor()).toBe(quill)
+        expect(quill.root.querySelectorAll('img')).toHaveLength(0)
+      } finally { await parent.unmount() }
+    },
+  )
+
+  it.each(['external', 'null'])(
+    'flushes pending HTML when focus leaves the whole editor: %s destination',
+    async (destination) => {
+      const parent = await mountControlledParent('<p>Initial text</p>')
+      const next = document.createElement('button')
+      document.body.appendChild(next)
+      try {
+        await parent.flushIdle()
+        const quill = parent.editor()
+        jest.spyOn(quill, 'scrollSelectionIntoView').mockImplementation(() => {})
+        await act(async () => { quill.root.focus(); quill.insertText(0, 'Pending ', 'user') })
+        await flushMutations()
+        expect(parent.changes).toEqual([])
+        expect(document.activeElement).toBe(quill.root)
+        await act(async () => { if (destination === 'external') next.focus(); else quill.root.blur() })
+        expect(parent.changes).toHaveLength(1)
+        expect(parent.parentValue()).toContain('Pending')
+      } finally { await parent.unmount(); next.remove() }
+    },
+  )
+
+  it('flushes edits made from a focused toolbar control when leaving the whole editor', async () => {
+    const parent = await mountControlledParent('<p>Initial text</p>')
+    const next = document.createElement('button')
+    document.body.appendChild(next)
+    try {
+      await parent.flushIdle()
+      const quill = parent.editor()
+      jest.spyOn(quill, 'scrollSelectionIntoView').mockImplementation(() => {})
+      const button = toolbarButton(parent.host, 'shared:components.article.articleEditorUiHelpers.otmenit_poslednee_deystvie_0195723d')
+      await act(async () => { button.focus(); quill.insertText(0, 'Toolbar edit ', 'user') })
+      await flushMutations()
+      expect(document.activeElement).toBe(button)
+      expect(parent.changes).toEqual([])
+      await act(async () => { next.focus() })
+      expect(parent.changes).toHaveLength(1)
+      expect(parent.parentValue()).toContain('Toolbar edit')
+    } finally { await parent.unmount(); next.remove() }
+  })
 
   it('не сообщает об изменении, когда редактор лишь проставил фолбэк-alt картинке', async () => {
     const { onChange, editor, unmount } = await mount(OLD_ARTICLE_HTML)

@@ -2712,6 +2712,24 @@ guard, падающий в CI на попытке обойти этот конт
   подтверждает stale initial-sync при delayed echo; в исходном runtime timeline
   не снимался. Предыдущие32 проверяли direct Quill + manual ensure и этот
   родительский путь не покрывали. Новая production editor-приёмка остаётся нужна.
+- **Доказанная focus-boundary граница #3434 (17.11.2026, reuse):** V8/V9
+  на533f исключили потерю history: исходный Quill DOM сохранялся, cut оставлял
+  undoDepth1/redoDepth0. V9 записал native down на Undo приy660 и focusout
+  редактор→собственный toolbar. Viewport-only listener без проверки relatedTarget
+  немедленно flush'ил пустое описание; touched validation добавляла23px локально
+  и98px summary. До native up та же кнопка сдвигалась на121px, а up/click уже
+  попадали вне editor; Undo handler не вызывался. Tooltip имел pointer-events:none.
+  Правильный owner — весь editor Shell, включая собственный toolbar, а не один
+  viewport. Listener теперь следует DOM ref существующих wrap/fullInner и не
+  flush'ит внутренний переход; null/external destination по-прежнему flush'ят.
+  Viewport остальных helpers, history, debounce и IconButton не меняются.
+  Native clipboard/toolbar unit diagnostic на старом533f прошёл2/2 без geometry;
+  новый контроль проверяет именно отсутствие parent emit до внутреннего click и
+  немедленный emit при уходе наружу/null, в том числе из toolbar. На точных трёх
+  production-файлах533f получены2 ожидаемых RED: преждевременный empty emit внутри
+  и пропущенный emit при уходе из toolbar;3healthy контрола прошли. После fix
+  две suites дали41/41PASS вместе с scoped checks. Unit проверяет контракт
+  событий; browser geometry и production-приёмка после boundary fix ещё NOTRUN.
 - **Controls:** `docs/TRAVEL_DRAFT_RECOVERY.md`, focused Jest, Playwright
   recovery flow, paired mobile-web/Android background/offline evidence;
   `e2e/travel-editor-history.live.spec.ts` (выход без сохранения, `#3400`).

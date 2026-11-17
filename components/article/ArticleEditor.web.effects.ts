@@ -326,23 +326,26 @@ export function runInitialForceSyncEffect({
 export function attachEditorFocusOutFlush({
   isWeb,
   windowObject,
-  getViewport,
+  getBoundary,
   flush,
 }: {
   isWeb: boolean
   windowObject: (Window & typeof globalThis) | undefined
-  getViewport: () => HTMLElement | undefined
+  getBoundary: () => HTMLElement | null | undefined
   flush: () => void
 }): (() => void) | undefined {
   if (!isWeb || !windowObject) return
-  const viewport = getViewport()
-  if (!viewport || typeof viewport.addEventListener !== 'function') return
-  const handleFocusOut = () => {
+  const boundary = getBoundary()
+  if (!boundary || typeof boundary.addEventListener !== 'function') return
+  const handleFocusOut = (event: FocusEvent) => {
+    // Own toolbar/HTML controls are still inside the editor. Flushing on their
+    // pointer-down can move validation/layout before the native click arrives.
+    if (event.relatedTarget instanceof windowObject.Node && boundary.contains(event.relatedTarget)) return
     flush()
   }
-  viewport.addEventListener('focusout', handleFocusOut)
+  boundary.addEventListener('focusout', handleFocusOut)
   return () => {
-    viewport.removeEventListener('focusout', handleFocusOut)
+    boundary.removeEventListener('focusout', handleFocusOut)
   }
 }
 

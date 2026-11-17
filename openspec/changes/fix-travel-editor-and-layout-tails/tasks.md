@@ -41,3 +41,10 @@ independent gate, containing release and remaining editor acceptance are pending
 - [x] Prepare the bounded initial-sync completion/current-HTML fence and full controlled-parent/real-Quill regression source.
 - [x] Establish full-parent RED on exact8c4 production3:2 intended cut DOM failures/2healthy external passes; repaired suites36/36 and scoped checks passed.
 - [ ] Complete scoped checks and independent review; normal publication/canonical and real private973 acceptance remain required.
+
+## Whole-editor focus-boundary recurrence
+
+- [x] Retain V9 native proof: original history remains intact; focusout flush mounts validation and moves the same Undo button121px between down/up, cancelling its click.
+- [x] Prepare the whole-Shell boundary ref/relatedTarget containment and causal pre-click parent-emit regression; keep viewport/history/IconButton unchanged.
+- [x] Establish exact old533f production3 boundary RED:2 intended failures/3healthy passes; repaired suites41/41PASS with scoped checks and source review.
+- [ ] Complete the final gate, publish/deploy the containing SHA normally and verify genuine toolbar clicks/history/persistence under the private973 guard; prior diagnostics do not replace acceptance.

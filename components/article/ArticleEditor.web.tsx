@@ -129,6 +129,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [htmlForcedSelection, setHtmlForcedSelection] = useState<{ start: number; end: number } | null>(null);
 
     const editorViewportRef = useRef<any>(null);
+    const editorBoundaryCleanupRef = useRef<(() => void) | undefined>(undefined);
 
     const lastFullscreenRef = useRef<boolean | null>(null);
 
@@ -432,14 +433,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     // the editor (e.g. clicking "Далее"). focusout fires synchronously before the
     // target control's click handler, so formData is up to date before navigation
     // validates the step.
-    useEffect(() => {
-        return attachEditorFocusOutFlush({
+    // The Shell ref also follows an asynchronously mounted fullscreen container.
+    const setEditorBoundaryRef = useCallback((node: unknown) => {
+        editorBoundaryCleanupRef.current?.();
+        editorBoundaryCleanupRef.current = attachEditorFocusOutFlush({
             isWeb,
             windowObject: win,
-            getViewport: () => editorViewportRef.current as HTMLElement | undefined,
+            getBoundary: () => typeof HTMLElement !== 'undefined' && node instanceof HTMLElement ? node : null,
             flush: () => debouncedParentChangeRaw.flush(),
         });
-    }, [debouncedParentChangeRaw, quillMountKey, shouldLoadQuill, showHtml]);
+    }, [debouncedParentChangeRaw]);
 
     const focusQuill = useCallback(() => {
         focusQuillEditor({
@@ -821,7 +824,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     return (
-        <ArticleEditorShell dynamicStyles={dynamicStyles} fullscreen={fullscreen}>
+        <ArticleEditorShell dynamicStyles={dynamicStyles} fullscreen={fullscreen} boundaryRef={setEditorBoundaryRef}>
             {body}
         </ArticleEditorShell>
     );
