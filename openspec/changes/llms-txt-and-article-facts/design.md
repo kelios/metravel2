@@ -12,6 +12,7 @@ Serve a static index and publish approved facts through the existing article wor
 - Extend the post-deploy SEO check to verify status, redirects, MIME type and Markdown shape independently of its page limit.
 - Rank by finalized Google Search Console web clicks, using impressions for ties. Select the highest-ranked owner-authored articles with source facts. Keep date-sensitive values qualified and use row headers in two-column tables.
 - After approval, dry-run each body change against the current article revision, back up before applying, and use the saved body to roll back. Validate the resulting raw public HTML of every article. Use one mobile and one desktop visual sample if table layout differs.
+- Give semantic row headers a readable minimum width in the web article typography. This keeps short labels intact while allowing longer labels and values to wrap.
 
 ## Risks / Trade-offs
 

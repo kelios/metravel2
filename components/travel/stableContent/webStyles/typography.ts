@@ -26,6 +26,18 @@ ${getQuillRichTextStyles(`.${cls}`)}
   clear: both;
 }
 
+.${cls} table th[scope="row"] {
+  min-width: 5.5rem;
+  padding-inline-end: ${DESIGN_TOKENS.spacing.sm}px;
+  text-align: start;
+  word-break: normal;
+}
+.${cls} table th[scope="row"],
+.${cls} table th[scope="row"] + td {
+  padding-block: ${DESIGN_TOKENS.spacing.xs}px;
+  vertical-align: top;
+}
+
 /* ===== FIGURE IMAGES ===== */
 .${cls} figure img {
   float: none !important;
