@@ -61,6 +61,10 @@ export const MOCK_BADGES: Badge[] = [
   // чтобы галерею и мотив-эмблему можно было увидеть под
   // `EXPO_PUBLIC_ACHIEVEMENTS_MOCK=true` до BE-seed (#1635).
   badge(12, 'quest-pioneer', 'Первопроходец', 'Первым прошёл квест — до вас его не проходил никто', 'quests', 'Квесты', 'gold', 75),
+  // Географические значки (#3232 / #3241). Тексты совпадают с серверным сидом.
+  // imageUrl остаётся null: картинки нет, рисуется процедурная эмблема.
+  badge(19, 'quest-city-series', 'Городская серия', 'Завершены два разных квеста в одном городе.', 'quests', 'Квесты', 'bronze', 25),
+  badge(20, 'quest-two-regions', 'Два региона', 'Завершены квесты в двух разных регионах. Учитываются регионы Беларуси и Польши.', 'geo', 'Гео', 'silver', 35),
   badge(10, 'crowd-favorite', 'Любимец публики', '50 лайков на путешествиях', 'social', 'Сообщество', 'silver', 40),
   badge(11, 'world-citizen', 'Гражданин мира', '15 посещённых стран', 'geo', 'География', 'legendary', 200),
   // Адвент-календарь 2026 (#2867, сид — #2864): слаги совпадают с `reward.badgeSlug`
@@ -167,6 +171,8 @@ const MOCK_LOCKED: BadgeProgress[] = [
   progress(badgeById(7), 1, 3),
   progress(badgeById(9), 4, 15),
   progress(badgeById(11), 7, 15),
+  progress(badgeById(19), 1, 2),
+  progress(badgeById(20), 0, 2),
 ];
 
 export const MOCK_MY_ACHIEVEMENTS: MyAchievements = {

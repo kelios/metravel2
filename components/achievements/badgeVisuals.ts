@@ -133,6 +133,9 @@ const SLUG_MOTIF_HINTS: Array<[RegExp, MotifKey]> = [
   [/auto|car|авто|roadtrip|road-?trip|машин/i, 'car'],
   [/water|вод|анкор|anchor|волн|sea|море/i, 'wave'],
   [/city|urban|город/i, 'city'],
+  // «Два региона» содержит `quest`, но это географическое условие, не очередной
+  // флаг «пройди N квестов» (#3241).
+  [/quest-two-regions/i, 'globe'],
   [/quest|квест/i, 'flag'],
   [/route|маршрут|map|карт/i, 'route'],
   [/like|лайк|favorite|сердц|публик|crowd|idol|fan/i, 'heart'],
@@ -170,6 +173,7 @@ const SLUG_ICON_HINTS: Array<[RegExp, FeatherName]> = [
   [/water|вод|анкор/i, 'anchor'],
   [/city|urban|город/i, 'map-pin'],
   [/place|место|первооткрыват|discover/i, 'map-pin'],
+  [/quest-two-regions/i, 'globe'],
   [/quest|квест/i, 'flag'],
   [/like|лайк|favorite/i, 'heart'],
   [/subscrib|подпис/i, 'users'],

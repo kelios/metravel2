@@ -66,7 +66,7 @@ function BadgeMedal({
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        wrap: { alignItems: 'center', width: showDescription ? size + 40 : size + 8 },
+        wrap: { alignItems: 'center', width: showDescription ? Math.max(size + 40, 176) : size + 8 },
         medalBox: { width: size, height: size },
         medal: {
           width: size,
@@ -113,7 +113,7 @@ function BadgeMedal({
           fontWeight: '600',
           color: earned ? colors.text : colors.textMuted,
           textAlign: 'center',
-          maxWidth: showDescription ? size + 40 : size + 8,
+          maxWidth: showDescription ? Math.max(size + 40, 176) : size + 8,
         },
         description: {
           marginTop: 2,
@@ -121,7 +121,7 @@ function BadgeMedal({
           lineHeight: 13,
           color: colors.textMuted,
           textAlign: 'center',
-          maxWidth: size + 40,
+          maxWidth: Math.max(size + 40, 176),
         },
         progressTrack: {
           marginTop: 6,
@@ -188,7 +188,7 @@ function BadgeMedal({
         </Text>
       ) : null}
       {showDescription && badge.description ? (
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={styles.description} numberOfLines={4}>
           {badge.description}
         </Text>
       ) : null}

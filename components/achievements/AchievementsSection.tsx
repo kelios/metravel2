@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -17,9 +17,16 @@ import {
   useUserAchievements,
 } from '@/hooks/useAchievementsApi'
 import { useAuthStore } from '@/stores/authStore'
+import type { Badge } from '@/api/achievements'
 import RankBar from '@/components/achievements/RankBar'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
-import AchievementsGalleryModal from '@/components/achievements/AchievementsGalleryModal'
+import BadgeGrid from '@/components/achievements/BadgeGrid'
+import AchievementsGalleryModal, {
+  groupByCategory,
+} from '@/components/achievements/AchievementsGalleryModal'
+import BadgeDetailSheet, {
+  type BadgeDetail,
+} from '@/components/achievements/BadgeDetailSheet'
 import PeerBadgeReceivedRow from '@/components/achievements/PeerBadgeReceivedRow'
 import SectionState from '@/components/achievements/SectionState'
 import { translate as i18nT } from '@/i18n'
@@ -42,8 +49,33 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
   const { data: publicData } = useUserAchievements(ownUserId)
   const peerReceived = publicData?.peerReceived ?? []
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [selectedBadgeId, setSelectedBadgeId] = useState<number | null>(null)
 
   const styles = getStyles(colors)
+  const groups = useMemo(() => (data ? groupByCategory(data) : []), [data])
+  const detailByBadgeId = useMemo(() => {
+    const map = new Map<number, BadgeDetail>()
+    data?.earned.forEach((ub) =>
+      map.set(ub.badge.id, {
+        badge: ub.badge,
+        earned: true,
+        userBadgeId: ub.id,
+        earnedAt: ub.earnedAt,
+      }),
+    )
+    data?.locked.forEach((p) =>
+      map.set(p.badge.id, {
+        badge: p.badge,
+        earned: false,
+        progress: { current: p.current, threshold: p.threshold },
+      }),
+    )
+    return map
+  }, [data])
+  const detail = selectedBadgeId == null ? null : detailByBadgeId.get(selectedBadgeId) ?? null
+  const openDetail = (badge: Badge) => {
+    if (detailByBadgeId.has(badge.id)) setSelectedBadgeId(badge.id)
+  }
 
   // Тихо скрываем при ошибке/неавторизованном — секция необязательная.
   if (isError || !isAuthenticated) return null
@@ -55,7 +87,19 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
           <Text style={styles.subheading}>{i18nT('achievements:components.achievements.AchievementsSection.znachki_za_konkretnye_dostizheniya_0b7c6354')}</Text>
           <RankBar rank={data.rank} style={styles.rank} />
 
-          {data.earned.length > 0 ? (
+          {bare && groups.length > 0 ? (
+            groups.map((group) => (
+              <View key={group.slug} style={styles.group}>
+                <Text style={styles.groupTitle}>{group.name}</Text>
+                <BadgeGrid
+                  items={group.items}
+                  size={68}
+                  showDescriptions
+                  onBadgePress={openDetail}
+                />
+              </View>
+            ))
+          ) : data.earned.length > 0 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -85,12 +129,21 @@ function AchievementsSection({ bare = false, testID, style }: Props) {
             />
           ) : null}
 
-          <AchievementsGalleryModal
-            visible={galleryOpen}
-            onClose={() => setGalleryOpen(false)}
-            data={data}
-            ownerName={ownerName}
-          />
+          {bare ? (
+            <BadgeDetailSheet
+              visible={detail != null}
+              onClose={() => setSelectedBadgeId(null)}
+              detail={detail}
+              ownerName={ownerName}
+            />
+          ) : (
+            <AchievementsGalleryModal
+              visible={galleryOpen}
+              onClose={() => setGalleryOpen(false)}
+              data={data}
+              ownerName={ownerName}
+            />
+          )}
         </>
       ) : null}
     </SectionState>
@@ -170,6 +223,12 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingRight: 8,
     },
     peerRow: { marginTop: DESIGN_TOKENS.spacing.xxs },
+    group: { gap: DESIGN_TOKENS.spacing.xs },
+    groupTitle: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontWeight: '700',
+      color: colors.text,
+    },
     empty: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,

@@ -258,6 +258,12 @@ describe('badgeMotif', () => {
   it('water-traveler → wave', () => {
     expect(badgeMotif('theme', 'water-traveler')).toBe('wave')
   })
+  it('quest-city-series → city, quest-two-regions → globe, не общий квестовый flag (#3241)', () => {
+    expect(badgeMotif('quests', 'quest-city-series')).toBe('city')
+    expect(badgeMotif('geo', 'quest-two-regions')).toBe('globe')
+    expect(badgeIcon('quests', 'quest-city-series')).toBe('map-pin')
+    expect(badgeIcon('geo', 'quest-two-regions')).toBe('globe')
+  })
   it('quest-pioneer → footprint, а не общий квестовый flag (#1635)', () => {
     // Первопроходец — единственный квест-значок за редкость, а не за счёт
     // пройденных: флагом он был бы неотличим от `quest-legend`.

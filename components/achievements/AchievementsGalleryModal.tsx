@@ -33,7 +33,7 @@ interface CategoryGroup {
   items: BadgeGridItem[];
 }
 
-function groupByCategory(data: MyAchievements): CategoryGroup[] {
+export function groupByCategory(data: MyAchievements): CategoryGroup[] {
   const order: string[] = [];
   const map = new Map<string, CategoryGroup>();
 

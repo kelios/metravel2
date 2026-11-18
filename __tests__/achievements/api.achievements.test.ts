@@ -52,7 +52,7 @@ describe('achievement mock fixtures', () => {
       1, 2, 3, 6, 8, 10,
     ])
     expect(MOCK_MY_ACHIEVEMENTS.locked.map(({ badge }) => badge.id)).toEqual([
-      4, 5, 7, 9, 11,
+      4, 5, 7, 9, 11, 19, 20,
     ])
     expect(MOCK_MY_ACHIEVEMENTS.recentlyEarned.map(({ badge }) => badge.id)).toEqual([
       10, 8, 6,
