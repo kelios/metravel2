@@ -31,6 +31,10 @@ jest.mock('@/api/travelRoutes', () => ({
   downloadTravelRouteFileBlob: jest.fn(),
 }))
 
+jest.mock('@/utils/routeFileElevation', () => ({
+  addMissingRouteElevation: jest.fn(async (preview) => preview),
+}))
+
 jest.mock('@/utils/routeFileParser', () => ({
   buildElevationProfile: jest.fn(() => []),
   parseRouteFileGeometry: jest.fn(() => ({
@@ -48,6 +52,9 @@ const { useTravelRouteFiles } = jest.requireMock('@/hooks/useTravelRouteFiles') 
 }
 const { downloadTravelRouteFileBlob } = jest.requireMock('@/api/travelRoutes') as {
   downloadTravelRouteFileBlob: jest.Mock
+}
+const { addMissingRouteElevation } = jest.requireMock('@/utils/routeFileElevation') as {
+  addMissingRouteElevation: jest.Mock
 }
 const { buildElevationProfile, parseRouteFileGeometry } = jest.requireMock('@/utils/routeFileParser') as {
   buildElevationProfile: jest.Mock
@@ -71,6 +78,7 @@ describe('useRouteFilePreviews', () => {
       points: [],
     })
     buildElevationProfile.mockReturnValue([])
+    addMissingRouteElevation.mockImplementation(async (preview) => preview)
   })
 
   afterEach(() => {
@@ -136,6 +144,34 @@ describe('useRouteFilePreviews', () => {
     )
 
     expect(result.current.isRoutePreviewLoading).toBe(true)
+  })
+
+  it('waits for terrain elevation before publishing a height-less KML preview', async () => {
+    const sourceLine = [{ coord: '49.81,6.42' }, { coord: '49.82,6.43' }]
+    const enriched = {
+      linePoints: [{ coord: '49.81,6.42', elevation: 165 }, { coord: '49.82,6.43', elevation: 210 }],
+      elevationProfile: [{ distanceKm: 0, elevationM: 165 }, { distanceKm: 1.3, elevationM: 210 }],
+    }
+    useTravelRouteFiles.mockReturnValue({
+      data: [{ id: 44, original_name: 'Mullerthal_Trail_Route_1.kml', ext: 'kml' }],
+      isLoading: false,
+      isFetching: false,
+    })
+    downloadTravelRouteFileBlob.mockResolvedValue({ text: '<kml/>' })
+    parseRouteFileGeometry.mockReturnValue({ hasIndependentPoints: false, lines: [sourceLine], points: [] })
+    let finishElevation!: (preview: typeof enriched) => void
+    addMissingRouteElevation.mockImplementationOnce(() => new Promise((resolve) => { finishElevation = resolve }))
+    const { result } = await renderHook(() => useRouteFilePreviews({
+      travelId: 761, canRenderHeavy: true, shouldRender: true, shouldForceRenderMap: false,
+    }))
+    await waitFor(() => expect(addMissingRouteElevation.mock.calls[0]?.[0]).toEqual({ linePoints: sourceLine, elevationProfile: [] }))
+    expect(result.current.isRoutePreviewLoading).toBe(true)
+    expect(result.current.isRoutePreviewReady).toBe(false)
+    expect(result.current.routePreviewItems).toEqual([])
+    await act(async () => { finishElevation(enriched) })
+    await waitFor(() => expect(result.current.isRoutePreviewReady).toBe(true))
+    expect(result.current.primaryRoutePreview).toEqual(enriched)
+    expect(result.current.isRoutePreviewLoading).toBe(false)
   })
 
   it('uses server preview only after source XML confirms a line-only file', async () => {

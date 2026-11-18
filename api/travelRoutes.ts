@@ -16,6 +16,7 @@ import type {
 const LONG_TIMEOUT = 30000;
 
 const toFiniteNumber = (value: unknown): number | null => {
+  if (value == null || (typeof value === 'string' && value.trim() === '')) return null;
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) ? n : null;
 };

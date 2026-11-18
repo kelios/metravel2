@@ -6,6 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 import { downloadTravelRouteFileBlob } from '@/api/travelRoutes'
 import { buildElevationProfile, parseRouteFileGeometry, sanitizeRoutePreview } from '@/utils/routeFileParser'
+import { addMissingRouteElevation } from '@/utils/routeFileElevation'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
 import { useTranslation } from '@/i18n/LocaleProvider'
@@ -195,7 +196,10 @@ export function useRouteFilePreviews({
             // Strip teleport-stitched <wpt> fragments (straight lines + inflated
             // distance) the backend preview can carry; no-op for clean tracks.
             const previews = rawPreviews.map(sanitizeRoutePreview)
-            const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
+            const validPreviews = await Promise.all(previews
+              .filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
+              .map(addMissingRouteElevation))
+            if (!active) return { pointItems: [], previewItems: [] }
 
             return {
               pointItems: geometry.points.map((point, pointIndex) => ({
