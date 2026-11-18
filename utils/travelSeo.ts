@@ -4,7 +4,7 @@ import { SEO_TITLE_MAX_LENGTH, buildSeoTitle, htmlToPlainText, normalizeSeoLead 
 import { buildCanonicalUrl, normalizeOgImageUrl } from '@/utils/seo'
 import { buildTravelPath as buildRouteTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { travelAuthorProfileUrl } from '@/utils/travelAuthorProfile';
-import { readTravelContentUpdatedAt } from '@/utils/travelContentUpdatedAt';
+import { readTravelArticleDates } from '@/utils/travelContentUpdatedAt';
 
 
 const getSeoHtmlFallback = () => i18nT('travel:utils.travelSeo.htmlFallback');
@@ -198,17 +198,11 @@ export function createTravelArticleJsonLd(
   const canonicalUrl = getTravelCanonicalUrl(travel, canonicalOverride);
   if (canonicalUrl) safeData.url = canonicalUrl;
 
-  if (travel.created_at) {
-    const dateStr =
-      typeof travel.created_at === 'number'
-        ? new Date(travel.created_at * 1000).toISOString()
-        : String(travel.created_at);
-    if (dateStr && !isNaN(Date.parse(dateStr))) safeData.datePublished = dateStr;
-  }
-
-  // #3237: та же честная дата, что у серверной разметки; нет её — дата публикации.
-  const modifiedAt = readTravelContentUpdatedAt(travel) ?? safeData.datePublished;
-  if (modifiedAt) safeData.dateModified = modifiedAt;
+  // #3365: дата публикации — точный published_at, не редактируемая дата похода.
+  // dateModified — та же цепочка, что lastmod sitemap (#3344).
+  const articleDates = readTravelArticleDates(travel);
+  if (articleDates.datePublished) safeData.datePublished = articleDates.datePublished;
+  if (articleDates.dateModified) safeData.dateModified = articleDates.dateModified;
 
   const authorName = travel.user?.name || travel.user?.first_name;
   if (authorName) {

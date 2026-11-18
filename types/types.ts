@@ -186,6 +186,11 @@ export type Travel = TravelModerationMetadata & {
     }
     created_at?: string
     updated_at?: string
+    /** Точная дата публикации. Не дата похода (`created_at`). #3365 */
+    published_at?: string | null
+    /** true — `published_at` оценочная, в JSON-LD её не класть. #3365 */
+    published_at_estimated?: boolean | null
+    content_updated_at?: string | null
     publish?: boolean | number | null
     moderation?: boolean | number | null
     publication_status?: TravelPublicationStatus | (string & {}) | null

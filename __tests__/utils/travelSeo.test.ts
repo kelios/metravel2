@@ -96,44 +96,58 @@ describe('travelSeo', () => {
     expect(jsonLd?.headline).not.toMatch(/…$/);
   });
 
-  // #1620: datePublished must come from a real source field. When the API
-  // payload has no created_at (current production contract — see
-  // travels/serializers.py, the column exists but is not exposed), the
-  // fallback is to omit the field, never to fabricate today's date.
-  it('omits datePublished when the source has no created_at (fails closed)', () => {
+  // #3365: дата публикации — точный published_at. Даты похода и технический
+  // updated_at в datePublished не попадают; сегодняшнюю дату не выдумываем.
+  it('omits datePublished when the source has no exact published_at (fails closed)', () => {
     const jsonLd = createTravelArticleJsonLd({
       id: 8,
       slug: 'demo-no-date',
       name: 'Demo no date',
+      created_at: '2017-02-01T12:00:00Z',
       updated_at: '2025-01-02T00:00:00.000Z',
     } as any);
 
     expect(jsonLd).not.toHaveProperty('datePublished');
-    // #3237: технический `updated_at` больше не выдаётся за дату правки содержания.
-    expect(jsonLd).not.toHaveProperty('dateModified');
+    expect(jsonLd?.dateModified).toBe('2017-02-01T12:00:00.000Z');
   });
 
   it.each([
     ['present', { content_updated_at: '2026-10-05T09:00:00Z' }, '2026-10-05T09:00:00.000Z'],
-    ['null', { content_updated_at: null }, '2017-02-01T12:00:00Z'],
-    ['absent', {}, '2017-02-01T12:00:00Z'],
-  ])('takes dateModified from content_updated_at when %s, else the publication date (#3237)', (_label, extra, expected) => {
+    ['null', { content_updated_at: null }, '2017-02-01T12:00:00.000Z'],
+    ['absent', {}, '2017-02-01T12:00:00.000Z'],
+  ])('takes dateModified from content_updated_at when %s, else created_at (#3237)', (_label, extra, expected) => {
     const jsonLd = createTravelArticleJsonLd({
       id: 10, slug: 'tivoli', name: 'Тиволи', created_at: '2017-02-01T12:00:00Z',
       updated_at: '2026-09-23T07:54:00Z', ...extra,
     } as any);
     expect(jsonLd?.dateModified).toBe(expected);
+    expect(jsonLd).not.toHaveProperty('datePublished');
   });
 
-  it('publishes datePublished verbatim when created_at is a valid source date', () => {
-    const jsonLd = createTravelArticleJsonLd({
+  it('publishes the exact published_at and ignores the trip date and an estimated date (#3365)', () => {
+    const exact = createTravelArticleJsonLd({
       id: 9,
       slug: 'demo-with-date',
       name: 'Demo with date',
-      created_at: '2024-03-15T10:00:00.000Z',
+      created_at: '2017-02-01T12:00:00Z',
+      updated_at: '2026-09-23T07:54:00Z',
+      published_at: '2026-11-02T21:37:00.883Z',
+      published_at_estimated: false,
+      content_updated_at: '2026-10-05T09:00:00Z',
     } as any);
+    expect(exact?.datePublished).toBe('2026-11-02T21:37:00.883Z');
+    expect(exact?.dateModified).toBe('2026-11-02T21:37:00.883Z');
 
-    expect(jsonLd?.datePublished).toBe('2024-03-15T10:00:00.000Z');
+    const estimated = createTravelArticleJsonLd({
+      id: 11,
+      slug: 'estimated',
+      name: 'Estimated',
+      created_at: '2017-02-01T12:00:00Z',
+      published_at: '2026-10-18T00:00:00Z',
+      published_at_estimated: true,
+    } as any);
+    expect(estimated).not.toHaveProperty('datePublished');
+    expect(estimated?.dateModified).toBe('2017-02-01T12:00:00.000Z');
   });
 
   it('creates breadcrumb json-ld for travel pages', () => {

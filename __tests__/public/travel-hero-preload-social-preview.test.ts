@@ -20,6 +20,7 @@ import {
   socialPreviewWidthForRoute,
 } from '@/constants/imageContract'
 import { normalizeOgImageUrl } from '@/utils/seo'
+import { readTravelArticleDates } from '@/utils/travelContentUpdatedAt'
 
 const SITE = 'https://metravel.by'
 
@@ -200,6 +201,38 @@ describe('preload-скрипт даёт тот же адрес соцпревь�
       twitter: head.meta('name', 'twitter:image'),
       jsonLd: (head.jsonLd('travel-article-jsonld')?.image as string[] | undefined)?.[0],
     }).toEqual({ og: expected, twitter: expected, jsonLd: expected })
+  })
+
+  it('кладёт в JSON-LD те же даты, что readTravelArticleDates (#3365)', async () => {
+    const cases = [
+      {
+        name: 'Хала Крупова',
+        description: 'Поход',
+        gallery: [{ url: `${SITE}/gallery/1.jpg` }],
+        created_at: '2017-02-01T12:00:00Z',
+        updated_at: '2026-09-23T07:54:00Z',
+        published_at: '2026-11-02T21:37:00.883Z',
+        published_at_estimated: false,
+        content_updated_at: '2026-10-05T09:00:00Z',
+      },
+      {
+        name: 'Хала Крупова',
+        description: 'Поход',
+        gallery: [{ url: `${SITE}/gallery/1.jpg` }],
+        created_at: '2017-02-01T12:00:00Z',
+        updated_at: '2026-09-23T07:54:00Z',
+        published_at: '2026-10-18T00:00:00Z',
+        published_at_estimated: true,
+      },
+    ]
+    for (const travel of cases) {
+      const head = runPreloadScript(travel)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      const dates = readTravelArticleDates(travel)
+      const jsonLd = head.jsonLd('travel-article-jsonld')
+      expect(jsonLd?.datePublished ?? null).toBe(dates.datePublished)
+      expect(jsonLd?.dateModified ?? null).toBe(dates.dateModified)
+    }
   })
 
   it('адрес без `?w=` не появляется ни на одном писателе меты', async () => {

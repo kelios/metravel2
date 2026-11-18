@@ -1,6 +1,6 @@
 /* global module, require */
 const { travelAuthorProfileUrl } = require('./travelAuthorProfile')
-const { readTravelContentUpdatedAt } = require('./travelContentUpdatedAt')
+const { readTravelArticleDates } = require('./travelContentUpdatedAt')
 
 const SITE_URL = 'https://metravel.by'
 
@@ -32,12 +32,11 @@ function buildTravelArticleStructuredData({ headline, description, canonical, im
   // `sameAs` — только соцсети из публичного профиля автора (#3240), пустые не пишем.
   if (authorUrl && Array.isArray(authorSameAs) && authorSameAs.length) payload.author.sameAs = authorSameAs.slice()
   if (image) payload.image = [image]
-  const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null
-  // #3237: `dateModified` — честная дата правки содержания (`content_updated_at`,
-  // #3240); её нет — дата публикации. Технический `updated_at` сюда не идёт.
-  const modifiedAt = readTravelContentUpdatedAt(travel) || publishedAt
-  if (publishedAt) payload.datePublished = publishedAt
-  if (modifiedAt) payload.dateModified = modifiedAt
+  // #3365: точный published_at и цепочка lastmod sitemap (#3344).
+  // Оценочная дата, created_at похода и технический updated_at в datePublished не идут.
+  const articleDates = readTravelArticleDates(travel)
+  if (articleDates.datePublished) payload.datePublished = articleDates.datePublished
+  if (articleDates.dateModified) payload.dateModified = articleDates.dateModified
   return payload
 }
 

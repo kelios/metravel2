@@ -33,6 +33,7 @@ import { i18n } from '@/i18n'
 import {
   DEFAULT_REPORT_REASONS,
   blockUser,
+  BLOCKED_USERS_MAX_PAGES,
   fetchBlockedUsers,
   fetchReportReasons,
   isMockBlocked,
@@ -161,10 +162,42 @@ describe('fetchBlockedUsers', () => {
     mockGet.mockResolvedValueOnce({ results: [{ id: 1 }, { id: 2 }] })
     const res = await fetchBlockedUsers()
     expect(res).toHaveLength(2)
+    expect(mockGet).toHaveBeenCalledWith('/user/blocked/?page=1')
   })
 
   it('unwraps a bare array', async () => {
     mockGet.mockResolvedValueOnce([{ id: 1 }])
     expect(await fetchBlockedUsers()).toHaveLength(1)
+  })
+
+  it('joins three pages of 20 blocked authors (#3365)', async () => {
+    const page = (number: number) => ({
+      count: 60,
+      results: Array.from({ length: 20 }, (_, index) => ({ id: (number - 1) * 20 + index + 1 })),
+    })
+    mockGet.mockImplementation(async (url: string) => page(Number(String(url).match(/page=(\d+)/)?.[1])))
+    const res = await fetchBlockedUsers()
+    expect(res.map((row) => row.id)).toEqual(Array.from({ length: 60 }, (_, index) => index + 1))
+    expect(mockGet.mock.calls.map((call) => call[0])).toEqual([
+      '/user/blocked/?page=1',
+      '/user/blocked/?page=2',
+      '/user/blocked/?page=3',
+    ])
+  })
+
+  it('stops at the page cap instead of following an endless count (#3365)', async () => {
+    mockGet.mockImplementation(async (url: string) => {
+      const page = Number(String(url).match(/page=(\d+)/)?.[1])
+      return {
+        count: 10_000,
+        results: Array.from({ length: 20 }, (_, index) => ({ id: (page - 1) * 20 + index + 1 })),
+      }
+    })
+    const res = await fetchBlockedUsers()
+    expect(res).toHaveLength(BLOCKED_USERS_MAX_PAGES * 20)
+    expect(mockGet).toHaveBeenCalledTimes(BLOCKED_USERS_MAX_PAGES)
+    expect(mockGet.mock.calls.map((call) => call[0])).not.toContain(
+      `/user/blocked/?page=${BLOCKED_USERS_MAX_PAGES + 1}`,
+    )
   })
 })

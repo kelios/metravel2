@@ -9,7 +9,7 @@
 //   GET    /user/report-reasons/ → [{ key, label }]
 //   POST   /user/{id}/block/    → 201 { blocked: true } (снимает взаимную подписку)
 //   DELETE /user/{id}/block/    → 204
-//   GET    /user/blocked/       → пагинированный список UserProfileDto
+//   GET    /user/blocked/       → пагинированный список UserProfileDto (по 20, #3365)
 //
 // Production contract verified by board #919. In-memory mocks are development-only.
 
@@ -17,6 +17,7 @@ import { apiClient, ApiError } from '@/api/client'
 import type { UserProfileDto } from '@/api/user'
 import { contentRefKey, type ContentRef } from '@/types/contentSafety'
 import { resolveDevMockFlag } from '@/utils/devMockFlags'
+import { fetchAllPages } from '@/utils/fetchAllPages'
 import { devWarn } from '@/utils/logger'
 import { REPORT_REASON_KEYS, reportReasonLabel } from '@/utils/reportReasonLabel'
 
@@ -73,9 +74,14 @@ const key = (userId: string | number): string => String(userId)
 
 type MaybePaginated<T> =
   | T[]
-  | { data?: T[]; results?: T[] }
+  | { data?: T[]; results?: T[]; count?: number }
   | null
   | undefined
+
+/** Потолок докачки `/user/blocked/`: 50 страниц по фактическому размеру ответа. #3365 */
+export const BLOCKED_USERS_MAX_PAGES = 50
+
+const blockedUsersPath = (page: number): string => `/user/blocked/?page=${page}`
 
 const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
   if (!payload) return []
@@ -83,6 +89,14 @@ const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
   if (Array.isArray(payload.data)) return payload.data
   if (Array.isArray(payload.results)) return payload.results
   return []
+}
+
+const readCountedPage = <T>(payload: MaybePaginated<T>): { items: T[]; total: number } => {
+  const items = unwrapList(payload)
+  const count = payload && !Array.isArray(payload) && typeof payload.count === 'number' && payload.count >= 0
+    ? payload.count
+    : items.length
+  return { items, total: count }
 }
 
 /** Справочник причин жалобы. При недоступности эндпоинта — дефолтный список. */
@@ -169,12 +183,14 @@ export async function unblockUser(userId: string | number): Promise<void> {
   }
 }
 
-/** Список заблокированных пользователей (экран настроек «Заблокированные»). */
+/** Список заблокированных пользователей. Сервер отдаёт по 20 строк — дочитываем все страницы. */
 export async function fetchBlockedUsers(): Promise<UserProfileDto[]> {
   if (USE_MOCK) return []
   try {
-    const res = await apiClient.get<MaybePaginated<UserProfileDto>>('/user/blocked/')
-    return unwrapList(res)
+    return await fetchAllPages(async (page) => {
+      const res = await apiClient.get<MaybePaginated<UserProfileDto>>(blockedUsersPath(page))
+      return readCountedPage(res)
+    }, { maxPages: BLOCKED_USERS_MAX_PAGES })
   } catch (error) {
     if (shouldFallbackToMock(error)) {
       devWarn('[safety] blocked list → mock fallback')

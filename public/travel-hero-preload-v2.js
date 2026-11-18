@@ -336,10 +336,28 @@
         }
       };
 
-      var createdAt = data && data.created_at ? String(data.created_at) : '';
-      var updatedAtRaw = data && data.updated_at ? String(data.updated_at) : '';
-      if (createdAt && !isNaN(Date.parse(createdAt))) payload.datePublished = createdAt;
-      if (updatedAtRaw && !isNaN(Date.parse(updatedAtRaw))) payload.dateModified = updatedAtRaw;
+      // #3365: та же цепочка, что utils/travelContentUpdatedAt.js. Импорт сюда недоступен.
+      var isoDate = function(value) {
+        if (typeof value === 'number' && isFinite(value)) {
+          var ms = value < 1e12 ? value * 1000 : value;
+          var numeric = new Date(ms);
+          return isNaN(numeric.getTime()) ? '' : numeric.toISOString();
+        }
+        if (typeof value !== 'string' || !String(value).trim()) return '';
+        var time = Date.parse(value);
+        return isNaN(time) ? '' : new Date(time).toISOString();
+      };
+      var exactPublished = data && data.published_at_estimated === true ? '' : isoDate(data && data.published_at);
+      var contentUpdated = isoDate(data && data.content_updated_at);
+      var createdAt = isoDate(data && data.created_at);
+      var modifiedAt = '';
+      if (contentUpdated && exactPublished) {
+        modifiedAt = Date.parse(contentUpdated) >= Date.parse(exactPublished) ? contentUpdated : exactPublished;
+      } else {
+        modifiedAt = contentUpdated || exactPublished || createdAt;
+      }
+      if (exactPublished) payload.datePublished = exactPublished;
+      if (modifiedAt) payload.dateModified = modifiedAt;
 
       var authorName = normalizeText(data && data.user && (data.user.name || data.user.first_name));
       if (authorName) {

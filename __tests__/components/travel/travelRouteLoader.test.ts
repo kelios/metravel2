@@ -212,6 +212,15 @@ describe('travel route loader', () => {
     expect(result.travel.rich_text?.description).toBeUndefined()
     expect(result.travel.media).toEqual({ cover })
     expect(result.travel).not.toHaveProperty('private_notes')
+    const dated = projectTravelLoaderPayload({
+      ...article,
+      published_at: '2026-11-02T21:37:00Z',
+      published_at_estimated: false,
+      created_at: '2017-02-01T12:00:00Z',
+    }, 'demo')
+    expect(dated.travel.published_at).toBe('2026-11-02T21:37:00Z')
+    expect(dated.travel.published_at_estimated).toBe(false)
+    expect(dated.travel.created_at).toBe('2017-02-01T12:00:00Z')
     expect(result.mediaPartial).toBe(true)
     expect(result.serverDescriptionSanitized).toBe(true)
     expect(JSON.stringify(result).length).toBeLessThan(JSON.stringify(raw).length / 10)
