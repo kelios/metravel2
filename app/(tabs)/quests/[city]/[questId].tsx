@@ -65,7 +65,7 @@ import {
   upsertMetaContent,
   useQuestHeadSync,
   useWebLayoutEffect,
-} from './questByIdChrome';
+} from '@/components/quests/questByIdChrome';
 
 
 // #2484: same handover as the quest screen in `app/[...missing].web.tsx` (#2465).
