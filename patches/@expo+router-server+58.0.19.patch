@@ -60,13 +60,15 @@ diff --git a/node_modules/@expo/router-server/build/utils/html.js b/node_modules
 index 1afa948..ab03a8d 100644
 --- a/node_modules/@expo/router-server/build/utils/html.js
 +++ b/node_modules/@expo/router-server/build/utils/html.js
-@@ -107,8 +107,24 @@
+@@ -107,9 +107,27 @@
  function getHydrationFlagScriptAsString() {
      return `<script type="module">${getHydrationFlagScriptContents()}</script>`;
  }
-+// metravel #3410: the keys are internal route ids ("/(tabs)/travels/<slug>"), not
-+// URLs. Crawlers lift path-like strings out of inline scripts and request them,
-+// so the slashes of a key travel as JSON escapes; JSON.parse restores the key.
++// metravel #3410: keys are internal route ids ("/(tabs)/travels/<slug>"), not
++// URLs. A JSON unicode escape of "/" still rebuilds the path for a crawler
++// (acceptance 18.11.2026 on da92b506). "/" is stored as U+001F, which is not a
++// slash escape, and this same script restores the key before hydration.
++const LOADER_KEY_SLASH = String.fromCharCode(31);
 +function stringifyLoaderData(data) {
 +    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
 +        return JSON.stringify(data);
@@ -75,14 +77,16 @@ index 1afa948..ab03a8d 100644
 +    for (const key of Object.keys(data)){
 +        const value = JSON.stringify(data[key]);
 +        if (value !== undefined) {
-+            entries.push(`${JSON.stringify(key).replace(/\//g, '\\u002F')}:${value}`);
++            entries.push(`${JSON.stringify(key.split('/').join(LOADER_KEY_SLASH))}:${value}`);
 +        }
 +    }
 +    return `{${entries.join(',')}}`;
 +}
  function getLoaderDataScriptContents(data) {
 -    const safeJson = escapeUnsafeCharacters(JSON.stringify(data));
+-    return `globalThis.__EXPO_ROUTER_LOADER_DATA__ = JSON.parse(${JSON.stringify(safeJson)});`;
 +    const safeJson = escapeUnsafeCharacters(stringifyLoaderData(data));
-     return `globalThis.__EXPO_ROUTER_LOADER_DATA__ = JSON.parse(${JSON.stringify(safeJson)});`;
++    return `globalThis.__EXPO_ROUTER_LOADER_DATA__ = JSON.parse(${JSON.stringify(safeJson)});globalThis.__EXPO_ROUTER_LOADER_DATA__=(function(data){if(!data||typeof data!=='object'||Array.isArray(data))return data;var out={};for(var key in data){if(Object.prototype.hasOwnProperty.call(data,key))out[key.split('\\u001f').join('/')]=data[key];}return out;})(globalThis.__EXPO_ROUTER_LOADER_DATA__);`;
  }
  function createLoaderDataScriptAsString(data) {
+     return `<script id="expo-router-data">${getLoaderDataScriptContents(data)}</script>`;
