@@ -502,10 +502,10 @@ async function testHubContentLinks({ path, groups }) {
 /**
  * #3323: постраничный каталог статей `/search?page=N` в сыром HTML — блок
  * `<nav data-search-catalog-links="N">` со ссылками на статьи этой страницы.
- * Пока HTML `/search` отдаётся статикой (до переключения nginx на SSR, #3279),
- * блока нет ни на одной странице: проверка сообщает об этом и не краснеет.
- * Как только блок появился, обе страницы обязаны его нести, наборы статей
- * различаться, а canonical второй страницы — указывать на неё саму.
+ * После #3279 и #3363 nginx больше не имеет права отдать статику: если блока
+ * нет на обеих страницах, проба краснеет (#3375). Обе страницы обязаны нести
+ * блок, наборы статей различаться, а canonical второй страницы — указывать
+ * на неё саму.
  */
 const SEARCH_CATALOG_PAGES = { first: '/search', second: '/search?page=2' };
 const SEARCH_CATALOG_BLOCK = /<nav\b[^>]*\bdata-search-catalog-links="(\d+)"[^>]*>([\s\S]*?)<\/nav>/i;
@@ -520,7 +520,9 @@ function readSearchCatalogBlock(html) {
 function evaluateSearchCatalogPages({ first, second, site }) {
   const one = readSearchCatalogBlock(first);
   const two = readSearchCatalogBlock(second);
-  if (!one && !two) return { state: 'static', failures: [] };
+  if (!one && !two) {
+    return { state: 'fail', failures: ['/search is static HTML: catalogue block missing (SSR required after #3279)'] };
+  }
   const failures = [];
   if (!one || one.page !== 1) failures.push('/search has no page-1 catalogue block');
   if (!two || two.page !== 2) failures.push('/search?page=2 has no page-2 catalogue block');
@@ -550,10 +552,6 @@ async function testSearchCatalogPages({ first, second }) {
     return;
   }
   const verdict = evaluateSearchCatalogPages({ ...pages, site: SITE });
-  if (verdict.state === 'static') {
-    console.log('  ⚠️  /search ещё отдаётся статикой: блока ссылок каталога нет (ждёт #3279), проверка пропущена');
-    return;
-  }
   assert(verdict.state === 'ok', `${second} raw HTML links its own articles and pages`, verdict.failures.join('; '));
 }
 

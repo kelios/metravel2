@@ -27,4 +27,6 @@ export const seoSsgResources = {
   "questDetail.travelsLead": "Traveller articles about this city will help round out the walk.",
   "questDetail.touristType": "City quest, walking route",
   "questDetail.touristTypeBike": "City quest, cycling route",
+  "questCity.leadWalk": "{{value1}}: free walking quests with tasks and legends at real places, on your phone — a self-guided tour without a guide. Any route can be printed as a gift quest book with a map and a diploma. Pick a route and go any day: no booking and no group to wait for.",
+  "questCity.leadWithBike": "{{value1}}: free walking and cycling quests with tasks and legends at real places, on your phone — a self-guided tour without a guide. Any route can be printed as a gift quest book with a map and a diploma. Pick a route and go any day: no booking and no group to wait for.",
 } as const

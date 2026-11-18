@@ -6,6 +6,7 @@ const ROOT = path.resolve(__dirname, '..', '..')
 const ALLOWED_DOCUMENT_TITLE_FILES = new Set([
   'app/+html.tsx',
   'app/(tabs)/quests/[city]/[questId].tsx',
+  'app/(tabs)/quests/[city]/questByIdChrome.tsx',
   'components/travel/details/TravelDetailsContainer.tsx',
   'components/travel/details/hooks/useTravelDetailsHeadSync.ts',
 ])

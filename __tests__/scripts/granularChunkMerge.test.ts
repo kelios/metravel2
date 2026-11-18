@@ -151,6 +151,26 @@ describe('granularChunkMerge', () => {
     expect(byModule('x.ts')).toBe(byModule('y.ts'))
   })
 
+  it('does not glue lazy import() groups past a consumer foreign budget', () => {
+    const plan = makePlan(
+      [
+        ['entry.js', 'initial'],
+        ['components/Editor.tsx', 'dynamic'],
+        ['components/Pdf.tsx', 'dynamic'],
+        ['components/Chart.tsx', 'dynamic'],
+      ],
+      [
+        [[1, 2], ['lazy1.ts']],
+        [[2, 3], ['lazy2.ts']],
+      ],
+    )
+    setFactory(plan, 'lazy1.ts', 130 * 1024)
+    setFactory(plan, 'lazy2.ts', 130 * 1024)
+    const merged = mergeGranularChunkPlan(plan, context)
+    const byModule = (file: string) => merged.chunks.find((atom: Atom) => names(atom).includes(file))
+    expect(byModule('lazy1.ts')).not.toBe(byModule('lazy2.ts'))
+  })
+
   it('never folds the initial entry into a shared group', () => {
     const plan = makePlan(
       [
@@ -347,10 +367,11 @@ describe('route foreign budget (#3316)', () => {
   it.each([1, 21, 144])('re-quotes only the pairs of a merged group on a random plan (seed %i)', (seed) => {
     const stats = { quotes: 0, candidates: 0 }
     const merged = mergeGranularChunkPlan(randomPlan(seed), context, { routeForeignBudgetBytes: 50 * KB, stats })
-    // At most 40 groups: their pairs once, then one row per merge.
+    // At most 40 groups on the HTML-route pass, then the same bound again for
+    // lazy import() groups that share no route (#3375).
     const merges = 40 - merged.chunks.filter(isShared).length
     expect(merges).toBeGreaterThan(0)
-    expect(stats.quotes).toBeLessThanOrEqual((40 * 39) / 2 + merges * 39)
+    expect(stats.quotes).toBeLessThanOrEqual(2 * ((40 * 39) / 2 + merges * 39))
     expect(stats.candidates).toBeLessThanOrEqual(stats.quotes)
   })
 

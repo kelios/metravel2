@@ -45,6 +45,8 @@ const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
 //     "quests.html": 17,
 //     "(tabs)/travels/[param].html": 18,
 //     "(tabs)/profile.html": 26,
+//     "(tabs)/articles.html": 16,
+//     "(tabs)/roulette.html": 21,
 //     "(tabs)/trips/plan/[id].html": 22
 //   }
 // }

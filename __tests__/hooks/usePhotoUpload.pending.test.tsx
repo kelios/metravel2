@@ -101,6 +101,9 @@ it('does not deliver the deferred result after an explicit cancel', async () => 
   await assignId();
   await act(async () => { screen.result.current.cancelUpload(); });
   expect(screen.result.current.loading).toBe(false);
+  expect(onUpload).toHaveBeenCalledTimes(1);
+  expect(onUpload).toHaveBeenCalledWith('https://example.com/old.jpg');
+  onUpload.mockClear();
   await act(async () => { resolveUpload(); });
   expect(onUpload).not.toHaveBeenCalled();
   expect(screen.result.current.loading).toBe(false);
@@ -164,7 +167,8 @@ describe('a queued file that is no longer the author\'s choice', () => {
     await act(async () => { screen.result.current.cancelUpload(); });
     await assignId();
     expect(uploadImage).not.toHaveBeenCalled();
-    expect(onUpload).not.toHaveBeenCalled();
+    expect(onUpload).toHaveBeenCalledTimes(1);
+    expect(onUpload).toHaveBeenCalledWith('https://example.com/old.jpg');
     expect(screen.result.current.loading).toBe(false);
     expect(screen.result.current.currentDisplayUrl).toBe('https://example.com/old.jpg');
   });

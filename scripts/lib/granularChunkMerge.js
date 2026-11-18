@@ -17,6 +17,8 @@
  * The merge therefore prices every pair in bytes (#3316): it takes the pair
  * that adds the least foreign code per saved request, and no route receives
  * more than ROUTE_FOREIGN_BUDGET_BYTES of foreign shared code in total.
+ * Lazy import() groups sit on no HTML route (#3375): they share that budget
+ * per async entry instead of being glued into one file by the empty route key.
  */
 const fs = require('node:fs')
 const { createHash } = require('node:crypto')
@@ -116,6 +118,21 @@ function routeKey(bits) {
   return Array.from(bits, (word) => (word >>> 0).toString(16)).join('.')
 }
 
+function routesAreEmpty(routes) {
+  for (let word = 0; word < routes.length; word += 1) if (routes[word] !== 0) return false
+  return true
+}
+
+function sharedOwnerCount(left, right) {
+  let shared = left & right
+  let count = 0
+  while (shared !== 0n) {
+    count += popcount32(Number(shared & 0xffffffffn))
+    shared >>= 32n
+  }
+  return count
+}
+
 const byPath = (a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)
 const byOwners = (a, b) => (a.ownerEntries < b.ownerEntries ? -1 : a.ownerEntries > b.ownerEntries ? 1 : 0)
 
@@ -167,20 +184,22 @@ function foreignBytes(group, route) {
 }
 
 /**
- * METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups on the same route set
- * always ship together, at no cost to any route. Groups no route delivers
- * (shared by lazy components only) share the empty key and become one
- * on-demand file, as with the pre-SDK 58 patch: measured on #2741, keeping
- * them apart (28 files) cost +16.5 KB gzip on the release total for no change
- * in any HTML route. Equal owner sets are merged too: upstream names a shared
- * file by its owners and materializes one file per owner set.
+ * METRAVEL_MERGE_IDENTICAL_ROUTE_SETS (#1543): groups on the same non-empty
+ * route set always ship together, at no cost to any route. The empty route
+ * key is not a set (#3375): every lazy import() outside `app/` would share it
+ * and become one file before the byte budget could see the pair. Those groups
+ * merge later, under the same foreign-byte ceiling, and only when they share
+ * a consumer. Equal owner sets are merged too: upstream names a shared file
+ * by its owners and materializes one file per owner set.
  */
 function mergeIdenticalGroups(groups) {
   const parent = groups.map((_, index) => index)
   const find = (index) => (parent[index] === index ? index : (parent[index] = find(parent[index])))
   const firstByKey = new Map()
   groups.forEach((group, index) => {
-    for (const key of [`o:${group.ownerEntries.toString(16)}`, `r:${routeKey(group.routes)}`]) {
+    const keys = [`o:${group.ownerEntries.toString(16)}`]
+    if (!routesAreEmpty(group.routes)) keys.push(`r:${routeKey(group.routes)}`)
+    for (const key of keys) {
       if (firstByKey.has(key)) parent[find(index)] = find(firstByKey.get(key))
       else firstByKey.set(key, index)
     }
@@ -305,6 +324,78 @@ function mergeGroupsWithinRouteBudget(groups, budgetBytes, stats) {
   return live.filter(Boolean)
 }
 
+function foreignBytesForEntry(group, entry) {
+  if ((group.ownerEntries & (1n << BigInt(entry))) === 0n) return 0
+  return group.bytes - (group.entryNeeded[entry] ?? 0)
+}
+
+/**
+ * Lazy `import()` groups have an empty route set, so the HTML-route pass
+ * never quotes them (`saved === 0`). Merge only the pairs that share a
+ * consumer, and only while every owner of the result stays within
+ * `budgetBytes` of factory code it does not reach. A negative budget means
+ * identical sets only: this pass does nothing.
+ */
+function mergeLazyGroupsWithinForeignBudget(groups, budgetBytes, stats) {
+  if (!(budgetBytes >= 0)) return groups
+  const lazy = []
+  const rest = []
+  for (const group of groups) (routesAreEmpty(group.routes) ? lazy : rest).push(group)
+  if (lazy.length < 2) return groups
+  const live = lazy.slice()
+  const count = live.length
+  const entrySlots = live.reduce((max, group) => Math.max(max, group.entryNeeded?.length ?? 0), 0)
+  const foreignByEntry = new Float64Array(entrySlots)
+  for (const group of live) {
+    for (const entry of ownerIndices(group.ownerEntries)) {
+      if (entry < entrySlots) foreignByEntry[entry] += foreignBytesForEntry(group, entry)
+    }
+  }
+  const revision = new Uint32Array(count)
+  const heap = []
+  const quote = (a, b) => {
+    const left = Math.min(a, b)
+    const right = Math.max(a, b)
+    const saved = sharedOwnerCount(live[left].ownerEntries, live[right].ownerEntries)
+    if (saved === 0) return
+    const merged = mergeGroups(live[left], live[right])
+    let added = 0
+    for (const entry of ownerIndices(merged.ownerEntries)) {
+      added += foreignBytesForEntry(merged, entry) - foreignBytesForEntry(live[left], entry) - foreignBytesForEntry(live[right], entry)
+    }
+    pushCandidate(heap, { price: added / saved, left, right, leftRevision: revision[left], rightRevision: revision[right] })
+    if (stats) stats.quotes += 1
+  }
+  for (let left = 0; left < count; left += 1) {
+    for (let right = left + 1; right < count; right += 1) quote(left, right)
+  }
+  while (heap.length > 0) {
+    const { left, right, leftRevision, rightRevision } = popCandidate(heap)
+    if (!live[left] || !live[right] || revision[left] !== leftRevision || revision[right] !== rightRevision) continue
+    if (stats) stats.candidates += 1
+    const merged = mergeGroups(live[left], live[right])
+    const added = new Map()
+    let fits = true
+    for (const entry of ownerIndices(merged.ownerEntries)) {
+      const extra = foreignBytesForEntry(merged, entry) - foreignBytesForEntry(live[left], entry) - foreignBytesForEntry(live[right], entry)
+      added.set(entry, extra)
+      const current = entry < foreignByEntry.length ? foreignByEntry[entry] : 0
+      if (current + extra > budgetBytes) fits = false
+    }
+    if (!fits) continue
+    for (const [entry, extra] of added) {
+      if (entry < foreignByEntry.length) foreignByEntry[entry] += extra
+    }
+    live[left] = merged
+    live[right] = null
+    revision[left] += 1
+    for (let other = 0; other < count; other += 1) {
+      if (live[other] && other !== left) quote(left, other)
+    }
+  }
+  return [...rest, ...live.filter(Boolean)]
+}
+
 /**
  * @param plan result of upstream `computeBitSetChunkPlan`
  * @param context granular strategy context ({ options: { projectRoot, serverRoot } })
@@ -353,12 +444,19 @@ function mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes = ROUTE
     // Every route of an atom reaches all of it.
     const needed = new Float64Array(words * 32)
     forEachBit(routes, (route) => { needed[route] = bytes })
-    groups.push({ ownerEntries: atom.ownerEntries, atoms: [atom], routes, bytes, needed })
+    // Each owner reaches the whole atom. Foreign code for that entry is the
+    // rest of a merged file (#3375, lazy import() outside app/).
+    const entryNeeded = new Float64Array(entryPaths.length)
+    for (const index of owners) entryNeeded[index] = bytes
+    groups.push({ ownerEntries: atom.ownerEntries, atoms: [atom], routes, bytes, needed, entryNeeded })
   }
 
   // The closing pass is a no-op unless the budget refused even free merges:
   // upstream needs one group per owner set whatever the budget.
-  const merged = mergeIdenticalGroups(mergeGroupsWithinRouteBudget(mergeIdenticalGroups(groups), routeForeignBudgetBytes, stats))
+  const identical = mergeIdenticalGroups(groups)
+  const budgeted = mergeGroupsWithinRouteBudget(identical, routeForeignBudgetBytes, stats)
+  const withLazy = mergeLazyGroupsWithinForeignBudget(budgeted, routeForeignBudgetBytes, stats)
+  const merged = mergeIdenticalGroups(withLazy)
   for (const group of merged) {
     const modules = group.atoms.flatMap((atom) => [...atom.modules]).sort(byPath)
     chunks.push({ ownerEntries: group.ownerEntries, modules: new Set(modules) })
@@ -947,12 +1045,18 @@ function remapCandidate(candidate, snapshot) {
 function mergeGroups(left, right) {
   const needed = new Float64Array(left.needed.length)
   for (let route = 0; route < needed.length; route += 1) needed[route] = left.needed[route] + right.needed[route]
+  const entryLength = Math.max(left.entryNeeded?.length ?? 0, right.entryNeeded?.length ?? 0)
+  const entryNeeded = new Float64Array(entryLength)
+  for (let entry = 0; entry < entryLength; entry += 1) {
+    entryNeeded[entry] = (left.entryNeeded?.[entry] ?? 0) + (right.entryNeeded?.[entry] ?? 0)
+  }
   return {
     ownerEntries: left.ownerEntries | right.ownerEntries,
     atoms: [...left.atoms, ...right.atoms],
     routes: orBits(left.routes, right.routes),
     bytes: left.bytes + right.bytes,
     needed,
+    entryNeeded,
   }
 }
 

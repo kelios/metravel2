@@ -38,6 +38,19 @@ async function apiPost(endpoint, payload) {
     return response.json();
 }
 
+async function apiGet(endpoint) {
+    if (isDryRun) return null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
+    const response = await fetch(`${API_BASE}${endpoint}`, { method: 'GET', headers });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status} GET ${endpoint}: ${text}`);
+    }
+    return response.json();
+}
+
 function serializeAnswer(answerFn) {
     const f = answerFn.toString();
     if (f.includes('() => true') || (f.includes('=> true') && !f.includes('=>'))) {
@@ -116,8 +129,15 @@ async function main() {
             continue;
         }
 
-        // 3. Create intro step
-        if (q.intro) {
+        // 3. Intro step — skip when the quest already has one (#3375).
+        let existingBundle = null;
+        try {
+            existingBundle = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(q.quest_id)}/`);
+        } catch (e) {
+            console.error(`  ❌ Quest lookup: ${e.message}`);
+        }
+        const hasIntro = require('./lib/questBundles').questBundleHasIntro(existingBundle);
+        if (q.intro && !hasIntro) {
             try {
                 await apiPost('/api/quest-steps/', {
                     quest: questDbId,
@@ -139,6 +159,8 @@ async function main() {
             } catch (e) {
                 console.error(`  ❌ Intro: ${e.message}`);
             }
+        } else if (q.intro && hasIntro) {
+            console.log('  ℹ️ Intro already exists, skip');
         }
 
         // 4. Create regular steps

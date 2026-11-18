@@ -188,6 +188,18 @@ describe('immutable public quest projection', () => {
     expect(city.page.meta.description).toBe('Город: 1 квест с заданиями — «Квест по городу». Проходите сами в любой день, без записи.');
   });
 
+  it('uses the walking city lead unless a quest in the city is cycled (#3375)', () => {
+    const leadOf = (page: { page: { meta: { city_name: string }; lead: string } }, key: string) =>
+      String(catalogs.get('ru').get(key)).replaceAll('{{value1}}', page.page.meta.city_name);
+    const walking = buildQuestWebProjection(questPrivateSnapshot(), catalogs).pages.find((page: { kind: string }) => page.kind === 'city');
+    expect(walking.page.lead).toBe(leadOf(walking, 'seoSsg:questCity.leadWalk'));
+    const source = questPrivateSnapshot();
+    Object.assign(source.catalog[0], { tags: ['bike'] });
+    const cycling = buildQuestWebProjection(source, catalogs).pages.find((page: { kind: string }) => page.kind === 'city');
+    expect(cycling.page.lead).toBe(leadOf(cycling, 'seoSsg:questCity.leadWithBike'));
+    expect(cycling.page.lead).not.toBe(walking.page.lead);
+  });
+
   it('tells two same-named cities of different countries apart by country (#3236)', () => {
     const source = questPrivateSnapshot();
     const base = source.catalog[0], ruBundle = source.bundles.ru['7/fixture-city-walk'];

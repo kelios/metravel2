@@ -3,13 +3,12 @@ const path = require('node:path');
 const { verifyQuestRuntimeResponse, verifyLiveQuestSsr } = require('@/scripts/verify-live-quest-ssr');
 const { buildQuestWebProjection } = require('@/scripts/lib/questWebProjection');
 const { loadSsgCatalogs } = require('@/i18n/babel-inline-plugin');
-import { questPrivateSnapshot } from '../fixtures/questPublicProjection';
+import { questPrivateSnapshot, questPublicApiResponse } from '../fixtures/questPublicProjection';
 
 const sha = 'a'.repeat(40);
-const rows = buildQuestWebProjection(questPrivateSnapshot(), loadSsgCatalogs(path.resolve(__dirname, '../..')).catalogs).pages;
-const detail = rows.find((row: { kind: string; locale: string }) => row.kind === 'detail' && row.locale === 'ru');
-const projection = { ...detail, schema_version: 2, state: 'available', publication_id: 'b'.repeat(64), corpus_revision: 'c'.repeat(64),
-  ru_source_path: detail.canonical_path, versions: [] };
+const snapshot = questPrivateSnapshot();
+const rows = buildQuestWebProjection(snapshot, loadSsgCatalogs(path.resolve(__dirname, '../..')).catalogs).pages;
+const projection = questPublicApiResponse(rows, snapshot);
 const page = projection.page;
 const graph = { '@graph': [
   { '@type': 'TouristTrip', name: page.heading, description: page.meta.description, touristType: page.meta.tourist_type,
@@ -19,8 +18,11 @@ const graph = { '@graph': [
 const paragraphs = [page.heading, page.kicker, page.lead, ...page.paragraphs, ...page.facts,
   ...page.sections.flatMap((section: { heading: string; paragraphs: string[]; items: Array<{ title: string; text: string; facts: string }> }) =>
     [section.heading, ...section.paragraphs, ...section.items.flatMap((item) => [item.title, item.text, item.facts])])];
+const alternates = projection.versions.length < 2 ? '' : projection.versions.map((version: { locale: string; path: string }) =>
+  `<link rel="alternate" hreflang="${version.locale}" href="https://metravel.by${version.path}">`).join('')
+  + `<link rel="alternate" hreflang="x-default" href="https://metravel.by${projection.ru_source_path}">`;
 const html = `<html lang="ru"><head><title>${page.meta.title}</title><meta name="description" content="${page.meta.description}">`
-  + `<link rel="canonical" href="${page.meta.canonical}"><meta name="robots" content="index, follow"></head><body>`
+  + `<link rel="canonical" href="${page.meta.canonical}">${alternates}<meta name="robots" content="index, follow"></head><body>`
   + `<main data-quest-public-page="detail"><h1>${page.heading}</h1>${paragraphs.map((text: string) => `<p>${text}</p>`).join('')}</main>`
   + `<script type="application/ld+json" data-seo-jsonld="quest-public">${JSON.stringify(graph)}</script></body></html>`;
 const response = (headers: Record<string, string> = {}) => new Response(html, { headers: {

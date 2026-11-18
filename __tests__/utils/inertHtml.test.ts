@@ -69,6 +69,15 @@ describe('toInertHtml (#3202)', () => {
     )
     expect(toInertHtml('<a href="java&#x09;script:alert(1)">a</a><a href="&#106;avascript&colon;x">b</a>')).toBe('<a>a</a><a>b</a>')
     expect(toInertHtml('<img srcset="/a.jpg 1x, javascript:x 2x" src="/a.jpg">')).toBe('<img srcset="/a.jpg 1x" src="/a.jpg">')
+    const picture = toInertHtml(
+      '<picture><source srcset="/a.webp 1x" type="image/webp"><img src="/a.jpg" alt=""></picture>',
+      { deferImages: true },
+    )
+    expect(picture).toContain('<source type="image/webp" data-deferred-srcset="/a.webp 1x">')
+    expect(picture).not.toMatch(/<source\b[^>]*\ssrcset=/)
+    const video = toInertHtml('<video><source src="/a.mp4" type="video/mp4"></video>', { deferImages: true })
+    expect(video).toContain('<source src="/a.mp4" type="video/mp4">')
+    expect(video).not.toContain('data-deferred-')
     expect(toInertHtml('<iframe src="https://www.youtube.com/embed/x" srcdoc="<script>x</script>">t</iframe>')).toBe(
       '<iframe src="https://www.youtube.com/embed/x"></iframe>',
     )

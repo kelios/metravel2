@@ -97,6 +97,9 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   // явная отмена, новый файл, удаление фото (#3312, #3314). Тогда он не уходит на
   // сервер, а ответ уже идущей догрузки чужой — одинаково до и после её старта.
   const queueEpochRef = useRef(0);
+  // Локальное превью уже отдано родителю (нет id или сервер не вернул адрес).
+  // Отмена забирает его обратно; загрузка с id, которая onUpload ещё не звала, молчит.
+  const handedPreviewRef = useRef(false);
   const supersedeQueuedUpload = useCallback(() => {
     queueEpochRef.current += 1;
     pendingUploadRef.current = null;
@@ -151,6 +154,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     supersedeQueuedUpload();
     if (remoteRetryTimerRef.current) { clearTimeout(remoteRetryTimerRef.current); remoteRetryTimerRef.current = null; }
     onPreviewChange?.(null);
+    handedPreviewRef.current = false;
     onUpload?.('');
   }, [onPreviewChange, onUpload, supersedeQueuedUpload]);
 
@@ -289,7 +293,11 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     setLoading(false); setUploadProgress(0); setPreviewUrl(null); setUploadMessage(null); setError(null);
     setIsManuallySelected(false);
     setImageUri(oldImage ? normalizeImageUrl(oldImage) : null);
-  }, [oldImage, supersedeQueuedUpload]);
+    if (handedPreviewRef.current) {
+      handedPreviewRef.current = false;
+      onUpload?.(oldImage ? normalizeImageUrl(oldImage) : '');
+    }
+  }, [oldImage, onUpload, supersedeQueuedUpload]);
 
   // «Фото в работе» начинается с запуска выбора (пикер, камера), а не с сети:
   // пока система отдаёт файл, `loading` уже держит сохранение и закрытие (#3213).
@@ -351,6 +359,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       if (!hasUploadId) {
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_gotovo_sohranite_tochku_dlya_zagruzki_0d630d1b'));
         pendingUploadRef.current = uploadableFile;
+        handedPreviewRef.current = true;
         onUpload?.(previewCandidate);
         return;
       }
@@ -383,6 +392,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setFallbackImageUrl(previewCandidate || uploadedUrlRaw || uploadedUrl);
         setHasTriedFallback(false);
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
+        handedPreviewRef.current = false;
         onUpload?.(uploadedUrl); setError(null);
       } else if (collection === 'travelImageAddress') {
         setImageUri(normalizeImageUrl(oldImage)); setPreviewUrl(null);
@@ -390,6 +400,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       } else if (previewCandidate) {
         setImageUri(previewCandidate); setPreviewUrl(null);
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.prevyu_sohraneno_poprobuyte_zagruzit_pozzhe_ad990114'));
+        handedPreviewRef.current = true;
         onUpload?.(previewCandidate); setFallbackImageUrl(null); setHasTriedFallback(false); setError(null);
       } else {
         reportClientError(i18nT('shared:hooks.usePhotoUpload.oshibka_pri_zagruzke_27a0bd4b')); setPreviewUrl(null);

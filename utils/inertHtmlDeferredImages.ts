@@ -34,7 +34,8 @@ export const DEFERRED_IMAGE_ATTRIBUTES = [
   ['src', 'data-deferred-src'],
 ] as const
 
-export const DEFERRED_IMAGE_SELECTOR = 'img[data-deferred-src],img[data-deferred-srcset]'
+export const DEFERRED_IMAGE_SELECTOR =
+  'img[data-deferred-src],img[data-deferred-srcset],source[data-deferred-srcset],source[data-deferred-src]'
 
 /**
  * #3408: мобильная лестница слота. Выпуск ставит её вместо `data-deferred-srcset`
@@ -106,4 +107,18 @@ export function serializeDeferredImage(sanitized: readonly HtmlAttribute[], mobi
     { name: 'loading', value: 'lazy' },
   ])
   return `${deferredTag}<noscript>${serializeStartTag('img', fallback)}</noscript>`
+}
+
+/** `<source>` внутри `<picture>`: только перенос `src`/`srcset`/`sizes`, без заглушки. */
+export function serializeDeferredSource(sanitized: readonly HtmlAttribute[]): string {
+  const attrs = sanitized.filter(({ name }) => !isDeferredName(name))
+  const moved: HtmlAttribute[] = []
+  const kept: HtmlAttribute[] = []
+  for (const attr of attrs) {
+    const pair = DEFERRED_IMAGE_ATTRIBUTES.find(([live]) => live === attr.name)
+    if (pair && nonEmpty(attr.value)) moved.push({ name: pair[1], value: attr.value })
+    else if (!pair) kept.push(attr)
+  }
+  if (moved.length === 0) return serializeStartTag('source', attrs)
+  return serializeStartTag('source', [...kept, ...moved])
 }

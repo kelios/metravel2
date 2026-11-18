@@ -27,4 +27,6 @@ export const seoSsgResources = {
   "questDetail.travelsLead": "Artykuły podróżników o tym mieście pomogą uzupełnić spacer.",
   "questDetail.touristType": "Miejski quest, trasa piesza",
   "questDetail.touristTypeBike": "Miejski quest, trasa rowerowa",
+  "questCity.leadWalk": "{{value1}}: darmowe piesze questy-spacery z zadaniami i legendami w prawdziwych miejscach, prosto ze smartfona — jak samodzielna wycieczka bez przewodnika. Każdą trasę można wydrukować jako quest-book na prezent z mapą i dyplomem. Wybierz trasę i ruszaj dowolnego dnia: bez zapisu i bez czekania na grupę.",
+  "questCity.leadWithBike": "{{value1}}: darmowe piesze i rowerowe questy-spacery z zadaniami i legendami w prawdziwych miejscach, prosto ze smartfona — jak samodzielna wycieczka bez przewodnika. Każdą trasę można wydrukować jako quest-book na prezent z mapą i dyplomem. Wybierz trasę i ruszaj dowolnego dnia: bez zapisu i bez czekania na grupę.",
 } as const

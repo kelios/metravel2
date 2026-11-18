@@ -154,7 +154,7 @@ function buildCity(city, bundles, travels, countries, ssg, metaInputs) {
   const page = { meta: { title, description,
     canonical: ORIGIN + path, image: absoluteImage(coverQuest?.cover_url || coverQuest?.coverUrl), tourist_type: '', city_name: name },
   heading: `Городские квесты: ${name}`, kicker: '',
-  lead: `${name}: бесплатные пешеходные квесты-прогулки с заданиями и легендами по реальным местам, прямо со смартфона — как самостоятельная экскурсия без гида. Любой маршрут можно распечатать как подарочный квест-бук с картой и дипломом. Выберите маршрут и отправляйтесь гулять в любой день: записываться и ждать группу не нужно.`,
+  lead: ssg.t(city.quests.some((quest) => hasBikeQuestTag(quest.tags)) ? 'seoSsg:questCity.leadWithBike' : 'seoSsg:questCity.leadWalk', { value1: name }),
   paragraphs: [], facts: [], sections };
   const entry = { kind: 'city', locale: 'ru', city_id: Number(city.cityId), city_ids: city.cityIds,
     aliases: [...(city.legacyAliases || []), ...(city.legacyCityIds || []).map(String), ...city.cityIds.map(String)],

@@ -9,6 +9,7 @@ import {
 } from '@/utils/htmlTokens'
 import {
   serializeDeferredImage,
+  serializeDeferredSource,
   type DeferredImageReserve,
   type DeferredImageSourcesResolver,
 } from '@/utils/inertHtmlDeferredImages'
@@ -199,6 +200,7 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
   const reserveImage = ownImages?.reserve ?? null
   const tokens = tokenizeHtml(source)
   const imageContext = resolveSources ? createImageContext(source, tokens) : null
+  let pictureDepth = 0
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]
@@ -232,12 +234,16 @@ export function toInertHtml(html: string | null | undefined, options?: InertHtml
         if (name === 'img' && deferImages) {
           const own = withOwnImageSources(attrs, resolveSources, context)
           out += serializeDeferredImage(own.attrs, own.mobileSrcset)
+        } else if (name === 'source' && pictureDepth > 0 && deferImages) {
+          out += serializeDeferredSource(attrs)
         } else {
           out += serializeStartTag(name, attrs)
         }
+        if (name === 'picture' && !token.selfClosing) pictureDepth += 1
         break
       }
       case 'end':
+        if (token.name === 'picture' && pictureDepth > 0) pictureDepth -= 1
         imageContext?.(token, index)
         // `</iframe>` уже выведен вместе с открывающим тегом.
         if (token.closesRawText || token.name === 'iframe') break

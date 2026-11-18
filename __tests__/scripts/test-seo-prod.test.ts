@@ -118,8 +118,7 @@ describe('production SEO gate: hub content links (#3218)', () => {
   });
 });
 
-// #3323: постраничный каталог /search?page=N. До переключения HTML /search на
-// SSR (#3279) блока нет — проба об этом сообщает и не краснеет.
+// #3323: постраничный каталог /search?page=N. После #3279/#3363 статика — провал (#3375).
 describe('production SEO gate: article catalogue pages (#3323)', () => {
   const { SEARCH_CATALOG_PAGES, evaluateSearchCatalogPages } = require('../../scripts/test-seo-prod');
   const site = 'https://metravel.by';
@@ -136,8 +135,11 @@ describe('production SEO gate: article catalogue pages (#3323)', () => {
     expect(SEARCH_CATALOG_PAGES).toEqual({ first: '/search', second: '/search?page=2' });
   });
 
-  it('reports a static /search without failing while the HTML is not SSR yet', () => {
-    expect(evaluateSearchCatalogPages({ first: staticShell, second: staticShell, site })).toEqual({ state: 'static', failures: [] });
+  it('fails when both catalogue pages are still static HTML', () => {
+    expect(evaluateSearchCatalogPages({ first: staticShell, second: staticShell, site })).toEqual({
+      state: 'fail',
+      failures: ['/search is static HTML: catalogue block missing (SSR required after #3279)'],
+    });
   });
 
   it('accepts two pages that link different articles, page 2 being its own canonical', () => {
