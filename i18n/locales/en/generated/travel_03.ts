@@ -255,6 +255,7 @@ export const travelGenerated3 = {
   "components.travel.stepRoute.NativePointList.removeTitle": "Delete point?",
   "components.travel.stepRoute.NativePointList.removeMessage": "The point will be removed from the route.",
   "components.travel.stepRoute.PointEditorSheet.photoUploading": "The photo is uploading. You can save the point once the upload finishes.",
+  "components.travel.stepRoute.PointEditorSheet.photoUploadTimeout": "The photo was not uploaded: the upload timed out. Select the photo again.",
   "components.travel.stepRoute.PointEditorSheet.cancelPhotoUpload": "Cancel upload",
   "components.travel.stepRoute.NativePointList.addPoint": "Add a point",
   "components.travel.stepRoute.NativeRoutePickerMap.hint": "Tap the map to add a point. Drag a marker to move it, tap it to open the point.",

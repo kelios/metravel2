@@ -255,6 +255,7 @@ export const travelGenerated3 = {
   "components.travel.stepRoute.NativePointList.removeTitle": "Выдаліць пункт?",
   "components.travel.stepRoute.NativePointList.removeMessage": "Пункт будзе выдалены з маршруту.",
   "components.travel.stepRoute.PointEditorSheet.photoUploading": "Фота загружаецца. Пункт можна захаваць, калі загрузка скончыцца.",
+  "components.travel.stepRoute.PointEditorSheet.photoUploadTimeout": "Фота не загрузілася: перавышаны час загрузкі. Выберыце фота яшчэ раз.",
   "components.travel.stepRoute.PointEditorSheet.cancelPhotoUpload": "Адмяніць загрузку",
   "components.travel.stepRoute.NativePointList.addPoint": "Дадаць кропку",
   "components.travel.stepRoute.NativeRoutePickerMap.hint": "Націсніце на карту, каб дадаць пункт. Маркер можна перацягнуць, а тап па ім адкрывае пункт.",

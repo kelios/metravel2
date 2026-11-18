@@ -22,6 +22,7 @@ interface PhotoUploadWithPreviewProps {
   onPreviewChange?: (previewUrl: string | null) => void;
   onRequestRemove?: () => void;
   onUploadStateChange?: (isUploading: boolean) => void;
+  onUploadTimeoutChange?: (timedOut: boolean) => void;
   /** Владелец формы получает отмену текущей загрузки (#3213: редактор точки). */
   uploadCancelRef?: React.MutableRefObject<(() => void) | null>;
   disabled?: boolean;
@@ -46,7 +47,7 @@ const WebDropzoneView = safeLazy(async () => {
 
 const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
   collection, idTravel, oldImage, onUpload, onPreviewChange, onRequestRemove,
-  onUploadStateChange, uploadCancelRef,
+  onUploadStateChange, onUploadTimeoutChange, uploadCancelRef,
   disabled = false, placeholder = i18nT('travel:components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b'), maxSizeMB = 10,
 }) => {
   const colors = useThemedColors();
@@ -58,12 +59,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     if (Platform.OS !== 'web') notify(message);
   }, [notify]);
 
+  const reportUploadTimeout = useCallback(() => {
+    onUploadTimeoutChange?.(true);
+  }, [onUploadTimeoutChange]);
+
   const {
     loading, uploadProgress, error, uploadMessage,
     hasValidImage, currentDisplayUrl,
     handleUploadImage, handleRemovePress, cancelUpload, beginSelection,
     handleImageLoadCheck, handleImageError, reportClientError,
-  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onError: notifyUploadError, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
+  } = usePhotoUpload({ collection, idTravel, oldImage, onUpload, onError: notifyUploadError, onUploadTimeout: reportUploadTimeout, onPreviewChange, onRequestRemove, disabled, maxSizeMB });
 
   useEffect(() => {
     onUploadStateChange?.(loading);
@@ -82,6 +87,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
   const uploadPickedAsset = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
     if (!asset.uri) return;
+    onUploadTimeoutChange?.(false);
     const file: NativeUploadFile = {
       uri: asset.uri,
       name: asset.fileName || 'photo.jpg',
@@ -89,7 +95,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
       size: asset.fileSize,
     };
     await handleUploadImage(file);
-  }, [handleUploadImage]);
+  }, [handleUploadImage, onUploadTimeoutChange]);
 
   // Выбор держит `loading` с касания до конца загрузки (#3213): пока система
   // отдаёт файл, владелец формы уже не даёт сохранить или закрыть редактор.

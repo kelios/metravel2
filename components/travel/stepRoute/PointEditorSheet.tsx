@@ -13,6 +13,7 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
 import ModalSafeArea from '@/components/ui/ModalSafeArea'
 import ModalToastHost from '@/components/ui/ModalToastHost'
 import MultiSelectField from '@/components/forms/MultiSelectField'
@@ -61,6 +62,7 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
 
+  const [photoTimedOut, setPhotoTimedOut] = useState(false)
   const [address, setAddress] = useState('')
   const [categories, setCategories] = useState<string[]>([])
   const [image, setImage] = useState<string>('')
@@ -76,17 +78,26 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
   useEffect(() => {
     if (!visible || !marker) {
       openPointRef.current = null
+      setPhotoTimedOut(false)
       return
     }
     const previous = openPointRef.current
     openPointRef.current = { index, id: marker.id }
     if (previous && previous.index === index && (previous.id == null || previous.id === marker.id)) return
+    setPhotoTimedOut(false)
     setAddress(marker.address || '')
     setCategories(Array.isArray(marker.categories) ? marker.categories.map((c) => String(c)) : [])
     setImage(marker.image || '')
     setExtraCategories([])
     setConfirmingRemove(false)
   }, [visible, marker, index])
+
+  // Захватываем отмену именно этой сессии: поздний ответ старой точки
+  // не должен вызвать setImage у следующей после remount загрузчика.
+  useEffect(() => {
+    const cancel = cancelPhotoUploadRef.current
+    return () => cancel?.()
+  }, [visible, marker?.id])
 
   const categoryItems = useMemo(() => {
     const base = (categoryTravelAddress || []).map((cat) => ({ ...cat, id: String(cat.id) }))
@@ -207,11 +218,13 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
               {marker.id != null ? (
                 <>
                   <PhotoUploadWithPreview
+                    key={String(marker.id)}
                     collection="travelImageAddress"
                     idTravel={String(marker.id)}
                     oldImage={image}
                     onUpload={setImage}
                     onUploadStateChange={setPhotoUploading}
+                    onUploadTimeoutChange={setPhotoTimedOut}
                     uploadCancelRef={cancelPhotoUploadRef}
                     placeholder={i18nT('map:components.map.EditMarkerModal.peretaschite_foto_tochki_marshruta_3a234cc4')}
                     maxSizeMB={10}
@@ -270,6 +283,19 @@ export const PointEditorSheet = React.memo(function PointEditorSheet({
           </ScrollView>
 
           <View style={styles.footer}>
+            {photoTimedOut ? (
+              <View style={styles.photoError} testID="travel-wizard.point-editor.photo-timeout">
+                <Text style={styles.photoErrorText} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                  {i18nT('travel:components.travel.stepRoute.PointEditorSheet.photoUploadTimeout')}
+                </Text>
+                <IconButton
+                  icon={<Feather name="x" size={20} color={colors.danger} />}
+                  label={i18nT('common:action.close')}
+                  onPress={() => setPhotoTimedOut(false)}
+                  testID="travel-wizard.point-editor.dismiss-photo-timeout"
+                />
+              </View>
+            ) : null}
             {photoUploading ? (
               <View style={styles.uploadState} testID="travel-wizard.point-editor.photo-uploading">
                 <View style={styles.uploadStateRow}>
@@ -330,6 +356,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       justifyContent: 'center',
     },
     closeButtonDisabled: { opacity: 0.4 },
+    photoError: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+      padding: DESIGN_TOKENS.spacing.sm,
+      marginBottom: DESIGN_TOKENS.spacing.sm,
+      backgroundColor: colors.dangerSoft,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+    },
+    photoErrorText: {
+      flex: 1,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      lineHeight: 20,
+      color: colors.danger,
+    },
     uploadState: { gap: DESIGN_TOKENS.spacing.xs, marginBottom: DESIGN_TOKENS.spacing.sm },
     uploadStateRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
     uploadStateText: {

@@ -255,6 +255,7 @@ export const travelGenerated3 = {
   "components.travel.stepRoute.NativePointList.removeTitle": "Usunąć punkt?",
   "components.travel.stepRoute.NativePointList.removeMessage": "Punkt zostanie usunięty z trasy.",
   "components.travel.stepRoute.PointEditorSheet.photoUploading": "Zdjęcie się przesyła. Punkt można zapisać po zakończeniu przesyłania.",
+  "components.travel.stepRoute.PointEditorSheet.photoUploadTimeout": "Zdjęcie nie zostało przesłane: przekroczono czas przesyłania. Wybierz zdjęcie ponownie.",
   "components.travel.stepRoute.PointEditorSheet.cancelPhotoUpload": "Anuluj przesyłanie",
   "components.travel.stepRoute.NativePointList.addPoint": "Dodaj punkt",
   "components.travel.stepRoute.NativeRoutePickerMap.hint": "Dotknij mapy, aby dodać punkt. Marker można przeciągnąć, a dotknięcie otwiera punkt.",

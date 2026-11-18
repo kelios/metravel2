@@ -24,6 +24,7 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 import * as ImagePicker from 'expo-image-picker';
+import { UploadTransportError } from '@/api/clientUploadTransport';
 import PointEditorSheet from '@/components/travel/stepRoute/PointEditorSheet';
 
 const { uploadImage } = jest.requireMock('@/api/misc') as { uploadImage: jest.Mock };
@@ -201,5 +202,111 @@ describe('PointEditorSheet while the point photo uploads (#3213)', () => {
 
     await fireEvent.press(screen.getByTestId('travel-wizard.point-editor.save'));
     expect(onSave).toHaveBeenLastCalledWith(1, expect.objectContaining({ image: 'https://example.com/other.jpg' }));
+  });
+});
+
+
+describe.each(['android', 'ios'] as const)('PointEditorSheet persistent photo timeout on %s (#3452)', (os) => {
+  const originalOS = Platform.OS;
+  let consoleError: jest.SpyInstance;
+  const props = { visible: true, marker, index: 0, categoryTravelAddress: [], onSave: jest.fn(), onRemove: jest.fn(), onClose: jest.fn() };
+  const banner = 'travel-wizard.point-editor.photo-timeout';
+  const gallery = 'photo-upload-gallery-button';
+  const picked: ImagePicker.ImagePickerResult = { canceled: false, assets: [{ uri: 'file:///retry.jpg', width: 10, height: 10 }] };
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: os });
+    jest.clearAllMocks();
+    uploadImage.mockReset();
+    jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: true } as ImagePicker.MediaLibraryPermissionResponse);
+    jest.mocked(ImagePicker.launchImageLibraryAsync).mockReset().mockResolvedValue(picked);
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    consoleError.mockRestore();
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+  });
+
+  const renderTimeout = async () => {
+    uploadImage.mockRejectedValueOnce(new UploadTransportError('response_timeout'));
+    const screen = await render(<PointEditorSheet {...props} />);
+    await fireEvent.press(screen.getByTestId(gallery));
+    expect(screen.getByTestId(banner)).toBeTruthy();
+    return screen;
+  };
+
+  it('retains the error after the toast lifetime and ordinary edits, until explicitly dismissed', async () => {
+    const screen = await renderTimeout();
+    jest.useFakeTimers();
+    await act(async () => { jest.advanceTimersByTime(5000); });
+    await fireEvent.changeText(screen.getByTestId('travel-wizard.point-editor.address'), 'Новый адрес');
+    expect(screen.getByText('Фото не загрузилось: превышено время загрузки. Выберите фото ещё раз.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('travel-wizard.point-editor.dismiss-photo-timeout'));
+    await screen.rerender(<PointEditorSheet {...props} />);
+    expect(screen.queryByTestId(banner)).toBeNull();
+    uploadImage.mockRejectedValueOnce(new UploadTransportError('idle_timeout'));
+    await fireEvent.press(screen.getByTestId(gallery));
+    expect(screen.getByTestId(banner)).toBeTruthy();
+  });
+
+  it('keeps the error when the picker is cancelled, clears it on a replacement, and still blocks saving', async () => {
+    const screen = await renderTimeout();
+    jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: true, assets: null });
+    await fireEvent.press(screen.getByTestId(gallery));
+    expect(screen.getByTestId(banner)).toBeTruthy();
+    let finish!: (value: { url: string }) => void;
+    uploadImage.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    void fireEvent.press(screen.getByTestId(gallery));
+    await waitFor(() => expect(uploadImage).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId(banner)).toBeNull();
+    await fireEvent.press(screen.getByTestId('travel-wizard.point-editor.save'));
+    expect(props.onSave).not.toHaveBeenCalled();
+    await act(async () => { finish({ url: 'https://example.com/retry.jpg' }); });
+    await fireEvent.press(screen.getByTestId('travel-wizard.point-editor.save'));
+    expect(props.onSave).toHaveBeenCalledWith(0, expect.objectContaining({ image: 'https://example.com/retry.jpg' }));
+    expect(screen.queryByTestId(banner)).toBeNull();
+  });
+
+  it('does not carry an error into another point or a reopened editor', async () => {
+    const screen = await renderTimeout();
+    await screen.rerender(<PointEditorSheet {...props} marker={{ ...marker, id: 43 }} index={1} />);
+    expect(screen.queryByTestId(banner)).toBeNull();
+    uploadImage.mockRejectedValueOnce(new UploadTransportError('idle_timeout'));
+    await fireEvent.press(screen.getByTestId(gallery));
+    expect(screen.getByTestId(banner)).toBeTruthy();
+    await screen.rerender(<PointEditorSheet {...props} visible={false} />);
+    await screen.rerender(<PointEditorSheet {...props} />);
+    expect(screen.queryByTestId(banner)).toBeNull();
+  });
+
+  it('ignores a late timeout from a previous point', async () => {
+    let reject!: (error: Error) => void;
+    uploadImage.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+    const screen = await render(<PointEditorSheet {...props} />);
+    void fireEvent.press(screen.getByTestId(gallery));
+    await waitFor(() => expect(uploadImage).toHaveBeenCalledTimes(1));
+    await screen.rerender(<PointEditorSheet {...props} marker={{ ...marker, id: 43 }} index={1} />);
+    await act(async () => { reject(new UploadTransportError('response_timeout')); });
+    expect(screen.queryByTestId(banner)).toBeNull();
+  });
+
+  it('ignores a late successful upload from a previous point', async () => {
+    let resolve!: (value: { url: string }) => void;
+    uploadImage.mockImplementationOnce(() => new Promise((finish) => { resolve = finish; }));
+    const screen = await render(<PointEditorSheet {...props} />);
+    void fireEvent.press(screen.getByTestId(gallery));
+    await waitFor(() => expect(uploadImage).toHaveBeenCalledTimes(1));
+    await screen.rerender(<PointEditorSheet {...props} marker={{ ...marker, id: 43, image: 'https://example.com/other.jpg' }} index={1} />);
+    await act(async () => { resolve({ url: 'https://example.com/late.jpg' }); });
+    await fireEvent.press(screen.getByTestId('travel-wizard.point-editor.save'));
+    expect(props.onSave).toHaveBeenCalledWith(1, expect.objectContaining({ image: 'https://example.com/other.jpg' }));
+  });
+
+  it('does not show a persistent timeout for an ordinary network failure', async () => {
+    uploadImage.mockRejectedValueOnce(new UploadTransportError('network'));
+    const screen = await render(<PointEditorSheet {...props} />);
+    await fireEvent.press(screen.getByTestId(gallery));
+    expect(screen.queryByTestId(banner)).toBeNull();
   });
 });

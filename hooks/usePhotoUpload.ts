@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { uploadImage } from '@/api/misc';
+import { isTimeoutError } from '@/api/clientErrors';
+import { UploadTransportError } from '@/api/clientUploadTransport';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { prepareWebImageFileForUpload, HeicConversionError } from '@/utils/webImageUpload';
 import { translate as i18nT } from '@/i18n'
@@ -54,6 +56,7 @@ export interface UsePhotoUploadOptions {
   oldImage?: string | null;
   onUpload?: (imageUrl: string) => void;
   onError?: (message: string) => void;
+  onUploadTimeout?: () => void;
   onPreviewChange?: (previewUrl: string | null) => void;
   onRequestRemove?: () => void;
   disabled?: boolean;
@@ -61,7 +64,7 @@ export interface UsePhotoUploadOptions {
 }
 
 export function usePhotoUpload(opts: UsePhotoUploadOptions) {
-  const { collection, idTravel, oldImage, onUpload, onError, onPreviewChange, onRequestRemove, disabled = false, maxSizeMB = 10 } = opts;
+  const { collection, idTravel, oldImage, onUpload, onError, onUploadTimeout, onPreviewChange, onRequestRemove, disabled = false, maxSizeMB = 10 } = opts;
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,6 +113,18 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     setUploadMessage(null);
     onError?.(message);
   }, [onError]);
+
+  const reportUploadFailure = useCallback((cause: unknown) => {
+    const isPointTimeout = Platform.OS !== 'web' && collection === 'travelImageAddress' && (
+      isTimeoutError(cause) || (cause instanceof UploadTransportError && cause.reason !== 'network')
+    );
+    reportClientError(isPointTimeout
+      ? i18nT('errorsStatic:api.client.uploadTimeout')
+      : cause instanceof HeicConversionError
+        ? i18nT('shared:hooks.usePhotoUpload.ne_udalos_preobrazovat_heic_sohranite_foto_k_e692768e')
+        : i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+    if (isPointTimeout && mountedRef.current) onUploadTimeout?.();
+  }, [collection, onUploadTimeout, reportClientError]);
 
   const applyFallback = useCallback((candidateFallback: string) => {
     setHasTriedFallback(true);
@@ -178,15 +193,15 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         setUploadMessage(i18nT('shared:hooks.usePhotoUpload.fotografiya_uspeshno_zagruzhena_21b2e8f4'));
         onUpload?.(uploadedUrl);
       }
-    } catch {
+    } catch (cause) {
       if (isSuperseded()) return;
       pendingUploadRef.current = file;
-      reportClientError(i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675'));
+      reportUploadFailure(cause);
     } finally {
       uploadingRef.current = false;
       if (mountedRef.current && !foregroundBusyRef.current) setLoading(false);
     }
-  }, [collection, idTravel, lastPreviewUrl, onUpload, reportClientError]);
+  }, [collection, idTravel, lastPreviewUrl, onUpload, reportUploadFailure]);
 
   // Auto-upload pending
   useEffect(() => { void uploadPendingIfPossible(); }, [uploadPendingIfPossible]);
@@ -383,11 +398,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       if (!isCurrent()) return;
       console.error('Ошибка при загрузке:', err);
       if (mountedRef.current) {
-        reportClientError(
-          err instanceof HeicConversionError
-            ? i18nT('shared:hooks.usePhotoUpload.ne_udalos_preobrazovat_heic_sohranite_foto_k_e692768e')
-            : i18nT('shared:hooks.usePhotoUpload.proizoshla_oshibka_pri_zagruzke_cc3f9675')
-        );
+        reportUploadFailure(err);
         setPreviewUrl(null);
       }
     } finally {
@@ -396,7 +407,7 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         if (mountedRef.current) { if (!uploadingRef.current) setLoading(false); setUploadProgress(0); }
       }
     }
-  }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError, supersedeQueuedUpload]);
+  }, [collection, idTravel, oldImage, previewUrl, onUpload, validateFile, reportClientError, reportUploadFailure, supersedeQueuedUpload]);
 
   // Image error/load handlers for web
   const handleImageLoadCheck = useCallback((imgEl: HTMLImageElement) => {

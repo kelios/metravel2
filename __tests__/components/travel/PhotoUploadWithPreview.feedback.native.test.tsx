@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/api/misc';
 import { showToast } from '@/utils/toast';
+import { UploadTransportError } from '@/api/clientUploadTransport';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 
 jest.mock('@/api/misc', () => ({ uploadImage: jest.fn() }));
@@ -68,4 +69,28 @@ it('notifies when a deferred cover upload fails after the draft receives its id'
   expect(uploadImage).toHaveBeenCalledTimes(1);
   expect(showToast).toHaveBeenCalledTimes(1);
   expect(screen.queryByText('Произошла ошибка при загрузке')).toBeNull();
+});
+
+
+it.each(['android', 'ios'] as const)('reports a point upload timeout on %s without changing cover feedback', async (os) => {
+  Object.defineProperty(Platform, 'OS', { value: os });
+  jest.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: true } as ImagePicker.MediaLibraryPermissionResponse);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///photo.jpg', width: 10, height: 10 }] });
+  jest.mocked(uploadImage).mockRejectedValue(new UploadTransportError('response_timeout'));
+  const onTimeoutChange = jest.fn();
+  const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    const screen = await render(<PhotoUploadWithPreview collection="travelImageAddress" idTravel="42" onUploadTimeoutChange={onTimeoutChange} />);
+    await fireEvent.press(screen.getByTestId('photo-upload-gallery-button'));
+    expect(onTimeoutChange.mock.calls).toEqual([[false], [true]]);
+    expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text1: 'Превышено время загрузки' }));
+    onTimeoutChange.mockClear();
+    await screen.rerender(<PhotoUploadWithPreview collection="travelMainImage" idTravel="42" onUploadTimeoutChange={onTimeoutChange} />);
+    await fireEvent.press(screen.getByTestId('photo-upload-gallery-button'));
+    expect(onTimeoutChange).not.toHaveBeenCalledWith(true);
+    expect(showToast).toHaveBeenLastCalledWith(expect.objectContaining({ text1: 'Произошла ошибка при загрузке' }));
+  } finally {
+    jest.mocked(uploadImage).mockReset();
+    consoleError.mockRestore();
+  }
 });
