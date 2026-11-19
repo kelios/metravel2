@@ -15,7 +15,9 @@
   F11 — reel.mp4 длится 15–40 с и несёт аудиопоток (если есть ffprobe): тихий Reel — находка,
         трек Epidemic Sound агент скачивает сам (раздел 27); тишина, заказанная владельцем,
         снимается строкой `lint-allow: F11 тишина — <чьё решение и когда>` в package.md;
-  F2  — титры Reel из spec.json держатся ≥ 1,5 с + 0,3 с на слово и не длиннее ~7 слов;
+  F2  — сцена Reel (кикер, заголовок и подзаголовок вместе) держится не меньше
+        max(1,5 с + 0,3 с × слов, слов/3). Сцена с подзаголовком держится не меньше 4 с.
+        Строка заголовка не длиннее ~7 слов.
         слайд карусели (spec.json) — не больше 4 предложений и 50 слов тела (без кикера и
         заголовка): длиннее — текстовая стена, которую с телефона не читают (замер 18.10.2026:
         принятые слайды 28–49 слов, отвергнутые редактором 60–82);
@@ -363,6 +365,9 @@ def check_quest_answers(package, lines, data_glob=QUEST_DATA_GLOB):
 
 
 TITLE_MIN_S, TITLE_PER_WORD_S, TITLE_MAX_WORDS = 1.5, 0.3, 7
+SCENE_SUBTITLE_MIN_S = 4.0
+REEL_LAYER_KEYS = ('kicker', 'title', 'subtitle')
+REEL_TIME_RANGE_RE = re.compile(r'^\s*([\d.]+)\s*[-–]\s*([\d.]+)\s*$')
 
 
 def check_checklist(package):
@@ -382,60 +387,143 @@ def check_checklist(package):
     return hits
 
 
-def reel_title_items(data):
-    """[(текст, секунд на экране)] из spec монтажа: dict с segments/texts или список сегментов;
-    время — `dur`, `t0`/`t1` или строка `t: "0.0-4.0"`."""
+def reel_word_count(text):
+    """Слова сцены: знак без буквы и цифры (точка-разделитель «·», тире) словом не считается."""
+    return sum(1 for token in str(text).replace('\n', ' ').split() if any(ch.isalnum() for ch in token))
+
+
+def reel_item_span(item, cursor):
+    """(t0, t1, следующий курсор). Без абсолютных границ клипы идут по порядку."""
+    t0, t1 = item.get('t0'), item.get('t1')
+    if t0 not in (None, '') and t1 not in (None, ''):
+        t0, t1 = float(t0), float(t1)
+        return t0, t1, max(cursor, t1)
+    span = REEL_TIME_RANGE_RE.match(str(item.get('t', '')))
+    if span:
+        t0, t1 = float(span.group(1)), float(span.group(2))
+        return t0, t1, max(cursor, t1)
+    dur = item.get('dur', item.get('duration'))
+    if dur not in (None, ''):
+        t1 = cursor + float(dur)
+        return cursor, t1, max(cursor, t1)
+    return None
+
+
+def reel_layer_spans(data, source):
+    """Непрерывные интервалы слоёв и находки F2 для некорректных интервалов."""
     if isinstance(data, list):
         data = {'segments': data}
     if not isinstance(data, dict):
-        return []
-    items = []
+        return [], []
+    spans = []
+    hits = []
+    cursor = 0.0
     for item in (data.get('segments') or []) + (data.get('texts') or []):
-        if not isinstance(item, dict) or not isinstance(item.get('text'), str):
+        if not isinstance(item, dict):
             continue
-        span = re.match(r'^\s*([\d.]+)\s*[-–]\s*([\d.]+)\s*$', str(item.get('t', '')))
-        if item.get('dur'):
-            items.append((item['text'], float(item['dur'])))
-        elif 't0' in item and 't1' in item:
-            items.append((item['text'], float(item['t1']) - float(item['t0'])))
-        elif span:
-            items.append((item['text'], float(span.group(2)) - float(span.group(1))))
-    return items
+        placed = reel_item_span(item, cursor)
+        if placed is None:
+            continue
+        t0, t1, cursor = placed
+        layers = []
+        for key in (*REEL_LAYER_KEYS, 'text'):
+            line = item.get(key)
+            if isinstance(line, str) and reel_word_count(line):
+                layer = 'title' if key == 'text' else key
+                layers.append((layer, ' '.join(line.split())))
+        if not layers:
+            continue
+        if t1 <= t0:
+            label = ' / '.join(dict.fromkeys(text for _key, text in layers))
+            hits.append(finding(source, 0, 'F2',
+                                'титр «%s» имеет неверный интервал %.1f–%.1f с. Конец должен быть позже начала'
+                                % (label, t0, t1)))
+            continue
+        spans.extend([t0, t1, layer, text] for layer, text in layers)
+    spans.sort(key=lambda span: (span[2], span[3], span[0]))
+    merged = []
+    for t0, t1, key, text in spans:
+        if merged and merged[-1][2:] == [key, text] and t0 <= merged[-1][1] + 1e-3:
+            merged[-1][1] = max(merged[-1][1], t1)
+        else:
+            merged.append([t0, t1, key, text])
+    return merged, hits
+
+
+def reel_visible_scenes(spans):
+    """Отрезки, внутри которых набор одновременно видимых слоёв не меняется."""
+    bounds = sorted({t for span in spans for t in span[:2]})
+    scenes = []
+    order = {key: index for index, key in enumerate(REEL_LAYER_KEYS)}
+    for t0, t1 in zip(bounds, bounds[1:]):
+        if t1 - t0 <= 1e-6:
+            continue
+        mid = (t0 + t1) / 2.0
+        active = [span for span in spans if span[0] <= mid < span[1]]
+        if not active:
+            continue
+        signature = tuple(sorted({(span[2], span[3]) for span in active}, key=lambda layer: (order[layer[0]], layer[1])))
+        if scenes and scenes[-1][2] == signature and abs(scenes[-1][1] - t0) < 1e-3:
+            scenes[-1][1] = t1
+        else:
+            scenes.append([t0, t1, signature])
+    return scenes
+
+
+def reel_scene_need(words, has_subtitle):
+    """Минимум для чтения полного текста сцены по правилу F2."""
+    need = max(TITLE_MIN_S + TITLE_PER_WORD_S * words, words / 3.0)
+    if has_subtitle:
+        need = max(need, SCENE_SUBTITLE_MIN_S)
+    return need
 
 
 def check_reel_titles(package):
-    """F2 для Reel (бриф шаг 5): титр держится ≥ 1,5 с + 0,3 с на слово, не длиннее ~7 слов.
-    Spec монтажа — spec.json в пакете или в build/; без тайминга слова считаются по slides.txt."""
-    items = []
+    """F2 для Reel: слова кикера, заголовка и подзаголовка, видимые одновременно.
+    Spec монтажа лежит в пакете или в build/. Без тайминга проверяется slides.txt."""
+    spans = []
+    hits = []
     for name in ('spec.json', os.path.join('build', 'spec.json')):
         path = os.path.join(package, name)
-        if os.path.exists(path) and not items:
+        if os.path.exists(path):
             try:
-                items = reel_title_items(json.loads(read(path)))
+                spans, hits = reel_layer_spans(json.loads(read(path)), name)
             except ValueError:
-                pass
+                continue
+            if spans or hits:
+                break
     plain = os.path.join(package, 'slides.txt')
-    if not items and os.path.exists(os.path.join(package, 'reel.mp4')):
+    if not spans and not hits and os.path.exists(os.path.join(package, 'reel.mp4')):
         if not os.path.exists(plain):
             return [finding('reel.mp4', 0, 'F2', 'титры Reel не найдены: нет spec.json (segments/texts с dur, '
                                                  't0/t1 или t) и slides.txt — линт их не проверил')]
-        items = [(block.strip(), None) for block in re.split(r'\n\s*\n', read(plain)) if block.strip()]
-    hits = []
-    merged = []  # один титр через несколько клипов подряд — одно появление на экране
-    for text, shown in items:
-        if merged and merged[-1][0] == text and shown is not None:
-            merged[-1] = (text, merged[-1][1] + shown)
-        else:
-            merged.append((text, shown))
-    for index, (text, shown) in enumerate(merged, 1):
-        words = len(text.split())
-        need = TITLE_MIN_S + TITLE_PER_WORD_S * words
-        if shown is not None and shown + 1e-6 < need:
-            hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
-                                'титр «%s» держится %.1f с, нужно ≥ %.1f с' % (text.replace('\n', ' / '), shown, need)))
-        if words > TITLE_MAX_WORDS:
-            hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
-                                'титр «%s» — %d слов, предел ~%d' % (text.replace('\n', ' / '), words, TITLE_MAX_WORDS)))
+        blocks = [block.strip() for block in re.split(r'\n\s*\n', read(plain)) if block.strip()]
+        for index, text in enumerate(blocks, 1):
+            words = reel_word_count(text)
+            if words > TITLE_MAX_WORDS:
+                hits.append(finding('spec.json титр %02d' % index, 0, 'F2',
+                                    'титр «%s» — %d слов, предел ~%d' % (text.replace('\n', ' / '), words, TITLE_MAX_WORDS)))
+        return hits
+    previous_end = None
+    previous_layers = ()
+    for index, (t0, t1, layers) in enumerate(reel_visible_scenes(spans), 1):
+        words = sum(reel_word_count(text) for _key, text in layers)
+        shown = t1 - t0
+        label = ' / '.join(text for _key, text in layers)
+        has_subtitle = any(key == 'subtitle' for key, _text in layers)
+        need = reel_scene_need(words, has_subtitle)
+        source = 'spec.json титр %02d' % index
+        if shown + 1e-6 < need:
+            hits.append(finding(source, 0, 'F2',
+                                'титр «%s» %.1f–%.1f с, %d слов, держится %.1f с, нужно ≥ %.1f с'
+                                % (label, t0, t1, words, shown, need)))
+        for key, text in layers:
+            line_words = reel_word_count(text)
+            continued = previous_end == t0 and (key, text) in previous_layers
+            if key == 'title' and line_words > TITLE_MAX_WORDS and not continued:
+                hits.append(finding(source, 0, 'F2',
+                                    'титр «%s» — %d слов, предел ~%d' % (text, line_words, TITLE_MAX_WORDS)))
+        previous_end, previous_layers = t1, layers
     return hits
 
 

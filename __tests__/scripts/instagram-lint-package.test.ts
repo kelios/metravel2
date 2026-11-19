@@ -173,8 +173,68 @@ describe('instagram lint-package', () => {
     ])
   })
 
+  const sceneWords = (count: number, prefix: string) => Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`).join(' ')
+
+  it('counts kicker, title and subtitle of one Reel scene together and does not duplicate a single title', () => {
+    const short = makePackage('reel-scene-short', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ segments: [
+        { kicker: sceneWords(2, 'к'), text: sceneWords(5, 'з'), title: sceneWords(5, 'з'), subtitle: sceneWords(4, 'п'), dur: 3 },
+        { text: 'Касина-Велька: круг 11,5 км', t0: null, t1: null, duration: 1.2 },
+        { text: 'Касина-Велька: круг 11,5 км', dur: 1.8 },
+      ] }),
+    })
+    const held = makePackage('reel-scene-held', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ segments: [
+        { kicker: sceneWords(2, 'к'), text: sceneWords(5, 'з'), subtitle: sceneWords(4, 'п'), dur: 4.8 },
+      ] }),
+    })
+    const overlap = makePackage('reel-scene-overlap', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ texts: [
+        { t: '11.5-14.8', text: sceneWords(5, 'а') },
+        { t: '11.5-14.8', subtitle: sceneWords(5, 'б') },
+        { t: '32.2-35.2', kicker: sceneWords(2, 'в'), text: sceneWords(5, 'г'), subtitle: sceneWords(4, 'д') },
+        { t: '28.6-32.2', text: sceneWords(6, 'е'), subtitle: sceneWords(5, 'ж') },
+        { t: '35.2-38.8', text: sceneWords(5, 'з'), subtitle: sceneWords(4, 'и') },
+        { t: '0.0-3.3', text: sceneWords(6, 'й'), subtitle: sceneWords(7, 'к') },
+        { t: '3.3-6.6', text: sceneWords(7, 'л'), subtitle: sceneWords(7, 'м') },
+      ] }),
+    })
+    const continued = makePackage('reel-scene-continued', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ texts: [
+        { t: '0-2', text: 'Касина-Велька: круг 11,5 км' },
+        { t: '2-4', title: 'Касина-Велька: круг 11,5 км' },
+      ] }),
+    })
+    const shortHits = lint(short).hits.filter((h: { rule: string }) => h.rule === 'F2')
+    expect(shortHits).toHaveLength(1)
+    expect(shortHits[0].message).toContain('11 слов')
+    expect(shortHits[0].message).toContain('держится 3.0 с')
+    expect(shortHits[0].message).toContain('нужно ≥ 4.8 с')
+    expect(lint(held).hits.filter((h: { rule: string }) => h.rule === 'F2')).toEqual([])
+    expect(lint(continued).hits.filter((h: { rule: string }) => h.rule === 'F2')).toEqual([])
+    const overlapHits = lint(overlap).hits.filter((h: { rule: string }) => h.rule === 'F2')
+    const messages = overlapHits.map((h: { message: string }) => h.message)
+    expect(messages).toEqual(expect.arrayContaining([
+      expect.stringContaining('11.5–14.8 с, 10 слов'),
+      expect.stringContaining('32.2–35.2 с, 11 слов'),
+      expect.stringContaining('28.6–32.2 с, 11 слов'),
+      expect.stringContaining('35.2–38.8 с, 9 слов'),
+      expect.stringContaining('0.0–3.3 с, 13 слов'),
+      expect.stringContaining('3.3–6.6 с, 14 слов'),
+    ]))
+    expect(overlapHits).toHaveLength(6)
+  })
+
   it('finds Reel titles in build/spec.json lists and t ranges, and flags a Reel with no titles to check', () => {
-    const listed = makePackage('reel-build-list', { 'caption.txt': CLEAN_CAPTION, 'reel.mp4': '' })
+    const listed = makePackage('reel-build-list', {
+      'caption.txt': CLEAN_CAPTION,
+      'reel.mp4': '',
+      'spec.json': JSON.stringify({ segments: [] }),
+    })
     fs.mkdirSync(path.join(listed, 'build'))
     fs.writeFileSync(path.join(listed, 'build', 'spec.json'), JSON.stringify([
       { src: 'a.MOV', dur: 1.2, text: 'Касина-Велька: круг 11,5 км' },
@@ -189,6 +249,39 @@ describe('instagram lint-package', () => {
         .toContain('F2 spec.json титр 01')
     }
     expect(lint(bare).hits).toContainEqual(expect.objectContaining({ rule: 'F2', source: 'reel.mp4' }))
+  })
+
+  it('uses absolute timestamps for overlapping layers with durations and checks a continuous title length once', () => {
+    const dir = makePackage('reel-partial-overlap', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ texts: [
+        { t0: 2, t1: 17, dur: 15, title: sceneWords(8, 'з') },
+        { t0: 7, t1: 11, dur: 4, subtitle: sceneWords(4, 'п') },
+      ] }),
+    })
+    const messages = lint(dir).hits.filter((h: { rule: string }) => h.rule === 'F2')
+      .map((h: { message: string }) => h.message)
+    expect(messages).toEqual([
+      expect.stringContaining('8 слов, предел ~7'),
+      expect.stringContaining('7.0–11.0 с, 12 слов, держится 4.0 с, нужно ≥ 5.1 с'),
+    ])
+  })
+
+  it('flags zero and reversed explicit Reel intervals instead of silently passing them', () => {
+    const dir = makePackage('reel-invalid-interval', {
+      'caption.txt': CLEAN_CAPTION,
+      'spec.json': JSON.stringify({ segments: [
+        { t0: 3, t1: 3, text: 'Пустой интервал' },
+        { t: '8-0', text: 'Обратный интервал' },
+      ] }),
+    })
+    const { hits, status } = lint(dir)
+    expect(status).toBe(1)
+    expect(hits.filter((h: { rule: string }) => h.rule === 'F2')
+      .map((h: { message: string }) => h.message)).toEqual([
+      expect.stringContaining('неверный интервал 3.0–3.0 с'),
+      expect.stringContaining('неверный интервал 8.0–0.0 с'),
+    ])
   })
 
   const hasFfmpeg = runCli('sh', ['-c', 'command -v ffmpeg && command -v ffprobe']).status === 0
