@@ -267,7 +267,8 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       // Веб: пытаемся использовать DOM и data-section-key для более стабильной прокрутки.
       // Если секция рендерится лениво (defer/lazy), делаем ретраи, чтобы дождаться DOM.
       if (Platform.OS === 'web') {
-        clearPending(key);
+        // A late-mounting section must not override a more recent navigation.
+        Object.keys(pendingRetriesRef.current).forEach(clearPending);
         if (tryScrollWeb(key)) return;
 
         // Ленивые тяжёлые секции (в частности карта) могут появиться через

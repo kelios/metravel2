@@ -240,6 +240,33 @@ describe('useScrollNavigation (web)', () => {
     expect(container.scrollTo).toHaveBeenCalledWith({ top: 56, behavior: 'smooth' });
   });
 
+  it('keeps the article at the gallery when an earlier section mounts late', async () => {
+    const container = document.getElementById('scroll-container')!;
+    const gallery = document.getElementById('target')!;
+    gallery.dataset.sectionKey = 'gallery';
+    container.scrollTop = 400;
+    gallery.getBoundingClientRect = () => ({ top: -400 } as DOMRect);
+
+    const { result } = await renderHook(() => useScrollNavigation());
+
+    await act(() => {
+      result.current.scrollTo('similar');
+      result.current.scrollTo('gallery');
+    });
+    expect(container.scrollTop).toBe(0);
+
+    const similar = document.createElement('div');
+    similar.dataset.sectionKey = 'similar';
+    similar.getBoundingClientRect = () => ({ top: 700 } as DOMRect);
+    container.appendChild(similar);
+
+    await act(() => {
+      jest.runAllTimers();
+    });
+    expect(container.scrollTo).toHaveBeenCalledTimes(1);
+    expect(container.scrollTop).toBe(0);
+  });
+
   it('does not double-count the header when the container already starts below it (regression)', async () => {
     // Прод-раскладка travel-details: скролл-контейнер начинается ровно под
     // липкой шапкой, поэтому вычитать её высоту ещё раз нельзя — иначе секция
