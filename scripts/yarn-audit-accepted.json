@@ -15,13 +15,6 @@
       "reason": "Исправление только в minimatch 11.0.1. Версии 8/9/10 тянут eslint, typescript-eslint, jest и glob; шаблоны задаём мы сами в конфигах сборки и тестов, пользовательский ввод в minimatch не попадает."
     },
     {
-      "id": "GHSA-gcqx-w48m-w2h4",
-      "module": "deepmerge",
-      "severity": "low",
-      "reviewBy": "2027-02-14",
-      "reason": "Исправленной версии нет. Пакет приходит только через jest и выполняется в тестах на наших конфигах, в бандл приложения не входит."
-    },
-    {
       "id": "GHSA-v3m3-f69x-jf25",
       "module": "quill",
       "severity": "low",
