@@ -152,3 +152,92 @@ test.describe('@smoke Places catalog', () => {
     expect(target.searchParams.get('lng')).toBe('26.473');
   });
 });
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  test.describe(`Places window after ten pages at ${viewport.width}px (#3460)`, () => {
+    test.use({ viewport });
+    test('keeps scroll, focus and a bounded number of mounted cards', async ({ page }) => {
+      await preacceptCookies(page);
+      const requested: number[] = [];
+      let failThirdPage = true;
+      await page.route('**/places/catalog/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('/category-groups/')) return route.fulfill({ json: { groups: [] } });
+        const number = Number(url.searchParams.get('page'));
+        const size = Number(url.searchParams.get('perPage'));
+        const searching = !!url.searchParams.get('q');
+        if (size === 20 && !searching) requested.push(number);
+        if (number === 3 && failThirdPage) {
+          failThirdPage = false;
+          return route.fulfill({ status: 400, json: {} });
+        }
+        const results = searching ? [museum] : Array.from({ length: size }, (_, i) => {
+          const id = String((number - 1) * size + i + 1);
+          return place(id, `Место ${id}`, 'Замки', 53.45, 26.47);
+        });
+        return route.fulfill({ json: { count: searching ? 1 : 201, results, facets: { countries: [], categories: [] } } });
+      });
+      await page.goto('/places', { waitUntil: 'domcontentloaded' });
+      const mounted = page.locator('[data-testid^="places-card-slot-"]');
+      const first = page.getByTestId('places-card-slot-1');
+      const footer = page.getByTestId('places-load-more');
+      await expect(first).toBeVisible();
+      for (let i = 2; i <= 10; i++) {
+        // Activate without scrolling, so the near-end auto-load cannot race the
+        // manual pagination assertions. Real scroll and navigation follow below.
+        await footer.getByRole('button').evaluate(button => (button as HTMLElement).click());
+        if (i === 3) {
+          await expect(first).toBeVisible();
+          const retry = footer.getByRole('button', { name: 'Повторить' });
+          await expect(retry).toBeAttached();
+          await retry.evaluate(button => (button as HTMLElement).click());
+        }
+        await expect(footer).toContainText(String(i * 20));
+        expect(await mounted.count()).toBeLessThanOrEqual(viewport.width === 390 ? 10 : 30);
+      }
+      expect(requested).toEqual([1, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+      const scroller = page.getByTestId('places-catalog-scroll');
+      const setOffset = async (y: number) => scroller.evaluate((el, next) => { el.scrollTop = next; }, y);
+      const interior = page.getByTestId('places-card-slot-13');
+      // Scroll using the native container, then focus a card in an interior row.
+      // Both ends of the grid are always mounted for keyboard entry.
+      await setOffset(viewport.width === 390 ? 5800 : 2100);
+      await expect(interior).toBeAttached();
+      const focused = interior.getByRole('button', { name: 'Открыть место на карте', exact: true });
+      await focused.focus();
+      await setOffset(16000);
+      await expect.poll(() => scroller.evaluate(el => el.scrollTop)).toBeGreaterThan(15000);
+      await expect.poll(() => page.locator('[data-testid^="places-card-slot-"]').evaluateAll(cards => cards.some(card => {
+        const id = Number(card.getAttribute('data-testid')?.replace('places-card-slot-', ''));
+        return id > 24 && id < 190;
+      }))).toBe(true);
+      await expect(focused).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect.poll(() => page.evaluate(() =>
+        document.activeElement?.closest('[data-testid^="places-card-slot-"]')?.getAttribute('data-testid'),
+      )).toMatch(/^places-card-slot-1[34]$/);
+      await setOffset(6500);
+      const action = mounted.getByRole('button', { name: 'Открыть место на карте', exact: true });
+      const findVisibleAction = () => action.evaluateAll(buttons => buttons.find(button => {
+        const { top, bottom } = button.getBoundingClientRect();
+        return top > 200 && bottom < window.innerHeight - 100;
+      })?.closest('[data-testid^="places-card-slot-"]')?.getAttribute('data-testid'));
+      await expect.poll(findVisibleAction).toBeTruthy();
+      const visibleAction = await findVisibleAction();
+      const card = page.getByTestId(visibleAction!);
+      const beforeNavigation = await scroller.evaluate(el => el.scrollTop);
+      expect(beforeNavigation).toBeGreaterThan(5000);
+      await card.getByRole('button', { name: 'Открыть место на карте', exact: true }).click();
+      await expect(page).toHaveURL(/\/map\?.*focusPlace=1/);
+      await page.goBack();
+      await expect(card).toBeInViewport();
+      await expect.poll(() => scroller.evaluate(el => el.scrollTop)).toBeCloseTo(beforeNavigation, -2);
+
+      await setOffset(0);
+      await page.getByLabel('Найти место').fill('Музей');
+      await expect(page.getByTestId('places-card-102')).toBeVisible();
+      await expect(mounted).toHaveCount(1);
+    });
+  });
+}

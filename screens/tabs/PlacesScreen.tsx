@@ -3,7 +3,6 @@ import React, { useMemo, useRef } from 'react'
 import {
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -34,7 +33,8 @@ import {
   getPlacesCountLabel,
   isSameCategorySet,
 } from './PlacesScreen.helpers'
-import { LoadMoreFooter, PlaceCard, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
+import { LoadMoreFooter, SkeletonGrid, StateBlock } from './PlacesScreen.parts'
+import { PlacesCatalogScrollView, PlacesWindowedGrid } from './PlacesWindowedGrid'
 import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
@@ -263,6 +263,8 @@ export default function PlacesScreen() {
     />
   ) : null
 
+  const [layoutTop, setLayoutTop] = React.useState(0)
+  const [mainTop, setMainTop] = React.useState(0)
   let resultsContent: React.ReactNode
   if (resultsStatus === 'loading') {
     resultsContent = <SkeletonGrid styles={styles} isCompact={isSingleColumn} isWide={isWide} />
@@ -314,19 +316,17 @@ export default function PlacesScreen() {
     )
   } else {
     resultsContent = (
-      <View style={styles.cardsGrid} testID="places-cards-grid">
-        {visiblePlaces.map((place, index) => (
-          <PlaceCard
-            key={place.placeId == null ? `point:${place.id}` : `place:${place.placeId}`}
-            place={place}
-            styles={styles}
-            onOpenMap={openOnMap}
-            onOpenTravel={openTravel}
-            priority={index < firstScreenCount}
-          />
-        ))}
-        {loadMoreBlock}
-      </View>
+      <PlacesWindowedGrid
+        key={JSON.stringify([selectedCategories, selectedCountry, appliedQuery, sortMode])}
+        places={visiblePlaces}
+        columns={isSingleColumn ? 1 : isWide ? wideColumns : 2}
+        parentTop={layoutTop + mainTop}
+        styles={styles}
+        onOpenMap={openOnMap}
+        onOpenTravel={openTravel}
+        firstScreenCount={firstScreenCount}
+        footer={loadMoreBlock}
+      />
     )
   }
 
@@ -403,6 +403,7 @@ export default function PlacesScreen() {
         {/* ─── Main layout ─── */}
         <View
           style={styles.layout}
+          onLayout={event => setLayoutTop(event.nativeEvent.layout.y)}
           testID="places-layout"
           {...breakpointLayoutProps(
             CATALOG_FILTER_PANEL_LAYOUT,
@@ -588,7 +589,7 @@ export default function PlacesScreen() {
           ) : null}
 
           {/* Results */}
-          <View style={styles.main} testID="places-main">
+          <View style={styles.main} onLayout={event => setMainTop(event.nativeEvent.layout.y)} testID="places-main">
             <View style={styles.resultsHeader}>
               <View style={styles.resultsTitleBlock}>
                 <Text style={styles.resultsTitle} numberOfLines={showCategoryScope ? undefined : 2} testID="places-results-title">
@@ -743,16 +744,16 @@ export default function PlacesScreen() {
         ? React.createElement('h1', { style: styles.srOnly as any }, seoHeading)
         : null}
       {compactFixedBar}
-      <ScrollView
+      <PlacesCatalogScrollView
+        testID="places-catalog-scroll"
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         onScroll={handleScroll}
-        scrollEventThrottle={180}
       >
         {pageChrome}
         <ContributionBanner variant="places" />
-      </ScrollView>
+      </PlacesCatalogScrollView>
     </View>
   )
 }
