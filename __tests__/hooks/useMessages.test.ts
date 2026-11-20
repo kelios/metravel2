@@ -1,9 +1,12 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { focusManager } from '@tanstack/react-query';
+import { ApiError } from '@/api/client';
 import { createQueryWrapper } from '../helpers/testQueryClient';
 
 // Mock the API module
 const mockFetchMessageThreads = jest.fn();
 const mockFetchMessages = jest.fn();
+const mockFetchMessageChanges = jest.fn();
 const mockFetchAvailableUsers = jest.fn();
 const mockFetchThreadByUser = jest.fn();
 const mockSendMessage = jest.fn();
@@ -13,6 +16,8 @@ const mockMarkThreadRead = jest.fn();
 const mockFetchUnreadCount = jest.fn();
 
 jest.mock('@/api/messages', () => ({
+  MESSAGE_PAGE_SIZE: 50,
+  fetchMessageChanges: (...args: unknown[]) => mockFetchMessageChanges(...args),
   fetchMessageThreads: (...args: any[]) => mockFetchMessageThreads(...args),
   fetchMessages: (...args: any[]) => mockFetchMessages(...args),
   fetchAvailableUsers: (...args: any[]) => mockFetchAvailableUsers(...args),
@@ -65,6 +70,18 @@ const PAGINATED_MESSAGES = {
   previous: null,
   results: [MSG_1, MSG_2],
 };
+
+function changes(cursor: string, messages = [MSG_1, MSG_2], removed_ids: number[] = [], has_more = false) {
+  return { cursor, messages, removed_ids, has_more };
+}
+
+function newestMessages(count: number, thread = 1) {
+  return Array.from({ length: count }, (_, i) => ({ ...MSG_1, thread, id: count - i }));
+}
+
+async function advance(ms: number) {
+  await act(async () => { await jest.advanceTimersByTimeAsync(ms); });
+}
 
 const USER_1 = { id: 1, first_name: 'John', last_name: 'Doe', avatar: null, user: 10 };
 
@@ -224,7 +241,7 @@ describe('useThreadMessages', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('loads messages for a thread', async () => {
-    mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('checkpoint'));
 
     const { result } = await renderHook(() => useThreadMessages(1, false));
 
@@ -232,69 +249,58 @@ describe('useThreadMessages', () => {
 
     expect(result.current.messages).toHaveLength(2);
     expect(result.current.hasMore).toBe(false);
-    expect(mockFetchMessages).toHaveBeenCalledWith(1, 1, 50, expect.any(AbortSignal));
+    expect(mockFetchMessageChanges).toHaveBeenCalledWith(1, null, expect.any(AbortSignal));
   });
 
   it.each(['thread', 'owner'])('ignores late messages after changing %s', async (change) => {
-    const first = createDeferred<typeof PAGINATED_MESSAGES>();
+    const first = createDeferred<ReturnType<typeof changes>>();
     const nextId = change === 'thread' ? 2 : 1;
-    const currentMessage = { ...MSG_2, id: 99, thread: nextId };
-    mockFetchMessages.mockReturnValueOnce(first.promise).mockResolvedValueOnce({
-      ...PAGINATED_MESSAGES,
-      results: [currentMessage],
-      next: 'http://api/messages/?page=2',
-    });
+    const currentPage = newestMessages(51, nextId);
+    mockFetchMessageChanges.mockReturnValueOnce(first.promise).mockResolvedValueOnce(changes('current', currentPage));
 
     const { result, rerender } = await renderHook(
       ({ id, owner }) => useThreadMessages(id, false, owner),
       { initialProps: { id: 1, owner: 'A' } },
     );
-    const oldSignal = mockFetchMessages.mock.calls[0][3] as AbortSignal;
+    const oldSignal = mockFetchMessageChanges.mock.calls[0][2] as AbortSignal;
     await rerender({ id: nextId, owner: change === 'owner' ? 'B' : 'A' });
-    await waitFor(() => expect(result.current.messages).toEqual([currentMessage]));
+    await waitFor(() => expect(result.current.messages).toEqual(currentPage.slice(0, 50)));
     expect(oldSignal.aborted).toBe(true);
 
-    await act(async () => first.resolve(PAGINATED_MESSAGES));
-    expect(result.current.messages).toEqual([currentMessage]);
+    await act(async () => first.resolve(changes('stale')));
+    expect(result.current.messages).toEqual(currentPage.slice(0, 50));
     expect(result.current.hasMore).toBe(true);
     expect(result.current.loading).toBe(false);
 
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('current', []));
     mockFetchMessages.mockResolvedValueOnce({ ...PAGINATED_MESSAGES, results: [] });
     await act(async () => result.current.loadMore());
     expect(mockFetchMessages).toHaveBeenLastCalledWith(nextId, 2, 50, expect.any(AbortSignal));
   });
 
   it('lets explicit pagination preempt a pending poll', async () => {
-    const setInterval = global.setInterval;
-    let tickPoll: (() => void) | undefined;
-    const interval = jest.spyOn(global, 'setInterval').mockImplementation((callback, delay, ...args) => {
-      if (delay === 10_000) {
-        tickPoll = () => callback(...args);
-        return setInterval(() => {}, delay);
-      }
-      return setInterval(callback, delay, ...args);
-    });
-    const poll = createDeferred<typeof PAGINATED_MESSAGES>();
-    const olderMessage = { ...MSG_1, id: 42 };
-    mockFetchMessages
-      .mockResolvedValueOnce({ ...PAGINATED_MESSAGES, next: 'http://api/messages/?page=2' })
-      .mockReturnValueOnce(poll.promise)
-      .mockResolvedValueOnce({ ...PAGINATED_MESSAGES, results: [olderMessage] });
+    jest.useFakeTimers();
+    const poll = createDeferred<ReturnType<typeof changes>>();
+    const newest = newestMessages(51);
+    const older = { ...MSG_1, id: 999 };
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start', newest)).mockReturnValueOnce(poll.promise)
+      .mockResolvedValueOnce(changes('start', []));
+    mockFetchMessages.mockResolvedValueOnce({ ...PAGINATED_MESSAGES, results: [newest[50], older] });
 
     try {
       const { result, unmount } = await renderHook(() => useThreadMessages(1));
-      await waitFor(() => expect(result.current.messages).toEqual(PAGINATED_MESSAGES.results));
-      expect(tickPoll).toBeDefined();
-      await act(async () => { tickPoll?.(); });
-      const pollSignal = mockFetchMessages.mock.calls[1][3] as AbortSignal;
+      await advance(10_000);
+      const pollSignal = mockFetchMessageChanges.mock.calls[1][2] as AbortSignal;
       await act(async () => result.current.loadMore());
       expect(pollSignal.aborted).toBe(true);
       expect(mockFetchMessages).toHaveBeenLastCalledWith(1, 2, 50, expect.any(AbortSignal));
-      await act(async () => poll.resolve({ ...PAGINATED_MESSAGES, results: [{ ...MSG_1, id: 43 }] }));
-      expect(result.current.messages).toEqual([...PAGINATED_MESSAGES.results, olderMessage]);
+      await act(async () => poll.resolve(changes('stale', [{ ...MSG_1, id: 1000 }])));
+      expect(result.current.messages.map((m) => m.id).sort((a, b) => a - b)).toEqual([
+        ...newest.map((m) => m.id).reverse(), older.id,
+      ]);
       await unmount();
     } finally {
-      interval.mockRestore();
+      jest.useRealTimers();
     }
   });
 
@@ -303,6 +309,7 @@ describe('useThreadMessages', () => {
 
     await act(async () => {});
 
+    expect(mockFetchMessageChanges).not.toHaveBeenCalled();
     expect(mockFetchMessages).not.toHaveBeenCalled();
     expect(result.current.messages).toEqual([]);
   });
@@ -312,12 +319,13 @@ describe('useThreadMessages', () => {
 
     await act(async () => {});
 
+    expect(mockFetchMessageChanges).not.toHaveBeenCalled();
     expect(mockFetchMessages).not.toHaveBeenCalled();
     expect(result.current.messages).toEqual([]);
   });
 
   it('sets error on failure', async () => {
-    mockFetchMessages.mockRejectedValueOnce(new Error('Server error'));
+    mockFetchMessageChanges.mockRejectedValueOnce(new Error('Server error'));
 
     const { result } = await renderHook(() => useThreadMessages(1, false));
 
@@ -327,10 +335,7 @@ describe('useThreadMessages', () => {
   });
 
   it('tracks hasMore from pagination', async () => {
-    mockFetchMessages.mockResolvedValueOnce({
-      ...PAGINATED_MESSAGES,
-      next: 'http://api/messages/?page=2',
-    });
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start', newestMessages(51)));
 
     const { result } = await renderHook(() => useThreadMessages(1, false));
 
@@ -340,7 +345,7 @@ describe('useThreadMessages', () => {
   });
 
   it('clears messages when threadId changes to null', async () => {
-    mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('checkpoint'));
 
     const { result, rerender } = await renderHook(
       ({ id }) => useThreadMessages(id, false),
@@ -355,7 +360,7 @@ describe('useThreadMessages', () => {
   });
 
   it('optimisticRemove removes message from list immediately', async () => {
-    mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('checkpoint'));
 
     const { result } = await renderHook(() => useThreadMessages(1, false));
     await waitFor(() => expect(result.current.messages).toHaveLength(2));
@@ -369,7 +374,7 @@ describe('useThreadMessages', () => {
   });
 
   it('optimisticRemove rollback restores message', async () => {
-    mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('checkpoint'));
 
     const { result } = await renderHook(() => useThreadMessages(1, false));
     await waitFor(() => expect(result.current.messages).toHaveLength(2));
@@ -648,5 +653,205 @@ describe('useUnreadCount (stubbed — backend not deployed)', () => {
 
     expect(mockFetchUnreadCount).not.toHaveBeenCalled();
     expect(result.current.count).toBe(0);
+  });
+});
+
+describe('open conversation polling', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    focusManager.setFocused(true);
+  });
+  afterEach(() => {
+    focusManager.setFocused(undefined);
+    jest.useRealTimers();
+  });
+
+  it('keeps ten quiet minutes under 30 background reads and never rereads message bodies', async () => {
+    const firstPage = newestMessages(50);
+    mockFetchMessageChanges.mockImplementation((_threadId, cursor) =>
+      Promise.resolve(changes('checkpoint', cursor === null ? firstPage : [])));
+    mockFetchMessageThreads.mockResolvedValue([THREAD_1]);
+    const { result } = await renderHook(() => {
+      useThreads();
+      return useThreadMessages(1);
+    });
+    expect(result.current.messages).toHaveLength(50);
+    expect(result.current.hasMore).toBe(false);
+    mockFetchMessageThreads.mockClear();
+    mockFetchMessageChanges.mockClear();
+    await advance(600_000);
+    const polls = mockFetchMessageChanges.mock.calls;
+    const listReads = mockFetchMessageThreads.mock.calls.length;
+    expect(polls.length).toBeGreaterThan(0);
+    expect(listReads).toBeGreaterThan(0);
+    expect(polls.length + listReads).toBeLessThanOrEqual(30);
+    expect(polls.every(([, cursor]) => cursor === 'checkpoint')).toBe(true);
+    expect(mockFetchMessages).not.toHaveBeenCalled();
+    expect(result.current.messages).toHaveLength(50);
+  });
+
+  it('drains a missed page, merges by id, and returns to the fast interval on activity', async () => {
+    const edited = { ...MSG_2, text: 'edited' };
+    const incoming = { ...MSG_1, id: 3 };
+    mockFetchMessageChanges
+      .mockResolvedValueOnce(changes('start'))
+      .mockResolvedValueOnce(changes('quiet', []))
+      .mockResolvedValueOnce(changes('more', [edited], [MSG_1.id], true))
+      .mockResolvedValueOnce(changes('done', [edited, incoming]))
+      .mockResolvedValueOnce(changes('done', []));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    await advance(19_999);
+    expect(mockFetchMessageChanges).toHaveBeenCalledTimes(2);
+    await advance(1);
+    expect(mockFetchMessageChanges.mock.calls.map(([, cursor]) => cursor)).toEqual([null, 'start', 'quiet', 'more']);
+    expect([...result.current.messages].sort((a, b) => a.id - b.id)).toEqual([edited, incoming]);
+    await advance(10_000);
+    expect(mockFetchMessageChanges).toHaveBeenLastCalledWith(1, 'done', expect.any(AbortSignal));
+  });
+
+  it.each(['route', 'application'])('catches up on return to the %s and after sending', async (source) => {
+    mockFetchMessageChanges
+      .mockResolvedValueOnce(changes('start'))
+      .mockResolvedValueOnce(changes('quiet', []))
+      .mockResolvedValueOnce(changes('returned', []))
+      .mockResolvedValueOnce(changes('sent', [{ ...MSG_1, id: 3 }]))
+      .mockResolvedValueOnce(changes('sent', []));
+    const { result, rerender } = await renderHook(({ visible }) => useThreadMessages(1, visible, 'A'),
+      { initialProps: { visible: true } });
+    await advance(10_000);
+    if (source === 'route') await rerender({ visible: false });
+    else await act(() => focusManager.setFocused(false));
+    await advance(120_000);
+    expect(mockFetchMessageChanges).toHaveBeenCalledTimes(2);
+    if (source === 'route') await rerender({ visible: true });
+    else await act(() => focusManager.setFocused(true));
+    expect(mockFetchMessageChanges).toHaveBeenLastCalledWith(1, 'quiet', expect.any(AbortSignal));
+    await act(async () => result.current.refresh());
+    expect(mockFetchMessageChanges).toHaveBeenLastCalledWith(1, 'returned', expect.any(AbortSignal));
+    expect(result.current.messages.map((m) => m.id)).toContain(3);
+    await advance(10_000);
+    expect(mockFetchMessageChanges).toHaveBeenLastCalledWith(1, 'sent', expect.any(AbortSignal));
+  });
+
+  it('retries an interrupted catch-up from the last applied cursor', async () => {
+    const incoming = { ...MSG_1, id: 3 };
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start', [MSG_1]))
+      .mockResolvedValueOnce(changes('next-page', [MSG_2], [], true))
+      .mockRejectedValueOnce(new Error('Offline'))
+      .mockResolvedValueOnce(changes('caught-up', [incoming]));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    expect(result.current.messages).toEqual([MSG_1, MSG_2]);
+    await act(async () => result.current.refresh());
+    expect(mockFetchMessageChanges.mock.calls.map(([, cursor]) => cursor)).toEqual([null, 'start', 'next-page', 'next-page']);
+    expect(result.current.messages).toEqual([MSG_1, MSG_2, incoming]);
+  });
+
+  it('evicts the old audience before a reset bootstrap resolves', async () => {
+    const bootstrap = createDeferred<ReturnType<typeof changes>>();
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start'))
+      .mockRejectedValueOnce(new ApiError(409, 'Reset required', { code: 'reset_required' }))
+      .mockReturnValueOnce(bootstrap.promise);
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    expect(result.current.messages).toEqual([]);
+    expect(mockFetchMessageChanges).toHaveBeenLastCalledWith(1, null, expect.any(AbortSignal));
+    await act(async () => bootstrap.resolve(changes('new-scope', [MSG_2])));
+    expect(result.current.messages).toEqual([MSG_2]);
+  });
+
+  it.each([403, 404])('evicts cached messages and invalidates delete rollback on HTTP %i', async (status) => {
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start'))
+      .mockRejectedValueOnce(new ApiError(status, 'Unavailable'));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    let rollback!: () => void;
+    await act(() => { rollback = result.current.optimisticRemove(MSG_1.id); });
+    await advance(10_000);
+    await act(() => rollback());
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.hasMore).toBe(false);
+    expect(mockFetchMessages).not.toHaveBeenCalled();
+  });
+
+  it('keeps shifted history when a deletion races the last numbered page', async () => {
+    const all = newestMessages(52);
+    const remaining = all.slice(1);
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('before', all.slice(0, 51)))
+      .mockResolvedValueOnce(changes('after', [], [all[0].id]))
+      .mockResolvedValue(changes('after', []));
+    mockFetchMessages.mockImplementation((_thread, page) => Promise.resolve({
+      results: remaining.slice((page - 1) * 50, page * 50),
+      next: page === 1 ? 'next-page' : null,
+    }));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await act(async () => result.current.loadMore());
+    await act(async () => result.current.loadMore());
+    expect(mockFetchMessages.mock.calls.map(([, page]) => page)).toEqual([2, 1, 2]);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.messages.map((m) => m.id)).toEqual(remaining.map((m) => m.id));
+  });
+
+  it('recovers a signed cursor rejected after rotation', async () => {
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('expired'))
+      .mockRejectedValueOnce(new ApiError(400, 'Invalid cursor', { cursor: 'Invalid cursor.' }))
+      .mockResolvedValueOnce(changes('fresh', [MSG_2]));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    expect(mockFetchMessageChanges.mock.calls.map(([, cursor]) => cursor)).toEqual([null, 'expired', null]);
+    expect(result.current.messages).toEqual([MSG_2]);
+  });
+
+  it('continues polling after a transient outage while the screen stays foregrounded', async () => {
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('saved', []))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(changes('online-again', [MSG_1]));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(130_000);
+    expect(result.current.messages).toEqual([MSG_1]);
+  });
+
+  it('pauses a multi-page catch-up when the app backgrounds', async () => {
+    const pending = createDeferred<ReturnType<typeof changes>>();
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('start', [MSG_1]))
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce(changes('done', [MSG_2]));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    await act(() => focusManager.setFocused(false));
+    await act(async () => pending.resolve(changes('middle', [], [], true)));
+    expect(mockFetchMessageChanges).toHaveBeenCalledTimes(2);
+    await act(() => focusManager.setFocused(true));
+    expect(mockFetchMessageChanges.mock.calls.map(([, cursor]) => cursor)).toEqual([null, 'start', 'middle']);
+    expect(result.current.messages).toEqual([MSG_1, MSG_2]);
+  });
+
+  it('refocus replaces a still-pending background poll', async () => {
+    const previous = createDeferred<ReturnType<typeof changes>>();
+    mockFetchMessageChanges.mockResolvedValueOnce(changes('here', [MSG_1]))
+      .mockReturnValueOnce(previous.promise)
+      .mockResolvedValueOnce(changes('returned', [MSG_2]));
+    const { result } = await renderHook(() => useThreadMessages(1));
+    await advance(10_000);
+    const signal = mockFetchMessageChanges.mock.calls[1][2] as AbortSignal;
+    await act(() => focusManager.setFocused(false));
+    await act(() => focusManager.setFocused(true));
+    expect(signal.aborted).toBe(true);
+    await act(() => previous.resolve(changes('old', [], [MSG_1.id])));
+    expect(result.current.messages).toEqual([MSG_1, MSG_2]);
+  });
+
+  it('recognizes the old route only on unsupported bootstrap and polls legacy pages adaptively', async () => {
+    mockFetchMessageChanges.mockRejectedValueOnce(new ApiError(405, 'Method not allowed'));
+    mockFetchMessages.mockResolvedValue(PAGINATED_MESSAGES);
+    const { result } = await renderHook(() => useThreadMessages(1));
+    expect(result.current.messages).toEqual(PAGINATED_MESSAGES.results);
+    await advance(30_000);
+    expect(mockFetchMessageChanges).toHaveBeenCalledTimes(1);
+    expect(mockFetchMessages).toHaveBeenCalledTimes(3);
+    expect(mockFetchMessages).toHaveBeenLastCalledWith(1, 1, 50, expect.any(AbortSignal));
   });
 });

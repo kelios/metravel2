@@ -111,6 +111,16 @@ async function installMocks(page: Page, currentUser: { id: number; name: string 
     const method = route.request().method();
 
     if (method === 'GET') {
+      const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/changes/')) {
+        const lastId = Number(url.searchParams.get('cursor') ?? 0);
+        return route.fulfill({ json: {
+          messages: messageStore.filter((message) => message.id > lastId),
+          removed_ids: [],
+          has_more: false,
+          cursor: String(messageStore[0]?.id ?? 0),
+        } });
+      }
       // Return messages from shared store (newest first)
       const sorted = [...messageStore].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

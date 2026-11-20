@@ -155,8 +155,16 @@ export async function installMessagingMocks(
   await page.route('**/api/messages/**', async (route) => {
     const request = route.request();
     if (request.method() === 'GET') {
-      const threadId = Number(new URL(request.url()).searchParams.get('thread_id'));
+      const url = new URL(request.url());
+      const threadId = Number(url.searchParams.get('thread_id'));
       const results = threadId === 10 ? messages : [];
+      if (url.pathname.endsWith('/changes/')) {
+        await fulfillJson(route, {
+          messages: url.searchParams.has('cursor') ? [] : results,
+          removed_ids: [], cursor: 'fixture', has_more: false,
+        });
+        return;
+      }
       await fulfillJson(route, { count: results.length, next: null, previous: null, results });
       return;
     }

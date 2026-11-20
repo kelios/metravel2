@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import isEqual from 'fast-deep-equal';
+import { useMessagePolling } from '@/hooks/useMessagePolling';
 import { ApiError } from '@/api/client';
 import {
     fetchMessageThreads,
     fetchMessages,
+    fetchMessageChanges,
+    MESSAGE_PAGE_SIZE,
     fetchThreadByUser,
     fetchAvailableUsers,
     sendMessage,
@@ -26,6 +30,7 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 // ---- useThreads ----
 
 const MAX_CONSECUTIVE_FAILURES = 3;
+const isAccessDenied = (error: unknown) => error instanceof ApiError && [401, 403, 404].includes(error.status);
 
 // #2134: переписка с заблокированным скрывается сразу и после любого перечитывания.
 // Списки живут в useState, а не в React Query, поэтому guard кэша их не видит —
@@ -51,70 +56,76 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const mountedRef = useRef(true);
+    const requestRef = useRef<AbortController | null>(null);
+    const lastThreads = useRef<MessageThread[]>([]);
     const consecutiveFailuresRef = useRef(0);
     const hiddenThreadIdsRef = useRef(new Set<number>());
 
     useEffect(() => {
         mountedRef.current = true;
-        return () => { mountedRef.current = false; };
+        return () => {
+            mountedRef.current = false;
+            requestRef.current?.abort();
+        };
     }, []);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        consecutiveFailuresRef.current = 0;
+    const read = useCallback(async (silent: boolean) => {
+        if (!mountedRef.current || (silent && (requestRef.current || consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES))) return false;
+        requestRef.current?.abort();
+        const request = new AbortController();
+        requestRef.current = request;
+        if (!silent) {
+            setLoading(true);
+            setError(null);
+            consecutiveFailuresRef.current = 0;
+        }
         try {
-            const data = await fetchMessageThreads();
-            if (mountedRef.current) {
-                setThreads(
-                    Array.isArray(data)
-                        ? withoutBlockedThreads(data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id)))
-                        : [],
-                );
-            }
+            const data = await fetchMessageThreads(request.signal);
+            if (request.signal.aborted) return false;
+            const next = Array.isArray(data)
+                ? withoutBlockedThreads(data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id)))
+                : [];
+            const changed = !isEqual(lastThreads.current, next);
+            lastThreads.current = next;
+            setThreads(next);
+            setError(null);
+            consecutiveFailuresRef.current = 0;
+            return changed;
         } catch (e: unknown) {
-            devError('useThreads load error:', e);
-            if (mountedRef.current) {
-                setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
+            if (!request.signal.aborted) {
+                consecutiveFailuresRef.current = isAccessDenied(e) ? consecutiveFailuresRef.current + 1 : 0;
+                if (!silent) {
+                    devError('useThreads load error:', e);
+                    setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
+                }
             }
+            return false;
         } finally {
-            if (mountedRef.current) {
+            if (!request.signal.aborted) {
+                requestRef.current = null;
                 setLoading(false);
                 setLoaded(true);
             }
         }
     }, []);
 
-    const silentRefresh = useCallback(async () => {
-        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
-        try {
-            const data = await fetchMessageThreads();
-            if (mountedRef.current) {
-                consecutiveFailuresRef.current = 0;
-                setThreads(
-                    Array.isArray(data)
-                        ? withoutBlockedThreads(data.filter((thread) => !hiddenThreadIdsRef.current.has(thread.id)))
-                        : [],
-                );
-            }
-        } catch {
-            consecutiveFailuresRef.current += 1;
-        }
-    }, []);
+    const poll = useCallback((resuming: boolean) => {
+        if (resuming) consecutiveFailuresRef.current = 0;
+        return read(!(resuming && requestRef.current));
+    }, [read]);
+    const restartPolling = useMessagePolling(enabled && pollEnabled, poll, THREADS_POLL_INTERVAL, 120_000);
+    const load = useCallback(async () => {
+        restartPolling();
+        await read(false);
+    }, [read, restartPolling]);
 
-    useEffect(() => { if (enabled) load(); }, [enabled, load]);
+    useEffect(() => { if (enabled) void load(); }, [enabled, load]);
 
     useEffect(() => subscribeAuthorBlock((_authorId, blocked) => {
         if (!mountedRef.current) return;
         if (blocked) setThreads((prev) => withoutBlockedThreads(prev));
         else if (enabled) void load();
     }), [enabled, load]);
-
-    useEffect(() => {
-        if (!enabled || !pollEnabled) return;
-        const id = setInterval(silentRefresh, THREADS_POLL_INTERVAL);
-        return () => clearInterval(id);
-    }, [enabled, pollEnabled, silentRefresh]);
 
     const setThreadUnreadCount = useCallback((threadId: number, unreadCount: number) => {
         setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, unread_count: unreadCount } : t)));
@@ -149,15 +160,27 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
 
 // ---- useThreadMessages ----
 
-type ThreadMessageLoadMode = 'reset' | 'more' | 'poll';
+type ThreadMessageLoadMode = 'refresh' | 'more' | 'poll';
 
 interface ThreadMessageSession {
     threadId: number | null;
     ownerId: string | null;
     page: number;
     hasMore: boolean;
+    cursor: string | null;
+    legacy: boolean;
+    legacyHead: Message[];
     failures: number;
+    hidden: Set<number>;
     request: { controller: AbortController; mode: ThreadMessageLoadMode } | null;
+}
+
+function mergeMessages(previous: Message[], updates: Message[], removed: number[]) {
+    if (!updates.length && !removed.length) return previous;
+    const byId = new Map(previous.map((message) => [message.id, message]));
+    for (const message of updates) byId.set(message.id, message);
+    for (const id of removed) byId.delete(id);
+    return [...byId.values()];
 }
 
 export function useThreadMessages(
@@ -169,6 +192,8 @@ export function useThreadMessages(
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
+    const displayed = useRef(messages);
+    useLayoutEffect(() => { displayed.current = messages; }, [messages]);
     const sessionRef = useRef<ThreadMessageSession | null>(null);
 
     const getSession = useCallback(() => {
@@ -176,62 +201,143 @@ export function useThreadMessages(
         return session?.threadId === threadId && session.ownerId === ownerId ? session : null;
     }, [threadId, ownerId]);
 
-    const load = useCallback(async (mode: ThreadMessageLoadMode) => {
+    const load = useCallback(async (mode: ThreadMessageLoadMode, rebootstrap = false, pollSignal?: AbortSignal) => {
         const session = getSession();
-        if (!session || session.threadId == null || session.threadId < 0) return;
-        if (mode === 'more' && (!session.hasMore || session.page === 1)) return;
-        if (mode === 'poll' && session.failures >= MAX_CONSECUTIVE_FAILURES) return;
+        if (!session || session.threadId == null || session.threadId < 0) return false;
+        if (mode === 'more' && (!session.hasMore || (!session.cursor && session.page === 1))) return false;
+        if (mode === 'poll' && session.failures >= MAX_CONSECUTIVE_FAILURES) return false;
+        const selectedId = session.threadId;
         const pending = session.request;
-        if (pending && mode !== 'reset' && (mode !== 'more' || pending.mode !== 'poll')) return;
+        if (pending && (mode === 'poll' || (mode === 'more' && pending.mode !== 'poll'))) return false;
 
         pending?.controller.abort();
         const request = { controller: new AbortController(), mode };
         session.request = request;
+        const signal = request.controller.signal;
         const isCurrent = () => getSession() === session && session.request === request;
-        const page = mode === 'more' ? session.page : 1;
-        const initialPoll = mode === 'poll' && session.page === 1;
-
+        const clearSnapshot = () => {
+            session.cursor = null;
+            session.page = 1;
+            session.hasMore = false;
+            session.hidden = new Set();
+            session.legacyHead = [];
+            setMessages([]);
+            setHasMore(false);
+        };
+        const filter = (items: Message[]) => withoutBlockedMessages(items.filter((m) => !session.hidden.has(m.id)));
+        if (rebootstrap) clearSnapshot();
         if (mode !== 'poll') {
+            session.failures = 0;
             setLoading(true);
             setError(null);
         }
-
+        let changed = false;
+        let historyInvalidated = false;
+        // Older history uses numbered pages. A delta read after the page request
+        // checks for a concurrent deletion or access reset before publishing that page.
+        const readChanges = async () => {
+            let more: boolean;
+            do {
+                const cursor = session.cursor;
+                let delta;
+                try {
+                    delta = await fetchMessageChanges(selectedId, cursor, signal);
+                } catch (e) {
+                    if (!isCurrent()) return;
+                    // The old DRF router resolves "changes" as a detail route with DELETE only.
+                    if (cursor === null && e instanceof ApiError && e.status === 405) {
+                        session.legacy = true;
+                        return;
+                    }
+                    const invalidCursor = e instanceof ApiError && e.status === 400 &&
+                        e.data != null && typeof e.data === 'object' && 'cursor' in e.data;
+                    if (cursor !== null && e instanceof ApiError && (e.status === 409 || invalidCursor)) {
+                        clearSnapshot();
+                        historyInvalidated = true;
+                        more = true;
+                        continue;
+                    }
+                    throw e;
+                }
+                if (!isCurrent()) return;
+                if (!delta?.cursor || (delta.has_more && delta.cursor === cursor)) {
+                    throw new Error(i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10'));
+                }
+                if (cursor === null) {
+                    session.page = 2;
+                    session.hasMore = delta.messages.length > MESSAGE_PAGE_SIZE;
+                    setHasMore(session.hasMore);
+                    setMessages(filter(delta.messages.slice(0, MESSAGE_PAGE_SIZE)));
+                } else {
+                    const updates = filter(delta.messages);
+                    for (const id of delta.removed_ids) session.hidden.delete(id);
+                    if (updates.length || delta.removed_ids.length) {
+                        setMessages((prev) => mergeMessages(prev, updates, delta.removed_ids));
+                    }
+                    if (session.hasMore && delta.removed_ids.length) {
+                        session.page = Math.max(1, session.page - Math.ceil(delta.removed_ids.length / MESSAGE_PAGE_SIZE));
+                        historyInvalidated = true;
+                    }
+                }
+                session.cursor = delta.cursor;
+                changed ||= delta.messages.length > 0 || delta.removed_ids.length > 0;
+                more = delta.has_more;
+            } while (more && !pollSignal?.aborted);
+        };
         try {
-            const data = await fetchMessages(session.threadId, page, 50, request.controller.signal);
-            if (!isCurrent()) return;
-
-            session.failures = 0;
-            const results = withoutBlockedMessages(data.results || []);
-            if (mode === 'reset' || initialPoll) {
-                if (initialPoll) setError(null);
-                setMessages(results);
-            } else {
-                setMessages((previous) => {
-                    const ids = new Set(previous.map((message) => message.id));
-                    const added = results.filter((message) => !ids.has(message.id));
-                    if (added.length === 0) return previous;
-                    if (mode === 'more') return [...previous, ...added];
-                    return [...added, ...previous].sort((a, b) => {
-                        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-                        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-                        return ta - tb || a.id - b.id;
+            if (mode !== 'more' && !session.legacy) await readChanges();
+            if (!isCurrent()) return false;
+            if (mode === 'more' || session.legacy) {
+                const known = mode === 'more' ? new Set(displayed.current.map((m) => m.id)) : null;
+                do {
+                    const page = mode === 'more' ? session.page : 1;
+                    const data = await fetchMessages(selectedId, page, MESSAGE_PAGE_SIZE, signal).catch((e) => {
+                        // DRF also returns 404 when a deletion removes the last numbered page.
+                        if (mode === 'more' && !session.legacy && e instanceof ApiError && e.status === 404) return null;
+                        throw e;
                     });
-                });
+                    if (!isCurrent()) return false;
+                    if (!session.legacy && mode === 'more') {
+                        historyInvalidated = false;
+                        await readChanges();
+                        if (!isCurrent()) return false;
+                        if (historyInvalidated) continue;
+                    }
+                    const updates = filter(data?.results ?? []);
+                    if (session.legacy && mode !== 'more') {
+                        changed = !isEqual(session.legacyHead, updates);
+                        session.legacyHead = updates;
+                        if (session.page === 1 || rebootstrap) setMessages(updates);
+                        else if (changed) setMessages((prev) => mergeMessages(prev, updates, []));
+                    } else {
+                        // The checkpoint is newer than the history page. Keep any concurrent edits.
+                        setMessages((prev) => {
+                            const ids = new Set(prev.map((m) => m.id));
+                            return [...prev, ...updates.filter((m) => !ids.has(m.id))];
+                        });
+                    }
+                    if (mode === 'more' || session.page === 1) {
+                        session.hasMore = Boolean(data?.next);
+                        session.page = page + 1;
+                        setHasMore(session.hasMore);
+                    }
+                    if (!known || updates.some((m) => !known.has(m.id))) break;
+                    // Catch-up can move a whole page of already visible rows across the boundary.
+                } while (session.hasMore);
             }
-
-            if (mode !== 'poll' || initialPoll) {
-                session.hasMore = Boolean(data.next);
-                session.page = page + 1;
-                setHasMore(session.hasMore);
-            }
-        } catch (e: unknown) {
-            if (!isCurrent()) return;
-            if (mode === 'poll') {
-                session.failures += 1;
-            } else {
+            session.failures = 0;
+            setError(null);
+            return changed;
+        } catch (e) {
+            if (!isCurrent()) return false;
+            const denied = isAccessDenied(e);
+            if (denied) clearSnapshot();
+            session.failures = denied ? session.failures + 1 : 0;
+            if (mode !== 'poll' || denied) {
                 devError('useThreadMessages load error:', e);
                 setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
             }
+            return false;
         } finally {
             if (isCurrent()) {
                 session.request = null;
@@ -242,7 +348,8 @@ export function useThreadMessages(
 
     useLayoutEffect(() => {
         const session: ThreadMessageSession = {
-            threadId, ownerId, page: 1, hasMore: true, failures: 0, request: null,
+            threadId, ownerId, page: 1, hasMore: true, cursor: null, legacy: false, legacyHead: [],
+            hidden: new Set(), failures: 0, request: null,
         };
         sessionRef.current = session;
         setMessages([]);
@@ -255,23 +362,32 @@ export function useThreadMessages(
         };
     }, [threadId, ownerId]);
 
-    useEffect(() => { void load('reset'); }, [load]);
+    useEffect(() => { void load('refresh'); }, [load]);
 
     useEffect(() => subscribeAuthorBlock((_authorId, blocked) => {
         if (!getSession()) return;
         if (blocked) setMessages((previous) => withoutBlockedMessages(previous));
-        else void load('reset');
+        else void load('refresh', true);
     }), [getSession, load]);
 
-    useEffect(() => {
-        if (threadId == null || threadId < 0 || !pollEnabled) return;
-        const id = setInterval(() => void load('poll'), MESSAGES_POLL_INTERVAL);
-        return () => clearInterval(id);
-    }, [threadId, pollEnabled, load]);
+    const poll = useCallback((resuming: boolean, signal: AbortSignal) => {
+        const session = getSession();
+        if (session && resuming) session.failures = 0;
+        return load(resuming && session?.request?.mode === 'poll' ? 'refresh' : 'poll', false, signal);
+    }, [getSession, load]);
+    const restartPolling = useMessagePolling(threadId != null && threadId >= 0 && pollEnabled, poll, MESSAGES_POLL_INTERVAL, 60_000);
+    const refresh = useCallback(async () => {
+        if (getSession()) {
+            restartPolling();
+            await load('refresh');
+        }
+    }, [getSession, load, restartPolling]);
 
     const optimisticRemove = useCallback((messageId: number) => {
         const session = getSession();
         if (!session) return () => {};
+        const hidden = session.hidden;
+        hidden.add(messageId);
         const snapshot: { removed: Message | null; index: number } = { removed: null, index: -1 };
         setMessages((prev) => {
             const index = prev.findIndex((m) => m.id === messageId);
@@ -286,7 +402,7 @@ export function useThreadMessages(
         // объект snapshot изолирует конкурентные вызовы (нет общей мутируемой переменной).
         return () => {
             const { removed, index } = snapshot;
-            if (getSession() === session && removed) {
+            if (getSession() === session && session.hidden === hidden && hidden.delete(messageId) && removed && !getBlockedAuthorIds().has(removed.sender)) {
                 setMessages((prev) => {
                     if (prev.some((m) => m.id === removed.id)) return prev;
                     const copy = [...prev];
@@ -297,7 +413,7 @@ export function useThreadMessages(
         };
     }, [getSession]);
 
-    return { messages, loading, error, hasMore, loadMore: () => load('more'), refresh: () => load('reset'), optimisticRemove };
+    return { messages, loading, error, hasMore, loadMore: () => load('more'), refresh, optimisticRemove };
 }
 
 // ---- useSendMessage ----

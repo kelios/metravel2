@@ -244,8 +244,8 @@ export interface ThreadByUserResponse {
 
 // ---- API functions ----
 
-export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
-    return messagingFetch<MessageThread[]>('/message-threads/');
+export const fetchMessageThreads = async (signal?: AbortSignal): Promise<MessageThread[]> => {
+    return messagingFetch<MessageThread[]>('/message-threads/', { signal });
 };
 
 // Backend may return either a bare array or a paginated/wrapped envelope
@@ -287,6 +287,25 @@ export const fetchMessages = async (
         previous: raw.previous ?? null,
         results: raw.results ?? raw.data ?? [],
     };
+};
+
+export const MESSAGE_PAGE_SIZE = 50;
+
+export interface MessageChanges {
+    messages: Message[];
+    removed_ids: number[];
+    cursor: string;
+    has_more: boolean;
+}
+
+export const fetchMessageChanges = (threadId: number, cursor: string | null, signal: AbortSignal) => {
+    // One extra bootstrap row tells us whether numbered history has a second page.
+    const params = new URLSearchParams({
+        thread_id: String(threadId),
+        limit: String(cursor === null ? MESSAGE_PAGE_SIZE + 1 : MESSAGE_PAGE_SIZE),
+    });
+    if (cursor !== null) params.set('cursor', cursor);
+    return messagingFetch<MessageChanges>(`/messages/changes/?${params}`, { signal });
 };
 
 export interface MarkThreadReadPayload {

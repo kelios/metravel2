@@ -99,7 +99,9 @@ async function installMocks(page: Page) {
         route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ count: messages.length, next: null, previous: null, results: messages }),
+            body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/changes/')
+                ? { messages: route.request().url().includes('cursor=') ? [] : messages, removed_ids: [], cursor: 'fixture', has_more: false }
+                : { count: messages.length, next: null, previous: null, results: messages }),
         }),
     );
 }

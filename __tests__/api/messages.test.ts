@@ -1,6 +1,7 @@
 import {
     fetchMessageThreads,
     fetchMessages,
+    fetchMessageChanges,
     fetchAvailableUsers,
     fetchThreadByUser,
     sendMessage,
@@ -99,6 +100,22 @@ describe('Messages API', () => {
             mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Not found' }, 404));
 
             await expect(fetchMessageThreads()).rejects.toMatchObject({ status: 404 });
+        });
+    });
+
+    describe('fetchMessageChanges', () => {
+        it.each([null, 'opaque+/=:&'])('reads the versioned change feed with cursor %p', async (cursor) => {
+            const signal = new AbortController().signal;
+            const page = { cursor: 'next', messages: [], removed_ids: [7], has_more: true };
+            mockedFetch.mockResolvedValueOnce(mockResponse(page));
+            expect(await fetchMessageChanges(5, cursor, signal)).toEqual(page);
+            const [url, init] = mockedFetch.mock.calls[0];
+            const parsed = new URL(url, 'https://example.test');
+            expect(parsed.pathname).toMatch(/\/messages\/changes\/$/);
+            expect(parsed.searchParams.get('thread_id')).toBe('5');
+            expect(parsed.searchParams.get('cursor')).toBe(cursor);
+            expect(parsed.searchParams.get('limit')).toBe(cursor === null ? '51' : '50');
+            expect(init?.signal).toBe(signal);
         });
     });
 

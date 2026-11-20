@@ -6,6 +6,8 @@ import { QueryClient } from '@tanstack/react-query'
 jest.mock('@/api/messages', () => ({
   fetchMessageThreads: jest.fn(),
   fetchMessages: jest.fn(),
+  fetchMessageChanges: jest.fn(),
+  MESSAGE_PAGE_SIZE: 50,
   fetchThreadByUser: jest.fn(),
   fetchAvailableUsers: jest.fn(),
   sendMessage: jest.fn(),
@@ -15,7 +17,7 @@ jest.mock('@/api/messages', () => ({
 }))
 
 import { useThreadMessages, useThreads } from '@/hooks/useMessages'
-import { fetchMessageThreads, fetchMessages } from '@/api/messages'
+import { fetchMessageThreads, fetchMessageChanges } from '@/api/messages'
 import {
   applyAuthorBlock,
   installBlockedAuthorGuard,
@@ -43,7 +45,7 @@ beforeEach(() => {
   qc = new QueryClient()
   stopGuard = installBlockedAuthorGuard(qc, { getOwner: () => '1' })
   ;(fetchMessageThreads as jest.Mock).mockResolvedValue(threads)
-  ;(fetchMessages as jest.Mock).mockResolvedValue({ results: messages, next: null })
+  ;(fetchMessageChanges as jest.Mock).mockResolvedValue({ messages, cursor: 'start', removed_ids: [], has_more: false })
 })
 
 afterEach(() => stopGuard())

@@ -337,21 +337,19 @@ function MessagesScreenContent({ isAuthenticated, authReady, userId }: {
                     try {
                         const res = await fetchThreadByUser(otherUid);
                         if (res.thread_id != null) {
-                            setSelectedThread({
-                                id: res.thread_id,
-                                participants: selectedThread.participants,
-                                created_at: null,
-                                last_message_created_at: null,
-                                unread_count: 0,
-                            });
+                            const resolvedId = res.thread_id;
+                            setSelectedThread((current) => current === selectedThread ? {
+                                ...selectedThread,
+                                id: resolvedId,
+                            } : current);
                         }
                     } catch (e) {
                         devError('handleSend: fetchThreadByUser error:', e);
                     }
-                    refreshThreads();
                 } else {
-                    refreshMessages();
+                    void refreshMessages();
                 }
+                void refreshThreads();
             }
             return ok;
         },
