@@ -120,7 +120,8 @@ for i, s in enumerate(SEG):
         used.setdefault(f0, []).append((i0, i0 + o["dur"], note + " / перебивка"))
     cards = [c for c in s.get("cards", []) if not c.get("pip") and c["file"].lower().endswith(".png")]
     for c in cards:
-        if c["dur"] < 3.0 and not teaser: add("ПЛАШКА", T[i] + c["at"] - s["in"], note, f"{os.path.basename(c['file'])} на экране {c['dur']:.1f} с")
+        if c.get("cont"): continue                     # продолжение плашки поверх стыка — меряется по первому куску ("span")
+        if c.get("span", c["dur"]) < 3.0 and not teaser: add("ПЛАШКА", T[i] + c["at"] - s["in"], note, f"{os.path.basename(c['file'])} на экране {c.get('span', c['dur']):.1f} с")
     if not teaser and not recap:
         br = sorted([o for o in s.get("broll", []) if not o.get("flash")], key=lambda o: o["at"])
         edges = [s["in"]] + [x for o in br for x in (o["at"], o["at"] + o["dur"])] + [s["out"]]
