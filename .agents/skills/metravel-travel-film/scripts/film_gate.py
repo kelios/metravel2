@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Допуск к сборке travel-фильма: 1080p — после рецензий, 4K — только по слову владельца.
 
-Журнал допуска — <папка плана>/допуск/<серия>.json. Пишет его только рецензент
-(`film-reviewer`) и, для 4K, сессия, получившая слово владельца в чате.
+Журнал допуска — <папка плана>/допуск/<серия>.json. Оценки пишет только рецензент
+(`film-reviewer`), слово владельца на 4K — сессия, получившая его в чате;
+сборщик пишет лишь запрос рецензии (request), на допуск он не влияет.
 
   film_gate.py script  <сценарий.md> --series s3 --score 8 --report <рецензия.md>
       оценка «сценарий»; журнал кладётся рядом с планами: --plans-dir <папка>
   film_gate.py verdict <plan.json> --series s3 --draft <черновик.mp4> --tech <audit_tech.md>
                        --scores сюжет=8,монтаж=8,картинка=8,звук=8,музыка=8 --blockers 0 --report <рецензия.md>
       оценки готового черновика ровно по этому плану (sha256 файла плана)
+  film_gate.py request <plan.json> --series s3 --draft <черновик.mp4> --from "<сессия>"
+      сборщик просит рецензию: status показывает черновик в очереди, пока по этому плану нет вердикта
   film_gate.py owner-4k <plan.json> --series s3 --quote "<слова владельца из чата>"
   film_gate.py check <plan.json> --size 1920x1080      — код 0, если сборка разрешена
   film_gate.py status <папка планов>                    — сводка по сериям
@@ -177,6 +180,10 @@ def status(plans_dir):
                     line += ", 4K разрешён владельцем"
             else:
                 line += " → план изменён после вердикта, нужна новая рецензия"
+        req = last(entries, "request")
+        if req and not any(e.get("kind") == "film" and e.get("plan_sha") == req["plan_sha"] and e["at"] >= req["at"]
+                           for e in entries):
+            line += f" · ЖДЁТ РЕЦЕНЗИИ с {req['at'].replace('T', ' ')[:16]}: {os.path.basename(req['draft'])} от {req['from']}"
         rows.append(line)
     print("\n".join(rows) if rows else "журналов допуска нет")
 
@@ -191,6 +198,8 @@ def main():
     v.add_argument("--draft", required=True); v.add_argument("--tech", required=True)
     v.add_argument("--scores", required=True); v.add_argument("--blockers", type=int, required=True)
     v.add_argument("--report", required=True)
+    r = sub.add_parser("request"); r.add_argument("plan"); r.add_argument("--series", required=True)
+    r.add_argument("--draft", required=True); r.add_argument("--from", dest="sender", required=True)
     o = sub.add_parser("owner-4k"); o.add_argument("plan"); o.add_argument("--series", required=True)
     o.add_argument("--quote", required=True)
     c = sub.add_parser("check"); c.add_argument("plan"); c.add_argument("--size", required=True)
@@ -218,6 +227,17 @@ def main():
         problems = gate_problems(a.plan, *HD_MAX)
         print("записано:", path)
         print("1080p разрешён" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
+    elif a.cmd == "request":
+        check_series(a.plan, a.series)
+        if not a.sender.strip():
+            raise SystemExit("нужно имя сессии-сборщика в --from")
+        for p in (a.plan, a.draft):
+            if not os.path.exists(p):
+                raise SystemExit(f"нет файла: {p}")
+        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series,
+                      {"kind": "request", "plan": os.path.abspath(a.plan), "plan_sha": sha(a.plan),
+                       "draft": os.path.abspath(a.draft), "from": a.sender.strip()})
+        print("записано:", path)
     elif a.cmd == "owner-4k":
         check_series(a.plan, a.series)
         if len(a.quote.strip()) < 3:
