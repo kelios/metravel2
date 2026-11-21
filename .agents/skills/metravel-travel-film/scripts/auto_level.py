@@ -44,11 +44,26 @@ def _norm(x):
     return unicodedata.normalize("NFC", x)
 
 
-TALK_MIN_WORDS, TALK_DENSITY = 5, 0.3   # разговор, а не вид: слов (длиннее 1 буквы) не меньше 5 и не реже 0,3 в секунду
+TALK_MIN_WORDS, TALK_DENSITY = 3, 0.3   # разговор, а не вид: слов (длиннее 1 буквы) не меньше 3 и не реже 0,3 в секунду
+# галлюцинации whisper на ветре и тишине (s3: «город сверху», «поля», «мол и маяк», «обед» — «субтитры создавал DimaTorzok»)
+HALLU = re.compile(r"субтитр|dimatorzok|редактор\w* субтитр|продолжение следует|подписывайтесь на канал", re.I)
+
+
+def real_words(wf):
+    """Слова расшифровки без галлюцинаций whisper: фраза с HALLU и фраза из одного слова, повторённого ≥ 3 раз
+    («мах мах мах» на ветряках). Общий источник слов для auto_level и audit_mix."""
+    out = []
+    for y in json.load(open(wf))["segments"]:
+        ws = y.get("words", [])
+        toks = [re.sub(r"[^\w]", "", x.get("word", "")).lower() for x in ws]
+        if HALLU.search(y.get("text", "") + " " + " ".join(toks)) or (len(toks) >= 3 and len(set(toks)) == 1):
+            continue
+        out += ws
+    return out
 
 
 def is_talk(nwords, dur):
-    """Отрезок — разговор: whisper находит в ветре и прибое 3–4 «слова» (s3 v12: «город сверху», «мол и маяк»).
+    """Отрезок — разговор (короткие реплики «фух, хорошо», «пока-пока» — тоже, рецензент 22.11).
     Общий порог с audit_mix.py (ЗАПАС, ТОНЕТ): рендер и проверка одинаково решают, где речь."""
     return nwords >= TALK_MIN_WORDS and nwords >= dur * TALK_DENSITY
 
@@ -72,7 +87,7 @@ def live_speech(segs, words_root, alias):
         if not wf:
             continue
         if wf not in cache:
-            cache[wf] = [(x["start"], re.sub(r"[^\w]", "", x.get("word", ""))) for y in json.load(open(wf))["segments"] for x in y.get("words", [])]
+            cache[wf] = [(x["start"], re.sub(r"[^\w]", "", x.get("word", ""))) for x in real_words(wf)]
         nw = sum(1 for ws, w in cache[wf] if a + off <= ws < b + off and len(w) > 1)
         if is_talk(nw, (b - a) * k):
             iv.append((t0, t0 + (b - a) * k))
@@ -113,6 +128,8 @@ def envelope(n, music, live, voice, speech_iv, adj):
             continue
         on = set(speech_windows(w, rng))
         lv = energy(w, on)
+        if lv < -45:                                 # речь в расшифровке, а в звуке тихо (заглушено планом) — не приглушать
+            continue
         levels.append(lv)
         for i in rng:                                # речь рядом (±1,5 с): тихая фраза в громком блоке — своя музыка;
             near = [q for q in range(max(rng.start, i - h), min(rng.stop, i + h)) if q in on]

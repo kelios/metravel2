@@ -28,7 +28,7 @@ segments.json — таблица отрезков рендера (start, end, no
 """
 import json, math, os, re, subprocess, sys, tempfile, unicodedata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from auto_level import is_talk   # порог «разговор, а не вид» — общий с автоуровнями render_plan
+from auto_level import is_talk, real_words   # порог «разговор, а не вид» — общий с автоуровнями render_plan
 
 a = sys.argv[1:]
 film = a[0]
@@ -48,7 +48,7 @@ def src_words(s):
     if p in alias: p, off = alias[p][0], float(alias[p][1])
     w = idx.get(unicodedata.normalize("NFC", os.path.splitext(os.path.basename(p))[0]))
     if not w: return None
-    return [N(x["word"]) for y in json.load(open(w))["segments"] for x in y.get("words", []) if s["in"] + off <= x["start"] < s["out"] + off]
+    return [N(x["word"]) for x in real_words(w) if s["in"] + off <= x["start"] < s["out"] + off]   # без галлюцинаций whisper
 
 def lufs_series(path, step=0.4):
     """Кратковременная громкость (M, окно 400 мс) по всему файлу: [(t, lufs)]."""
@@ -137,8 +137,8 @@ for s in segs:
     a0, b0 = s["start"] + 0.3, s["end"] - 0.3
     if b0 - a0 < 1: continue
     vo = mean_db(S_voi, a0, b0); sw = src_words(s) if root else None
-    live = (sw is not None and is_talk(len([w for w in sw if len(w) > 1]), s["end"] - s["start"])) or not root
-    talking = vo > -35 or live                  # тот же порог разговора, что у ЗАПАС и автоуровней: 3–4 «слова» ветра — вид
+    live = (sw is not None and len(sw) >= 3) or not root   # от 3 слов, без порога плотности: короткая реплика на длинном
+    talking = vo > -35 or live                  # виде — тоже речь (рецензент 22.11); галлюцинации whisper отсеяны в src_words
     sp = max(mean_db(S_base, a0, b0) if live else -99, vo)
     mu = mean_db(S_mus, a0, b0)
     if vo > -35 and vo >= sp - 0.01:            # голос за кадром: музыку меряем в те же моменты, а не по всему отрезку —
@@ -184,7 +184,7 @@ def words_at(sg, t0, t1):
     w = idx.get(unicodedata.normalize("NFC", os.path.splitext(os.path.basename(p))[0]))
     if not w: return None
     a0, b0 = sg["in"] + off + (t0 - sg["start"]), sg["in"] + off + (t1 - sg["start"])
-    return any(a0 - 0.2 <= x["start"] < b0 + 0.2 for y in json.load(open(w))["segments"] for x in y.get("words", []))
+    return any(a0 - 0.2 <= x["start"] < b0 + 0.2 for x in real_words(w))
 if R_voi and R_base:
     i, n_o = 0, min(len(R_voi), len(R_base))
     while i < n_o:
