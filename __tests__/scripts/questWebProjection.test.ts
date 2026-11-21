@@ -184,7 +184,7 @@ describe('immutable public quest projection', () => {
   // из одного шаблона на все города; формулу «что посмотреть» держат статьи.
   it('builds the city landing head from the shared landing builder', () => {
     const city = buildQuestWebProjection(questPrivateSnapshot(), catalogs).pages.find((page: { kind: string }) => page.kind === 'city');
-    expect(city.page.meta.title).toBe('Город: квесты-прогулки с заданиями | Metravel');
+    expect(city.page.meta.title).toBe('Город: квесты-прогулки с заданиями | MeTravel');
     expect(city.page.meta.description).toBe('Город: 1 квест с заданиями — «Квест по городу». Проходите сами в любой день, без записи.');
   });
 
@@ -215,17 +215,17 @@ describe('immutable public quest projection', () => {
     expect(cities).toHaveLength(2);
     const metas = cities.map((page: { page: { meta: { title: string; description: string } } }) => page.page.meta);
     expect(metas.map((meta: { title: string }) => meta.title).sort()).toEqual([
-      'Город, Беларусь: квесты-прогулки с заданиями | Metravel',
-      'Город, Польша: квесты-прогулки с заданиями | Metravel',
+      'Город, Беларусь: квесты-прогулки с заданиями | MeTravel',
+      'Город, Польша: квесты-прогулки с заданиями | MeTravel',
     ]);
     expect(new Set(metas.map((meta: { description: string }) => meta.description)).size).toBe(2);
   });
 
   it('rejects a city landing head that stays duplicated after the country is added (#3236)', () => {
-    const entry = (path: string) => ({ canonical_path: path, page: { meta: { title: 'Город | Metravel', description: 'Одно описание.' } } });
+    const entry = (path: string) => ({ canonical_path: path, page: { meta: { title: 'Город | MeTravel', description: 'Одно описание.' } } });
     const cities = [entry('/quests/a'), entry('/quests/b')];
     const inputs = new Map(cities.map((city) => [city, { cityName: 'Город', countryName: 'Беларусь', questTitles: ['Квест'] }]));
-    expect(() => assertDistinctCityLandingMeta(cities, inputs)).toThrow('Quest city landing title is not unique: "Город, Беларусь: квесты-прогулки с заданиями | Metravel" at /quests/a, /quests/b');
+    expect(() => assertDistinctCityLandingMeta(cities, inputs)).toThrow('Quest city landing title is not unique: "Город, Беларусь: квесты-прогулки с заданиями | MeTravel" at /quests/a, /quests/b');
   });
 
   // #3379 (в): бэкенд меряет UTF-8 компактного JSON страницы против MAX_PAGE_BYTES = 256 КБ.

@@ -345,7 +345,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана.
 export function generateMetadata() {
   return routeMetadata({
-    title: `${i18nT('offline:title')} | Metravel`,
+    title: `${i18nT('offline:title')} | MeTravel`,
     description: i18nT('seoStatic:root.default.description'),
     canonical: '/offline',
     robots: 'noindex, nofollow',

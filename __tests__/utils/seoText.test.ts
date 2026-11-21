@@ -99,7 +99,7 @@ describe('seoText', () => {
 
   describe('buildSeoTitle', () => {
     it('keeps the brand suffix while it fits the budget', () => {
-      expect(buildSeoTitle('Албания. Влёра')).toBe('Албания. Влёра | Metravel');
+      expect(buildSeoTitle('Албания. Влёра')).toBe('Албания. Влёра | MeTravel');
     });
 
     it('drops the brand instead of the keywords when both do not fit', () => {

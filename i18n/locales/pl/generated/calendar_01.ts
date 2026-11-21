@@ -1,7 +1,7 @@
 export const calendarGenerated1 = {
   "app.tabs.calendar.moi_plany_i_puteshestviya_a3cff280": "Moje plany i podróże",
   "app.tabs.calendar.moy_kalendar_f9da1dd3": "Mój kalendarz",
-  "app.tabs.calendar.moy_kalendar_metravel_1d39e960": "Mój kalendarz | Metravel",
+  "app.tabs.calendar.moy_kalendar_metravel_1d39e960": "Mój kalendarz | MeTravel",
   "app.tabs.calendar.pokazat_vse_302c971f": "Pokaż wszystko",
   "app.tabs.calendar.ubrat_77b9552b": "Usuń",
   "app.tabs.calendar.ubrat_iz_kalendarya_171623ca": "Usuń z kalendarza",

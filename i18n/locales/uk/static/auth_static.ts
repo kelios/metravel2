@@ -30,7 +30,7 @@ export const authStaticResources = {
   "authScreen.intentDone.calendar": "«{{title}}» — у плані, у «Хочу поїхати»",
   "authScreen.progressSaved": "Зберегли ваш прогрес",
   "google.unavailable.text": "Google Sign-In не налаштований",
-  "google.unavailable.a11y": "Google Sign-In не налаштований для мобільної програми",
+  "google.unavailable.a11y": "Google Sign-In не налаштований для мобільного застосунку",
   "accountConfirmation.failed": "Не вдалося підтвердити обліковий запис. {{details}}",
   "accountConfirmation.error": "Відбулася помилка під час підтвердження облікового запису. {{details}}",
   "accountConfirmation.signInNotice": "Якщо ви продовжите, то підтвердите електронну пошту й увійдете в обліковий запис, якого стосується це посилання. Якщо ви вже ввійшли в інший обліковий запис, його буде змінено.",

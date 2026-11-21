@@ -96,7 +96,7 @@ const OVERLOAD_RETRY_MAX_DELAY_MS = 5000
 const OVERLOAD_RETRY_MAX_PAGES = 6
 
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.'
-const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel'])
+const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel', 'Статья | MeTravel'])
 
 function fetchUrl(url, redirectDepth = 0, originalUrl = url, retried = false) {
   return new Promise((resolve, reject) => {

@@ -32,7 +32,7 @@ describe('discoverySeo', () => {
   it('creates structured data for the map page', () => {
     const jsonLd = createMapStructuredData({
       canonical: 'https://metravel.by/map',
-      title: 'Карта маршрутов и достопримечательностей Беларуси | Metravel',
+      title: 'Карта маршрутов и достопримечательностей Беларуси | MeTravel',
       description: 'Интерактивная карта путешествий.',
       entries: [
         {

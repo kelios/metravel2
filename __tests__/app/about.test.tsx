@@ -184,7 +184,7 @@ describe('AboutScreen', () => {
     });
   });
 
-  it('exposes exactly one page heading, without the "| Metravel" tab-title suffix (#1610)', async () => {
+  it('exposes exactly one page heading, without the "| MeTravel" tab-title suffix (#1610)', async () => {
     (Platform as { OS: string }).OS = 'web';
 
     const { getAllByRole, getByText, container } = await render(<AboutScreen />);
@@ -197,7 +197,7 @@ describe('AboutScreen', () => {
       (node) => node.props['aria-level'] === 1,
     );
     expect(level1Headings.map((node) => String(node.props.children))).toEqual(['О проекте']);
-    expect(String(heading.props.children)).not.toContain('Metravel');
+    expect(String(heading.props.children)).not.toContain('MeTravel');
 
     // The removed sr-only node was a raw JSX <h1>, not a React Native Text,
     // so the accessibility-role assertions above would not detect its return.

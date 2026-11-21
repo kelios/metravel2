@@ -482,11 +482,11 @@ describe('Quest screen title sync', () => {
     })
 
     expect(document.title).toBe(
-      'Минск — Тайна Свислочского Цмока: Легенда оживает | Metravel',
+      'Минск — Тайна Свислочского Цмока: Легенда оживает | MeTravel',
     )
     expect(
       document.querySelector('meta[property="og:title"]')?.getAttribute('content')
-    ).toBe('Минск — Тайна Свислочского Цмока: Легенда оживает | Metravel')
+    ).toBe('Минск — Тайна Свислочского Цмока: Легенда оживает | MeTravel')
     expect(
       document.querySelector('meta[name="description"]')?.getAttribute('content')
     ).toContain('Город Минск: бесплатный пеший маршрут')
@@ -732,7 +732,7 @@ describe('Quest screen title sync', () => {
     expect(typeof wizardProps.onGuestLogin).toBe('function')
     expect(typeof wizardProps.onGuestRegister).toBe('function')
     expect(document.title).toBe(
-      'Минск — Тайна Свислочского Цмока: Легенда оживает | Metravel',
+      'Минск — Тайна Свислочского Цмока: Легенда оживает | MeTravel',
     )
     expect(document.querySelector('meta[name="robots"]')).toBeNull()
   })

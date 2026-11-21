@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
 // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана.
 export function generateMetadata() {
   return routeMetadata({
-    title: `${i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662')} | Metravel`,
+    title: `${i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662')} | MeTravel`,
     description: i18nT('seoStatic:root.default.description'),
     canonical: '/more',
     robots: 'noindex, follow',

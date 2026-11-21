@@ -28,7 +28,7 @@ export async function generateMetadata(request: ImmutableRequest | undefined, pa
   const { profile } = payload
   return routeMetadata({
     // Те же строки, что у клиентского InstantSEO экрана (`[id].tsx`).
-    title: `${profile.name} | Metravel`,
+    title: `${profile.name} | MeTravel`,
     description: translate('auth:app.tabs.user.id.profil_avtora_value1_na_metravel_471497a1', { value1: profile.name }),
     canonical: `/user/${profile.userId}`,
     image: profile.avatar,

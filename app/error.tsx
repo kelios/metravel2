@@ -88,7 +88,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 // generateMetadata, helmet в экспорт больше не попадает); строки те же, что у экрана.
 export function generateMetadata() {
   return routeMetadata({
-    title: `${i18nT('errors:app.error.oshibka_cecac702')} | Metravel`,
+    title: `${i18nT('errors:app.error.oshibka_cecac702')} | MeTravel`,
     description: i18nT('errors:app.error.chto_to_poshlo_ne_tak_2bd9c3e0'),
     robots: 'noindex, nofollow',
     ogType: 'website',

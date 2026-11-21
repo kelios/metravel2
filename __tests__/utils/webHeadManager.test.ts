@@ -15,7 +15,7 @@ const STATIC_TERMS = [
   '<meta name="description" content="Terms description">',
   '<meta name="robots" content="index,follow">',
   '<link rel="canonical" href="https://metravel.by/terms">',
-  '<meta property="og:title" content="Metravel">',
+  '<meta property="og:title" content="MeTravel">',
   '<meta property="og:url" content="https://metravel.by/terms">',
   '<meta property="og:image" content="https://metravel.by/og/terms.jpg">',
   '<meta property="og:locale" content="ru_RU">',
@@ -25,10 +25,10 @@ const STATIC_TERMS = [
 ].join('')
 
 const page = (name: string, extra: HeadTag[] = []): HeadTag[] => [
-  { kind: 'title', content: `${name} | Metravel` },
+  { kind: 'title', content: `${name} | MeTravel` },
   { kind: 'meta', attr: 'name', key: 'description', content: `${name} description` },
   { kind: 'link', rel: 'canonical', href: `https://metravel.by/${name}` },
-  { kind: 'meta', attr: 'property', key: 'og:title', content: `${name} | Metravel` },
+  { kind: 'meta', attr: 'property', key: 'og:title', content: `${name} | MeTravel` },
   { kind: 'meta', attr: 'property', key: 'og:url', content: `https://metravel.by/${name}` },
   { kind: 'meta', attr: 'property', key: 'og:locale', content: 'ru_RU' },
   { kind: 'meta', attr: 'name', key: 'twitter:card', content: 'summary' },
@@ -64,8 +64,8 @@ describe('webHeadManager (#2756)', () => {
     applyHeadTags(owner, page('terms'))
 
     expectSingleHead()
-    expect(document.title).toBe('terms | Metravel')
-    expect(content('meta[property="og:title"]')).toBe('terms | Metravel')
+    expect(document.title).toBe('terms | MeTravel')
+    expect(content('meta[property="og:title"]')).toBe('terms | MeTravel')
     // #1929/#1930: build-owned robots без объявления страницей переживает гидрацию.
     expect(content('meta[name="robots"]')).toBe('index,follow')
     expect(count('meta[name="viewport"]')).toBe(1)
@@ -107,7 +107,7 @@ describe('webHeadManager (#2756)', () => {
 
     expectSingleHead()
     expect(content('meta[name="description"]')).toBe('quests description')
-    expect(content('meta[property="og:title"]')).toBe('quests | Metravel')
+    expect(content('meta[property="og:title"]')).toBe('quests | MeTravel')
   })
 
   it('перенятый узел с меткой helmet теряет её: фиксация helmet (только JSON-LD) его не снимет', () => {

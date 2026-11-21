@@ -2,7 +2,7 @@ export const messagesGenerated1 = {
   "app.tabs.messages.dlya_dostupa_k_soobscheniyam_neobhodimo_avto_df1d2208": "Для доступу да паведамленняў неабходна аўтарызавацца",
   "app.tabs.messages.lichnye_soobscheniya_18511fc1": "Асабістыя паведамленні",
   "app.tabs.messages.polzovatel_3baf520c": "Карыстальнік",
-  "app.tabs.messages.soobscheniya_metravel_ccba5f8b": "Паведамлення | Metravel",
+  "app.tabs.messages.soobscheniya_metravel_ccba5f8b": "Паведамлення | MeTravel",
   "app.tabs.messages.voydite_v_akkaunt_4c68ac56": "Увайдзіце ў рахунак",
   "app.tabs.messages.voyti_9426b865": "Увайсці",
   "app.tabs.messages.vyberite_dialog_ili_nachnite_novyy_0cc840a3": "Абярыце дыялог ці пачніце новы",

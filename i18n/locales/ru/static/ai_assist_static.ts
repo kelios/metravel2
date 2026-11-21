@@ -3,7 +3,7 @@
 // всех локалях (RU/BE/UK/PL/EN), плейсхолдеры {{count}} и {{max}} сохраняются.
 export const aiAssistStaticResources = {
   "nav.assistant": "Ассистент",
-  "ask.title": "Ассистент metravel",
+  "ask.title": "Ассистент MeTravel",
   "ask.info": "Отвечает только по статьям и квестам сайта: каждая рекомендация — со ссылкой на нашу страницу. Если материала нет, так и скажет.",
   "ask.seoTitle": "Ассистент по маршрутам — metravel.by",
   "ask.seoDescription": "Спросите, куда поехать: ассистент подберёт статьи и квесты metravel.by и ответит со ссылками.",

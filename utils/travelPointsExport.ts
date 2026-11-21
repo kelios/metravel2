@@ -74,7 +74,7 @@ export const getExportableTravelPointWaypoints = (points: unknown): RouteWaypoin
 };
 
 export const buildTravelPointsExportInput = (travel: Travel): RouteExportInput => {
-  const travelName = normalizeText((travel as any)?.name ?? (travel as any)?.title) || 'Metravel points';
+  const travelName = normalizeText((travel as any)?.name ?? (travel as any)?.title) || 'MeTravel points';
   const sourceUrl = normalizeText((travel as any)?.url);
   const sourceLines = [
     i18nT('export:utils.travelPointsExport.tochki_marshruta_iz_metravel_value1_75577000', { value1: travelName }),

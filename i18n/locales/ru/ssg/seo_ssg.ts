@@ -2,7 +2,7 @@
 // `loadSsgCatalogs`; never imported by runtime resources, so it stays out of
 // the client locale chunks. Client code must not reference `*Ssg:` keys.
 export const seoSsgResources = {
-  "questDetail.kicker": "Городской квест Metravel",
+  "questDetail.kicker": "Городской квест MeTravel",
   "questDetail.sectionLabel": "Описание городского квеста",
   "questDetail.leadWithCity": "{{value1}} — пеший квест по городу {{value2}}.",
   "questDetail.lead": "{{value1}} — пеший городской квест.",
@@ -17,7 +17,7 @@ export const seoSsgResources = {
   "questDetail.routeHeading": "Что на маршруте",
   "questDetail.routeLead": "Точки маршрута по порядку — что это за места и чем они интересны. Задания и ответы остаются в самом квесте.",
   "questDetail.linksHeading": "Куда дальше",
-  "questDetail.linksLead": "Этот маршрут — часть городских квестов Metravel. Ниже — остальные квесты этого города и города с квестами рядом.",
+  "questDetail.linksLead": "Этот маршрут — часть городских квестов MeTravel. Ниже — остальные квесты этого города и города с квестами рядом.",
   "questDetail.cityQuests": "Все квесты города: {{value1}}",
   "questDetail.nearbyCity_one": "— {{count}} квест, {{value1}} км",
   "questDetail.nearbyCity_few": "— {{count}} квеста, {{value1}} км",

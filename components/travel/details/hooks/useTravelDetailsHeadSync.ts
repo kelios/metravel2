@@ -35,7 +35,7 @@ export function useTravelDetailsHeadSync({
   const localeRevision = useLocaleRevision()
   const routePathsKey = routePaths?.join('\n') ?? ''
   useEffect(() => {
-    if (!readyTitle || readyTitle === 'Metravel') return undefined
+    if (!readyTitle || readyTitle === 'MeTravel') return undefined
     if (!isFocused) return undefined
 
     syncNavigationTitle(readyTitle)

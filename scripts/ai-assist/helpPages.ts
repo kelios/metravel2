@@ -36,7 +36,7 @@ export const HELP_PAGE_TITLES: Readonly<Record<string, Readonly<Record<Locale, s
   'breadcrumb.quests': { ru: 'Квесты', be: 'Квэсты', uk: 'Квести', pl: 'Questy', en: 'Quests' },
   'breadcrumb.about': { ru: 'О сайте', be: 'Аб сайце', uk: 'Про сайт', pl: 'O serwisie', en: 'About the site' },
   'breadcrumb.registration': { ru: 'Регистрация', be: 'Рэгістрацыя', uk: 'Реєстрація', pl: 'Rejestracja', en: 'Registration' },
-  'breadcrumb.app': { ru: 'Приложение', be: 'Дадатак', uk: 'Додаток', pl: 'Aplikacja', en: 'Application' },
+  'breadcrumb.app': { ru: 'Приложение', be: 'Дадатак', uk: 'Застосунок', pl: 'Aplikacja', en: 'Application' },
   'breadcrumb.favorites': { ru: 'Хочу поехать', be: 'Хачу паехаць', uk: 'Хочу поїхати', pl: 'Chcę pojechać', en: 'I want to go' },
   'breadcrumb.calendar': { ru: 'Мой календарь', be: 'Мой каляндар', uk: 'Мій календар', pl: 'Mój kalendarz', en: 'My calendar' },
   'breadcrumb.trips': { ru: 'Поездки', be: 'Паездкі', uk: 'Поїздки', pl: 'Wycieczki', en: 'Trips' },

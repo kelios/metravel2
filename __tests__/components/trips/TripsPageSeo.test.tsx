@@ -55,7 +55,7 @@ describe('TripsPageSeo', () => {
       />,
     );
 
-    expect(document.title).toBe('test | Metravel');
+    expect(document.title).toBe('test | MeTravel');
     expect(document.head.querySelectorAll('title')).toHaveLength(1);
     expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
       'https://metravel.by/trips/plan/31',
@@ -63,7 +63,7 @@ describe('TripsPageSeo', () => {
   });
 
   it('uses the brand alone for an empty label', () => {
-    expect(buildTripsPageTitle('   ')).toBe('Metravel');
+    expect(buildTripsPageTitle('   ')).toBe('MeTravel');
   });
 
   it('does not compete for the title while its route is unfocused', async () => {

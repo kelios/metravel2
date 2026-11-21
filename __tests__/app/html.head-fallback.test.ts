@@ -26,7 +26,7 @@ function loadCriticalHeadScript(): string {
     'i18nT', 'SITE_BRAND', 'getMapSeoTitle', 'getMapSeoDescription', 'SECRET_LINK_ROUTE_PATHS', 'DESIGN_COLORS', 'getSeasonalThemeBootScript',
     'serializeForInlineScript',
     `return (${getter})()`,
-  )(i18nT, 'Metravel', getMapSeoTitle, getMapSeoDescription, SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript, serializeForInlineScript)
+  )(i18nT, 'MeTravel', getMapSeoTitle, getMapSeoDescription, SECRET_LINK_ROUTE_PATHS, DESIGN_COLORS, getSeasonalThemeBootScript, serializeForInlineScript)
 }
 
 function runCriticalHead(doc: Document, pathname: string): void {
@@ -92,7 +92,7 @@ describe('critical head fallback', () => {
       : `${i18nT('seoStatic:critical.generic.platformDescriptionPrefix')} для прогулок по Минску и самостоятельных поездок по Беларуси.`
     const description = getStoredTravelSeoDescription(stored)
     expect(description).toBe(stored)
-    const title = 'Прогулка по Минску | Metravel'
+    const title = 'Прогулка по Минску | MeTravel'
     const canonical = 'https://metravel.by/travels/minsk'
     const criticalScript = `<script id="critical-head-test">${loadCriticalHeadScript()}</script>`
     const base = `<html><head><meta charset="utf-8"/><title>Old</title>${criticalScript}</head><body></body></html>`
@@ -133,7 +133,7 @@ describe('critical head fallback', () => {
   })
 
   it('retains the old fallback for the same generic-prefix text without SSG provenance', () => {
-    const doc = document.implementation.createHTMLDocument('Metravel')
+    const doc = document.implementation.createHTMLDocument('MeTravel')
     const generic = `${i18nT('seoStatic:critical.generic.platformDescriptionPrefix')} для прогулок по Минску и самостоятельных поездок по Беларуси.`
     appendDescriptions(doc, [generic, generic, generic])
     runCriticalHead(doc, '/travels/old-town')
@@ -142,7 +142,7 @@ describe('critical head fallback', () => {
   })
 
   it.each(['', '   ', '\u00a0'])('does not freeze a blank marked description (%p)', blank => {
-    const doc = document.implementation.createHTMLDocument('Metravel')
+    const doc = document.implementation.createHTMLDocument('MeTravel')
     appendDescriptions(doc, [blank, blank, blank], true)
     runCriticalHead(doc, '/travels/old-town')
     const expected = i18nT('seoStatic:critical.travel.descriptionPrefix').replace('{{value1}}', 'Old town')
@@ -159,7 +159,7 @@ describe('critical head fallback', () => {
   ])('retains absent and generic description fallbacks for %s', (pathname, translationKey) => {
     const expected = translationKey ? i18nT(translationKey) : getMapSeoDescription()
     for (const existing of ['', i18nT('seoStatic:critical.generic.loadingDescription')]) {
-      const doc = document.implementation.createHTMLDocument('Metravel')
+      const doc = document.implementation.createHTMLDocument('MeTravel')
       if (existing) appendDescriptions(doc, [existing, existing, existing])
       runCriticalHead(doc, pathname)
       for (const selector of DESCRIPTION_SELECTORS) {
@@ -174,7 +174,7 @@ describe('critical head fallback', () => {
     ['/travels/old-town', 'seoStatic:critical.travel.descriptionPrefix'],
     ['/article/old-town', 'seoStatic:critical.article.descriptionPrefix'],
   ])('retains the named route fallback for %s', (pathname, translationKey) => {
-    const doc = document.implementation.createHTMLDocument('Metravel')
+    const doc = document.implementation.createHTMLDocument('MeTravel')
     runCriticalHead(doc, pathname)
     const expected = i18nT(translationKey).replace('{{value1}}', 'Old town')
     for (const selector of DESCRIPTION_SELECTORS) expect(doc.querySelector(selector)?.getAttribute('content')).toBe(expected)
@@ -187,7 +187,7 @@ describe('critical head fallback', () => {
     expect(source).toContain("const HOME_TITLE = i18nT('seoStatic:root.home.title')")
     expect(source).toContain("const HOME_DESCRIPTION = i18nT('seoStatic:root.home.description')")
     expect(source).toContain("meta[name=\"description\"]")
-    expect(source).not.toContain('Идеи поездок на выходные и книга путешествий | Metravel')
+    expect(source).not.toContain('Идеи поездок на выходные и книга путешествий | MeTravel')
     expect(source).not.toContain('собирайте красивую книгу поездок в PDF')
   })
 

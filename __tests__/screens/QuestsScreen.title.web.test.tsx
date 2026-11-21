@@ -58,7 +58,7 @@ describe('QuestsScreen default catalog head (#1618)', () => {
     await render(<QuestsScreen />)
 
     await waitFor(() => {
-      expect(document.title).toBe('Городские квесты и маршруты с заданиями | Metravel')
+      expect(document.title).toBe('Городские квесты и маршруты с заданиями | MeTravel')
     })
   })
 
@@ -96,7 +96,7 @@ describe('QuestsScreen catalog JSON-LD placement (#2817)', () => {
         </QuestDiscoveryContext.Provider>,
       )
     })
-    await waitFor(() => expect(document.title).toBe('Городские квесты и маршруты с заданиями | Metravel'))
+    await waitFor(() => expect(document.title).toBe('Городские квесты и маршруты с заданиями | MeTravel'))
     // Head is not mounted at all: its tags never reach the server HTML.
     expect(activeHelmetHeads.size).toBe(0)
     const bodyScripts = bodyRoot.container.queryAll((node) => node.type === 'script')

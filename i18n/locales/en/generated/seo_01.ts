@@ -10,6 +10,6 @@ export const seoGenerated1 = {
   "utils.discoverySeo.katalog_kvestov_ffeb5cb5": "Quest catalog",
   "utils.discoverySeo.marshruty_i_tochki_na_karte_66b1e613": "Routes and points on the map",
   ...questSeo,
-  "utils.travelSeo.marshrut_value1_na_metravel_opisanie_poezdki_148133d5": "Route {{value1}} on Metravel: trip description, photos, map and travel tips.",
+  "utils.travelSeo.marshrut_value1_na_metravel_opisanie_poezdki_148133d5": "Route {{value1}} on MeTravel: trip description, photos, map and travel tips.",
   "utils.travelSeo.puteshestvie_value1_49e1afe0": "Travel {{value1}}",
 } as const

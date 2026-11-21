@@ -44,7 +44,7 @@ export { getAnalyticsInlineScript };
 
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
 const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
-const SITE_BRAND = 'Metravel';
+const SITE_BRAND = 'MeTravel';
 const TRAVEL_HERO_PRELOAD_SCRIPT_SRC = '/travel-hero-preload-v2.js';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -320,7 +320,7 @@ const getCriticalHeadScript = () => {
     }
     function isGenericTitle(value){
       var t=String(value||'').trim();
-      return !t||t===${serializeForInlineScript(SITE_BRAND)}||t==='MeTravel'||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.travelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.meTravelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.loadingTitle'))};
+      return !t||t===${serializeForInlineScript(SITE_BRAND)}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.travelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.meTravelTitle'))}||t===${serializeForInlineScript(i18nT('seoStatic:critical.generic.loadingTitle'))};
     }
     function isGenericDescription(value){
       var d=String(value||'').trim();

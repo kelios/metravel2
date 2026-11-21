@@ -1,8 +1,8 @@
 // Экран статистики приложения для администратора (#2843).
 export const appStatsStaticResources = {
-  'menu.label': 'Статыстыка праграмы',
-  'screen.title': 'Статыстыка праграмы',
-  'screen.seoDescription': 'Статыстыка ўсталёвак, утрымання і падзенняў праграмы MeTravel. Толькі для адміністратара.',
+  'menu.label': 'Статыстыка дадатку',
+  'screen.title': 'Статыстыка дадатку',
+  'screen.seoDescription': 'Статыстыка ўсталёвак, утрымання і падзенняў дадатку MeTravel. Толькі для адміністратара.',
   'filters.period': 'Перыяд',
   'filters.period7': '7 дзён',
   'filters.period30': '30 дзён',

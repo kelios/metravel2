@@ -6,11 +6,11 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { translate as i18nT } from '@/i18n';
 import { buildCanonicalUrl } from '@/utils/seo';
 
-const TITLE_SUFFIX = ' | Metravel';
+const TITLE_SUFFIX = ' | MeTravel';
 
 export const buildTripsPageTitle = (label: string): string => {
   const normalizedLabel = String(label || '').trim();
-  return normalizedLabel ? `${normalizedLabel}${TITLE_SUFFIX}` : 'Metravel';
+  return normalizedLabel ? `${normalizedLabel}${TITLE_SUFFIX}` : 'MeTravel';
 };
 
 interface TripsPageSeoProps {

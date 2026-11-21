@@ -51,8 +51,8 @@ const FULL_BASE = [
   '<meta data-rh="true" property="og:url" content="https://metravel.by/old"/>',
   '<meta data-rh="true" property="og:image" content="https://metravel.by/old.jpg"/>',
   '<meta data-rh="true" property="og:image:secure_url" content="https://metravel.by/assets/icons/logo_yellow_512x512.png"/>',
-  '<meta data-rh="true" property="og:image:alt" content="[param] | Metravel"/>',
-  '<meta data-rh="true" name="twitter:image:alt" content="[param] | Metravel"/>',
+  '<meta data-rh="true" property="og:image:alt" content="[param] | MeTravel"/>',
+  '<meta data-rh="true" name="twitter:image:alt" content="[param] | MeTravel"/>',
   '<meta data-rh="true" property="og:site_name" content="MeTravel"/>',
   '<meta data-rh="true" name="twitter:card" content="summary"/>',
   '<meta data-rh="true" name="twitter:title" content="Old Title"/>',
@@ -660,8 +660,8 @@ describe('home SEO metadata parity', () => {
     const quests = STATIC_PAGES.find((page: { route: string }) => page.route === '/quests')
 
     expect(quests).toEqual(expect.objectContaining({
-      title: 'Городские квесты и маршруты с заданиями | Metravel',
-      description: 'Проходите городские квесты Metravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
+      title: 'Городские квесты и маршруты с заданиями | MeTravel',
+      description: 'Проходите городские квесты MeTravel: маршруты с заданиями, точками на карте и идеями для прогулок и поездок.',
     }))
   })
 })
@@ -739,15 +739,15 @@ describe('SEO tag count contract (regression guard)', () => {
 // boundary (FE-4). A mid-word clip like "…Нитосл…" reads as broken in search.
 // ---------------------------------------------------------------------------
 describe('buildSeoTitle', () => {
-  const SUFFIX = ' | Metravel';
+  const SUFFIX = ' | MeTravel';
 
   it('appends the brand suffix to a short title untouched', () => {
     expect(buildSeoTitle('Албания. Влёра')).toBe(`Албания. Влёра${SUFFIX}`);
   });
 
   it('returns the bare brand for an empty title', () => {
-    expect(buildSeoTitle('')).toBe('Metravel');
-    expect(buildSeoTitle(null)).toBe('Metravel');
+    expect(buildSeoTitle('')).toBe('MeTravel');
+    expect(buildSeoTitle(null)).toBe('MeTravel');
   });
 
   it('keeps the full title at the 60-char boundary without clipping', () => {
@@ -848,18 +848,18 @@ describe('patchNoindexFallbackTemplate', () => {
     const html = patchNoindexFallbackTemplate(
       [
         '<html><head>',
-        '<title data-rh="true">Путешествие | Metravel</title>',
+        '<title data-rh="true">Путешествие | MeTravel</title>',
         '<meta data-rh="true" name="description" content="Найди место для путешествия и поделись своим опытом."/>',
         '<link data-rh="true" rel="canonical" href="https://metravel.by/quests/[city]/[questId]"/>',
         '</head><body><div id="root"></div></body></html>',
       ].join(''),
       {
-        title: 'Квест не найден | Metravel',
+        title: 'Квест не найден | MeTravel',
         description: 'Этот квест не найден или больше недоступен.',
       },
     );
 
-    expect(html).toContain('<title data-rh="true">Квест не найден | Metravel</title>');
+    expect(html).toContain('<title data-rh="true">Квест не найден | MeTravel</title>');
     expect(html).toContain('content="Этот квест не найден или больше недоступен."');
     expect(html).toContain('<meta data-rh="true" name="robots" content="noindex, follow"/>');
     expect(html).not.toContain('rel="canonical"');
@@ -883,26 +883,26 @@ describe('patchNoindexFallbackTemplate', () => {
     const html = patchNoindexFallbackTemplate(
       [
         '<html><head>',
-        '<title>Metravel</title>',
+        '<title>MeTravel</title>',
         '<meta name="description" content="Маршруты, заметки и фото путешествий по Беларуси и не только."/>',
-        '<meta property="og:title" content="Metravel"/>',
+        '<meta property="og:title" content="MeTravel"/>',
         '<meta property="og:description" content="Маршруты, заметки и фото путешествий по Беларуси и не только."/>',
         '<meta property="og:url" content="https://metravel.by/quests/[city]"/>',
-        '<meta name="twitter:title" content="Metravel"/>',
+        '<meta name="twitter:title" content="MeTravel"/>',
         '<meta name="twitter:description" content="Маршруты, заметки и фото путешествий по Беларуси и не только."/>',
         '<meta name="robots" content="max-image-preview:large"/>',
         '</head><body></body></html>',
       ].join(''),
       {
-        title: 'Страница не найдена | Metravel',
+        title: 'Страница не найдена | MeTravel',
         description: 'Страница не найдена.',
         robots: 'noindex, nofollow',
       },
     );
 
-    expect(html).toContain('<title data-rh="true">Страница не найдена | Metravel</title>');
-    expect(html).toContain('<meta data-rh="true" property="og:title" content="Страница не найдена | Metravel"/>');
-    expect(html).toContain('<meta data-rh="true" name="twitter:title" content="Страница не найдена | Metravel"/>');
+    expect(html).toContain('<title data-rh="true">Страница не найдена | MeTravel</title>');
+    expect(html).toContain('<meta data-rh="true" property="og:title" content="Страница не найдена | MeTravel"/>');
+    expect(html).toContain('<meta data-rh="true" name="twitter:title" content="Страница не найдена | MeTravel"/>');
     expect(html).toContain('<meta data-rh="true" property="og:description" content="Страница не найдена."/>');
     expect(html).toContain('<meta data-rh="true" name="twitter:description" content="Страница не найдена."/>');
     expect(html).toContain('<meta data-rh="true" name="robots" content="noindex, nofollow"/>');
@@ -911,7 +911,7 @@ describe('patchNoindexFallbackTemplate', () => {
     expect(html).toContain('<meta data-rh="true" name="twitter:card" content="summary"/>');
     expect(html).toContain('<meta data-rh="true" property="og:locale" content="ru_RU"/>');
     expect(html).not.toContain('og:url');
-    expect(html).not.toContain('content="Metravel"');
+    expect(html).not.toMatch(/(og|twitter):title" content="MeTravel"/);
     for (const re of [/property="og:title"/g, /name="twitter:title"/g, /name="description"/g, /name="robots"/g]) {
       expect((html.match(re) || []).length).toBe(1);
     }
@@ -920,9 +920,9 @@ describe('patchNoindexFallbackTemplate', () => {
   it('inserts a <title> into an export-level page that ships none', () => {
     const html = patchNoindexFallbackTemplate(
       '<html><head><meta charset="utf-8"/><script>1</script></head><body></body></html>',
-      { title: 'Страница не найдена | Metravel', description: 'Страница не найдена.' },
+      { title: 'Страница не найдена | MeTravel', description: 'Страница не найдена.' },
     );
-    expect(html).toMatch(/<head><title data-rh="true">Страница не найдена \| Metravel<\/title>/);
+    expect(html).toMatch(/<head><title data-rh="true">Страница не найдена \| MeTravel<\/title>/);
     expect((html.match(/<title/g) || []).length).toBe(1);
   });
 });

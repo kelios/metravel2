@@ -186,7 +186,7 @@ function AboutAndContactScreen() {
               <View style={styles.container}>
                 {/* #1610: AboutIntroCard exposes the visible page heading. The
                     old sr-only node reused seoTitle verbatim, including the
-                    "| Metravel" browser-title suffix, inside a real <h1>. */}
+                    "| MeTravel" browser-title suffix, inside a real <h1>. */}
                 <View style={styles.content}>
                   <HeroBanner isWide={isWide} />
 

@@ -3,7 +3,7 @@
   try {
     var SITE_ORIGIN = 'https://metravel.by';
     var DEFAULT_OG_IMAGE = SITE_ORIGIN + '/og-default.png';
-    var FALLBACK_DESCRIPTION = 'Путешествие на Metravel.';
+    var FALLBACK_DESCRIPTION = 'Путешествие на MeTravel.';
 
     var host = window.location && window.location.hostname;
     function isPrivateHost(h){
@@ -100,8 +100,8 @@
 
     function buildTitle(base) {
       var normalized = normalizeText(base);
-      if (!normalized) return 'Путешествие | Metravel';
-      var suffix = ' | Metravel';
+      if (!normalized) return 'Путешествие | MeTravel';
+      var suffix = ' | MeTravel';
       var maxBaseLength = Math.max(10, 60 - suffix.length);
       if (normalized.length > maxBaseLength) {
         normalized = normalized.slice(0, maxBaseLength - 3).trimEnd() + '...';
@@ -325,7 +325,7 @@
       var payload = {
         '@context': 'https://schema.org',
         '@type': 'Article',
-        headline: title.replace(/\s+\|\s+Metravel$/, ''),
+        headline: title.replace(/\s+\|\s+MeTravel$/, ''),
         description: description,
         url: correctUrl,
         image: imageUrl ? [imageUrl] : undefined,

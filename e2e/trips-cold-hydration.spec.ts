@@ -102,7 +102,7 @@ for (const locale of ['ru', 'be', 'uk', 'pl', 'en'] as const) {
         )
         expect(sameCatalog, 'the committed catalog remounted while its live GET resolved').toBe(true)
         await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/trips\/?$/)
-        await expect(page).toHaveTitle(/Metravel$/)
+        await expect(page).toHaveTitle(/MeTravel$/)
         await page.screenshot({ path: testInfo.outputPath('content.png'), fullPage: false })
       } finally {
         releaseScripts()

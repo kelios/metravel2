@@ -3,7 +3,7 @@ import { escapeXml, isoNow, normalizeTrack, normalizeWaypoints, safeFileBaseName
 
 // GPX 1.1
 export const buildGpx = (input: RouteExportInput): RouteExportResult => {
-  const name = input.name?.trim() || 'Metravel route';
+  const name = input.name?.trim() || 'MeTravel route';
   const time = input.time || isoNow();
 
   const track = normalizeTrack(input.track);
@@ -54,7 +54,7 @@ ${trkptsXml}
 <gpx version="1.1" creator="metravel" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
     <name>${escapeXml(name)}</name>
-${descXml}${input.author?.trim() ? `    <author><name>${escapeXml(input.author.trim())}</name></author>\n` : ''}${input.sourceUrl ? `    <link href="${escapeXml(input.sourceUrl)}"><text>${escapeXml(input.sourceName || 'Metravel')}</text></link>\n` : ''}    <time>${escapeXml(time)}</time>
+${descXml}${input.author?.trim() ? `    <author><name>${escapeXml(input.author.trim())}</name></author>\n` : ''}${input.sourceUrl ? `    <link href="${escapeXml(input.sourceUrl)}"><text>${escapeXml(input.sourceName || 'MeTravel')}</text></link>\n` : ''}    <time>${escapeXml(time)}</time>
   </metadata>
 ${wptXml ? wptXml + '\n' : ''}${rteXml ? rteXml + '\n' : ''}${trackXml ? trackXml + '\n' : ''}
 </gpx>

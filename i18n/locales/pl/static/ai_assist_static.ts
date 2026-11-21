@@ -1,7 +1,7 @@
 // Asystent serwisu (#2460). Klucze zgodne z RU; placeholdery {{count}} i {{max}} zachowane.
 export const aiAssistStaticResources = {
   "nav.assistant": "Asystent",
-  "ask.title": "Asystent metravel",
+  "ask.title": "Asystent MeTravel",
   "ask.info": "Odpowiada wyłącznie na podstawie artykułów i questów serwisu: każda rekomendacja ma link do naszej strony. Jeśli materiału nie ma, powie to wprost.",
   "ask.seoTitle": "Asystent tras — metravel.by",
   "ask.seoDescription": "Zapytaj, dokąd pojechać: asystent dobierze artykuły i questy metravel.by i odpowie z linkami.",

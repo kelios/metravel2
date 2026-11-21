@@ -97,7 +97,7 @@ test('guest profile owns its title after map/search navigation and Back (#3068)'
     await profileTab.click()
     await expect(page).toHaveURL(/\/profile$/)
     await expect(page.getByText('Ваш профиль', { exact: true })).toBeVisible()
-    await expect(page).toHaveTitle('Профиль | Metravel')
+    await expect(page).toHaveTitle('Профиль | MeTravel')
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
     await page.screenshot({ path: testInfo.outputPath(`profile-from-${source.slice(1)}.png`) })
     await page.goBack()

@@ -187,7 +187,7 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsList.ne_udalos_zagruzit_tochki_a1d1dfdc": "Не атрымалася загрузіць кропкі",
   "components.UserPoints.PointsList.povtorit_0641a83c": "Паўтарыць",
   "components.UserPoints.PointsList.proverte_podklyuchenie_k_internetu_i_poprobu_e66933f1": "Праверце падлучэнне да інтэрнэту і паспрабуйце яшчэ раз.",
-  "components.UserPoints.PointsList.sohranyayte_interesnye_mesta_na_karte_ili_do_04659fd5": "Захоўвайце цікавыя месцы на карце або дадайце свой пункт уручную.",
+  "components.UserPoints.PointsList.sohranyayte_interesnye_mesta_na_karte_ili_do_04659fd5": "Захоўвайце цікавыя месцы на карце або дадайце сваю кропку ўручную.",
   "components.UserPoints.PointsList.u_vas_poka_net_tochek_7f6af4ba": "У вас пакуль няма кропак",
   "components.UserPoints.PointsListActionsModal.dobavit_vruchnuyu_05015f8e": "Дадаць уручную",
   "components.UserPoints.PointsListActionsModal.eksport_18ea80fc": "Экспарт…",

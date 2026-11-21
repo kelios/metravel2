@@ -40,8 +40,8 @@ describe('localized home SEO metadata', () => {
     const title = resources[locale].seoStatic['root.home.title']
     const description = resources[locale].seoStatic['root.home.description']
 
-    expect(title.endsWith('| Metravel')).toBe(true)
-    expect(title.match(/\| Metravel/g)).toHaveLength(1)
+    expect(title.endsWith('| MeTravel')).toBe(true)
+    expect(title.match(/\| MeTravel/g)).toHaveLength(1)
     expect(title).not.toMatch(/(?:\.\.\.|…)\s*$/)
     expect(description).not.toMatch(/(?:\.\.\.|…)\s*$/)
   })

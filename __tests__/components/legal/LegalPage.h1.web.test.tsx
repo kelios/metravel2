@@ -36,7 +36,7 @@ describe('LegalPage single H1 (#1617)', () => {
     const { getByText, queryByText, container } = await render(
       <LegalPage
         headKey="privacy"
-        seoTitle="Политика конфиденциальности и обработка данных | Metravel"
+        seoTitle="Политика конфиденциальности и обработка данных | MeTravel"
         seoDescription="d"
         pageTitle="Политика конфиденциальности"
         sections={[{ paragraphs: ['текст'] }]}
@@ -48,7 +48,7 @@ describe('LegalPage single H1 (#1617)', () => {
     expect(heading.props['aria-level']).toBe(1)
 
     // The old hidden duplicate must be gone entirely, not just re-hidden.
-    expect(queryByText('Политика конфиденциальности и обработка данных | Metravel')).toBeNull()
+    expect(queryByText('Политика конфиденциальности и обработка данных | MeTravel')).toBeNull()
     // Host-only queries count each rendered heading once.
     const level1 = container.queryAll(node =>
       node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,

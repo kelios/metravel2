@@ -371,7 +371,7 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
       `<meta data-rh="true" property="og:image" content="${escapeAttr(image)}"/>`
     );
     // The prerendered shell carries generic og:image:secure_url (logo) and
-    // og:image:alt ("[param] | Metravel") from the route placeholder — keep
+    // og:image:alt ("[param] | MeTravel") from the route placeholder — keep
     // them in sync with the per-page image, otherwise crawlers read the shell values.
     html = replaceOrInsert(
       html,
@@ -908,33 +908,33 @@ async function main() {
   const fallbackTemplates = [
     {
       file: path.join(DIST_DIR, 'travels', '[param].html'),
-      title: 'Путешествие не найдено | Metravel',
+      title: 'Путешествие не найдено | MeTravel',
       description: 'Эта страница путешествия не найдена или больше недоступна.',
     },
     {
       file: path.join(DIST_DIR, 'article', '[id].html'),
-      title: 'Статья не найдена | Metravel',
+      title: 'Статья не найдена | MeTravel',
       description: 'Эта статья не найдена или больше недоступна.',
     },
     {
       file: path.join(DIST_DIR, 'user', '[id].html'),
-      title: 'Профиль не найден | Metravel',
+      title: 'Профиль не найден | MeTravel',
       description: 'Этот профиль не найден или больше недоступен.',
     },
     {
       file: path.join(DIST_DIR, 'quests', '[city]', '[questId].html'),
-      title: 'Квест не найден | Metravel',
+      title: 'Квест не найден | MeTravel',
       description: 'Этот квест не найден или больше недоступен.',
     },
     {
       file: path.join(DIST_DIR, 'quests', 'country', '[country].html'),
-      title: 'Страна с квестами не найдена | Metravel',
+      title: 'Страна с квестами не найдена | MeTravel',
       description: 'Для этой страны нет опубликованной подборки квестов.',
     },
     // #2740: the city shell shipped an empty <title> and sat open to indexing.
     {
       file: path.join(DIST_DIR, 'quests', '[city].html'),
-      title: 'Город с квестами не найден | Metravel',
+      title: 'Город с квестами не найден | MeTravel',
       description: 'Для этого города нет опубликованной подборки квестов.',
     },
     // #2740: Expo renders the export-level 404 outside the [...missing] route's
@@ -948,7 +948,7 @@ async function main() {
     // #2740: expo-router's internal route list; never linked, never indexable.
     {
       file: path.join(DIST_DIR, '_sitemap.html'),
-      title: 'Metravel',
+      title: 'MeTravel',
       description: readRequiredRuTranslation('seoStatic:root.default.description'),
       robots: 'noindex, nofollow',
     },

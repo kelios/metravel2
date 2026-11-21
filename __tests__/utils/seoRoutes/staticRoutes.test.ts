@@ -62,8 +62,8 @@ describe('utils/seoRoutes/staticRoutes (#2740)', () => {
     const map = resolveStaticRouteSeo('/map', translate);
     expect(map).toMatchObject({ title: getMapSeoTitle(), description: getMapSeoDescription() });
     expect(map?.title).toContain('Беларуси');
-    expect(map?.title).toMatch(/ \| Metravel$/);
-    expect(map?.h1).toBe(map?.title.replace(/ \| Metravel$/, ''));
+    expect(map?.title).toMatch(/ \| MeTravel$/);
+    expect(map?.h1).toBe(map?.title.replace(/ \| MeTravel$/, ''));
   });
 
   it('returns null for unknown routes', () => {

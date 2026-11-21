@@ -262,7 +262,7 @@ describe('UpsertTravel create/edit flow', () => {
 
     expect(mockSeo).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Редактировать путешествие: Energylandia | Metravel',
+        title: 'Редактировать путешествие: Energylandia | MeTravel',
         canonical: 'https://metravel.by/travel/321',
         robots: 'noindex, nofollow',
       })
@@ -274,7 +274,7 @@ describe('UpsertTravel create/edit flow', () => {
 
     expect(mockSeo).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Создать путешествие | Metravel',
+        title: 'Создать путешествие | MeTravel',
         canonical: 'https://metravel.by/travel/new',
         robots: 'noindex, nofollow',
       })

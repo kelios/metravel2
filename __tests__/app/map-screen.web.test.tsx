@@ -147,7 +147,7 @@ describe('map.web route hydration shell signal', () => {
     ssgHeading.style.position = 'absolute'
     ssgHeading.style.width = '1px'
     ssgHeading.style.height = '1px'
-    ssgHeading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | Metravel'
+    ssgHeading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | MeTravel'
     root.before(ssgHeading)
     return ssgHeading
   }

@@ -262,7 +262,7 @@ export default function PublicUserProfileScreen() {
       {isFocused && (
         <InstantSEO
           headKey={`user-${userId}`}
-          title={`${displayName} | Metravel`}
+          title={`${displayName} | MeTravel`}
           description={i18nT('auth:app.tabs.user.id.profil_avtora_value1_na_metravel_471497a1', { value1: fullName || '' })}
           canonical={buildCanonicalUrl(`/user/${userId}`)}
           ogType="website"
@@ -284,7 +284,7 @@ export default function PublicUserProfileScreen() {
                 borderWidth: 0,
               } as any
             }
-          >{`${displayName} | Metravel`}</h1>
+          >{`${displayName} | MeTravel`}</h1>
         )}
 
         <PublicProfileHeader

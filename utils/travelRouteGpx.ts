@@ -22,11 +22,11 @@ export const buildTravelRouteGpx = (
   travel: TravelRouteGpxSource,
   options: { time?: string } = {},
 ): RouteExportResult => {
-  const name = normalizeText(travel.name) || 'Metravel route'
+  const name = normalizeText(travel.name) || 'MeTravel route'
   const path = buildTravelPath(travel)
   const result = buildGpx({
     name,
-    sourceName: 'Metravel',
+    sourceName: 'MeTravel',
     sourceUrl: path ? buildCanonicalUrl(path) : undefined,
     author: normalizeText(travel.userName) || undefined,
     waypoints: getTravelRouteWaypoints(travel.travelAddress),

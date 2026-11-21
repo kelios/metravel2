@@ -35,7 +35,7 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/about',
-    title: 'О проекте MeTravel — сообщество путешественников | Metravel',
+    title: 'О проекте MeTravel — сообщество путешественников | MeTravel',
     description:
       'MeTravel объединяет путешественников: публикуйте маршруты, сохраняйте полезные места, читайте истории и собирайте собственную книгу поездок.',
     breadcrumb: 'О проекте',
@@ -48,14 +48,14 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/contact',
-    title: 'Контакты и обратная связь | Metravel',
+    title: 'Контакты и обратная связь | MeTravel',
     description:
-      'Свяжитесь с командой Metravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.',
+      'Свяжитесь с командой MeTravel: вопросы, предложения, идеи партнерства и обратная связь по маршрутам, статьям и сервису.',
     breadcrumb: 'Контакты',
   },
   {
     route: '/search',
-    title: 'Поиск маршрутов и идей путешествий по Беларуси | Metravel',
+    title: 'Поиск маршрутов и идей путешествий по Беларуси | MeTravel',
     description:
       'Ищите путешествия по странам, городам, категориям и датам, применяйте фильтры и быстро находите маршруты, вдохновение и советы для следующей поездки.',
     breadcrumb: 'Поиск маршрутов',
@@ -76,7 +76,7 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/articles',
-    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
+    title: 'Статьи о путешествиях, маршрутах и советах | MeTravel',
     description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
     robots: 'noindex, nofollow',
   },
@@ -87,7 +87,7 @@ const STATIC_ROUTE_SEO = Object.freeze([
     // know (audit 2026-08-08). Closed until it has crawlable content; turning it
     // into a real hub (intro + place links + categories) is a separate feature.
     route: '/places',
-    title: 'Места на карте: замки, музеи, парки и природа | Metravel',
+    title: 'Места на карте: замки, музеи, парки и природа | MeTravel',
     description:
       'Каталог мест MeTravel: замки, усадьбы, музеи, парки, водопады и другие точки из путешествий — с фильтрами по стране, категории и рейтингу.',
     robots: 'noindex, follow',
@@ -98,7 +98,7 @@ const STATIC_ROUTE_SEO = Object.freeze([
     // title, description and `canonical: https://metravel.by/` — declaring itself
     // a duplicate of the home page (audit 2026-08-08).
     route: '/article',
-    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
+    title: 'Статьи о путешествиях, маршрутах и советах | MeTravel',
     description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
     robots: 'noindex, nofollow',
   },
@@ -125,71 +125,71 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/favorites',
-    title: 'Избранные маршруты и места | Metravel',
+    title: 'Избранные маршруты и места | MeTravel',
     description: 'Твои сохранённые путешествия и маршруты.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/privacy',
-    title: 'Политика конфиденциальности и данных | Metravel',
+    title: 'Политика конфиденциальности и данных | MeTravel',
     description: 'Политика конфиденциальности и обработки персональных данных MeTravel.',
     breadcrumb: 'Политика конфиденциальности',
   },
   {
     route: '/cookies',
-    title: 'Настройки cookies и аналитики | Metravel',
+    title: 'Настройки cookies и аналитики | MeTravel',
     description: 'Управление настройками cookies и аналитики на MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/login',
-    title: 'Вход в Metravel: аккаунт, маршруты и избранное | Metravel',
+    title: 'Вход в MeTravel: аккаунт, маршруты и избранное | MeTravel',
     description:
-      'Войдите в аккаунт Metravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.',
+      'Войдите в аккаунт MeTravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/registration',
-    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
+    title: 'Регистрация в MeTravel: аккаунт и маршруты | MeTravel',
     description:
-      'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
+      'Создайте аккаунт MeTravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/register',
     canonicalRoute: '/registration',
-    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
+    title: 'Регистрация в MeTravel: аккаунт и маршруты | MeTravel',
     description:
-      'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
+      'Создайте аккаунт MeTravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/accountconfirmation',
-    title: 'Подтверждение аккаунта | Metravel',
-    description: 'Подтверждение учётной записи Metravel.',
+    title: 'Подтверждение аккаунта | MeTravel',
+    description: 'Подтверждение учётной записи MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/set-password',
-    title: 'Смена пароля | Metravel',
-    description: 'Смена пароля в аккаунте Metravel.',
+    title: 'Смена пароля | MeTravel',
+    description: 'Смена пароля в аккаунте MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/subscribe/confirm',
-    title: 'Подтверждение подписки | Metravel',
-    description: 'Подтверждение подписки на рассылку Metravel.',
+    title: 'Подтверждение подписки | MeTravel',
+    description: 'Подтверждение подписки на рассылку MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/subscribe/unsubscribe',
-    title: 'Отписка от рассылки | Metravel',
-    description: 'Отписка от рассылки Metravel.',
+    title: 'Отписка от рассылки | MeTravel',
+    description: 'Отписка от рассылки MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/travelsby',
-    title: 'Что посмотреть в Беларуси: места и маршруты | Metravel',
+    title: 'Что посмотреть в Беларуси: места и маршруты | MeTravel',
     description:
       'Что посмотреть в Беларуси: замки, усадьбы, озёра, города и готовые маршруты на выходные. Фото, карта, координаты и советы путешественников.',
     breadcrumb: 'Путешествия',
@@ -206,76 +206,76 @@ const STATIC_ROUTE_SEO = Object.freeze([
     route: '/quests/scenario',
     // 68 chars did not fit the SERP budget (≤60); "по городу" survives in the H1
     // and the description, so the keyword phrase is not lost. Description was 165.
-    title: 'Готовый сценарий квеста — распечатать бесплатно | Metravel',
+    title: 'Готовый сценарий квеста — распечатать бесплатно | MeTravel',
     description:
       'Готовый сценарий квеста по городу: распечатайте бесплатный квест-бук с картой, заданиями, дипломом и страницей ведущего. Для дня рождения, семьи и класса.',
     breadcrumb: 'Сценарий квеста',
   },
   {
     route: '/history',
-    title: 'История просмотров маршрутов | Metravel',
+    title: 'История просмотров маршрутов | MeTravel',
     description: 'Хронология твоих путешествий и поездок.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/messages',
-    title: 'Сообщения | Metravel',
-    description: 'Личные сообщения Metravel.',
+    title: 'Сообщения | MeTravel',
+    description: 'Личные сообщения MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/export',
-    title: 'Экспорт | Metravel',
-    description: 'Экспорт данных и материалов Metravel.',
+    title: 'Экспорт | MeTravel',
+    description: 'Экспорт данных и материалов MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/metravel',
-    title: 'Мои путешествия | Metravel',
+    title: 'Мои путешествия | MeTravel',
     description: 'Раздел управления вашими путешествиями.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/profile',
-    title: 'Профиль | Metravel',
-    description: 'Профиль пользователя Metravel.',
+    title: 'Профиль | MeTravel',
+    description: 'Профиль пользователя MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/settings',
-    title: 'Настройки | Metravel',
-    description: 'Настройки аккаунта Metravel.',
+    title: 'Настройки | MeTravel',
+    description: 'Настройки аккаунта MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/subscriptions',
-    title: 'Подписки | Metravel',
-    description: 'Ваши подписки и подписчики в Metravel.',
+    title: 'Подписки | MeTravel',
+    description: 'Ваши подписки и подписчики в MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/quests/map',
-    title: 'Карта квестов | Metravel',
-    description: 'Карта всех квестов Metravel.',
+    title: 'Карта квестов | MeTravel',
+    description: 'Карта всех квестов MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/userpoints',
-    title: 'Мои точки и сохраненные места | Metravel',
+    title: 'Мои точки и сохраненные места | MeTravel',
     description: 'Управляй своими точками на карте.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/app-stats',
-    title: 'Статистика приложения | Metravel',
+    title: 'Статистика приложения | MeTravel',
     description: 'Статистика установок, удержания и падений приложения. Только для администратора.',
     robots: 'noindex, nofollow',
   },
 ]);
 
-const SITE_NAME_SUFFIX = /\s*\|\s*Metravel\s*$/i;
+const SITE_NAME_SUFFIX = /\s*\|\s*MeTravel\s*$/i;
 
-/** Title without the trailing « | Metravel» brand: the visible page heading. */
+/** Title without the trailing « | MeTravel» brand: the visible page heading. */
 function stripSiteNameSuffix(title) {
   return title.replace(SITE_NAME_SUFFIX, '');
 }

@@ -26,7 +26,7 @@ export const tripsGenerated1 = {
   "app.tabs.trips.plan.id.data_dolzhna_byt_v_formate_gggg_mm_dd_e9eabe4e": "Дата має бути у форматі РРРР-ММ-ДД.",
   "app.tabs.trips.plan.id.data_efe4aaba": "Дата",
   "app.tabs.trips.plan.id.data_poezdki_d9833760": "Дата поїздки",
-  "app.tabs.trips.plan.id.eksport_marshruta_dostupen_v_veb_versii_i_mo_23033c52": "Експорт маршруту доступний у веб-версії та мобільному додатку.",
+  "app.tabs.trips.plan.id.eksport_marshruta_dostupen_v_veb_versii_i_mo_23033c52": "Експорт маршруту доступний у веб-версії та мобільному застосунку.",
   "app.tabs.trips.plan.id.foto_budet_prikrepleno_k_poezdke_posle_zagru_1d3589b9": "Фото буде прикріплено до поїздки після завантаження та збереження змін.",
   "app.tabs.trips.plan.id.mest_a8c84414": "Місць",
   "app.tabs.trips.plan.id.nazvanie_dolzhno_byt_ne_koroche_3_simvolov_7818255f": "Назва має бути не коротшою за 3 символи.",

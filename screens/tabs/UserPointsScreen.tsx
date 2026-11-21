@@ -23,7 +23,7 @@ export default function UserPointsScreen() {
   const seoBlock = isFocused ? (
     <InstantSEO
       headKey="userpoints"
-      title={`${i18nT('navigationStatic:breadcrumb.userpoints')} | Metravel`}
+      title={`${i18nT('navigationStatic:breadcrumb.userpoints')} | MeTravel`}
       description={i18nT('shared:screens.tabs.UserPointsScreen.dlya_sohraneniya_i_prosmotra_vashih_tochek_n_5b5b8307')}
       canonical={buildCanonicalUrl('/userpoints')}
       robots="noindex, nofollow"

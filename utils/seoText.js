@@ -9,7 +9,7 @@
  */
 
 const SEO_TITLE_MAX_LENGTH = 60;
-const SEO_TITLE_SUFFIX = ' | Metravel';
+const SEO_TITLE_SUFFIX = ' | MeTravel';
 
 const HTML_ENTITY_MAP = Object.freeze({
   amp: '&',
@@ -140,13 +140,13 @@ const TRAILING_PUNCTUATION = /[\s.,;:!?·–—-]+$/u;
  * Бренд-суффикс — необязательная часть заголовка: на ранжирование он не влияет,
  * а места занимает 11 символов. Поэтому при нехватке бюджета жертвуем брендом,
  * а не ключевыми словами: «Смолевуд: натурная площадка Беларусьфильма под Минском»
- * вместо «Смолевуд: натурная площадка Беларусьфильма под… | Metravel».
+ * вместо «Смолевуд: натурная площадка Беларусьфильма под… | MeTravel».
  */
 function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
   const normalized = String(base == null ? '' : base)
     .replace(/\s+/g, ' ')
     .trim();
-  if (!normalized) return 'Metravel';
+  if (!normalized) return 'MeTravel';
 
   if (normalized.length + SEO_TITLE_SUFFIX.length <= maxLength) {
     return `${normalized}${SEO_TITLE_SUFFIX}`;

@@ -70,7 +70,7 @@ export function staticRouteMetadata(route: string, overrides: Partial<RouteSeoPr
  */
 export function shellRouteMetadata(overrides: Partial<RouteSeoProps> = {}): RouteMetadata {
   return routeMetadata({
-    title: 'Metravel',
+    title: 'MeTravel',
     description: i18nT('seoStatic:root.default.description'),
     image: DEFAULT_OG_IMAGE_PATH,
     ogType: 'website',

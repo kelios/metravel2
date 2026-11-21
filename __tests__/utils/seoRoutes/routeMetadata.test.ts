@@ -13,7 +13,7 @@ describe('utils/seoRoutes/routeMetadata (#2740)', () => {
   });
 
   it('normalizes a relative image path the same way for ad-hoc routes', () => {
-    const metadata = routeMetadata({ title: 'T | Metravel', image: '/og-home.jpg', canonical: '/x' });
+    const metadata = routeMetadata({ title: 'T | MeTravel', image: '/og-home.jpg', canonical: '/x' });
     expect(metadata.openGraph.images?.[0].url).toMatch(/^https:\/\/[^/]+\/og-home\.jpg/);
     expect(metadata.alternates?.canonical).toMatch(/^https:\/\/[^/]+\/x$/);
   });
@@ -34,14 +34,14 @@ describe('utils/seoRoutes/routeMetadata (#2740)', () => {
     try {
       await i18n.changeLanguage('en');
       const hub = staticRouteMetadata('/quests', { canonical: '/en/quests' });
-      expect(hub.title).toBe('City quests and routes with tasks | Metravel');
+      expect(hub.title).toBe('City quests and routes with tasks | MeTravel');
       expect(hub.description).toBe(translate('seoStatic:root.quests.description'));
       expect(hub.description).not.toMatch(/[а-яё]/i);
       expect(hub.alternates?.canonical).toMatch(/\/en\/quests$/);
     } finally {
       await i18n.changeLanguage('ru');
     }
-    expect(staticRouteMetadata('/quests').title).toBe('Городские квесты и маршруты с заданиями | Metravel');
+    expect(staticRouteMetadata('/quests').title).toBe('Городские квесты и маршруты с заданиями | MeTravel');
   });
 
   it('refuses a route that is not in the shared table', () => {

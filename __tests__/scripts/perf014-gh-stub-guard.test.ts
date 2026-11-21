@@ -148,7 +148,7 @@ describe('PERF-014 gesture-handler web stub — metro.config resolver', () => {
     expect(installedSerializers).toContain('config.serializer?.unstable_granularWebExport === true')
     // Granular stays gated on a non-lazy web client export: native and dev keep legacy.
     expect(installedSerializers).toMatch(/context\.platform === 'web' && context\.environment === 'client'[^;]*!options\.dev && !isLazyBundle/)
-    expect(installedChunks).not.toContain('Metravel')
+    expect(installedChunks).not.toContain('MeTravel')
     expect(fs.existsSync(path.join(ROOT, EXPO_OLD_STRATEGY_REL))).toBe(false)
     expect(fs.existsSync(path.join(ROOT, 'patches/expo+58.0.19.patch'))).toBe(false)
     expect(installedRuntime).not.toContain('__METRAVEL_CHUNK_DEPS__')

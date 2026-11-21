@@ -124,7 +124,7 @@ it('preserves the cold route HTML, real catalog states and locale initialization
       expect(report.loading).toBe(true)
       expect(report.empty).toBe(false)
       expect(report.restoreReads).toBe(0)
-      expect(report.head.title).toContain('Metravel')
+      expect(report.head.title).toContain('MeTravel')
       expect(report.head.canonical).toMatch(/^https:\/\/[^/]+\/trips$/)
       expect(report.serverFetches).toBe(0)
       return

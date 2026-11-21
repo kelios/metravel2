@@ -3,7 +3,7 @@ import { render } from '@testing-library/react-native'
 import { Platform, StyleSheet } from 'react-native'
 
 jest.mock('@/constants/mapSeo', () => ({
-  getMapSeoTitle: () => 'Карта маршрутов и достопримечательностей Беларуси | Metravel',
+  getMapSeoTitle: () => 'Карта маршрутов и достопримечательностей Беларуси | MeTravel',
   getMapSeoDescription: () => 'desc',
 }))
 
@@ -47,7 +47,7 @@ const styles = {
 const mountStaticHeading = () => {
   const heading = document.createElement('h1')
   heading.setAttribute('data-ssg-travel-h1', 'true')
-  heading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | Metravel'
+  heading.textContent = 'Карта маршрутов и достопримечательностей Беларуси | MeTravel'
   document.body.appendChild(heading)
   return heading
 }

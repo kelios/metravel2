@@ -96,9 +96,9 @@ describe('LazyInstantSEO head ownership (#2756)', () => {
   })
 
   it('пишет локализованные значения главной в теги RU-экспорта и следует за сменой языка', async () => {
-    appendExportHead('Квесты и маршруты | Metravel', 'Русское описание главной')
-    const be = { title: 'Квэсты і маршруты | Metravel', description: 'Беларускае апісанне галоўнай' }
-    const en = { title: 'City Quests and Routes | Metravel', description: 'English home description' }
+    appendExportHead('Квесты и маршруты | MeTravel', 'Русское описание главной')
+    const be = { title: 'Квэсты і маршруты | MeTravel', description: 'Беларускае апісанне галоўнай' }
+    const en = { title: 'City Quests and Routes | MeTravel', description: 'English home description' }
 
     await act(async () => {
       root?.render(<LazyInstantSEO {...be} canonical="https://metravel.by/" />)
@@ -113,9 +113,9 @@ describe('LazyInstantSEO head ownership (#2756)', () => {
   })
 
   it('после SPA-перехода по одному тегу каждого ключа, значения главной не утекают (#1613)', async () => {
-    appendExportHead('Static home | Metravel', 'Static home description')
+    appendExportHead('Static home | MeTravel', 'Static home description')
     await act(async () => {
-      root?.render(<LazyInstantSEO key="home" title="Home | Metravel" description="Home description" />)
+      root?.render(<LazyInstantSEO key="home" title="Home | MeTravel" description="Home description" />)
     })
 
     window.history.pushState(null, '', '/quests')
@@ -123,14 +123,14 @@ describe('LazyInstantSEO head ownership (#2756)', () => {
       root?.render(
         <LazyInstantSEO
           key="quests"
-          title="Квесты | Metravel"
+          title="Квесты | MeTravel"
           description="Quest catalogue description"
           canonical="https://metravel.by/quests"
         />,
       )
     })
 
-    expectSingleHead('Квесты | Metravel', 'Quest catalogue description')
+    expectSingleHead('Квесты | MeTravel', 'Quest catalogue description')
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/quests')
     // og:image объявлял только экспорт главной.
     expect(document.head.querySelectorAll('meta[property="og:image"]')).toHaveLength(0)
@@ -140,29 +140,29 @@ describe('LazyInstantSEO head ownership (#2756)', () => {
 
   it('экран не в фокусе не пишет head; возврат фокуса возвращает его значения', async () => {
     await act(async () => {
-      root?.render(<LazyInstantSEO title="Article | Metravel" description="Article description" />)
+      root?.render(<LazyInstantSEO title="Article | MeTravel" description="Article description" />)
     })
     mockUseIsFocused.mockReturnValue(false)
     await act(async () => {
-      root?.render(<LazyInstantSEO title="Article v2 | Metravel" description="Article description" />)
+      root?.render(<LazyInstantSEO title="Article v2 | MeTravel" description="Article description" />)
     })
-    expect(document.title).toBe('Article | Metravel')
+    expect(document.title).toBe('Article | MeTravel')
 
     mockUseIsFocused.mockReturnValue(true)
     await act(async () => {
-      root?.render(<LazyInstantSEO title="Article v2 | Metravel" description="Article description" />)
+      root?.render(<LazyInstantSEO title="Article v2 | MeTravel" description="Article description" />)
     })
-    expectSingleHead('Article v2 | Metravel', 'Article description')
+    expectSingleHead('Article v2 | MeTravel', 'Article description')
   })
 
   it('ключ без значения снимается: страница без description не оставляет чужой', async () => {
     await act(async () => {
-      root?.render(<LazyInstantSEO title="Home | Metravel" description="Home description" />)
+      root?.render(<LazyInstantSEO title="Home | MeTravel" description="Home description" />)
     })
     await act(async () => {
-      root?.render(<LazyInstantSEO title="Trips | Metravel" />)
+      root?.render(<LazyInstantSEO title="Trips | MeTravel" />)
     })
-    expect(document.title).toBe('Trips | Metravel')
+    expect(document.title).toBe('Trips | MeTravel')
     expect(document.head.querySelectorAll('meta[property="og:title"]')).toHaveLength(1)
     for (const selector of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
       expect(document.head.querySelectorAll(selector)).toHaveLength(0)

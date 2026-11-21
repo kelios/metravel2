@@ -1,4 +1,5 @@
 import { resources } from '@/i18n/resources'
+import { ssgOnlyResources } from '@/i18n/ssgResources'
 
 // Глоссарий терминов интерфейса. Значения `generated/*` переведены машинно, и
 // короткая подпись без окружения уходит в самый частый словарный смысл: «тема»
@@ -78,6 +79,32 @@ const PL_CARD_NOT_SHEET = new RegExp(
 )
 const UK_CARD_WORD = /картк|картц|карток/i
 const BE_CARD_WORD = /картк|картц|картак/i
+
+// Решения владельца 21.11.2026 (#3372). «Квест» в польском — одно слово „quest”:
+// раньше его передавали ещё и как zadanie, misja, gra, poszukiwanie, и кнопка
+// «Начать квест» называлась „Rozpocznij zadanie”, а текст рядом звал нажать
+// „Rozpocznij misję”. «Задание», «игра» и «поиск» остаются своими словами,
+// поэтому запрет действует только там, где в RU-строке их нет.
+const RU_QUEST_WORD = /(^|[^а-яё])квест/i
+const RU_TASK_GAME_SEARCH = /задани|(^|[^а-яё])игр|поиск|мисси/i
+const PL_QUEST_WORD = new RegExp(`(^|[^${PL_LETTER}])que(st|ści)`, 'i')
+const PL_QUEST_SUBSTITUTE = new RegExp(
+  `zada[nń]|misj|poszukiwa|wypraw|(^|[^${PL_LETTER}])gr(a|ę|y|ze|ą|om|ami|ach|ier)?(?![${PL_LETTER}])`,
+  'i',
+)
+// «Мои поездки» — раздел совместных поездок („Wycieczki” в навигации), «Мои
+// путешествия» — свои статьи („Moje podróże”); обе подписи были „Moje podróże”.
+const RU_MY_TRIPS = /(^|[^а-яё])мо(и|их|им|ими)\s+поездк/i
+const RU_MY_TRAVELS = /(^|[^а-яё])мо(и|их|им|ими)\s+путешестви/i
+// «Точка» маршрута и карты в белорусском — «кропка»; «пункт» остаётся пунктом
+// меню, списка и населённым пунктом. «Точка печати» в книгах — пункт приёма
+// заказов, а не место на карте.
+const RU_ITEM_WORD = /(^|[^а-яё])пункт/i
+const BE_ITEM_WORD = new RegExp(`(^|[^${BE_LETTER}])пунк[тц]`, 'i')
+const BE_POINT_WORD = /кроп(к|ак|цы)/i
+const PRINT_PROVIDER_KEYS = /^provider(Empty|FontsEmbedded|FontsOutlines|FontsAsk|LoadError)$/
+// «Приложение» — программа на устройстве: BE «дадатак», UK «застосунок».
+const RU_APP_WORD = /(^|[^а-яё])приложени/i
 
 // Одна шкала сложности на всех поверхностях: бейдж и карточка квеста, попап
 // карты, каталог города, фильтр путешествий. В PL слово согласуется с «poziom»
@@ -326,6 +353,53 @@ const TERMS: Term[] = [
     minEntries: 20,
     locales: { pl: { forbidden: new RegExp(`(^|[^${PL_LETTER}])jasn`, 'i') } },
   },
+  {
+    name: '«квест» — в польском „quest” (#3372)',
+    ru: RU_QUEST_WORD,
+    minEntries: 380,
+    locales: { pl: { required: PL_QUEST_WORD } },
+  },
+  {
+    name: '«квест» без «задания», «игры» и «поиска» — не zadanie, misja, gra, poszukiwanie',
+    ru: RU_QUEST_WORD,
+    except: { ru: RU_TASK_GAME_SEARCH },
+    minEntries: 300,
+    locales: { pl: { forbidden: PL_QUEST_SUBSTITUTE } },
+  },
+  {
+    name: '«Начать квест» — одна подпись у кнопки и у текста, который зовёт её нажать',
+    ru: /начать квест/i,
+    minEntries: 11,
+    locales: { pl: { required: /Rozpocznij quest/ } },
+  },
+  {
+    name: '«Мои поездки» — „Moje wycieczki”, как раздел „Wycieczki”',
+    ru: RU_MY_TRIPS,
+    minEntries: 9,
+    locales: { pl: { required: /wyciecz/i, forbidden: /podróż|przejazd/i } },
+  },
+  {
+    name: '«Мои путешествия» — „Moje podróże”, не wycieczki',
+    ru: RU_MY_TRAVELS,
+    minEntries: 14,
+    locales: { pl: { required: /podróż/i, forbidden: /wyciecz/i } },
+  },
+  {
+    name: '«точка» — в белорусском «кропка», не «пункт» (#3372)',
+    ru: RU_POINT_WORD,
+    except: { ru: RU_ITEM_WORD, keys: PRINT_PROVIDER_KEYS },
+    minEntries: 300,
+    locales: { be: { required: BE_POINT_WORD, forbidden: BE_ITEM_WORD } },
+  },
+  {
+    name: '«приложение» — BE «дадатак», UK «застосунок» (#3372)',
+    ru: RU_APP_WORD,
+    minEntries: 50,
+    locales: {
+      be: { required: /дадат(ак|к)/i, forbidden: /прыкладанн|праграм/i },
+      uk: { required: /застосун(ок|к)/i, forbidden: /додат(ок|к)|програм|застосуванн/i },
+    },
+  },
 ]
 
 type Bundle = Record<string, Record<string, unknown>>
@@ -348,7 +422,7 @@ const localeCases = TERMS.flatMap((term) =>
   (Object.keys(term.locales) as Locale[]).map((locale) => ({ locale, term, name: term.name })),
 )
 
-describe('глоссарий терминов интерфейса (#2180, #2188, #2242, #2254)', () => {
+describe('глоссарий терминов интерфейса (#2180, #2188, #2242, #2254, #3372)', () => {
   it.each(TERMS)('$name: правило находит свои RU-ключи', (term) => {
     expect(entriesOf(term).length).toBeGreaterThanOrEqual(term.minEntries)
   })
@@ -385,6 +459,19 @@ describe('глоссарий терминов интерфейса (#2180, #2188
     expect(PL_WALK_VERB.test('Nie wiesz gdzie iść?')).toBe(true)
     expect(PL_WALK_VERB.test('Chcę pojechać')).toBe(false)
     expect(PL_WALK_VERB.test('przyjść na spotkanie')).toBe(false)
+    expect(RU_QUEST_WORD.test('Что входит в квест-бук')).toBe(true)
+    expect(RU_TASK_GAME_SEARCH.test('Квест-комната — это платная игра')).toBe(true)
+    expect(RU_TASK_GAME_SEARCH.test('Выиграйте приз')).toBe(false)
+    expect(PL_QUEST_WORD.test('Recenzje o queście')).toBe(true)
+    expect(PL_QUEST_SUBSTITUTE.test('Rozpocznij zadanie')).toBe(true)
+    expect(PL_QUEST_SUBSTITUTE.test('Kontynuuj grę')).toBe(true)
+    expect(PL_QUEST_SUBSTITUTE.test('Film z misji')).toBe(true)
+    expect(PL_QUEST_SUBSTITUTE.test('Program questu')).toBe(false)
+    expect(RU_MY_TRIPS.test('Поиск по моим поездкам')).toBe(true)
+    expect(RU_MY_TRIPS.test('Организовать мою поездку')).toBe(false)
+    expect(BE_ITEM_WORD.test('Удакладніце ў пункце')).toBe(true)
+    expect(BE_ITEM_WORD.test('Кропкі маршруту')).toBe(false)
+    expect(BE_POINT_WORD.test('На кожнай кропцы')).toBe(true)
   })
 
   it('шаблоны перевода различают карту, карточку и лист', () => {
@@ -424,4 +511,27 @@ it.each(['ru', 'be', 'uk', 'pl', 'en'] as const)('uses the same wishlist name in
   for (const key of ['feedback.favoriteAdded', 'feedback.favoriteRemoved', 'feedback.favoriteError']) expect(common[key]).toContain(name)
   expect(common['feedback.favoriteAdded']).not.toMatch(/избранн|абран|обран|ulubion|favorites/i)
   expect(common['feedback.favoriteRemoved']).not.toMatch(/избранн|абран|обран|ulubion|favorites/i)
+})
+
+// Бренд пишется «MeTravel» во всех пяти локалях, включая SEO-заголовки (решение
+// владельца 21.11.2026, #3372): до правки половина строк несла «Metravel».
+// Адрес сайта, почта и хэндл названием не считаются: metravel.by, @metravelby.
+const BRAND_MENTION = /(?<![@/.\w-])metravel(?![\w-]|\.by)/gi
+// В польском имя склоняется: «Podróżuj MeTravelem».
+const PL_DECLINED_BRAND = /(?<![@/.\w-])metravel(em|a|u|owi|ie)(?![\w-])/gi
+// Заголовок видео набран прописными целиком — это оформление, а не написание бренда.
+const BRAND_CAPS_KEYS = /^components\.about\.VideoCard\.metravel_o_metravel_by_/
+
+it.each(['ru', 'be', 'uk', 'pl', 'en'] as const)('бренд пишется «MeTravel»: %s', (locale) => {
+  const bundles = [resources[locale], ssgOnlyResources[locale]] as unknown as Bundle[]
+  const violations = bundles.flatMap((bundle) =>
+    Object.entries(bundle).flatMap(([namespace, entries]) =>
+      Object.entries(entries).flatMap(([key, value]) => {
+        if (typeof value !== 'string' || BRAND_CAPS_KEYS.test(key)) return []
+        const mentions = [...(value.match(BRAND_MENTION) ?? []), ...(value.match(PL_DECLINED_BRAND) ?? [])]
+        return mentions.some((mention) => !mention.startsWith('MeTravel')) ? [`${namespace}:${key} = ${JSON.stringify(value)}`] : []
+      }),
+    ),
+  )
+  expect(violations).toEqual([])
 })

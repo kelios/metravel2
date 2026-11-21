@@ -2,7 +2,7 @@ export const messagesGenerated1 = {
   "app.tabs.messages.dlya_dostupa_k_soobscheniyam_neobhodimo_avto_df1d2208": "You must be logged in to access messages.",
   "app.tabs.messages.lichnye_soobscheniya_18511fc1": "Personal messages",
   "app.tabs.messages.polzovatel_3baf520c": "User",
-  "app.tabs.messages.soobscheniya_metravel_ccba5f8b": "Messages | Metravel",
+  "app.tabs.messages.soobscheniya_metravel_ccba5f8b": "Messages | MeTravel",
   "app.tabs.messages.voydite_v_akkaunt_4c68ac56": "Login to your account",
   "app.tabs.messages.voyti_9426b865": "Login",
   "app.tabs.messages.vyberite_dialog_ili_nachnite_novyy_0cc840a3": "Select a conversation or start a new one",

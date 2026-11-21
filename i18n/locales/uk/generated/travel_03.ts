@@ -273,7 +273,7 @@ export const travelGenerated3 = {
   "components.travel.stepRoute.RouteMapCard.zagruzka_karty_1b8eb2da": "Завантаження карти…",
   "components.travel.TelegramDiscussionSection.administratoru_zadayte_expo_public_telegram__c10c2ba6": "Адміністратору: установіть EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL у налаштуваннях оточення, щоб увімкнути посилання на канал.",
   "components.travel.TelegramDiscussionSection.obsuzhdenie_marshruta_v_telegram_a7792961": "Обговорення маршруту до Telegram",
-  "components.travel.TelegramDiscussionSection.otkroetsya_vneshnee_prilozhenie_ili_vkladka_f07c5d42": "Відкриється зовнішня програма або вкладка",
+  "components.travel.TelegramDiscussionSection.otkroetsya_vneshnee_prilozhenie_ili_vkladka_f07c5d42": "Відкриється зовнішній застосунок або вкладка",
   "components.travel.TelegramDiscussionSection.otkryt_chat_v_telegram_64956452": "Відкрити чат у Telegram",
   "components.travel.TelegramDiscussionSection.otkryt_obsuzhdenie_v_telegram_ac2c9644": "Відкрити обговорення в Telegram",
   "components.travel.TelegramDiscussionSection.skoro_zdes_budet_chat_v_telegram_98a61847": "Скоро тут буде чат у Telegram",

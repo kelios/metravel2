@@ -183,16 +183,16 @@ function isBlockedFromIndexing(robots) {
 
 /**
  * Мирроринг контракта `buildSeoTitle` (`utils/seoText.js`) вместо прямой
- * проверки «в заголовке есть слово Metravel».
+ * проверки «в заголовке есть слово MeTravel».
  *
  * Бренд-суффикс намеренно необязателен: при нехватке бюджета SERP жертвуем
- * брендом, а не ключевыми словами. Старый ассершен `titleContains: 'Metravel'`
+ * брендом, а не ключевыми словами. Старый ассершен `titleContains: 'MeTravel'`
  * падал именно на длинных заголовках, то есть ровно там, где правило
  * отработало верно, — и держал блокирующий гейт красным, из-за чего дневная
  * SEO-рутина каждый раз останавливалась на шаге 0.
  *
  * `buildSeoTitle` возвращает ровно три формы, их и проверяем:
- *   1. `base | Metravel` — суффикс влез в бюджет;
+ *   1. `base | MeTravel` — суффикс влез в бюджет;
  *   2. `base`            — без суффикса он влезает, с суффиксом уже нет;
  *   3. `clipped…`        — не влез даже без бренда, срез по границе слова.
  */
@@ -945,7 +945,7 @@ async function main() {
 
   // --- 1. Home page ---
   await testPage('/', {
-    titleContains: 'Metravel',
+    titleContains: 'MeTravel',
     descNotFallback: true,
     canonicalPath: '/',
     ogType: 'website',

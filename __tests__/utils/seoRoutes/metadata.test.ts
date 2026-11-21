@@ -4,7 +4,7 @@ describe('utils/seoRoutes/metadata buildRouteMetadata (#2740)', () => {
   it('emits the full LazyInstantSEO tag set', () => {
     expect(
       buildRouteMetadata({
-        title: 'Квесты | Metravel',
+        title: 'Квесты | MeTravel',
         description: 'Описание',
         canonical: 'https://metravel.by/quests',
         image: 'https://metravel.by/og/quests.jpg',
@@ -17,7 +17,7 @@ describe('utils/seoRoutes/metadata buildRouteMetadata (#2740)', () => {
         alternates: { ru: 'https://metravel.by/quests', 'x-default': 'https://metravel.by/quests' },
       }),
     ).toEqual({
-      title: 'Квесты | Metravel',
+      title: 'Квесты | MeTravel',
       description: 'Описание',
       robots: 'noindex, follow',
       alternates: {
@@ -26,7 +26,7 @@ describe('utils/seoRoutes/metadata buildRouteMetadata (#2740)', () => {
       },
       openGraph: {
         type: 'website',
-        title: 'Квесты | Metravel',
+        title: 'Квесты | MeTravel',
         siteName: 'MeTravel',
         description: 'Описание',
         url: 'https://metravel.by/quests',
@@ -35,7 +35,7 @@ describe('utils/seoRoutes/metadata buildRouteMetadata (#2740)', () => {
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'Квесты | Metravel',
+        title: 'Квесты | MeTravel',
         description: 'Описание',
         images: [{ url: 'https://metravel.by/og/quests.jpg', alt: 'Квесты' }],
       },
@@ -43,11 +43,11 @@ describe('utils/seoRoutes/metadata buildRouteMetadata (#2740)', () => {
   });
 
   it('falls back to summary card and omits empty optionals', () => {
-    const metadata = buildRouteMetadata({ title: ' Metravel ', description: '  ', robots: '', canonical: null });
+    const metadata = buildRouteMetadata({ title: ' MeTravel ', description: '  ', robots: '', canonical: null });
     expect(metadata).toEqual({
-      title: 'Metravel',
-      openGraph: { type: 'website', title: 'Metravel', siteName: 'MeTravel' },
-      twitter: { card: 'summary', title: 'Metravel' },
+      title: 'MeTravel',
+      openGraph: { type: 'website', title: 'MeTravel', siteName: 'MeTravel' },
+      twitter: { card: 'summary', title: 'MeTravel' },
     });
   });
 

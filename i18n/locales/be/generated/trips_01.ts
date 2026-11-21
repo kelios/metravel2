@@ -132,7 +132,7 @@ export const tripsGenerated1 = {
   "components.trips.planning.CommunityRoutesCatalog.region_po_zhelaniyu_aa0b5cef": "Рэгіён (па жаданні)",
   "components.trips.planning.CommunityRoutesCatalog.vse_730ac669": "Усе",
   "components.trips.planning.RouteBuilder.dobavit_tochku_60ab5746": "Дадаць кропку",
-  "components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e": "Дадайце першы пункт маршруту ніжэй.",
+  "components.trips.planning.RouteBuilder.dobavte_pervuyu_tochku_marshruta_nizhe_d7cb9f9e": "Дадайце першую кропку маршруту ніжэй.",
   "components.trips.planning.RouteBuilder.dolgota_lng_f08c3647": "Даўгата (lng)",
   "components.trips.planning.RouteBuilder.ischem_sovpadeniya_b077a7ac": "Шукаем супадзенні...",
   "components.trips.planning.RouteBuilder.konstruktor_marshruta_187e063e": "Канструктар маршруту",

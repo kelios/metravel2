@@ -92,7 +92,7 @@ describe('TravelPointsBlock', () => {
     (Platform as { OS: string }).OS = originalOS;
   });
 
-  it('shows all route-point export actions on native and shares KML with Metravel source styling', async () => {
+  it('shows all route-point export actions on native and shares KML with MeTravel source styling', async () => {
     const { getByLabelText } = await render(
       <TravelPointsBlock
         anchors={{ points: createRef() } as any}

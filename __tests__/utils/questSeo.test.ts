@@ -22,7 +22,7 @@ describe('quest SEO metadata', () => {
       durationMin: 120,
     })
 
-    expect(seo.title).toBe('Витебск: столица авангарда | Metravel')
+    expect(seo.title).toBe('Витебск: столица авангарда | MeTravel')
     expect(seo.title).not.toContain('что посмотреть')
     expect(seo.description).toContain('Город Витебск: бесплатный пеший маршрут «Столица авангарда»')
     expect(seo.description).toContain('8 точек. Примерно 2 ч.')
@@ -36,7 +36,7 @@ describe('quest SEO metadata', () => {
       points: 12,
     })
 
-    expect(seo.title).toBe('Минск — Тайна Свислочского Цмока: Легенда оживает | Metravel')
+    expect(seo.title).toBe('Минск — Тайна Свислочского Цмока: Легенда оживает | MeTravel')
     expect(seo.title.length).toBeLessThanOrEqual(60)
     expect(seo.title).not.toContain('Минск: Минск')
   })
@@ -62,7 +62,7 @@ describe('quest SEO metadata', () => {
       points: 6,
     })
 
-    expect(seo.title).toBe('Вашково — Огонёк и семь знаков Аллеи фонарей | Metravel')
+    expect(seo.title).toBe('Вашково — Огонёк и семь знаков Аллеи фонарей | MeTravel')
   })
 
   it('keeps encoded descriptions within the static SEO attribute limit', () => {
@@ -178,7 +178,7 @@ describe('quest city landing meta', () => {
   it('opens the title with the city and the word «квесты» and names real route places', () => {
     const seo = buildQuestCityLandingMeta(MINSK)
 
-    expect(seo.title).toBe('Минск: квесты-прогулки — Свято-Духов собор | Metravel')
+    expect(seo.title).toBe('Минск: квесты-прогулки — Свято-Духов собор | MeTravel')
     expect(seo.title.length).toBeLessThanOrEqual(60)
     expect(seo.description).toBe(
       'Минск: 3 квеста с заданиями — «Детский квест по Минску: бронзовые друзья города», «Звезда над батлейкой» и другие. Проходите сами в любой день, без записи.',
@@ -190,7 +190,7 @@ describe('quest city landing meta', () => {
     const minsk = buildQuestCityLandingMeta(MINSK)
     const grodno = buildQuestCityLandingMeta(GRODNO)
 
-    expect(grodno.title).toBe('Гродно: квесты-прогулки — Форт №4 | Metravel')
+    expect(grodno.title).toBe('Гродно: квесты-прогулки — Форт №4 | MeTravel')
     expect(grodno.description).toBe(
       'Гродно: 2 квеста с заданиями — «Две звезды над Неманом», «Оркестр, который потерял дирижёра». Проходите сами в любой день, без записи. Рядом: Друскининкай.',
     )
@@ -217,17 +217,17 @@ describe('quest city landing meta', () => {
 
     // Оба места — 59 знаков без бренда: второе уходит целиком.
     expect(buildQuestCityLandingMeta({ cityName: 'Минск', places: [square, cathedral] }).title)
-      .toBe('Минск: квесты-прогулки — Площадь Свободы | Metravel')
+      .toBe('Минск: квесты-прогулки — Площадь Свободы | MeTravel')
     // Длинному имени города не хватает места даже на одно: заголовок без мест, но с брендом.
     const long = buildQuestCityLandingMeta({ cityName: 'Гожув-Велькопольский', places: [cathedral] })
-    expect(long.title).toBe('Гожув-Велькопольский: квесты-прогулки с заданиями | Metravel')
+    expect(long.title).toBe('Гожув-Велькопольский: квесты-прогулки с заданиями | MeTravel')
     expect(long.title.length).toBeLessThanOrEqual(60)
   })
 
   it('falls back to a title without places and a description without neighbours', () => {
     const seo = buildQuestCityLandingMeta({ cityName: 'д.Вашково (Ушачского района)', questTitles: ['Огонёк и семь знаков Аллеи фонарей'] })
 
-    expect(seo.title).toBe('Вашково: квесты-прогулки с заданиями | Metravel')
+    expect(seo.title).toBe('Вашково: квесты-прогулки с заданиями | MeTravel')
     expect(seo.description).toBe('Вашково: 1 квест с заданиями — «Огонёк и семь знаков Аллеи фонарей». Проходите сами в любой день, без записи.')
   })
 
@@ -246,7 +246,7 @@ describe('quest city landing meta', () => {
   it('names the country only when asked to tell two same-named cities apart', () => {
     const by = buildQuestCityLandingMeta({ ...GRODNO, countryName: 'Беларусь' })
 
-    expect(by.title).toBe('Гродно, Беларусь: квесты-прогулки — Форт №4 | Metravel')
+    expect(by.title).toBe('Гродно, Беларусь: квесты-прогулки — Форт №4 | MeTravel')
     expect(by.description.startsWith('Гродно, Беларусь: 2 квеста')).toBe(true)
   })
 

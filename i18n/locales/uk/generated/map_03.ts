@@ -229,7 +229,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM недоступний (помилка мережі)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla недоступний (помилка мережі)",
   "utils.routingHelpers.requestFailedAfterRetries": "Не вдалося виконати запит після повторних спроб",
-  "constants.mapSeo.title": "Карта пам’яток Білорусі — маршрути та відстані | Metravel",
+  "constants.mapSeo.title": "Карта пам’яток Білорусі — маршрути та відстані | MeTravel",
   "constants.mapSeo.description": "Інтерактивна карта Білорусі з пам’ятками: обирайте точки за категоріями, будуйте маршрут за точками й дивіться відстані між ними.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Пошук за тегами",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук за тегами та категоріями місць",

@@ -52,7 +52,7 @@ describe('guest quest registration promise', () => {
   })
 
   it.each([
-    ['be', 1, '1 пункт'], ['be', 2, '2 пункты'], ['be', 5, '5 пунктаў'],
+    ['be', 1, '1 кропку'], ['be', 2, '2 кропкі'], ['be', 5, '5 кропак'],
     ['uk', 1, '1 точку'], ['uk', 2, '2 точки'], ['uk', 5, '5 точок'],
     ['pl', 1, '1 punkt'], ['pl', 2, '2 punkty'], ['pl', 5, '5 punktów'],
     ['en', 1, '1 quest point;'], ['en', 2, '2 quest points;'], ['en', 5, '5 quest points;'],

@@ -41,7 +41,7 @@ describe('client quest structured data', () => {
       provider: { '@type': 'Organization', name: 'MeTravel', url: 'https://metravel.by' },
     });
     // #3238: the quest name, never the branded `<title>`.
-    expect(data['@graph'][0].name).not.toMatch(/\|\s*Metravel/i);
+    expect(data['@graph'][0].name).not.toMatch(/\|\s*MeTravel/i);
     expect(data['@graph'][1]).toMatchObject({ '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, item: 'https://metravel.by/' },
       { '@type': 'ListItem', position: 2, item: 'https://metravel.by/quests' },
@@ -64,7 +64,7 @@ describe('client quest structured data', () => {
       process.env.EXPO_PUBLIC_QUEST_LOCALE_HUBS = published ? 'true' : 'false';
       const ssr = buildQuestPublicStructuredData(detailFor(locale))['@graph'][1].itemListElement[1].item;
       const runtime = createQuestDetailStructuredData({
-        canonical: `https://metravel.by/${locale}/quests/7/fixture-city-walk`, title: 'T | Metravel',
+        canonical: `https://metravel.by/${locale}/quests/7/fixture-city-walk`, title: 'T | MeTravel',
         description: 'D', inLanguage: locale,
       })['@graph'].find((node: { '@type'?: string }) => node['@type'] === 'BreadcrumbList') as { itemListElement: Array<{ item: string }> };
       return [ssr, runtime.itemListElement[1].item];

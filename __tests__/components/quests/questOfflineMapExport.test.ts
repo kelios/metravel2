@@ -62,8 +62,8 @@ describe('questOfflineMapExport', () => {
       routeSource: 'routed',
     });
 
-    expect(file.content).toContain('Велосипедный маршрут квеста Metravel');
-    expect(file.content).not.toContain('Пеший маршрут квеста Metravel');
+    expect(file.content).toContain('Велосипедный маршрут квеста MeTravel');
+    expect(file.content).not.toContain('Пеший маршрут квеста MeTravel');
   });
 
   it('builds GeoJSON LineString from routed geometry and marks it as real route', () => {

@@ -1,7 +1,7 @@
 // Асістэнт сайта (#2460). Ключи супадаюць з RU; плейсхолдары {{count}} і {{max}} захаваны.
 export const aiAssistStaticResources = {
   "nav.assistant": "Асістэнт",
-  "ask.title": "Асістэнт metravel",
+  "ask.title": "Асістэнт MeTravel",
   "ask.info": "Адказвае толькі па артыкулах і квэстах сайта: кожная рэкамендацыя — са спасылкай на нашу старонку. Калі матэрыялу няма, так і скажа.",
   "ask.seoTitle": "Асістэнт па маршрутах — metravel.by",
   "ask.seoDescription": "Спытайце, куды паехаць: асістэнт падбярэ артыкулы і квэсты metravel.by і адкажа са спасылкамі.",
@@ -120,9 +120,9 @@ export const aiAssistStaticResources = {
   "author.limit": "Ліміт прапаноў на сёння вычарпаны. Заўтра памочнік зноў даступны.",
   "author.remaining": "Засталося запытаў сёння: {{count}}",
   "tripDraft.title": "Чарнавік апісання",
-  "tripDraft.info": "Збярэ 2–3 варыянты апісання паездкі па пунктах маршруту, датах і транспарце — толькі па плане, нічога не выдумляючы. Варыянт можна ўставіць і паправіць.",
+  "tripDraft.info": "Збярэ 2–3 варыянты апісання паездкі па кропках маршруту, датах і транспарце — толькі па плане, нічога не выдумляючы. Варыянт можна ўставіць і паправіць.",
   "tripDraft.suggest": "Прапанаваць апісанне",
-  "tripDraft.tooShort": "Дадайце пункты маршруту і даты — чарнавіку трэба ад {{min}} знакаў плана, зараз {{count}}.",
+  "tripDraft.tooShort": "Дадайце кропкі маршруту і даты — чарнавіку трэба ад {{min}} знакаў плана, зараз {{count}}.",
   "tripDraft.variantsTitle": "Варыянты апісання",
   "tripDraft.insert": "Уставіць",
   "tripDraft.replace": "Замяніць",
@@ -130,7 +130,7 @@ export const aiAssistStaticResources = {
   "tripDraft.replaceMessage": "Бягучы тэкст апісання будзе заменены выбраным варыянтам.",
   "tripDraft.inserted": "Устаўлена ў апісанне. Праверце і папраўце пад сябе.",
   "tripDraft.source.title": "Назва",
-  "tripDraft.source.points": "Пункты",
+  "tripDraft.source.points": "Кропкі",
   "tripDraft.source.dates": "Даты",
   "tripDraft.source.transport": "Транспарт",
 } as const

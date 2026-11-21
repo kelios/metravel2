@@ -59,7 +59,7 @@ describe('JSON-LD Helmet contract (#1967)', () => {
     }
     await render(
       <LazyInstantSEO
-        title="Карта маршрутов | Metravel"
+        title="Карта маршрутов | MeTravel"
         additionalTags={jsonLdScript(data, { key: 'map-structured-data' })}
       />,
     )

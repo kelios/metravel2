@@ -1,7 +1,7 @@
 // Site assistant (#2460). Keys match RU; placeholders {{count}} and {{max}} are preserved.
 export const aiAssistStaticResources = {
   "nav.assistant": "Assistant",
-  "ask.title": "Metravel assistant",
+  "ask.title": "MeTravel assistant",
   "ask.info": "Answers only from the site's articles and quests: every recommendation comes with a link to our page. If there is no material, it says so.",
   "ask.seoTitle": "Route assistant — metravel.by",
   "ask.seoDescription": "Ask where to go: the assistant picks metravel.by articles and quests and answers with links.",

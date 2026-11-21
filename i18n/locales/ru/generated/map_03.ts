@@ -229,7 +229,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM недоступен (сетевая ошибка)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla недоступен (сетевая ошибка)",
   "utils.routingHelpers.requestFailedAfterRetries": "Не удалось выполнить запрос после повторных попыток",
-  "constants.mapSeo.title": "Карта достопримечательностей Беларуси и маршруты | Metravel",
+  "constants.mapSeo.title": "Карта достопримечательностей Беларуси и маршруты | MeTravel",
   "constants.mapSeo.description": "Интерактивная карта Беларуси с достопримечательностями: выбирайте точки по категориям, стройте маршрут по точкам и смотрите расстояния между ними.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Поиск по тегам",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Поиск по тегам и категориям мест",

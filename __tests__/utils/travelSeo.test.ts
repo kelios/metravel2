@@ -22,12 +22,12 @@ describe('travelSeo', () => {
     // Длинный заголовок держится в бюджете SERP за счёт бренд-суффикса, а не ключевых слов.
     const long = buildTravelSeoTitle('  Очень длинный   заголовок маршрута   '.repeat(4));
     expect(long).toMatch(/…$/);
-    expect(long).not.toContain(' | Metravel');
+    expect(long).not.toContain(' | MeTravel');
     expect(long.length).toBeLessThanOrEqual(60);
     expect(buildTravelSeoTitle('Смолевуд: натурная площадка Беларусьфильма под Минском')).toBe(
       'Смолевуд: натурная площадка Беларусьфильма под Минском',
     );
-    expect(buildTravelSeoTitle('')).toBe('Metravel');
+    expect(buildTravelSeoTitle('')).toBe('MeTravel');
     expect(getTravelSeoDescription('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
     expect(getTravelSeoDescription('')).toBe('Найди место для путешествия и поделись своим опытом.');
   });
@@ -48,11 +48,11 @@ describe('travelSeo', () => {
 
   it('builds unique slug/id fallbacks for incomplete travel SEO data', () => {
     expect(buildTravelSeoFallbackTitle('park-grudek-v-iavozhno-polskie-maldivy')).toBe(
-      'Park grudek iavozhno polskie maldivy | Metravel',
+      'Park grudek iavozhno polskie maldivy | MeTravel',
     );
-    expect(buildTravelSeoFallbackTitle(628)).toBe('Путешествие 628 | Metravel');
+    expect(buildTravelSeoFallbackTitle(628)).toBe('Путешествие 628 | MeTravel');
     expect(buildTravelSeoFallbackDescription('vitebsk-chto-mozhno-posmotret')).toContain(
-      'Маршрут Vitebsk chto mozhno posmotret на Metravel',
+      'Маршрут Vitebsk chto mozhno posmotret на MeTravel',
     );
   });
 
@@ -82,7 +82,7 @@ describe('travelSeo', () => {
   });
 
   // #1620: headline is the editorial title only. The branded/truncated
-  // "<title>… | Metravel" document title is a separate contract (buildSeoTitle)
+  // "<title>… | MeTravel" document title is a separate contract (buildSeoTitle)
   // and must never leak into Article.headline.
   it('never appends the branded document-title suffix to Article.headline', () => {
     const jsonLd = createTravelArticleJsonLd({
@@ -92,7 +92,7 @@ describe('travelSeo', () => {
     } as any);
 
     expect(jsonLd?.headline).toBe('Озеро Хотомле');
-    expect(jsonLd?.headline).not.toContain('Metravel');
+    expect(jsonLd?.headline).not.toContain('MeTravel');
     expect(jsonLd?.headline).not.toMatch(/…$/);
   });
 

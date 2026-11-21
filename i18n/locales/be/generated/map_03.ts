@@ -229,7 +229,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM недаступны (сеткавая памылка)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla недаступны (сеткавая памылка)",
   "utils.routingHelpers.requestFailedAfterRetries": "Не атрымалася выканаць запыт пасля паўторных спроб",
-  "constants.mapSeo.title": "Карта славутасцей Беларусі — маршруты, адлегласці | Metravel",
+  "constants.mapSeo.title": "Карта славутасцей Беларусі — маршруты, адлегласці | MeTravel",
   "constants.mapSeo.description": "Інтэрактыўная карта Беларусі са славутасцямі: выбірайце кропкі па катэгорыях, будуйце маршрут па кропках і глядзіце адлегласці паміж імі.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Пошук па тэгах",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Пошук па тэгах і катэгорыях месцаў",

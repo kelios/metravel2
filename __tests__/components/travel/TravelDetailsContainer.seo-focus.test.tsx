@@ -119,17 +119,17 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     jest.useFakeTimers()
     mockSetOptions.mockClear()
     mockUseIsFocused.mockReturnValue(false)
-    document.title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel'
+    document.title = 'Поиск маршрутов и идей путешествий по Беларуси | MeTravel'
     document.head.innerHTML = [
-      '<meta property="og:title" content="Поиск маршрутов и идей путешествий по Беларуси | Metravel">',
+      '<meta property="og:title" content="Поиск маршрутов и идей путешествий по Беларуси | MeTravel">',
       '<meta property="og:description" content="Search description">',
       '<meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow_512x512.png">',
-      '<meta name="twitter:title" content="Поиск маршрутов и идей путешествий по Беларуси | Metravel">',
+      '<meta name="twitter:title" content="Поиск маршрутов и идей путешествий по Беларуси | MeTravel">',
       '<meta name="twitter:description" content="Search description">',
       '<meta name="twitter:image" content="https://metravel.by/assets/icons/logo_yellow_512x512.png">',
       '<meta name="description" content="Search description">',
       '<link rel="canonical" href="https://metravel.by/search">',
-      '<title data-rh="true">Поиск маршрутов и идей путешествий по Беларуси | Metravel</title>',
+      '<title data-rh="true">Поиск маршрутов и идей путешествий по Беларуси | MeTravel</title>',
     ].join('')
   })
 
@@ -151,10 +151,10 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     })
 
     expect(mockSetOptions).not.toHaveBeenCalled()
-    expect(document.title).toBe('Поиск маршрутов и идей путешествий по Беларуси | Metravel')
+    expect(document.title).toBe('Поиск маршрутов и идей путешествий по Беларуси | MeTravel')
     expect(
       document.querySelector('meta[property="og:title"]')?.getAttribute('content')
-    ).toBe('Поиск маршрутов и идей путешествий по Беларуси | Metravel')
+    ).toBe('Поиск маршрутов и идей путешествий по Беларуси | MeTravel')
     expect(
       document.querySelector('link[rel="canonical"]')?.getAttribute('href')
     ).toBe('https://metravel.by/search')

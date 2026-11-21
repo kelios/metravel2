@@ -6,7 +6,7 @@ export const common = {
   'language.pl': "Polski",
   'language.en': "English",
   'language.settingTitle': "Мова інтерфейсу",
-  'language.settingDescription': "Виберіть мову сайту та програми. Налаштування збережеться на цьому пристрої.",
+  'language.settingDescription': "Виберіть мову сайту та застосунку. Налаштування збережеться на цьому пристрої.",
   'language.system': "Як у системі",
   'language.systemDescription': "Використовувати мову пристрою, якщо вона підтримується",
   'language.headerLabel': "Змінити мову",

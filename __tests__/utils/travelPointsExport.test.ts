@@ -40,7 +40,7 @@ describe('travelPointsExport', () => {
     } as any);
 
     expect(input.name).toBe('Weekend route points');
-    expect(input.description).toBe('Точки маршрута из Metravel: Weekend route');
+    expect(input.description).toBe('Точки маршрута из MeTravel: Weekend route');
     expect(input.sourceName).toBe('Weekend route');
     expect(input.waypoints).toHaveLength(1);
     expect(input.track).toBeUndefined();

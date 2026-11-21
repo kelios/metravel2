@@ -11,7 +11,7 @@ describe('normalizeHeadCharset', () => {
   const buildHelmetHeavyHtml = () => `<!DOCTYPE html>
 <html lang="ru">
 <head>
-<title data-rh="true">Пользовательское соглашение | Metravel</title>
+<title data-rh="true">Пользовательское соглашение | MeTravel</title>
 <meta data-rh="true" name="description" content="${cyrillicFiller}"/>
 <meta data-rh="true" property="og:title" content="Пользовательское соглашение"/>
 <meta data-rh="true" property="og:description" content="${cyrillicFiller}"/>
@@ -42,7 +42,7 @@ describe('normalizeHeadCharset', () => {
     expect(charsetByteOffset).toBeLessThan(1024)
 
     // Helmet tags and the rest of <head> are untouched, just reordered around them.
-    expect(fixed).toContain('<title data-rh="true">Пользовательское соглашение | Metravel</title>')
+    expect(fixed).toContain('<title data-rh="true">Пользовательское соглашение | MeTravel</title>')
     expect(fixed).toContain('<meta httpEquiv="X-UA-Compatible" content="IE=edge" />')
   })
 

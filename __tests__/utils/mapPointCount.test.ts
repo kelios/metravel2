@@ -25,10 +25,10 @@ describe('map point identity and loaded scope in every production locale', () =>
     expect(qualifyMapPointCount(formatMapPoints(5), 'loaded')).toBe(loaded)
     expect(qualifyMapPointCount(formatMapPoints(5), 'radius')).toBe(`5 ${forms[2]}`)
     // #2938: owner decision 2026-11-02 brings the country back (reverses
-    // #2382); the brand is spelled "Metravel" like on every other page.
+    // #2382); the brand is spelled "MeTravel" like on every other page.
     expect(getMapSeoTitle()).toMatch(/Беларус|Білорус|Belarus|Białoru/)
     expect(getMapSeoDescription()).toMatch(/Беларус|Білорус|Belarus|Białoru/)
-    expect(getMapSeoTitle()).toMatch(/ \| Metravel$/)
+    expect(getMapSeoTitle()).toMatch(/ \| MeTravel$/)
     expect(getMapSeoTitle().length).toBeLessThanOrEqual(SEO_TITLE_MAX_LENGTH)
     expect(getMapSeoDescription().length).toBeLessThanOrEqual(160)
   })

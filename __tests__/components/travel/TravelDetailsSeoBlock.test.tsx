@@ -39,14 +39,14 @@ describe('TravelDetailsSeoBlock', () => {
         headKey="travel-lake"
         readyDesc="Описание путешествия"
         readyImage="https://metravel.by/gallery/3375/cover.jpg"
-        readyTitle="Озеро Хотомле | Metravel"
+        readyTitle="Озеро Хотомле | MeTravel"
       />
     )
 
     expect(mockSeoProps).toHaveBeenCalledWith(
       expect.objectContaining({
         image: 'https://metravel.by/gallery/3375/cover.jpg',
-        imageAlt: 'Озеро Хотомле | Metravel',
+        imageAlt: 'Озеро Хотомле | MeTravel',
       })
     )
     expect(mockSeoProps.mock.calls[0][0]).not.toHaveProperty('imageWidth')
@@ -67,7 +67,7 @@ describe('TravelDetailsSeoBlock', () => {
         jsonLd={jsonLd}
         readyDesc="Описание путешествия"
         readyImage="https://metravel.by/gallery/3375/cover.jpg"
-        readyTitle="Озеро Хотомле | Metravel"
+        readyTitle="Озеро Хотомле | MeTravel"
       />
     )
 

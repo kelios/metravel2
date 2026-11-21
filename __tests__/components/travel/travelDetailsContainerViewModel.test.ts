@@ -61,7 +61,7 @@ describe('getTravelDetailsSeoViewModel', () => {
     const detail = normalizeTravelDetail(raw);
     expect(seo.readyDesc).toBe(meta);
     expect(seo.readyDesc).toBe(buildTravelSeoDescription(raw, detail.description, detail.meta_description));
-    expect(seo.readyTitle).toBe('Прогулка по Минску | Metravel');
+    expect(seo.readyTitle).toBe('Прогулка по Минску | MeTravel');
     expect(seo.canonicalUrl).toBe('https://metravel.by/travels/minsk-fixture');
     expect(travel.description).toBe(raw.description);
   });
@@ -85,7 +85,7 @@ describe('getTravelDetailsSeoViewModel', () => {
       'trek-v-khokholovskoi-doline'
     );
 
-    expect(seo.readyTitle).toBe('Трек в Хохоловской долине | Metravel');
+    expect(seo.readyTitle).toBe('Трек в Хохоловской долине | MeTravel');
   });
 
   it('keeps head untouched (null title/desc) while travel data is incomplete', () => {

@@ -63,7 +63,7 @@ export const navigationGenerated1 = {
   "components.layout.FooterDesktop.politika_569007d9": "Політика",
   "components.layout.FooterDesktop.pravila_poezdok_0224bc25": "Правила поїздок",
   "components.layout.FooterDesktop.pravila_soobschestva_3fc378a4": "Правила спільноти",
-  "components.layout.FooterDesktop.prilozhenie_ac8200d5": "Додаток",
+  "components.layout.FooterDesktop.prilozhenie_ac8200d5": "Застосунок",
   "components.layout.FooterDesktop.soglashenie_eed97b3c": "Угода",
   "components.layout.FooterDesktop.tiktok_87c3a282": "TikTok",
   "components.layout.FooterDesktop.youtube_11ee4fb1": "YouTube",

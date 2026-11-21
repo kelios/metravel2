@@ -345,7 +345,7 @@ describe('ProfileScreen', () => {
     expect(await findByTestId('guest-account-prompt-register')).toBeTruthy();
     expect(await findByTestId('guest-account-prompt-login')).toBeTruthy();
     expect(jest.mocked(InstantSEO).mock.calls.at(-1)?.[0]).toMatchObject({
-      title: 'Профиль | Metravel',
+      title: 'Профиль | MeTravel',
       canonical: 'https://metravel.by/profile',
       robots: 'noindex, nofollow',
     });

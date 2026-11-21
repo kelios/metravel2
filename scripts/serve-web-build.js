@@ -144,7 +144,7 @@ function applyDynamicReplacements(html, replacements) {
       `$1${escapedValue}`
     )
     next = next.replace(
-      new RegExp(`(<title[^>]*>)${escapedToken}(?=(?:\\s*\\|\\s*Metravel)?<\\/title>)`, 'g'),
+      new RegExp(`(<title[^>]*>)${escapedToken}(?=(?:\\s*\\|\\s*MeTravel)?<\\/title>)`, 'g'),
       `$1${escapedValue}`
     )
     next = next.replace(

@@ -270,7 +270,7 @@ test.describe('SEO: travel detail page meta tags', () => {
 
 test.describe('SEO: static pages meta tags', () => {
   const PAGES = [
-    { path: '/', titleContains: 'Metravel', ogType: 'website' },
+    { path: '/', titleContains: 'MeTravel', ogType: 'website' },
     { path: '/search', titleContains: 'Поиск', ogType: 'website' },
     { path: '/map', titleContains: 'Карта', ogType: 'website' },
     { path: '/about', titleContains: 'MeTravel', ogType: 'website' },

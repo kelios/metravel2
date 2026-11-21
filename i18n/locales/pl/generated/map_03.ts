@@ -229,7 +229,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM niedostępny (błąd sieci)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla jest niedostępna (błąd sieci)",
   "utils.routingHelpers.requestFailedAfterRetries": "Żądanie nie powiodło się po wielokrotnych próbach",
-  "constants.mapSeo.title": "Mapa atrakcji Białorusi — trasy i odległości | Metravel",
+  "constants.mapSeo.title": "Mapa atrakcji Białorusi — trasy i odległości | MeTravel",
   "constants.mapSeo.description": "Interaktywna mapa Białorusi z atrakcjami: wybieraj punkty według kategorii, planuj trasę po punktach i sprawdzaj odległości między nimi.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Szukaj po tagach",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Wyszukiwanie po tagach i kategoriach miejsc",

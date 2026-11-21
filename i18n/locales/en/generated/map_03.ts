@@ -229,7 +229,7 @@ export const mapGenerated3 = {
   "components.MapPage.useRouting.osrmUnavailable": "OSRM unavailable (network error)",
   "components.MapPage.useRouting.valhallaUnavailable": "Valhalla is unavailable (network error)",
   "utils.routingHelpers.requestFailedAfterRetries": "Request failed after repeated attempts",
-  "constants.mapSeo.title": "Map of Belarus attractions — routes and distances | Metravel",
+  "constants.mapSeo.title": "Map of Belarus attractions — routes and distances | MeTravel",
   "constants.mapSeo.description": "Interactive map of Belarus with attractions: pick points by category, build a route through them and see the distances between points.",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_5b3c9f14": "Search by tags",
   "components.MapPage.FiltersPanelRadiusSection.poisk_po_tegam_i_kategoriyam_mest_7d41ac68": "Search places by tag and category",

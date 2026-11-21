@@ -166,7 +166,7 @@ import QuestsByCityScreen from '@/app/(tabs)/quests/[city]/index'
 const GENERIC_DESCRIPTION = 'Generic description'
 const CITY_DESCRIPTION = 'Рим: 1 квест с заданиями — «Форум». Проходите сами в любой день, без записи. Рядом: Неаполь.'
 const PROJECTION_META = {
-  title: 'Опубликованный заголовок Рима | Metravel',
+  title: 'Опубликованный заголовок Рима | MeTravel',
   description: 'Опубликованное описание Рима из проекции.',
   locale: 'ru',
 }
@@ -303,7 +303,7 @@ describe('quest city SEO focus lifecycle', () => {
     const props = (mockCatalogRoute?.seo as React.ReactElement<{ title: string; description: string }>).props
     expect(props.title).not.toBe(PROJECTION_META.title)
     expect(props.description).not.toBe(PROJECTION_META.description)
-    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | Metravel')
+    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | MeTravel')
     await screen.unmount()
   })
 
@@ -311,7 +311,7 @@ describe('quest city SEO focus lifecycle', () => {
     await render(<QuestsByCityScreen />)
 
     const props = (mockCatalogRoute?.seo as React.ReactElement<{ title: string; description: string }>).props
-    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | Metravel')
+    expect(props.title).toBe('Рим: квесты-прогулки — Площадь Кампидольо | MeTravel')
     expect(props.description).toBe(CITY_DESCRIPTION)
     expect(`${props.title} ${props.description}`).not.toContain('что посмотреть')
   })

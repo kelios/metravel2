@@ -3,7 +3,7 @@ import { escapeXml, isoNow, normalizeTrack, normalizeWaypoints, safeFileBaseName
 
 // KML 2.2
 export const buildKml = (input: RouteExportInput): RouteExportResult => {
-  const name = input.name?.trim() || 'Metravel route';
+  const name = input.name?.trim() || 'MeTravel route';
   const time = input.time || isoNow();
 
   const track = normalizeTrack(input.track);

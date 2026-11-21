@@ -37,7 +37,7 @@ type QuestEntry = {
 type QuestDetailInput = {
   canonical: string;
   title: string;
-  /** Plain quest name for the last crumb and the quest entity; `title` carries the « | Metravel» suffix. */
+  /** Plain quest name for the last crumb and the quest entity; `title` carries the « | MeTravel» suffix. */
   crumbName?: string;
   description: string;
   inLanguage?: string;
