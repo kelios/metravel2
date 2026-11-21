@@ -1,7 +1,7 @@
 import type { RoutePoint } from '@/api/plannedTrips'
 import { cleanDraftPoint, parseSourcePoint, type TripPlanDraft, type TripPlanDraftPoint } from '@/utils/tripPlanDraft'
 import { addCalendarDays } from '@/utils/tripDateTime'
-import { getDefaultTripStartDate, type TripPlanPrefill, type TripPlanSourceParams } from '@/utils/tripPlanLinks'
+import { clip, firstParam, getDefaultTripStartDate, TRIP_PLAN_TITLE_MAX as TITLE_MAX, type TripPlanPrefill, type TripPlanSourceParams } from '@/utils/tripPlanLinks'
 
 /**
  * Приём точек маршрута формой новой поездки (#3298, #3416 п.1): черновик плана ассистента и одна точка
@@ -9,20 +9,10 @@ import { getDefaultTripStartDate, type TripPlanPrefill, type TripPlanSourceParam
  *
  * Модуль грузит только экран `/trips/plan/create`. Сборка ссылки на форму (`utils/tripPlanLinks.ts` — её
  * грузит страница статьи) и хранилище черновика (`utils/tripPlanDraft.ts` — его грузит экран ассистента)
- * от него не зависят и модули маршрута поездки за собой не тянут.
+ * от него не зависят и модули маршрута поездки за собой не тянут. Предел названия, чтение параметра и
+ * обрезка текста берутся из `utils/tripPlanLinks.ts` — своих копий здесь нет (#3431 В1).
  */
-const TITLE_MAX = 96
 const TRIP_PLAN_POINT_SOURCES = ['travel', 'quest']
-
-const firstParam = (value: string | string[] | undefined): string => {
-  const raw = Array.isArray(value) ? value[0] : value
-  return typeof raw === 'string' ? raw.trim() : ''
-}
-
-const clip = (value: string, max: number): string => {
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  return normalized.length <= max ? normalized : `${normalized.slice(0, max - 1).trimEnd()}...`
-}
 
 /**
  * Точки черновика → точки маршрута поездки в порядке дней. Статья — «Место» с привязкой `placeId`, квест —

@@ -175,6 +175,9 @@ function runDeploy(fixture: Fixture, args: string[], env: Record<string, string>
 function addDeployStubs(fixture: Fixture): Record<string, string> {
   const bin = path.join(fixture.root, 'bin')
   writeFile(path.join(bin, 'ssh'), '#!/bin/bash\nprintf \'%s\' "$STUB_SSH_STATUS"', 0o755)
+  // #3416: the rollout needs GNU rsync (`--mkpath`); the stub answers `--help` like it unless told otherwise,
+  // so the suite does not depend on which rsync the machine has first in PATH (macOS ships openrsync).
+  writeFile(path.join(bin, 'rsync'), '#!/bin/bash\nprintf \'%s\\n\' "${STUB_RSYNC_HELP-rsync  version 3.5.2 --mkpath}"', 0o755)
   writeFile(path.join(fixture.repo, 'scripts/deploy-target.sh'),
     'PROD_SSH_TARGET=stub@host\nPROD_REMOTE_DIR=/srv/stub\nrequire_deploy_target() { :; }')
   writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), CAPABILITY_STUB)
@@ -382,6 +385,33 @@ describe('scripts/deploy-prod.sh', () => {
       expect(result.stdout).not.toContain('stub live check')
       expect(result.stdout).toContain('Backend SSR')
       expect(fs.existsSync(fixture.worktree)).toBe(false)
+    } finally { removeDir(fixture.root) }
+  })
+
+  it('refuses a rollout before the build when rsync has no --mkpath, and leaves build-only alone (#3416)', () => {
+    const fixture = makeFixture()
+    try {
+      const live = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const deployEnv = { ...addDeployStubs(fixture), ...liveOriginEnv(fixture.root, live) }
+      const sha = git(fixture.repo, ['rev-parse', 'HEAD'])
+      const openrsync = 'usage: rsync [-0468BCDEFHIKLOPRSTWVabcdghiklnopqrtuvxyz] [-e program]'
+
+      const refused = runDeploy(fixture, [sha], { ...deployEnv, STUB_RSYNC_HELP: openrsync })
+      expect(refused.status).toBe(1)
+      expect(refused.stdout).toContain('rsync без ключа --mkpath')
+      expect(refused.stdout).toContain('/opt/homebrew/bin в PATH раньше /usr/bin')
+      // Nothing was built and nothing reached the production host.
+      expect(fs.existsSync(fixture.stubOut)).toBe(false)
+      expect(refused.stdout).not.toContain('Прод-чекаут бэкенда чистый')
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
+      const logs = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy')).filter((name) => name.endsWith('.log'))
+      expect(fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', logs[0]), 'utf8')).toContain('rsync без ключа --mkpath')
+
+      // DEPLOY=0 publishes nothing, so the transfer tool is not its concern.
+      const buildOnly = runDeploy(fixture, [sha], { ...deployEnv, DEPLOY: '0', STUB_RSYNC_HELP: openrsync })
+      expect(buildOnly.status).toBe(0)
+      expect(buildOnly.stdout).not.toContain('rsync без ключа')
+      expect(readStubOut(fixture)).toMatchObject({ head: sha, deploy: '0' })
     } finally { removeDir(fixture.root) }
   })
 

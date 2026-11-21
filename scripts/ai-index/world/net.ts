@@ -10,6 +10,25 @@ export const USER_AGENT = 'trail-index-builder/0.1'
 
 const DEFAULT_TIMEOUT_MS = 240_000
 const MAX_RETRY_PAUSE_MS = 120_000
+/**
+ * Потолок ожидания по заголовку `Retry-After` (#3431, А5). Сервис, который просит ждать дольше, повтором
+ * раньше срока не тревожим и молча часами не ждём: запрос закрывается `NetworkError`, а вызывающий решает,
+ * отложить маршрут или сменить экземпляр (растущие паузы прохода — `build.ts`).
+ */
+export const MAX_RETRY_AFTER_MS = 600_000
+
+/**
+ * Пауза из заголовка `Retry-After`, мс: число секунд либо дата HTTP; `null` — заголовка нет или он не
+ * читается. `now` — для тестов.
+ */
+export function retryAfterMs(header: string | null | undefined, now: number = Date.now()): number | null {
+  const text = String(header ?? '').trim()
+  if (!text) return null
+  if (/^\d+(?:\.\d+)?$/.test(text)) return Number(text) * 1000
+  // Дата HTTP несёт названия дня и месяца; голое «-5» `Date.parse` тоже прочёл бы как год.
+  const at = /[a-z]/i.test(text) ? Date.parse(text) : Number.NaN
+  return Number.isFinite(at) ? Math.max(0, at - now) : null
+}
 
 /** Сервис не ответил после всех повторов: вызывающий решает, ждать, менять экземпляр или отложить маршрут. */
 export class NetworkError extends Error {
@@ -99,8 +118,11 @@ export async function fetchCached(url: string, options: FetchOptions = {}): Prom
     }
     if (response.status === 429 || response.status >= 500) {
       lastError = `HTTP ${response.status}`
-      const retryAfter = Number(response.headers.get('retry-after'))
-      const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : Math.min(MAX_RETRY_PAUSE_MS, (options.retryPauseMs ?? 5000) * (attempt + 1))
+      const asked = retryAfterMs(response.headers.get('retry-after'))
+      if (asked !== null && asked > MAX_RETRY_AFTER_MS) {
+        throw new NetworkError(`${url}: ${lastError}, сервис просит подождать ${Math.round(asked / 1000)} с — больше потолка ${MAX_RETRY_AFTER_MS / 1000} с`)
+      }
+      const wait = asked !== null && asked > 0 ? asked : Math.min(MAX_RETRY_PAUSE_MS, (options.retryPauseMs ?? 5000) * (attempt + 1))
       options.log?.(`${lastError} от ${new URL(url).host}, повтор через ${Math.round(wait / 1000)} с`)
       await sleep(wait)
       continue

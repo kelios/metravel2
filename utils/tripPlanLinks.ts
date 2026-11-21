@@ -21,16 +21,22 @@ export interface TripPlanShareSource {
   title?: string | null;
 }
 
-const TITLE_MAX = 96;
+/**
+ * Предел названия поездки, первое значение параметра ссылки и обрезка по слову — один источник для сборки
+ * ссылки и для приёма точек формой (`utils/tripPlanDraftIntake.ts`, #3431 В1): тот модуль уже импортирует
+ * этот, новых связей в графе чанков экспорт не добавляет.
+ */
+export const TRIP_PLAN_TITLE_MAX = 96;
+const TITLE_MAX = TRIP_PLAN_TITLE_MAX;
 const SOURCE_URL_MAX = 500;
 const DESCRIPTION_MAX = 420;
 
-const firstParam = (value: string | string[] | undefined): string => {
+export const firstParam = (value: string | string[] | undefined): string => {
   const raw = Array.isArray(value) ? value[0] : value;
   return typeof raw === 'string' ? raw.trim() : '';
 };
 
-const clip = (value: string, max: number): string => {
+export const clip = (value: string, max: number): string => {
   const normalized = value.replace(/\s+/g, ' ').trim();
   if (normalized.length <= max) return normalized;
   const cut = normalized.slice(0, max - 1);

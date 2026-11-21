@@ -150,6 +150,21 @@ describe('сбор сводки посетителя (#3354)', () => {
     expect(calls).toHaveLength(5)
   })
 
+  // #3431 Б2: сводка лежит в памяти до четырёх минут, но достаётся только по токену. Выход на сайте снимает
+  // cookie сессии и удаляет токен на бэкенде — запрос вышедшего посетителя идёт без токена и получает ход гостя.
+  it('после выхода из аккаунта запрос без токена — гость сразу, хотя сводка ещё в памяти', async () => {
+    const { profile, calls } = makeProfile()
+    expect(await profile.resolve(withCookie(TOKEN_A))).not.toBeNull()
+    expect(profile.stats().size).toBe(1)
+    const before = calls.length
+    for (const request of [{ headers: {} }, { headers: { cookie: 'csrftoken=xyz; theme=dark' } }, { headers: { cookie: 'authToken=' } }]) {
+      expect(await profile.resolve(request)).toBeNull()
+    }
+    // К API за гостя служба не ходит, а запись прежнего токена чужому запросу недоступна.
+    expect(calls).toHaveLength(before)
+    expect(await profile.resolve(withToken(TOKEN_B))).not.toEqual(await profile.resolve(withCookie(TOKEN_A)))
+  })
+
   it('без токена к API не ходит', async () => {
     const { profile, calls } = makeProfile()
     expect(await profile.resolve({ headers: {} })).toBeNull()

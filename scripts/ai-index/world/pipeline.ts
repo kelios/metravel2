@@ -250,5 +250,15 @@ export function withoutAscent(record: OsmLayerRecord): OsmLayerRecord {
   return rest
 }
 
+/**
+ * Длина, с которой сверяется геометрия отношения OSM (#3431): длина Wikidata, а когда её нет (319 маршрутов
+ * из 781 на индексе 21.11.2026) — тег `distance` самого отношения. Без этого участок выдавался за весь
+ * маршрут: Kammweg — 149,8 км при теге 298, Naheweg — 16,1 км при 75. Нет ни того ни другого — сверить нечем.
+ */
+export const referenceLengthKm = (row: { wd_length_km?: number; tag_distance_km?: number }): number | undefined => {
+  const tag = row.tag_distance_km
+  return row.wd_length_km ?? (tag !== undefined && Number.isFinite(tag) && tag > 0 ? tag : undefined)
+}
+
 /** Геометрия OSM расходится с длиной Wikidata: выбранное отношение — не весь маршрут. */
 export const lengthMismatch = (osmKm: number, wdKm: number | undefined): boolean => wdKm !== undefined && wdKm > 0 && Math.abs(osmKm - wdKm) / wdKm > LENGTH_MISMATCH

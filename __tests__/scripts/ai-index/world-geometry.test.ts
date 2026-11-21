@@ -46,6 +46,27 @@ describe('внешний индекс маршрутов: длина по гео
     expect(lineLengthM(points)).toBeCloseTo(lineLengthM(line), 1)
   })
 
+  // #3431 А4: отрезок через линию перемены дат идёт коротким путём.
+  it('линия перемены дат: точки остаются у 180-го меридиана, а не встают поперёк земного шара', () => {
+    for (const line of [[[-16.8, 179.99], [-16.8, -179.99]], [[-16.8, -179.99], [-16.8, 179.99]]] as Point[][]) {
+      const points = resampleLine(line, 100)
+      expect(points[0]).toEqual(line[0])
+      expect(points[points.length - 1]).toEqual(line[1])
+      // 0,02° долготы на этой широте — около 2,1 км: два десятка шагов, а не сорок тысяч километров.
+      expect(points.length).toBeGreaterThan(15)
+      expect(points.length).toBeLessThan(30)
+      for (const [lat, lon] of points) {
+        expect(lat).toBeCloseTo(-16.8, 6)
+        expect(Math.abs(lon)).toBeGreaterThanOrEqual(179.98)
+        expect(Math.abs(lon)).toBeLessThanOrEqual(180)
+      }
+      for (let i = 1; i < points.length - 1; i += 1) expect(haversineM(points[i - 1], points[i])).toBeCloseTo(100, 0)
+      expect(lineLengthM(points)).toBeCloseTo(lineLengthM(line), 1)
+    }
+    // Обычный отрезок правка не меняет.
+    expect(resampleLine([[46, 7], [46, 7.001]], 30)[1][1]).toBeGreaterThan(7)
+  })
+
   it('границы маршрута — по всем цепочкам', () => {
     expect(boundsOf([[[46, 7], [46.02, 7.1]], [[45.9, 6.9], [46, 7]]])).toEqual([45.9, 6.9, 46.02, 7.1])
     expect(boundsOf([])).toBeNull()

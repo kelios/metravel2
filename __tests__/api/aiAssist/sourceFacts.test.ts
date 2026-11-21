@@ -7,6 +7,7 @@ import {
   formatKm,
   questFactsLine,
   questFactsOf,
+  questRouteKindOf,
   rankBySuperlative,
   routeKindOf,
   routeLengthKm,
@@ -263,6 +264,32 @@ describe('факты источника в карточке ассистента
       expect(routeKindOf({ categories: ['Автопутешествие'], transports: ['Машина'] })).toBeNull()
       expect(routeKindOf({})).toBeNull()
       expect(routeKindOf(null)).toBeNull()
+    })
+
+    // #3416 п.3: вид маршрута квеста — по тегам каталога, иначе по названию.
+    it('вид маршрута квеста: тег `bike`, `hiking`, `roadtrip` либо слово названия; городская прогулка вида не несёт', () => {
+      expect(questRouteKindOf(['bike', 'roadtrip'])).toBe('bike')
+      expect(questRouteKindOf(['hiking', 'nature'])).toBe('foot')
+      expect(questRouteKindOf(['roadtrip', 'castle'])).toBe('car')
+      expect(questRouteKindOf(['citywalk', 'history'])).toBeNull()
+      expect(questRouteKindOf(null)).toBeNull()
+      for (const title of [
+        'Велоквест из Барановичей: усадьбы Котлубаев и Бохвицев',
+        'Велаквэст з Баранавічаў: сядзібы Катлубаяў і Бохвіцаў',
+        'Велоквест із Кракова: Твардовський, Тинець і біла гора',
+        'Quest rowerowy z Baranowicz: dwory Kotłubajów i Bochwiców',
+        'Bike quest from Krakow: Twardowski, Tyniec and the white hill',
+      ]) {
+        expect({ title, kind: questRouteKindOf([], title) }).toEqual({ title, kind: 'bike' })
+      }
+      expect(questRouteKindOf([], 'Автоквест по Браславским озёрам')).toBe('car')
+      // Начало слова видом не служит: художник, глагол и автограф.
+      for (const title of ['Квест по Мадриду: Веласкес и королевский двор', 'Дорога, что вела к замку', 'Квест по Минску: автограф на стене', 'Квест по Гродно', 'Amsterdam quest: a city of bike lanes', 'Quest po Amsterdamie: miasto rowerów']) {
+        expect({ title, kind: questRouteKindOf([], title) }).toEqual({ title, kind: null })
+      }
+      // Запись фактов несёт вид только когда каталог его называет.
+      expect(questFactsOf(160, { tags: ['bike', 'roadtrip'] })).toEqual({ type: 'quest', source_id: 160, route: 'bike' })
+      expect(questFactsOf(7, { tags: ['citywalk'] })).toEqual({ type: 'quest', source_id: 7 })
     })
 
     it('длина: число километров в названии либо единственный файл маршрута; ненадёжное число — не длина', () => {

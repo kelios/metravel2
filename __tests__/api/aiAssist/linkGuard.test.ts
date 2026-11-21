@@ -512,6 +512,50 @@ describe('страж ссылок: маршруты мира (#3357)', () => {
     expect(guarded).toMatchObject({ text: 'Подробнее: [E1](https://en.wikipedia.org/wiki/E1_%28European_long_distance_path%29)', removed: 0 })
   })
 
+  // #3431 А6: модель пишет адрес статьи со скобками как есть — ссылка обрывалась на первой «)».
+  describe('адрес со скобками от самой модели', () => {
+    const e1 = [{ title: 'E1', url: 'https://en.wikipedia.org/wiki/E1_(European_long_distance_path)' }]
+    const kept = '[E1](https://en.wikipedia.org/wiki/E1_%28European_long_distance_path%29)'
+
+    it('ссылка со скобками в адресе читается целиком: лишней «)» после неё нет', () => {
+      expect(enforceSourceLinks('См. [E1](https://en.wikipedia.org/wiki/E1_(European_long_distance_path)) — длинный путь.', site, { worldSources: e1 })).toEqual({
+        text: `См. ${kept} — длинный путь.`,
+        removed: 0,
+        relabeled: 0,
+        removedWorld: 0,
+      })
+      // Выдуманная подпись заменяется названием маршрута, как у адреса без скобок.
+      expect(enforceSourceLinks('См. [лучшая тропа](https://en.wikipedia.org/wiki/E1_(European_long_distance_path)).', site, { worldSources: e1 })).toMatchObject({ text: `См. ${kept}.`, relabeled: 1, removed: 0 })
+      // Ссылка в скобках фразы по-прежнему закрывается своей скобкой.
+      expect(enforceSourceLinks('Идите (см. [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)) дальше', site, { worldSources: world }).text).toBe(
+        'Идите (см. [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)) дальше',
+      )
+    })
+
+    it('голый адрес карточки со скобками становится ссылкой, а не обрывком «(…)»', () => {
+      expect(enforceSourceLinks('См. https://en.wikipedia.org/wiki/E1_(European_long_distance_path) — длинный путь.', site, { worldSources: e1 })).toMatchObject({ text: `См. ${kept} — длинный путь.`, removed: 0 })
+      // Адрес продолжается — это другая статья: не карточка.
+      expect(enforceSourceLinks('См. https://en.wikipedia.org/wiki/E1_(European_long_distance_path)_Race тут', site, { worldSources: e1 })).toMatchObject({ removed: 1, removedWorld: 1 })
+    })
+
+    // Обход стража: скобки в адресе не дают чужому адресу остаться в тексте и не делают его карточкой.
+    it.each([
+      ['чужой адрес в скобках после адреса карточки', '[E1](https://en.wikipedia.org/wiki/E1_(European_long_distance_path)(https://evil.example/x)) тут'],
+      ['чужой адрес в скобках внутри адреса карточки', '[E1](https://en.wikipedia.org/wiki/E1_(https://evil.example/x)) тут'],
+      ['чужой адрес со скобками', '[E1](https://evil.example/E1_(European_long_distance_path)) тут'],
+      ['чужой адрес в скобках после адреса сайта', '[Квест](https://metravel.by/quests/4/minsk-cmok(https://evil.example/x)) тут'],
+      ['чужой адрес в запросе адреса сайта', '[Квест](https://metravel.by/quests/4/minsk-cmok?next=(https://evil.example/x)) тут'],
+      ['чужой голый адрес в скобках', 'Смотрите (https://evil.example/E1_(European_long_distance_path)) тут'],
+      ['непарная скобка в чужом адресе', '[E1](https://evil.example/a(b) тут'],
+    ])('обход не проходит: %s', (_name, raw) => {
+      const guarded = enforceSourceLinks(raw, [{ type: 'quest', source_id: '4', title: 'Квест по Минску: Цмок', url: 'https://metravel.by/quests/4/minsk-cmok', path: '/quests/4/minsk-cmok', snippet: '', score: 1 }], { worldSources: e1 })
+      expect(guarded.text).not.toContain('evil.example')
+      expect(guarded.removed).toBeGreaterThanOrEqual(1)
+      // Чужой адрес карточкой не стал: ссылка на статью E1 в ответе не появилась.
+      expect(guarded.text).not.toContain('wikipedia.org')
+    })
+  })
+
   it('знаки заглушек в тексте модели не превращаются в ссылку', () => {
     const raw = 'См. 0 и [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)'
     expect(enforceSourceLinks(raw, site, { worldSources: world }).text).toBe('См. 0 и [West Highland Way](https://en.wikipedia.org/wiki/West_Highland_Way)')

@@ -25,6 +25,10 @@ import { detectIntent } from './retrievalQuery.ts'
 
 export type QuestDifficulty = 'easy' | 'medium' | 'hard'
 
+export type RouteKind = 'foot' | 'bike'
+/** Вид маршрута квеста: кроме пешего и вело — автоквест (тег `roadtrip`), которого у статей нет. */
+export type QuestRouteKind = RouteKind | 'car'
+
 export type QuestFacts = {
   type: 'quest'
   source_id: number
@@ -38,6 +42,8 @@ export type QuestFacts = {
   age?: [number, number]
   /** Тег `adult-required`. */
   adult?: boolean
+  /** Вид маршрута квеста по тегам каталога (#3416, `questRouteKindOf`): пеший поход, велоквест, автоквест. */
+  route?: QuestRouteKind
 }
 
 export type TravelFacts = {
@@ -80,9 +86,30 @@ export type QuestFactsInput = {
   tags?: readonly string[]
 }
 
+// Составные слова, а не начало: «Веласкес» и «вела» — не велоквест, «автограф» — не автоквест.
+const BIKE_QUEST_TITLE_RE = /(?<![\p{L}\p{N}])(?:вел[оа](?:квест|квэст|маршрут|поход|паход|прогулк|прагулк|тур)\p{L}*|rowerow\p{L}*|(?:bike|bicycle|cycling)\s+(?:quest|tour|ride|route))(?![\p{L}\p{N}])/iu
+const CAR_QUEST_TITLE_RE = /(?<![\p{L}\p{N}])(?:авто(?:квест|путешеств|маршрут|подорож)\p{L}*|аўта(?:квэст|вандроўк|маршрут)\p{L}*|samochod\p{L}*|road\s?trip|car\s+quest)(?![\p{L}\p{N}])/iu
+
+/**
+ * Вид маршрута квеста (#3416, п.3) — по тегам каталога, иначе по названию: тег `bike` и «Велоквест из
+ * Барановичей», «Quest rowerowy z Baranowicz» — вело; тег `hiking` — пеший поход; тег `roadtrip` без `bike` и
+ * «Автоквест…» — на машине. Городская прогулка (`citywalk`) вида маршрута не несёт: `null`, как у статьи, о
+ * которой каталог молчит. Без этого велоквест стоял в подсказке на «Szlak pieszy do 30 km w Polsce» (lv106).
+ */
+export const questRouteKindOf = (tags: readonly string[] | null | undefined, title?: string | null): QuestRouteKind | null => {
+  const own = new Set((tags ?? []).map((tag) => String(tag).trim().toLowerCase()))
+  if (own.has('bike')) return 'bike'
+  if (own.has('hiking')) return 'foot'
+  if (own.has('roadtrip')) return 'car'
+  const name = String(title ?? '')
+  if (BIKE_QUEST_TITLE_RE.test(name)) return 'bike'
+  return CAR_QUEST_TITLE_RE.test(name) ? 'car' : null
+}
+
 /** Запись фактов квеста из полей каталога; неизвестное и пустое в запись не попадает. */
 export const questFactsOf = (sourceId: number, input: QuestFactsInput): QuestFacts => {
   const audience = questAudience(input.tags ?? [])
+  const route = questRouteKindOf(input.tags)
   const points = positiveInt(input.points)
   const duration = positiveInt(input.duration_min)
   const difficulty = DIFFICULTIES.find((value) => value === input.difficulty)
@@ -96,6 +123,7 @@ export const questFactsOf = (sourceId: number, input: QuestFactsInput): QuestFac
     ...(audience ? { audience: audience.kind } : {}),
     ...(audience?.age ? { age: [audience.age[0], audience.age[1]] as [number, number] } : {}),
     ...(audience?.adult ? { adult: true } : {}),
+    ...(route ? { route } : {}),
   }
 }
 
@@ -113,8 +141,6 @@ export type TravelFactsInput = {
 export const FOOT_ROUTE_CATEGORIES: ReadonlySet<string> = new Set(['поход', 'хайкинг', 'треккинг'])
 export const BIKE_ROUTE_CATEGORIES: ReadonlySet<string> = new Set(['велопоход', 'веломаршрут'])
 const BIKE_TRANSPORT = 'велосипед'
-
-export type RouteKind = 'foot' | 'bike'
 
 const lowerNames = (values: readonly string[] | undefined): string[] => (values ?? []).map((value) => String(value).trim().toLowerCase())
 

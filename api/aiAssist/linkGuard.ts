@@ -22,7 +22,10 @@ import type { AiWorldTrail } from './trailFacts.ts'
 import type { AiSource } from './types'
 
 // Адрес в угловых скобках («[x](</quests/4>)») — тот же адрес: скобки в него не входят.
-const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)/g
+// Пара круглых скобок внутри адреса — его часть (#3431, А6): статья «…/wiki/E1_(European_long_distance_path)»
+// обрывалась на первой «)», и после ссылки в тексте оставалась лишняя скобка. Непарная «(» читается как
+// прежде — обычным знаком адреса; какой адрес разрешён, по-прежнему решает сверка с карточками.
+const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(\s*<?((?:\([^\s()<>]*\)|[^\s)>])+)>?(?:\s+"[^"]*")?\s*\)/g
 const ABSOLUTE_URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'«»]+/gi
 // Голое «metravel.by» без пути — название сайта, а не ссылка: оно стоит во фразе отказа «не по теме»
 // (#2711) и в обычной речи модели; режется только `metravel.by/<путь>`.
@@ -151,6 +154,15 @@ const worldLinkKey = (url: string): string => {
   }
 }
 
+const decodedUrl = (url: string): string => {
+  try {
+    return decodeURI(url)
+  } catch {
+    return url
+  }
+}
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 /** Заглушки сохранённых внешних ссылок: правила для голых адресов ниже их не трогают. */
 const WORLD_LINK_OPEN = '\uE002'
 const WORLD_LINK_CLOSE = '\uE003'
@@ -218,6 +230,15 @@ export function enforceSourceLinks(rawText: string, sources: readonly AiSource[]
     countRemoved(url)
     return options.markRemoved ? `${label}${REMOVED_LINK_MARK}` : label
   })
+  // Голый адрес внешней карточки со скобками («…/wiki/E1_(European_long_distance_path)», #3431 А6): правило
+  // голых адресов скобок не берёт, обрывало адрес на «(» и оставляло в тексте «(European_long_distance_path)».
+  // Заменяется только дословный адрес карточки ответа, за которым адрес не продолжается.
+  for (const card of worldByKey.values()) {
+    if (!/[()]/.test(card.url)) continue
+    for (const form of new Set([card.url, decodedUrl(card.url)])) {
+      text = text.replace(new RegExp(`${escapeRegExp(form)}(?![\\p{L}\\p{N}_/%(-])`, 'gu'), () => keepWorld(card))
+    }
+  }
   // Голый адрес сайта, которого нет в карточках, — выдуманный материал («Выезд в Польшу… — metravel.by/travels/…»):
   // он тоже оставляет метку. Внешний адрес (не metravel.by) исчезает без неё, как раньше.
   const dropUnlessAllowed = (onSite: (match: string) => boolean) => (match: string): string => {

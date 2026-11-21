@@ -1,6 +1,12 @@
-import { matchPlaceSources, mentionsAnyPlace, withoutPlace } from '@/api/aiAssist/promptPlace'
+import { COUNTRY_NAMES } from '@/api/aiAssist/placeCountries'
+import { countryCodeOfWord, countryCodesOf, matchPlaceSources, mentionsAnyPlace, namedCountryCodes, namesPlaceAfterFrom, sameCountryWord, withoutPlace } from '@/api/aiAssist/promptPlace'
 import { arrangeSources, withoutNearby } from '@/api/aiAssist/sourceSelection'
 import type { AiSource } from '@/api/aiAssist/types'
+import { questsGenerated2 as questsBe } from '@/i18n/locales/be/generated/quests_02'
+import { questsGenerated2 as questsEn } from '@/i18n/locales/en/generated/quests_02'
+import { questsGenerated2 as questsPl } from '@/i18n/locales/pl/generated/quests_02'
+import { questsGenerated2 as questsRu } from '@/i18n/locales/ru/generated/quests_02'
+import { questsGenerated2 as questsUk } from '@/i18n/locales/uk/generated/quests_02'
 
 // Отбор по месту — первый шаг цепочки `arrangeSources` (#3289): место не названо, у него нет карточек или
 // названо исключение — подбор идёт дальше как есть. Отдельной обёртки в продукте нет (#3345).
@@ -312,5 +318,264 @@ describe('aiAssist promptPlace: корпус падежей и названий 
     const arranged = arrangeSources('Посоветуй маршрут в Татрах для новичков без машины', [path, turbacz, hut], { mentions })
     expect(ids(withoutNearby(arranged.sources))).toEqual(['path', 'hut'])
     expect(arranged.sources.find((source) => source.source_id === 'turbacz')?.group).toBe('nearby')
+  })
+})
+
+// #3416 п.2, 4, 6 и #3431: общий разбор места — страна на другом языке и в другом падеже, спутник вместо
+// места, вопрос без заглавных букв, «N км от места». Каждая форма — на RU/BE/UK/PL/EN.
+describe('aiAssist promptPlace: общий разбор места на пяти языках (#3416, #3431)', () => {
+  const poland = travel('pl', 'Татры за три дня', 'Польша. Дней: 3. Закопане и Морское Око', ['Польша'])
+  const germany = travel('de', 'Саксонская Швейцария', 'Германия. Дней: 2. Бастай и Кёнигштайн', ['Германия'])
+  const italy = travel('it', 'Доломиты', 'Италия. Дней: 5. Тре-Чиме', ['Италия'])
+  const hungary = quest('hu', 'Квест по Будапешту', ['Будапешт', 'Budapest'], 'Венгрия')
+  const both = travel('plsk', 'Пьенины', 'Польша, Словакия. Дней: 2. Сплав по Дунайцу', ['Польша, Словакия'])
+  const cards = [poland, germany, italy, hungary, both]
+
+  it.each<[string, string, string[]]>([
+    ['RU', 'Маршруты в Польше', ['pl', 'plsk']],
+    ['BE', 'Маршруты ў Польшчы', ['pl', 'plsk']],
+    ['UK', 'Маршрути в Польщі', ['pl', 'plsk']],
+    ['PL', 'Szlak pieszy do 30 km w Polsce', ['pl', 'plsk']],
+    ['EN', 'Hiking trail in Poland', ['pl', 'plsk']],
+    ['RU', 'Куда съездить в Германии?', ['de']],
+    ['BE', 'Што паглядзець у Германіі?', ['de']],
+    ['UK', 'Що подивитися в Німеччині?', ['de']],
+    ['PL', 'Trasy w Niemczech', ['de']],
+    ['EN', 'Trips in Germany', ['de']],
+    ['PL', 'Co zobaczyć we Włoszech?', ['it']],
+    ['UK', 'Маршрути в Італії', ['it']],
+    ['PL', 'Questy na Węgrzech', ['hu']],
+    ['UK', 'Квести в Угорщині', ['hu']],
+    ['EN', 'Quests in Hungary', ['hu']],
+    ['UK', 'Маршрути у Словаччині', ['plsk']],
+  ])('%s: страна карточки узнаётся на языке вопроса — «%s»', (_lang, query, expected) => {
+    expect(ids(matchPlaceSources(query, cards) ?? [])).toEqual(expected)
+  })
+
+  it('страна со строчной буквы после предлога узнаётся и в строгом поиске: список стран закрытый', () => {
+    expect(ids(matchPlaceSources('что посмотреть в польше', cards, ['countries'], { strict: true }) ?? [])).toEqual(['pl', 'plsk'])
+    expect(ids(matchPlaceSources('Едем с Анной: что посмотреть в польше?', cards, ['countries'], { strict: true }) ?? [])).toEqual(['pl', 'plsk'])
+    expect(namedCountryCodes('что посмотреть в польше')).toEqual(['PL'])
+    // Короткое название — только с заглавной: «на кубе» и «в чаде» страной не становятся.
+    expect(namedCountryCodes('сидели на кубе из бетона')).toEqual([])
+    expect(namedCountryCodes('Отдых на Кубе')).toEqual(['CU'])
+    // Числительное и обычное слово страной не становятся.
+    expect(namedCountryCodes('Квест на сорок минут в центре')).toEqual([])
+    // Короткое название — только своими падежными формами: Кубань и иранцы — не Куба и не Иран.
+    expect(namedCountryCodes('Поход на Кубани в мае')).toEqual([])
+    expect(namedCountryCodes('Чем интересна Кубань?')).toEqual([])
+    expect(countryCodeOfWord('иранцы')).toBeNull()
+    expect(['кубе', 'кубу', 'кубои', 'кипре', 'кипром', 'иране', 'cyprze', 'kubie', 'usa'].map(countryCodeOfWord)).toEqual(['CU', 'CU', 'CU', 'CY', 'CY', 'IR', 'CY', 'CU', 'US'])
+    // Исключение страну не называет.
+    expect(namedCountryCodes('Пеший маршрут в Европе, кроме Польши')).toEqual([])
+  })
+
+  it('таблица стран: одно слово — одна страна, падеж и язык её не меняют', () => {
+    expect(countryCodeOfWord('polsce')).toBe('PL')
+    expect(countryCodeOfWord('niemczech')).toBe('DE')
+    expect(countryCodeOfWord('włoszech'.normalize('NFD').replace(/\p{M}+/gu, ''))).toBe('IT')
+    expect(countryCodeOfWord('угорщині')).toBe('HU')
+    expect(countryCodeOfWord('минске')).toBeNull()
+    expect(sameCountryWord('niemcy', 'niemczech')).toBe(true)
+    expect(sameCountryWord('польша', 'polsce')).toBe(true)
+    // Похожие начала разных стран не склеиваются.
+    expect(sameCountryWord('австрии', 'австралии')).toBe(false)
+    expect(sameCountryWord('словакии', 'словении')).toBe(false)
+    expect(sameCountryWord('индии', 'индонезии')).toBe(false)
+    expect(countryCodesOf(['Польша, Словакия'])).toEqual(['PL', 'SK'])
+    expect(countryCodesOf(['Южная Корея', 'United Kingdom', "В'етнам"])).toEqual(['KR', 'GB', 'VN'])
+    expect(countryCodesOf(['Маврикий', null, undefined])).toEqual([])
+  })
+
+  it('таблица стран не расходится со списком стран сайта: каждое название на пяти локалях ведёт к своему коду', () => {
+    const locales = { ru: questsRu, be: questsBe, uk: questsUk, pl: questsPl, en: questsEn } as Record<string, Record<string, string>>
+    const prefix = 'screens.tabs.QuestsScreen.country.'
+    const codes = Object.keys(questsRu).filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length))
+    expect(codes.sort()).toEqual(Object.keys(COUNTRY_NAMES).sort())
+    const missed: string[] = []
+    for (const code of codes) {
+      for (const [locale, resource] of Object.entries(locales)) {
+        const name = resource[`${prefix}${code}`]
+        // Название узнаётся целиком либо по слову в любом падеже: в польском списке сайта «Austrii», «Albanii».
+        const known = countryCodesOf([name]).includes(code) || name.split(/[^\p{L}\p{N}]+/u).some((word) => countryCodeOfWord(word.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()) === code)
+        if (!known) missed.push(`${code}/${locale}: ${name}`)
+      }
+    }
+    expect(missed).toEqual([])
+  })
+
+  it('упоминание страны в тексте сверяется на всех языках сайта (`mentionsAnyPlace`)', () => {
+    expect(mentionsAnyPlace(['Polsce'], 'Польша. Дней: 3. Закопане и Морское Око')).toBe(true)
+    expect(mentionsAnyPlace(['Poland'], 'Маршрут по Польше на машине')).toBe(true)
+    expect(mentionsAnyPlace(['Niemczech'], 'Германия. Дней: 2. Бастай')).toBe(true)
+    expect(mentionsAnyPlace(['Польщі'], 'Trasa przez Polskę i Słowację')).toBe(true)
+    expect(mentionsAnyPlace(['Polsce'], 'Германия. Дней: 2. Бастай')).toBe(false)
+  })
+
+  // Имя человека совпадает с местом каталога (Лида) и газеттира (Виктория, Иордания): после предлога «с кем»
+  // в творительном падеже это спутник; родительный после тех же предлогов — место отправления.
+  const lida = quest('lida', 'Квест по Лиде', ['Лида', 'Ліда', 'Lida'])
+  const victoria = quest('vic', 'Victoria trail', ['Виктория', 'Вікторыя', 'Вікторія', 'Wiktoria', 'Victoria'], 'Австралия')
+  const jordan = travel('jo', 'Петра', 'Иордания. Дней: 4. Петра и Вади-Рам', ['Иордания'])
+  const people = [lida, victoria, jordan, quest('other', 'Квест по Пинску', ['Пинск', 'Пінск', 'Pinsk'])]
+
+  it.each<[string, string]>([
+    ['RU', 'Идём в поход с Лидой на выходные'],
+    ['RU', 'Гуляем с Викторией, что посмотреть?'],
+    ['BE', 'Ідзём у паход з Лідай на выхадныя'],
+    ['BE', 'Гуляем з Вікторыяй, што паглядзець?'],
+    ['UK', 'Йдемо в похід з Вікторією на вихідні'],
+    ['PL', 'Idziemy na wędrówkę z Wiktorią na weekend'],
+    ['PL', 'Jedziemy z Jordanem na weekend'],
+    ['EN', 'Hiking with Victoria this weekend'],
+    ['EN', 'A weekend trip with Jordan'],
+  ])('%s: спутник — не место: «%s»', (_lang, query) => {
+    expect(matchPlaceSources(query, people)).toBeNull()
+    expect(matchPlaceSources(query, people, ['cities'], { strict: true })).toBeNull()
+  })
+
+  it.each<[string, string, string[]]>([
+    ['RU', 'Что посмотреть в Лиде с детьми?', ['lida']],
+    ['RU', 'Паром с Виктории на материк', ['vic']],
+    ['BE', 'Што паглядзець у Лідзе?', ['lida']],
+    ['UK', 'Маршрут по Вікторії', ['vic']],
+    ['PL', 'Szlak w Wiktorii na trzy dni', ['vic']],
+    ['EN', 'Hiking in Victoria with kids', ['vic']],
+    ['EN', 'A week in Jordan with friends', ['jo']],
+  ])('%s: то же название местом остаётся — «%s»', (_lang, query, expected) => {
+    expect(ids(matchPlaceSources(query, people) ?? [])).toEqual(expected)
+  })
+
+  // Строгий поиск читает место по заглавной букве. Вопрос без заглавных (режим `lowercase`, маршруты мира)
+  // читается по предлогу места; автор, который заглавными пользуется, остаётся под строгим правилом.
+  const scotland = quest('sc', '', ['Шотландия', 'Шатландыя', 'Шотландія', 'Szkocja', 'Scotland'], 'Великобритания')
+  const gazetteer = [scotland, quest('co', '', ['Корсика', 'Корсіка', 'Korsyka', 'Corsica'], 'Франция'), quest('rd', '', ['Дорога', 'Береза', 'Мир'], 'Беларусь')]
+  const lowercase = (query: string) => ids(matchPlaceSources(query, gazetteer, ['cities'], { strict: true, lowercase: true }) ?? [])
+
+  it.each<[string, string]>([
+    ['RU', 'пеший маршрут в шотландии'],
+    ['RU', 'Пеший маршрут в шотландии на пять дней'],
+    ['BE', 'пешы маршрут у шатландыі'],
+    ['UK', 'піший маршрут у шотландії'],
+    ['PL', 'szlak pieszy w szkocji'],
+    ['EN', 'hiking trail in scotland'],
+  ])('%s: вопрос без заглавных букв читается по предлогу места — «%s»', (_lang, query) => {
+    expect(lowercase(query)).toEqual(['sc'])
+  })
+
+  it('вопрос без заглавных: слово без предлога, омоним обычного слова и короткое название местом не становятся', () => {
+    expect(lowercase('шотландия пеший маршрут')).toEqual([])
+    expect(lowercase('маршрут на березе у реки')).toEqual([])
+    expect(lowercase('лучшие маршруты в мире')).toEqual([])
+    expect(lowercase('поход на сорок километров')).toEqual([])
+  })
+
+  it('автор пользуется заглавными — слово со строчной после предлога местом не считается и в режиме `lowercase`', () => {
+    expect(lowercase('По дороге в Бобруйск заедем в лес')).toEqual([])
+    expect(lowercase('Пеший маршрут на Корсике по дороге к морю')).toEqual(['co'])
+  })
+
+  it('каталог сайта остаётся строгим: без режима `lowercase` город со строчной буквы не добирается (lv23)', () => {
+    expect(matchPlaceSources('пеший маршрут в шотландии', gazetteer, ['cities'], { strict: true })).toBeNull()
+  })
+
+  // #3416 п.6, первая часть: падежная форма первым словом фразы («Минске что посмотреть?») местом не
+  // считается — цена правила #3369 о заглавной букве в начале фразы; в наборах вопросов форма не встречается.
+  it('падежная форма первым словом фразы место не называет; само название и форма после предлога — называют', () => {
+    const minsk = quest('minsk', 'Квест по Минску', ['Минск', 'Мінск', 'Minsk'])
+    const pool = [minsk, quest('other', 'Квест по Пинску', ['Пинск', 'Пінск', 'Pinsk'])]
+    expect(matchPlaceSources('Минске что посмотреть?', pool)).toBeNull()
+    expect(ids(matchPlaceSources('Минск что посмотреть?', pool) ?? [])).toEqual(['minsk'])
+    expect(ids(matchPlaceSources('В Минске что посмотреть?', pool) ?? [])).toEqual(['minsk'])
+  })
+
+  // #3416 п.2: «N км от …» — расстояние от места или длина маршрута от ориентира.
+  it.each<[string, string, boolean]>([
+    ['RU', 'Минска', true],
+    ['RU', 'минска на выходные', true],
+    ['RU', 'вокзала', false],
+    ['RU', 'озера до деревни', false],
+    ['BE', 'мінска', true],
+    ['BE', 'вакзала', false],
+    ['UK', 'львова', true],
+    ['UK', 'зупинки', false],
+    ['PL', 'krakowa', true],
+    ['PL', 'dworca', false],
+    ['EN', 'krakow', true],
+    ['EN', 'the station', false],
+    ['EN', 'my hotel', false],
+  ])('%s: «N км от %s» — место: %s', (_lang, after, expected) => {
+    expect(namesPlaceAfterFrom(after)).toBe(expected)
+  })
+})
+
+// #3357, приёмка на полном индексе: слово вопроса — падежная форма названия, а не слово с тем же началом.
+describe('aiAssist promptPlace: падежная форма, а не общее начало (#3357)', () => {
+  const other = quest('other', 'Квест по Пинску', ['Пинск', 'Пінск', 'Pińsk', 'Pinsk'])
+  const names = (query: string, cities: string[], options: Parameters<typeof matchPlaceSources>[3] = {}): boolean => {
+    const own = quest('own', 'Квест города', cities)
+    return (matchPlaceSources(query, [other, own], ['cities'], options) ?? []).includes(own)
+  }
+
+  it.each<[string, string, string[]]>([
+    // Те же три-четыре буквы в начале — другое слово.
+    ['RU', 'Пеший маршрут в Нарнии на три дня', ['Нара']],
+    ['RU', 'Пеший маршрут в Нарнии на три дня', ['Нарботэн', 'Norrbotten']],
+    ['RU', 'Поход в Альпах на неделю', ['Альб']],
+    ['RU', 'Поход в Альпах на неделю', ['Альберта', 'Alberta']],
+    ['RU', 'Поход в Альпах на неделю', ['Альбасете']],
+    ['RU', 'Поход в Альпах на неделю', ['Альфёльд']],
+    ['RU', 'Поход в Альпах на неделю', ['Альта', 'Альто']],
+    ['RU', 'Кто победит на Выборах?', ['Выборг']],
+    ['RU', 'Летим на Тайвань на две недели', ['Тайн', 'Тайнсайд']],
+    ['RU', 'Мечтаем про Коста-Рику', ['Косово']],
+    ['BE', 'Пешы маршрут у Нарніі', ['Нара']],
+    ['BE', 'Ляцім на Тайвань на два тыдні', ['Тайбей']],
+    ['UK', 'Летимо до Відня з донькою', ['Венеция', 'Венеція']],
+    ['UK', 'Плануємо тиждень в Андоррі', ['Андора']],
+    ['PL', 'Szlak pieszy w Narnii', ['Nara']],
+    ['PL', 'Odpowiedz po Polsku: dokąd na weekend?', ['Polska']],
+    ['EN', 'How many points are in the Warsaw quest?', ['Karlowe Wary', 'Karlovy Vary']],
+    ['EN', 'A quest for Angkor Wat', ['Anglia', 'Anglesey']],
+    ['EN', 'Which is shorter, the Lisbon quest or the Porto one?', ['Portugal', 'Portugalia']],
+    ['EN', 'Tell me about Tour du Mont Blanc', ['Monaco', 'Montana', 'Tours']],
+  ])('%s: «%s» не называет «%s»', (_lang, query, cities) => {
+    expect(names(query, cities)).toBe(false)
+    expect(names(query, cities, { strict: true })).toBe(false)
+  })
+
+  it.each<[string, string, string[]]>([
+    ['RU', 'Поход в Альпах на неделю', ['Альпы']],
+    ['RU', 'Тропы Альп для новичков', ['Альпы']],
+    ['RU', 'Что посмотреть в Глубоком за день?', ['Глубокое']],
+    ['RU', 'Едем в Пиренеи, потом из Пиренеев домой', ['Пиренеи']],
+    ['RU', 'Поход по Татрам', ['Татры']],
+    ['BE', 'Што паглядзець у Брэсце?', ['Брэст']],
+    ['BE', 'Што паглядзець у Лідзе?', ['Ліда']],
+    ['BE', 'Квэсты ў Кракаве', ['Кракаў']],
+    ['BE', 'Паход у Альпах', ['Альпы']],
+    ['UK', 'Маршрут у Шотландії', ['Шотландія']],
+    ['UK', 'Похід в Альпах', ['Альпи']],
+    ['UK', 'Квести в Одесі', ['Одеса']],
+    ['PL', 'Jedziemy do Poznania bez samochodu', ['Poznań']],
+    ['PL', 'Trasa w okolicach Wrocławia', ['Wrocław']],
+    ['PL', 'Co zobaczyć w Budapeszcie?', ['Budapeszt']],
+    ['PL', 'Wycieczka z Zakopanego', ['Zakopane']],
+    ['PL', 'Szlak w Tatrach', ['Tatry']],
+    ['PL', 'Wakacje na Cyprze', ['Cypr']],
+    ['EN', 'A hike in the Tatras', ['Tatra']],
+    ['EN', 'Hiking in the Alps', ['Alps']],
+  ])('%s: «%s» называет «%s»', (_lang, query, cities) => {
+    expect(names(query, cities)).toBe(true)
+  })
+
+  it('статья относится к месту по прилагательному и названию края, но не по слову с тем же началом', () => {
+    const grodno = quest('grodno', 'Квест по Гродно', ['Гродно', 'Гродна', 'Grodno'])
+    const region = travel('region', 'Желудок и усадьбы Гродненщины: как добраться', 'Беларусь. Дней: 1. Усадьба в Желудке')
+    const castle = travel('castle', 'Старый замок', 'Беларусь. Дней: 1. Гродненский Старый замок над Неманом')
+    expect(ids(matchPlaceSources('Что посмотреть в Гродно за один день?', [grodno, region, castle]) ?? [])).toEqual(['grodno', 'region', 'castle'])
+    const mir = quest('mir', 'Квест в Мире', ['Мир', 'Mir'])
+    const mirow = travel('mirow', 'Замки Мирув и Боболице: маршрут на один день', 'Польша. Дней: 1. Орлиные гнёзда', ['Польша'])
+    expect(ids(matchPlaceSources('Несвиж и Мир за один день', [mir, mirow]) ?? [])).toEqual(['mir'])
   })
 })

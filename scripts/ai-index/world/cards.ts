@@ -169,9 +169,53 @@ export function cardAttribution(osm: OsmLayerRecord): string {
 
 const firstOf = <T>(values: Partial<Record<CardLocale, T>>, locale: CardLocale): T | undefined => values[locale] ?? values.en ?? CARD_LOCALES.map((key) => values[key]).find((value) => value !== undefined)
 
+/**
+ * Язык страны среди языков сайта, по элементу Wikidata страны: на нём метка маршрута бывает записана и в
+ * чужой локали (английская метка польской тропы — по-польски).
+ */
+const COUNTRY_NATIVE_LOCALES: Readonly<Record<string, readonly CardLocale[]>> = {
+  Q36: ['pl'],
+  Q184: ['be', 'ru'],
+  Q212: ['uk'],
+  Q159: ['ru'],
+  Q145: ['en'],
+  Q30: ['en'],
+  Q16: ['en'],
+  Q408: ['en'],
+  Q664: ['en'],
+  Q27: ['en'],
+}
+
+const titleWords = (value: string): string[] =>
+  value
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length >= 3)
+
+/**
+ * Название маршрута на языке карточки (#3431, А2). Метка Wikidata на этом языке бывает записана на языке
+ * страны: у «Główny Szlak Sudecki» английская метка — польская, а английское название лежит псевдонимом
+ * («Main Sudetes Trail»). Псевдоним берётся, только когда метка дословно совпадает с меткой на языке страны
+ * маршрута, а сам псевдоним — перевод: не повторяет названий на том языке и не делит с меткой ни одного
+ * слова (сокращение «Tongariro Crossing» и вариант «Szlak im. Husarii Polskiej» переводом не считаются).
+ * Замер на индексе 15.11.2026 (781 маршрут): правило меняет одно название — «Main Sudetes Trail».
+ */
+export function trailTitle(open: OpenLayerRecord, locale: CardLocale): string | undefined {
+  const label = open.labels[locale]
+  const aliases = open.aliases[locale] ?? []
+  if (!label || !aliases.length) return firstOf(open.labels, locale) ?? open.native_title
+  const native = [...new Set(open.countries.flatMap((country) => COUNTRY_NATIVE_LOCALES[country.qid] ?? []))].filter((other) => other !== locale && open.labels[other] === label)
+  if (!native.length) return label
+  const foreign = new Set(native.flatMap((other) => [open.labels[other] ?? '', ...(open.aliases[other] ?? [])]))
+  const own = new Set(titleWords(label))
+  return aliases.find((alias) => !foreign.has(alias) && titleWords(alias).length > 1 && !titleWords(alias).some((word) => own.has(word))) ?? label
+}
+
 /** Карточка маршрута на языке вопроса: поля слоёв соединяются по `source_id`, значения не смешиваются. */
 export function toTrailCard(osm: OsmLayerRecord, open: OpenLayerRecord, locale: CardLocale): TrailCard | null {
-  const title = firstOf(open.labels, locale) ?? open.native_title
+  const title = trailTitle(open, locale)
   const link = firstOf(open.links, locale)
   if (!title || !link || osm.source_id !== open.source_id) return null
   const countries = open.countries.map((country) => firstOf(country.names, locale)).filter((name): name is string => Boolean(name))

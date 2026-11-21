@@ -10,8 +10,11 @@
  *     есть другие кандидаты. У однодневной статьи часов в фактах нет: годится оценка модели в
  *     пределах схемы, иначе — `PLAN_DEFAULT_HOURS`.
  *   - **Доводка плана модели** (`refinePlan`): порядок внутри дня — по расстоянию между координатами, от
- *     первого материала к ближайшему; сумма часов дня — не больше `PLAN_DAY_MAX_HOURS`, материалов — не
- *     больше `PLAN_MAX_ITEMS_PER_DAY`; что не поместилось, переносится в день, где есть место.
+ *     первого материала к ближайшему; сумма часов дня — не больше `PLAN_DAY_MAX_HOURS` (с детьми —
+ *     `PLAN_DAY_MAX_HOURS_KIDS`), материалов — не больше `PLAN_MAX_ITEMS_PER_DAY`; что не поместилось,
+ *     переносится в день, где есть место.
+ *   - **Сборник.** Статья-перечень («19 маршрутов из Минска») — не пункт дня: в план не идёт, пока без неё
+ *     остаётся из чего собирать (`isCollection`).
  *   - **Сборка кодом** (`assemblePlan`): когда модель не ответила по схеме или выключена. Жадно: день
  *     начинает самый близкий к вопросу материал, к нему добавляются ближайшие по карте, пока хватает часов.
  *     Число дней — не больше запрошенного и не больше того, на сколько хватает материалов по часам.
@@ -38,6 +41,11 @@ export const PLAN_MODEL_DEFAULT = false
 export const PLAN_REGION_KM = 50
 /** Сумма часов одного дня — не больше. */
 export const PLAN_DAY_MAX_HOURS = 10
+/**
+ * То же для плана с детьми (#3431, В2): десять часов материалов в день ребёнок не проходит. Предел равен
+ * `PLAN_DAY_TARGET_HOURS` — «полному дню»: материал на целый день по-прежнему стоит в своём дне один.
+ */
+export const PLAN_DAY_MAX_HOURS_KIDS = 6
 /** Сколько часов материалов делает день полным: по этому числу код решает, на сколько дней хватает материалов. */
 export const PLAN_DAY_TARGET_HOURS = 6
 export const PLAN_MAX_ITEMS_PER_DAY = 4
@@ -192,23 +200,48 @@ const wholeDayKeys = (cards: readonly PlanCandidate[]): ReadonlySet<string> => n
 const keyOfItem = (item: Pick<PlanItem, 'type' | 'source_id'>): string => `${item.type}:${item.source_id}`
 
 /** Материал помещается в день: день пуст либо в нём нет и не появится материала на целый день, хватает часов и мест. */
-const fitsDay = (day: readonly PlanItem[], item: PlanItem, whole: ReadonlySet<string>): boolean =>
+const fitsDay = (day: readonly PlanItem[], item: PlanItem, whole: ReadonlySet<string>, maxHours: number): boolean =>
   day.length === 0 ||
-  (!whole.has(keyOfItem(item)) && !day.some((placed) => whole.has(keyOfItem(placed))) && day.length < PLAN_MAX_ITEMS_PER_DAY && hoursOf(day) + item.hours <= PLAN_DAY_MAX_HOURS)
+  (!whole.has(keyOfItem(item)) && !day.some((placed) => whole.has(keyOfItem(placed))) && day.length < PLAN_MAX_ITEMS_PER_DAY && hoursOf(day) + item.hours <= maxHours)
+
+const COLLECTION_TITLE_RE = /(?<![\p{L}\p{N}.,])(\d{1,3})\s+(?:[\p{L}-]+\s+){0,2}?(?:маршрут\p{L}*|мест(?:а|о)?|поезд(?:ок|ки|ка))(?![\p{L}\p{N}])/iu
+/** Сколько маршрутов или мест в названии делает статью сборником. */
+const COLLECTION_MIN_COUNT = 3
 
 /**
- * Карточки плана на один день: материал на целый день в него не берётся, пока есть другие кандидаты —
- * однодневный план из одной статьи «на два дня» не план. Других нет — остаётся как есть.
+ * Статья-сборник (#3431, В2): «Замки и усадьбы Беларуси: 19 маршрутов из Минска», «Что посмотреть вокруг
+ * Кракова: 18 маршрутов», «Отдых у воды в Беларуси: 33 проверенных места», «Маршруты выходного дня из
+ * Минска: 13 поездок». Это перечень поездок, а не место на карте: числа дней у неё в каталоге нет, и в плане
+ * она вставала одним пунктом на четыре часа. Признак — статья без числа дней, в названии которой стоит число
+ * маршрутов, мест или поездок от трёх (на слепке индекса 12.11.2026 таких семь из 434).
+ */
+export const isCollection = (card: Pick<PlanCandidate, 'type' | 'title' | 'facts'>): boolean => {
+  if (card.type !== 'travel' || (card.facts?.type === 'travel' && card.facts.number_days !== undefined)) return false
+  const count = Number(COLLECTION_TITLE_RE.exec(card.title)?.[1])
+  return Number.isInteger(count) && count >= COLLECTION_MIN_COUNT
+}
+
+/** Меньше материалов план по дням не образуют (тот же порог, что у отказа `422 invalid_plan`). */
+const PLAN_MIN_CARDS = 2
+
+/**
+ * Карточки, из которых собирается план. Статья-сборник в план не идёт, пока без неё остаётся из чего
+ * собирать. Материал на целый день не берётся в план на один день, пока есть другие кандидаты: однодневный
+ * план из одной статьи «на два дня» не план. Других нет — карточки остаются как есть.
  */
 const forDays = (cards: readonly PlanCandidate[], days: number): readonly PlanCandidate[] => {
-  if (days !== 1) return cards
-  const regular = cards.filter((card) => !isWholeDay(card))
-  return regular.length ? regular : cards
+  const single = cards.filter((card) => !isCollection(card))
+  const usable = single.length >= PLAN_MIN_CARDS ? single : cards
+  if (days !== 1) return usable
+  const regular = usable.filter((card) => !isWholeDay(card))
+  return regular.length ? regular : usable
 }
 
 export interface BuildOptions {
   /** Запрошенное число дней: план не длиннее. */
   days: number
+  /** Предел часов одного дня; по умолчанию `PLAN_DAY_MAX_HOURS`, для плана с детьми — `PLAN_DAY_MAX_HOURS_KIDS`. */
+  maxDayHours?: number
 }
 
 /**
@@ -221,6 +254,7 @@ export function refinePlan(plan: RawPlan, cards: readonly PlanCandidate[], optio
   const allowed = forDays(cards, options.days)
   const byKey = new Map(allowed.map((card) => [candidateKey(card), card]))
   const whole = wholeDayKeys(allowed)
+  const maxHours = options.maxDayHours ?? PLAN_DAY_MAX_HOURS
   const days: PlanItem[][] = []
   const spill: PlanItem[] = []
   for (const day of plan.days.slice(0, options.days)) {
@@ -229,13 +263,13 @@ export function refinePlan(plan: RawPlan, cards: readonly PlanCandidate[], optio
       const card = byKey.get(`${raw.source}:${raw.id}`)
       if (!card) continue
       const item = toItem(card, itemHours(card, raw.hours))
-      if (fitsDay(kept, item, whole)) kept.push(item)
+      if (fitsDay(kept, item, whole, maxHours)) kept.push(item)
       else spill.push(item)
     }
     days.push(kept)
   }
   for (const item of spill) {
-    const target = days.find((day) => day.length > 0 && fitsDay(day, item, whole))
+    const target = days.find((day) => day.length > 0 && fitsDay(day, item, whole, maxHours))
     if (target) target.push(item)
     else if (days.filter((day) => day.length > 0).length < options.days) days.push([item])
   }
@@ -252,6 +286,7 @@ export function refinePlan(plan: RawPlan, cards: readonly PlanCandidate[], optio
 export function assemblePlan(cards: readonly PlanCandidate[], options: BuildOptions): PlanDay[] {
   const allowed = forDays(cards, options.days)
   const whole = wholeDayKeys(allowed)
+  const maxHours = options.maxDayHours ?? PLAN_DAY_MAX_HOURS
   const pool = allowed.map((card) => toItem(card, itemHours(card)))
   if (!pool.length) return []
   const total = hoursOf(pool)
@@ -269,7 +304,7 @@ export function assemblePlan(cards: readonly PlanCandidate[], options: BuildOpti
       // Ближайший по карте из тех, что помещаются по часам.
       let best = -1
       for (let index = 0; index < rest.length; index += 1) {
-        if (!fitsDay(day, rest[index], whole)) continue
+        if (!fitsDay(day, rest[index], whole, maxHours)) continue
         if (best < 0 || distanceKm(last, rest[index]) < distanceKm(last, rest[best])) best = index
       }
       if (best < 0) break

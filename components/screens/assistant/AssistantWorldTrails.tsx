@@ -1,9 +1,10 @@
 import { memo, useCallback, useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { type AiWorldTrail, type LoadStep, monthRanges, roundAltitude, roundClimb, SAC_GRADE_LABEL } from '@/api/aiAssist/trailFacts'
 import UIButton from '@/components/ui/Button'
+import NavigationLink from '@/components/ui/NavigationLink'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { formatDate, formatInteger, formatNumber } from '@/i18n/format'
@@ -83,13 +84,25 @@ const WorldTrailRow = memo(function WorldTrailRow({ trail, styles, colors }: Row
   const effort = worldEffortText(trail)
   const months = worldMonthsText(trail)
   const source = i18nT(/\.wikivoyage\.org\//i.test(trail.url) ? 'aiAssistStatic:ask.worldSourceWikivoyage' : 'aiAssistStatic:ask.worldSourceWikipedia')
+  // `NavigationLink` берёт только статичный стиль: отклик нажатой и наведённой строки — тем же
+  // `sourceRowPressed`, что у строки источника; фокус с клавиатуры рисует сам браузер у `<a>`.
+  const [active, setActive] = useState(false)
+  const activate = useCallback(() => setActive(true), [])
+  const deactivate = useCallback(() => setActive(false), [])
   return (
-    <Pressable
-      accessibilityRole="link"
+    // Настоящая ссылка (#3431): на web — `<a href target="_blank" rel="noopener">`, её читает скринридер,
+    // открывает средняя кнопка и меню браузера; обычное нажатие по-прежнему идёт через помощник внешних ссылок.
+    <NavigationLink
+      external
+      href={trail.url}
+      onNavigate={open}
       accessibilityLabel={[trail.title, trail.country, facts, effort, months].filter(Boolean).join('. ')}
       accessibilityHint={i18nT('aiAssistStatic:ask.worldOpen')}
-      onPress={open}
-      style={({ pressed }) => [styles.worldRow, pressed && styles.sourceRowPressed]}
+      onPressIn={activate}
+      onPressOut={deactivate}
+      onHoverIn={activate}
+      onHoverOut={deactivate}
+      style={[styles.worldRow, active && styles.sourceRowPressed]}
       testID={`assistant-world-trail-${trail.source_id}`}
     >
       <View style={styles.sourceIcon}>
@@ -110,7 +123,7 @@ const WorldTrailRow = memo(function WorldTrailRow({ trail, styles, colors }: Row
         <Text style={styles.worldNote}>{`${source} · ${i18nT('aiAssistStatic:ask.worldOpen')}`}</Text>
       </View>
       <Feather name="external-link" size={18} color={colors.textMuted} />
-    </Pressable>
+    </NavigationLink>
   )
 })
 

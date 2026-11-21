@@ -209,6 +209,18 @@ describe('условия вопроса (#3353): длина маршрута и 
 
   it('расстояние от места — не длина маршрута; вопрос без километров условия длины не несёт', () => {
     expect(parseConditions('Что посмотреть в 30 км от Минска?')).toEqual({})
+    // #3416 п.2: место со строчной буквы — тоже расстояние, а не длина маршрута; ориентир — длина.
+    expect(parseConditions('что посмотреть 50 км от минска')).toEqual({})
+    expect(parseConditions('што паглядзець 50 км ад мінска')).toEqual({})
+    expect(parseConditions('куди поїхати 40 км від львова')).toEqual({})
+    expect(parseConditions('co zobaczyć 30 km od krakowa')).toEqual({})
+    expect(parseConditions('what to see 30 km from krakow')).toEqual({})
+    expect(parseConditions('маршрут 20 км от вокзала')).toEqual({ kind: 'travel', maxKm: 25 })
+    expect(parseConditions('маршрут 20 км ад вакзала')).toEqual({ kind: 'travel', maxKm: 25 })
+    expect(parseConditions('маршрут 20 км від зупинки')).toEqual({ kind: 'travel', maxKm: 25 })
+    expect(parseConditions('trasa 20 km od dworca')).toEqual({ kind: 'travel', maxKm: 25 })
+    expect(parseConditions('a 20 km hike from the station')).toEqual({ maxKm: 25, route: 'foot' })
+    expect(parseConditions('поход 20 км от озера до деревни')).toEqual({ maxKm: 25, route: 'foot' })
     expect(parseConditions('Is there a hike within 20 km from Krakow?')).toEqual({ route: 'foot' })
     expect(parseConditions('Is there a hike within 30 km of Krakow?')).toEqual({ route: 'foot' })
     expect(parseConditions('Квест за 20 км від Львова')).toEqual({ kind: 'quest' })
@@ -264,6 +276,26 @@ describe('условия вопроса (#3353): длина и вид маршр
     // Статья не о маршруте («Автопутешествие») и статья без категорий — не совпало и не нарушено.
     expect(judgeCard({ route: 'foot' }, travel({ categories: ['Автопутешествие'], transports: ['Машина'] }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
     expect(judgeCard({ route: 'foot' }, travel())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+  })
+
+  // #3416 п.3: у квеста вид маршрута — по тегу каталога (запись фактов) либо по названию.
+  it('вид маршрута квеста: велоквест и автоквест на вопрос о пешем маршруте опускаются, поход совпадает, прогулка по городу — не нарушено', () => {
+    const foot = parseConditions('Szlak pieszy do 30 km w Polsce')
+    expect(foot).toMatchObject({ route: 'foot', maxKm: 30 })
+    // Тег каталога в записи фактов.
+    expect(judgeCard(foot, quest({ route: 'bike' }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard(foot, quest({ route: 'car' }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard(foot, quest({ route: 'foot' }))).toEqual({ reasons: ['пеший маршрут'], score: 1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'bike' }, quest({ route: 'bike' }))).toEqual({ reasons: ['веломаршрут'], score: 1, dropped: false, unfit: false })
+    // Запись фактов старого индекса вида не несёт — вид читается из названия карточки на пяти языках.
+    for (const title of ['Велоквест из Барановичей', 'Велаквэст з Баранавічаў', 'Велоквест із Кракова', 'Quest rowerowy z Baranowicz', 'Bike quest from Krakow']) {
+      expect({ title, verdict: judgeCard(foot, { ...quest(), title }) }).toEqual({ title, verdict: { reasons: [], score: -1, dropped: false, unfit: false } })
+      expect(judgeCard(foot, { type: 'quest', facts: null, title })).toMatchObject({ score: -1, dropped: false })
+    }
+    // Городской квест вида маршрута не называет: не совпал и не нарушил.
+    expect(judgeCard(foot, { ...quest(), title: 'Квест по Кракову: легенды Вавеля' })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
+    // Название статьи вид не задаёт: у неё он только по каталогу.
+    expect(judgeCard(foot, { ...travel(), title: 'Велоквест, который мы не прошли' })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
   })
 
   it('детский квест на вопрос о длине маршрута без детей — карточка другой аудитории', () => {

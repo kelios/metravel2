@@ -17,7 +17,7 @@ import {
   type TripPlanDraftInput,
 } from '@/utils/tripPlanDraft'
 import { buildTripPlanPrefillFromDraft, buildTripPlanRoutePrefill, draftRoutePoints } from '@/utils/tripPlanDraftIntake'
-import { buildTripPlanCreateHrefFromQuest, formatSourcePoint } from '@/utils/tripPlanLinks'
+import { buildTripPlanCreateHrefFromQuest, clip, formatSourcePoint, TRIP_PLAN_TITLE_MAX } from '@/utils/tripPlanLinks'
 import { isValidCoordinate } from '@/utils/coordinates'
 import { MAX_ROUTE_DAY } from '@/utils/routePointDay'
 
@@ -192,6 +192,19 @@ describe('граф импортов: страница статьи не тяне
     const users = ['app/(tabs)/trips/plan/create.tsx', 'components/travel/CTASection.tsx', 'components/screens/assistant/AssistantPlanDays.tsx', 'components/screens/assistant/AssistantSourceCards.tsx', 'hooks/usePlanTripFromSource.ts']
     expect(users.filter((file) => importsOf(file).includes('@/utils/tripPlanDraftIntake'))).toEqual(['app/(tabs)/trips/plan/create.tsx'])
     expect(importsOf('components/travel/CTASection.tsx')).not.toContain('@/utils/tripPlanDraft')
+  })
+
+  // #3431 В1: предел названия, чтение параметра ссылки и обрезка текста — один источник в `tripPlanLinks.ts`.
+  it('приём точек не держит своих копий `TITLE_MAX`, `firstParam`, `clip`: берёт их из сборки ссылки', () => {
+    const intake = fs.readFileSync(path.join(__dirname, '../..', 'utils/tripPlanDraftIntake.ts'), 'utf8')
+    expect(intake).not.toMatch(/^const (?:TITLE_MAX|firstParam|clip)\b/m)
+    expect(importsOf('utils/tripPlanDraftIntake.ts')).toContain('@/utils/tripPlanLinks')
+    // Название точки и название поездки режутся одним правилом — по слову, как в ссылке.
+    const long = `${'Замок '.repeat(20)}и парк`
+    const [point] = buildTripPlanRoutePrefill({ source: 'quest', sourceTravelTitle: long, sourcePoint: '50,19' })
+    expect(point.name).toBe(clip(long, TRIP_PLAN_TITLE_MAX))
+    expect(point.name.length).toBeLessThanOrEqual(TRIP_PLAN_TITLE_MAX + 2)
+    expect(point.name.endsWith('Замок...')).toBe(true)
   })
 
   it('свои копии проверок совпадают с общими: потолок дня и пределы координат', () => {

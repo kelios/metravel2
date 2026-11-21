@@ -10,10 +10,13 @@
  *      система) на пяти языках. Вопрос называет место из газеттира («в Шотландии», «на Корсике», «w
  *      Polsce») — в блок идут только маршруты этого места. Падежные формы и омонимы обычных слов разбирает
  *      тот же код, что отбирает карточки сайта по месту (`matchPlaceSources`, `promptPlace.ts`), в строгом
- *      режиме: место называет только слово с заглавной буквы. Общий список предлогов места (`topicGate.ts`)
- *      не расширяется: «на выходные» и «на два дня» местом не становятся.
- *      Вопрос называет место, которого газеттир не знает («в Беларуси»), — блока нет: чужие маршруты на
- *      вопрос о конкретном месте не показываются. Часть света и месяц после предлога местом не считаются.
+ *      режиме: место называет слово с заглавной буквы, а в вопросе без заглавных («пеший маршрут в
+ *      шотландии») — слово после предлога места. Страна узнаётся на любом из пяти языков и в любом падеже
+ *      («w Niemczech», «in Poland») по таблице `placeCountries.ts`. Общий список предлогов места
+ *      (`topicGate.ts`) не расширяется: «на выходные» и «на два дня» местом не становятся.
+ *      Вопрос называет место, которого газеттир не знает («в Беларуси», «в беларуси»), — блока нет: чужие
+ *      маршруты на вопрос о конкретном месте не показываются. Часть света и месяц после предлога местом не
+ *      считаются.
  *   3. Условия вопроса сверяет тот же `judgeCard`, что у материалов сайта: длиннее названной границы, вне
  *      расчётного сезона, заметно дольше названного числа дней — карточка в блок не идёт.
  *   4. Порядок: сколько условий совпало, затем смешанный ранг смысловой близости к вопросу и известности
@@ -24,7 +27,7 @@
  */
 
 import { AI_MAX_RECOMMENDATIONS } from './policy.ts'
-import { matchPlaceSources, samePlaceWord } from './promptPlace.ts'
+import { countryCodesOf, isPlaceForm, matchPlaceSources, namedCountryCodes, sameCountryWord, samePlaceWord } from './promptPlace.ts'
 import { judgeCard, parseConditions, type QuestionConditions } from './questionConditions.ts'
 import { namedDestinations } from './topicGate.ts'
 import type { AiWorldTrail } from './trailFacts.ts'
@@ -85,6 +88,9 @@ const GENERIC_PLACE_WORD_RE = new RegExp(
     'srodkow\\p{L}*', 'doln\\p{L}*', 'gorn\\p{L}*', '[lł]ancuch\\p{L}*', 'american\\p{L}*', 'американ\\p{L}*', 'амерыкан\\p{L}*', 'gran(?:d|de)?', 'canyon', 'свят\\p{L}*', 'swiet\\p{L}*', 'sainte?',
     // Складчатый пояс через всю Евразию (Q847514, «часть от» Альп и Гималаев у 42 маршрутов): по нему «в Альпах»
     // находил Annapurna Circuit.
+    // Вопрос без заглавных букв читается по предлогу (#3416): «по дороге на юг» находил место «Дорога», «по
+    // острову» — «Острів» (замер на наборах контура оценки, 316 вопросов).
+    'дорог\\p{L}*', 'остр[іо]в\\p{L}*', 'drog\\p{L}*', 'road',
     'alpide', 'альп[иі]и?с\\p{L}*', 'гімалаи?ск\\p{L}*', 'гималаи?ск\\p{L}*', 'средиземноморск\\p{L}*', 'середземноморськ\\p{L}*',
   ].join('|')})$`,
   'u',
@@ -110,28 +116,112 @@ export const gazetteerWords = (names: ReadonlyArray<string | null | undefined>):
 }
 
 /**
+ * Часть света — не место отбора (#3357, D2): «пеший маршрут в Европе» — вопрос без места. В газеттире слово
+ * появлялось из названий вроде «Северная Европа» (общее слово «Северная» отброшено) у одного маршрута на
+ * 2 733 км, и вопрос о Европе получал пустой блок. Названия — как после `fold`.
+ */
+const CONTINENT_WORDS: ReadonlySet<string> = new Set([
+  'европа', 'еуропа', 'європа', 'europa', 'europe', 'азия', 'азія', 'azja', 'asia', 'евразия', 'еуразія', 'євразія', 'eurazja', 'eurasia',
+  'америка', 'амерыка', 'ameryka', 'america', 'африка', 'афрыка', 'afryka', 'africa', 'океания', 'акіянія', 'океанія', 'oceania', 'антарктида', 'антарктыда', 'antarktyda', 'antarctica',
+])
+
+/** Названия одного места на языках индекса: язык → название. */
+export type PlaceNames = Readonly<Record<string, string | undefined>>
+
+const nameWords = (name: string | undefined): string[] => gazetteerWords([name]).map(fold)
+
+/**
+ * Чужие слова в названиях мест (#3357, D1): слово, которым называется другое место индекса, а в названии
+ * этого стоит не на всех языках. «Прованс — Альпы — Лазурный Берег» по-английски — «Provence-Alpes-Côte
+ * d'Azur», «Dinaric Alps» по-русски — «Динарское нагорье», «Новая Шотландия» — «Nova Scotia»: слово «Альпы»
+ * или «Шотландия» здесь — особенность перевода, а не принадлежность месту, и маршрут вокруг Марселя (GR
+ * 2013) на вопрос об Альпах идти не должен. У «Грайских Альп» и «Высоких Татр» слово стоит на всех языках —
+ * оно остаётся.
+ *
+ * «Другое место» — то, чьё название на каждом языке — одно слово газеттира («Альпы», «Alps», «Alpy»); общие
+ * слова («Новая», «Восточная») в счёт не идут, поэтому «Восточная Англия» согласована с Англией, а «Новая
+ * Шотландия» с Шотландией — нет. Мест с одним названием в индексе бывает несколько — слово остаётся, если
+ * согласуется хотя бы с одним.
+ * Возвращает по идентификатору места слова, которые у него не считаются; считается один раз при загрузке.
+ */
+export const borrowedPlaceWords = (places: ReadonlyArray<{ qid: string; names: PlaceNames }>): Map<string, Set<string>> => {
+  const unique = new Map(places.map((place) => [place.qid, place]))
+  type Head = { qid: string; words: Map<string, string> }
+  const headsByWord = new Map<string, Head[]>()
+  const wordsOfPlace = new Map<string, Map<string, string[]>>()
+  for (const place of unique.values()) {
+    const byLocale = new Map(Object.entries(place.names).map(([locale, name]) => [locale, nameWords(name)] as const))
+    wordsOfPlace.set(place.qid, byLocale)
+    if (!byLocale.size || [...byLocale.values()].some((words) => words.length !== 1)) continue
+    const head: Head = { qid: place.qid, words: new Map([...byLocale].map(([locale, words]) => [locale, words[0]])) }
+    for (const word of new Set(head.words.values())) headsByWord.set(word, [...(headsByWord.get(word) ?? []), head])
+  }
+  // Место согласовано с «другим местом»: на каждом общем языке его название несёт слово того места.
+  const agrees = (byLocale: ReadonlyMap<string, string[]>, head: Head): boolean =>
+    [...byLocale].every(([locale, words]) => {
+      const own = head.words.get(locale)
+      return own === undefined || words.some((word) => word === own || isPlaceForm(word, own) || isPlaceForm(own, word))
+    })
+  // Тёзки — два элемента с одним и тем же названием целиком («Татры» и «Татры», «Уэльс» и «Уэльс»): разница
+  // в написании на другом языке («Tatra Mountains» и «Tatras») чужим слово не делает.
+  const wholeNames = (place: { names: PlaceNames }): Set<string> =>
+    new Set(Object.values(place.names).flatMap((name) => (name && !/[^\p{L}\p{N}]/u.test(name.trim()) ? [fold(name.trim())] : [])))
+  const namesake = (qid: string, head: Head): boolean => {
+    const whole = wholeNames(unique.get(qid)!)
+    return [...head.words.values()].some((word) => whole.has(word))
+  }
+  const borrowed = new Map<string, Set<string>>()
+  for (const [qid, byLocale] of wordsOfPlace) {
+    for (const words of byLocale.values()) {
+      for (const word of words) {
+        const heads = (headsByWord.get(word) ?? []).filter((head) => head.qid !== qid)
+        if (!heads.length || heads.some((head) => namesake(qid, head) || agrees(byLocale, head))) continue
+        const own = borrowed.get(qid) ?? new Set<string>()
+        for (const head of heads) for (const other of head.words.values()) own.add(other)
+        borrowed.set(qid, own)
+      }
+    }
+  }
+  return borrowed
+}
+
+/** Названия места без чужих слов (`borrowedPlaceWords`) — вход `gazetteerPlace`. */
+export const ownPlaceNames = (place: { qid: string; names: PlaceNames }, borrowed: ReadonlyMap<string, ReadonlySet<string>>): string[] => {
+  const skip = borrowed.get(place.qid)
+  const names = Object.values(place.names).filter((name): name is string => Boolean(name))
+  if (!skip?.size) return names
+  return names.map((name) => name.split(/([^\p{L}\p{N}]+)/u).filter((part) => !skip.has(fold(part))).join(''))
+}
+
+/**
  * Место маршрута для сверки: слова газеттира мест ниже страны и стран. Слово, которым названа и страна
- * маршрута — в любом падеже (остров «Великобритания», «метрополия Франции»), — остаётся только у страны:
- * иначе вопрос о стране находил бы лишь маршруты, у которых названо такое место.
+ * маршрута — в любом падеже и на любом языке (остров «Великобритания», «метрополия Франции», «Jura
+ * Szwabska w Niemczech»), — остаётся только у страны: иначе вопрос о стране находил бы лишь маршруты, у
+ * которых названо такое место («w Niemczech» — 24 маршрута из всех немецких, #3416). Часть света местом
+ * отбора не служит (`CONTINENT_WORDS`).
  */
 export const gazetteerPlace = (places: ReadonlyArray<string | null | undefined>, countries: ReadonlyArray<string | null | undefined>): AiSourcePlace => {
   const countryWords = gazetteerWords(countries)
   const taken = countryWords.map(fold)
-  return { cities: gazetteerWords(places).filter((word) => !taken.some((country) => samePlaceWord(country, fold(word)))), countries: countryWords }
+  const ofCountry = (word: string): boolean => taken.some((country) => samePlaceWord(country, word) || sameCountryWord(country, word))
+  return { cities: gazetteerWords(places).filter((word) => !CONTINENT_WORDS.has(fold(word)) && !ofCountry(fold(word))), countries: countryWords }
 }
 
 const titleKey = (value: unknown): string => fold(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
 /**
  * Ключи названий маршрута: без диакритики, регистра и знаков. Названием вопроса служит только достаточно
- * длинное: от двух слов (не короче семи букв) либо от восьми букв — «E4», «GR 20», «Camino» и «The Way» в
- * вопросе маршрут не называют.
+ * длинное: от двух слов (не короче семи букв) либо от восьми букв — «E4», «Camino» и «The Way» в вопросе
+ * маршрут не называют. Исключение — название-шифр из букв и номера («GR 20», «GR20», «TMB 1», #3431): оно
+ * короткое, но своё; в вопросе засчитывается только написанное заглавными («Расскажи про GR 20»), как
+ * любое название короче трёх слов (`namesTrail`). Шифр из одной буквы («E4») по-прежнему не название.
  */
+const CODE_TITLE_RE = /^\p{L}{2,5} ?\d{1,4}$/u
 export const titleKeys = (titles: ReadonlyArray<string | null | undefined>): string[] => [
   ...new Set(
     titles.map(titleKey).filter((key) => {
       const letters = key.replace(/ /g, '').length
-      return letters >= 8 || (key.includes(' ') && letters >= 7)
+      return letters >= 8 || (key.includes(' ') && letters >= 7) || CODE_TITLE_RE.test(key)
     }),
   ),
 ]
@@ -213,20 +303,35 @@ export const selectWorldTrails = (query: string | null | undefined, candidates: 
   // его основа (`stemsOf`, «Київ — Києва»), а общее начало совпадения не короче трёх букв (`promptPlace.ts`).
   // Так перебор не идёт по тысячам слов на каждый вопрос.
   const heads = new Set(fold(placeText).split(/[^\p{L}\p{N}]+/u).filter((word) => word.length >= 3).map((word) => word.slice(0, 2)))
+  // Страна названа на другом языке, чем в индексе («в Угорщині» при «Венгрия», «Hungary»): первые буквы не
+  // совпадут, карточку оставляет код страны из общей таблицы.
+  const askedCountries = namedCountryCodes(placeText)
   const ofLevel = (level: keyof AiSourcePlace): WorldCandidate[] | null => {
-    const near = candidates.filter((candidate) => candidate.place[level]?.some((word) => heads.has(fold(word).slice(0, 2))))
-    return near.length ? (matchPlaceSources(placeText, near.map((candidate) => asPlaceSource(candidate, candidate.place[level])), ['countries'], { strict: true })?.map((source) => source.candidate) ?? null) : null
+    const countries = level === 'countries'
+    const near = candidates.filter(
+      (candidate) =>
+        candidate.place[level]?.some((word) => heads.has(fold(word).slice(0, 2))) ||
+        (countries && askedCountries.length > 0 && countryCodesOf(candidate.place.countries).some((code) => askedCountries.includes(code))),
+    )
+    // Названия стран на остальных языках добавляются только настоящим странам: уровень мест ниже страны
+    // передаётся тем же полем, и штат Джорджия Грузией стать не должен.
+    return near.length
+      ? (matchPlaceSources(placeText, near.map((candidate) => asPlaceSource(candidate, candidate.place[level])), ['countries'], { strict: true, lowercase: true, countryForms: countries })?.map((source) => source.candidate) ?? null)
+      : null
   }
   const inPlace = ofLevel('cities')
   const inCountry = ofLevel('countries')
   const both = inPlace && inCountry ? inPlace.filter((candidate) => inCountry.includes(candidate)) : null
-  const ofPlace = both?.length ? both : (inPlace ?? inCountry)
+  // Названы и место, и страна, а общих маршрутов нет — слово вопроса называет страну, а место лишь носит её
+  // имя (#3357): «в Швейцарии» — это Швейцария, а не три маршрута Саксонской Швейцарии.
+  const ofPlace = both?.length ? both : (inCountry ?? inPlace)
   let pool: readonly WorldCandidate[]
   if (ofPlace) pool = ofPlace
   else {
     // «in June», «w lipcu»: название месяца после предлога места — условие сезона, а не место.
     const unknown = namedDestinations(placeText).filter((place) => !BROAD_PLACE_RE.test(place) && !parseConditions(place).months?.length)
-    if (unknown.length) return namedCards.slice(0, limit)
+    // Страна из общей таблицы названа и со строчной буквы («в беларуси»): её маршрутов в индексе нет.
+    if (unknown.length || askedCountries.length) return namedCards.slice(0, limit)
     pool = candidates
   }
 

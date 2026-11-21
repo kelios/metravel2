@@ -383,6 +383,9 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
             patchTurn(id, { status: 'error' })
         }
       } catch (error) {
+        // Ход без ответа службы личный контекст не подтверждает (#3431, Б1): отказ 429, обрыв и исключение
+        // оставляли строку «Ассистент учитывает…» от прошлого хода до следующего `done`.
+        if (mountedRef.current) setProfileActive(false)
         if (isAskError(error)) {
           switch (error.kind) {
             case 'aborted':

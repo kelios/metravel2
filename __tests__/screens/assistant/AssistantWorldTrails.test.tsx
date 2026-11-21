@@ -3,6 +3,7 @@
  * ступень нагрузки, строка об источниках данных и ссылка на статью, которая открывается вне сайта.
  */
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 const mockPush = jest.fn()
 const mockOpenExternal = jest.fn(async (..._args: unknown[]) => true)
@@ -13,6 +14,7 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
 }))
 jest.mock('@/utils/externalLinks', () => ({
+  ...jest.requireActual('@/utils/externalLinks'),
   openExternalUrlInNewTab: (...args: unknown[]) => mockOpenExternal(...args),
 }))
 jest.mock('@/utils/analytics', () => ({
@@ -128,10 +130,27 @@ describe('блок «Ещё в мире» (#3357)', () => {
     expect(row.props.accessibilityRole).toBe('link')
     expect(row.props.accessibilityHint).toBe('Откроется вне сайта')
     expect(row.props.accessibilityLabel).toContain('West Highland Way')
+    // #3431: строка — настоящая ссылка с адресом статьи, новой вкладкой и `noopener`, а не `div role="link"`.
+    expect(row.props.href).toBe('https://en.wikipedia.org/wiki/West_Highland_Way')
+    expect(row.props.hrefAttrs).toEqual({ target: '_blank', rel: 'noopener' })
     await fireEvent.press(row)
     expect(mockOpenExternal).toHaveBeenCalledWith('https://en.wikipedia.org/wiki/West_Highland_Way')
     expect(mockPush).not.toHaveBeenCalled()
     expect(mockAnalytics).toHaveBeenCalledWith(WORLD_TRAIL_OPEN_EVENT, { id: whw.source_id })
+  })
+
+  it('строка-ссылка сохраняет отклик нажатия и наведения строки источника (#3431)', async () => {
+    await render(<Card item={turn()} />)
+    const opacity = () => StyleSheet.flatten(screen.getByTestId(`assistant-world-trail-${whw.source_id}`).props.style)?.opacity
+    expect(opacity()).toBeUndefined()
+    await fireEvent(screen.getByTestId(`assistant-world-trail-${whw.source_id}`), 'pressIn')
+    expect(opacity()).toBe(0.8)
+    await fireEvent(screen.getByTestId(`assistant-world-trail-${whw.source_id}`), 'pressOut')
+    expect(opacity()).toBeUndefined()
+    await fireEvent(screen.getByTestId(`assistant-world-trail-${whw.source_id}`), 'hoverIn')
+    expect(opacity()).toBe(0.8)
+    await fireEvent(screen.getByTestId(`assistant-world-trail-${whw.source_id}`), 'hoverOut')
+    expect(opacity()).toBeUndefined()
   })
 
   it('цель касания строки маршрута не меньше принятой на экране', async () => {

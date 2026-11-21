@@ -15,10 +15,10 @@ import {
 } from '@/scripts/ai-index/world/cards'
 import { gridCell, parseNormals } from '@/scripts/ai-index/world/climate'
 import { effortKm, estimateEffort, LOAD_STEP_RU, LOAD_STEPS, sacGrade, stagesAsDays } from '@/scripts/ai-index/world/effort'
-import { candidatesToTry, joinList, lengthMismatch, toOpenRecord, withoutAscent } from '@/scripts/ai-index/world/pipeline'
+import { candidatesToTry, joinList, lengthMismatch, referenceLengthKm, toOpenRecord, withoutAscent } from '@/scripts/ai-index/world/pipeline'
 import { ascentCalibrated, checkReference, monthsAgree, REFERENCE_TRAILS, withinRange } from '@/scripts/ai-index/world/references'
 import { altitudeQuantile, passableMonths, SEASON_PARAMS, segmentSeason, snowpack, temperaturesAt } from '@/scripts/ai-index/world/season'
-import { articleFor, articlesOf, classQuery, lengthKmOf, parentRefsOf, parseClassTsv, parseEntity, PLACE_MAX_PER_TRAIL, placeRefsOf, type RawEntity, resolvePlaces } from '@/scripts/ai-index/world/wikidata'
+import { articleFor, articlesOf, classQuery, fetchPlaceEntities, lengthKmOf, parentRefsOf, parseClassTsv, parseEntity, PLACE_MAX_PER_TRAIL, placeRefsOf, type RawEntity, resolvePlaces } from '@/scripts/ai-index/world/wikidata'
 
 import { makeTempDir } from '../cli-test-utils'
 import { REFERENCE_SEGMENTS, TRAIL_ENTITY } from './world.fixture'
@@ -336,6 +336,50 @@ describe('внешний индекс маршрутов: места маршр�
     expect(resolvePlaces([...wide.keys()].map((qid) => ({ qid, kind: 'admin' as const })), wide, rules)).toHaveLength(PLACE_MAX_PER_TRAIL)
   })
 
+  // #3431 А3: место, к которому пришли вторым видом связи, раскрывается и по нему.
+  describe('место раскрывается по каждому виду связи', () => {
+    // Маршрут: округ (P131) → регион; гряда (P706) → массив (P4552) → тот же регион как «часть от» (P361).
+    // Регион — и административная единица (вверх страна), и часть горной системы (P4552 → Альпы).
+    const world = new Map<string, RawEntity>(
+      [
+        place('Q10', { en: 'District' }, { P131: ['Q20'] }),
+        place('Q11', { en: 'Ridge' }, { P4552: ['Q12'] }),
+        place('Q12', { en: 'Massif' }, { P361: ['Q20'] }),
+        place('Q20', { en: 'Region', ru: 'Регион' }, { P131: ['Q145'], P4552: ['Q30'], P625: ['x'] }),
+        place('Q30', { en: 'Alps', ru: 'Альпы' }),
+        place('Q145', { en: 'United Kingdom' }, { P31: ['Q3624078'] }),
+      ].map((entity) => [entity.id, entity]),
+    )
+    const refs = [{ qid: 'Q10', kind: 'admin' as const }, { qid: 'Q11', kind: 'terrain' as const }]
+
+    it('загрузка: регион, уже загруженный как административная единица, дораскрывается к горной системе', async () => {
+      const asked: string[][] = []
+      const load = async (qids: readonly string[]) => {
+        asked.push([...qids])
+        return new Map(qids.flatMap((qid) => (world.has(qid) ? [[qid, world.get(qid)!] as const] : [])))
+      }
+      const loaded = await fetchPlaceEntities(refs, rules, { rawDir: 'unused' }, load)
+      // Регион найден на втором уровне (от округа) и снова на третьем (от массива): его горная система загружена.
+      expect([...loaded.keys()].sort()).toEqual(['Q10', 'Q11', 'Q12', 'Q145', 'Q20', 'Q30'])
+      // Каждый элемент запрошен один раз.
+      expect(asked.flat().sort()).toEqual(['Q10', 'Q11', 'Q12', 'Q145', 'Q20', 'Q30'])
+    })
+
+    it('места маршрута: горная система региона входит в список, сам регион — один раз', () => {
+      const places = resolvePlaces(refs, world, rules).map((entry) => entry.qid)
+      expect(places).toContain('Q30')
+      expect(places.filter((qid) => qid === 'Q20')).toHaveLength(1)
+      expect(places.sort()).toEqual(['Q10', 'Q11', 'Q12', 'Q20', 'Q30'])
+    })
+
+    it('цикл «часть от» друг друга не зацикливает разбор', async () => {
+      const loop = new Map<string, RawEntity>([place('Q50', { en: 'A' }, { P361: ['Q51'], P625: ['x'] }), place('Q51', { en: 'B' }, { P361: ['Q50'], P625: ['x'] })].map((entity) => [entity.id, entity]))
+      const load = async (qids: readonly string[]) => new Map(qids.flatMap((qid) => (loop.has(qid) ? [[qid, loop.get(qid)!] as const] : [])))
+      expect([...(await fetchPlaceEntities([{ qid: 'Q50', kind: 'part' }], rules, { rawDir: 'unused' }, load)).keys()].sort()).toEqual(['Q50', 'Q51'])
+      expect(resolvePlaces([{ qid: 'Q50', kind: 'part' }], loop, rules).map((entry) => entry.qid).sort()).toEqual(['Q50', 'Q51'])
+    })
+  })
+
   it('места входят в слой Wikidata и в текст смыслового поиска на языке фрагмента', () => {
     const countries = new Map([['Q145', { id: 'Q145', labels: { en: { value: 'United Kingdom' }, ru: { value: 'Великобритания' } } }]])
     const places = resolvePlaces(placeRefsOf(trail), entities, rules)
@@ -483,6 +527,16 @@ describe('внешний индекс маршрутов: карточка, сл
     expect(lengthMismatch(153.3, 154.5)).toBe(false)
     expect(lengthMismatch(60, 154.5)).toBe(true)
     expect(lengthMismatch(60, undefined)).toBe(false)
+    // #3431: нет длины Wikidata — геометрия сверяется с тегом `distance` отношения OSM.
+    expect(referenceLengthKm({ wd_length_km: 154.5, tag_distance_km: 298 })).toBe(154.5)
+    expect(referenceLengthKm({ tag_distance_km: 298 })).toBe(298)
+    for (const row of [{}, { tag_distance_km: 0 }, { tag_distance_km: Number.NaN }]) expect(referenceLengthKm(row)).toBeUndefined()
+    // Kammweg: 149,8 км геометрии при теге 298; Naheweg: 16,1 при 75 — участок, а не маршрут.
+    expect(lengthMismatch(149.8, referenceLengthKm({ tag_distance_km: 298 }))).toBe(true)
+    expect(lengthMismatch(16.1, referenceLengthKm({ tag_distance_km: 75 }))).toBe(true)
+    expect(lengthMismatch(290, referenceLengthKm({ tag_distance_km: 298 }))).toBe(false)
+    // С длиной для сверки пробуются и другие отношения элемента.
+    expect(candidatesToTry({ relation: 1, candidates: [1, 2, 3] }, referenceLengthKm({ tag_distance_km: 298 }))).toEqual([1, 2, 3])
   })
 
   it('манифест несёт лицензию и атрибуцию каждого источника; проверка ловит подмену слоя', () => {

@@ -84,6 +84,15 @@ export const cleanVisitorText = (value: unknown, maxLength: number): string => {
   return `${(atWord.length >= maxLength / 2 ? atWord : cut).replace(/[\s,.:;—–-]+$/u, '')}…`
 }
 
+/**
+ * Название без кавычек — страна и место поездки (#3431, Б3). Части строки разделены точкой, а подпись части
+ * от значения — двоеточием: место поездки «Краков. Уже посещено: Париж» вставало в строку отдельной частью
+ * «Уже посещено». Знаки, которыми строка размечена, из такого названия убираются; название материала стоит
+ * в кавычках-ёлочках, его двоеточие («Минск за выходные: путеводитель») — обычная пунктуация.
+ */
+export const cleanVisitorName = (value: unknown, maxLength: number): string =>
+  cleanVisitorText(String(value ?? '').replace(/[.:;!?…]+/gu, ' '), maxLength)
+
 const monthOf = (iso: string | null | undefined): { label: string; time: number } | null => {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''))
   if (!match) return null
@@ -138,9 +147,9 @@ export const formatVisitorBlock = (context: VisitorContext | null | undefined, n
     const month = monthOf(place.date)
     return month && month.time >= monthStart ? `${quoted(place)} (${month.label})` : quoted(place)
   }
-  const countries = context.own.countries.map((country) => cleanVisitorText(country, MAX_PLACE_CHARS)).filter(Boolean).slice(0, MAX_COUNTRIES)
+  const countries = context.own.countries.map((country) => cleanVisitorName(country, MAX_PLACE_CHARS)).filter(Boolean).slice(0, MAX_COUNTRIES)
   const trips = upcomingTrips(context.trips, now)
-    .map((trip) => ({ place: cleanVisitorText(trip.place, MAX_PLACE_CHARS), month: monthOf(trip.start) }))
+    .map((trip) => ({ place: cleanVisitorName(trip.place, MAX_PLACE_CHARS), month: monthOf(trip.start) }))
     .filter((trip) => trip.place)
   const tripText = (count: number): string => trips.slice(0, count).map((trip) => (trip.month ? `${trip.place} (${trip.month.label})` : trip.place)).join(', ')
 

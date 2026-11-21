@@ -11,6 +11,8 @@ const PUBLIC_FILES = Object.freeze({
   'apple-touch-icon.png': 'Browser touch icon',
   'assets/data/ai-similar.json': 'Precomputed semantic neighbours for the "similar articles" blocks (#3292, npm run ai:similar:build)',
   'assets/data/lasy-zanocuj.json': 'Polish forest camping map data',
+  'assets/data/world-trails-osm-LICENSE.txt': 'ODbL 1.0 terms and attribution for the world hiking trails OSM layer (#3357)',
+  'assets/data/world-trails-osm.jsonl': 'World hiking trails: fields derived from OpenStreetMap, published as an ODbL derivative database (#3357, WORLD_OSM_LAYER_PUBLIC_PATH)',
   'assets/fonts/lora-OFL.txt': 'Lora font redistribution license',
   'assets/fonts/lora-italic-v37-cyrillic.woff2': 'Gallery caption italic font, Cyrillic subset',
   'assets/fonts/lora-italic-v37-latin-ext.woff2': 'Gallery caption italic font, Polish and extended Latin subset',

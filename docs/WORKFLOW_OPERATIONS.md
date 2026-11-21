@@ -850,6 +850,14 @@ Worktree снимается на любом выходе: брошенный wor
 консоль идут только этапы, таблица времени и итоги. `DEPLOY=0` — тот же путь без
 выкладки.
 
+Выкату нужен GNU rsync 3.2.3+: стадия `stage` заливает кандидата командой
+`rsync --mkpath` (`scripts/web-ssr-publication.sh`). На macOS `/usr/bin/rsync` —
+openrsync без этого ключа, поэтому на MacBook `/opt/homebrew/bin` (`brew install
+rsync`) должен стоять в PATH раньше `/usr/bin`. При `DEPLOY=1` скрипт проверяет
+это до worktree и сборки (#3416): «❌ rsync без ключа --mkpath», код выхода 1,
+прод не меняется. Раньше такой выкат собирался несколько минут и падал уже на
+заливке с `rsync: unrecognized option --mkpath`.
+
 Для точного bundle-budget эталон — этот же фиксированный worktree и его реальные
 симлинк-зависимости, а не экспорт из основного checkout: Metro использует
 абсолютный порядок путей для module IDs и относительные пути для chunk metadata.

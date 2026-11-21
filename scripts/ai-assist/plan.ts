@@ -33,13 +33,14 @@ import type http from 'node:http'
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { planDaysOf, requestedDaysOf } from '../../api/aiAssist/planIntent.ts'
 import { ASSISTANT_SYSTEM_PROMPT, resolveAnswerLanguage, sanitizeFragment } from '../../api/aiAssist/prompt.ts'
+import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { classifyQuestion } from '../../api/aiAssist/topicGate.ts'
 import type { AiChatMessage } from '../../api/aiAssist/types.ts'
 import { clientIp } from './ask.ts'
 import type { DemandLog } from './demandLog.ts'
 import type { AskLimits } from './limits.ts'
 import { HttpError, parseLocale, parseQuery } from './params.ts'
-import { assemblePlan, candidateKey, PLAN_DAY_MAX_HOURS, PLAN_MAX_ITEMS_PER_DAY, type PlanCandidate, type PlanDay, refinePlan } from './planBuild.ts'
+import { assemblePlan, candidateKey, PLAN_DAY_MAX_HOURS, PLAN_DAY_MAX_HOURS_KIDS, PLAN_MAX_ITEMS_PER_DAY, type PlanCandidate, type PlanDay, refinePlan } from './planBuild.ts'
 import { parsePlanAnswer } from './planSchema.ts'
 import { BusyError, type SingleFlight } from './queue.ts'
 import type { Locale } from './search.ts'
@@ -175,6 +176,8 @@ export function createPlanHandler(deps: PlanDeps): PlanHandler {
     }
 
     const days = planDaysOf(q)
+    // План с детьми (#3431, В2): день короче. Условие читает тот же разбор, что отбирал карточки.
+    const maxDayHours = parseConditions(q).children ? PLAN_DAY_MAX_HOURS_KIDS : PLAN_DAY_MAX_HOURS
     const allowed = new Set(cards.map(candidateKey))
     let rawText = ''
     let errors: string[] = []
@@ -199,7 +202,7 @@ export function createPlanHandler(deps: PlanDeps): PlanHandler {
         const parsed = parsePlanAnswer(rawText, { allowed, maxDays: days })
         errors = parsed.errors
         if (parsed.plan) {
-          planDays = refinePlan(parsed.plan, cards, { days })
+          planDays = refinePlan(parsed.plan, cards, { days, maxDayHours })
           modelNote = parsed.plan.note
           if (planDays.length) assembled = 'model'
         }
@@ -218,7 +221,7 @@ export function createPlanHandler(deps: PlanDeps): PlanHandler {
         }
       }
     }
-    if (assembled === 'code') planDays = assemblePlan(cards, { days })
+    if (assembled === 'code') planDays = assemblePlan(cards, { days, maxDayHours })
     if (!planDays.length) {
       await refund()
       throw new HttpError(422, 'invalid_plan', { detail: 'план не собрался' })

@@ -5,10 +5,12 @@
 import {
   assemblePlan,
   factHours,
+  isCollection,
   isWholeDay,
   itemHours,
   orderByNearest,
   PLAN_DAY_MAX_HOURS,
+  PLAN_DAY_MAX_HOURS_KIDS,
   PLAN_MAX_ITEMS_PER_DAY,
   PLAN_MODEL_DEFAULT,
   PLAN_REGION_KM,
@@ -272,6 +274,48 @@ describe('сборка плана кодом (#3298)', () => {
     const hours = new Map(days.flatMap((day) => day.items.map((entry) => [entry.source_id, entry.hours] as const)))
     expect(hours.get(568)).toBe(4)
     if (hours.has(246)) expect(hours.get(246)).toBe(2)
+  })
+
+  // #3431 В2: предел часов дня — параметр сборки; для плана с детьми он ниже.
+  it('план с детьми: день не длиннее детского предела — у сборки кодом и у доводки плана модели', () => {
+    const hoursOfDay = (day: { items: Array<{ hours: number }> }) => day.items.reduce((sum, entry) => sum + entry.hours, 0)
+    const quests = [1, 2, 3, 4, 5, 6].map((id) => card('quest', id, 50.06 + id / 1000, 19.94, { type: 'quest', source_id: id, duration_min: 180 }))
+    const adult = assemblePlan(quests, { days: 2 })
+    const kids = assemblePlan(quests, { days: 2, maxDayHours: PLAN_DAY_MAX_HOURS_KIDS })
+    // Три квеста по три часа — девять часов: взрослому дню годится, детскому — нет.
+    expect(adult.map(hoursOfDay)).toEqual([9, 9])
+    expect(kids.map(hoursOfDay)).toEqual([6, 6])
+    expect(PLAN_DAY_MAX_HOURS_KIDS).toBeLessThan(PLAN_DAY_MAX_HOURS)
+    const crowded = plan([[item('quest', 1), item('quest', 2), item('quest', 3)], [item('quest', 4)]])
+    const refined = refinePlan(parsePlanAnswer(JSON.stringify(crowded), { allowed: new Set(quests.map((entry) => `quest:${entry.source_id}`)), maxDays: 2 }).plan!, quests, { days: 2, maxDayHours: PLAN_DAY_MAX_HOURS_KIDS })
+    expect(refined.map(hoursOfDay)).toEqual([6, 6])
+    // Материал на целый день длиннее детского предела, но свой день по-прежнему занимает.
+    const whole = [card('travel', 238, 53.68, 23.83, { type: 'travel', source_id: 238, number_days: 2 }), ...quests.slice(0, 2)]
+    expect(assemblePlan(whole, { days: 2, maxDayHours: PLAN_DAY_MAX_HOURS_KIDS }).map((day) => day.items.map((entry) => entry.source_id))).toEqual([[238], [1, 2]])
+  })
+
+  // #3431 В2: статья-сборник — перечень поездок, а не пункт дня.
+  it('статья-сборник в план не идёт, пока без неё остаётся из чего собирать', () => {
+    for (const title of ['Замки и усадьбы Беларуси: 19 маршрутов из Минска', 'Что посмотреть вокруг Кракова: 18 маршрутов', 'Горы Польши: 19 пеших маршрутов', 'Отдых у воды в Беларуси: 33 проверенных места', 'Куда поехать в Беларуси на выходные: 4 маршрута', 'Маршруты выходного дня из Минска: 13 поездок', 'Заброшенные усадьбы и замки Беларуси: 38 мест']) {
+      expect({ title, collection: isCollection(card('travel', 1, 50, 19, null, title)) }).toEqual({ title, collection: true })
+    }
+    // Не сборник: число — высота, километры и дни; квест; статья с числом дней в каталоге.
+    for (const title of ['Лесковец (922 м): лёгкий маршрут в Бескидах', 'Mullerthal Trail: 112 км по Люксембургу за 6 дней', 'Краков: путеводитель по местам', 'Два маршрута по Гродно', 'Хельская коса: три маяка и неделя на Балтике', '78 парков - 78 печатей: как стать исследователем краковских парков', '12 местных блюд Кракова']) {
+      expect({ title, collection: isCollection(card('travel', 1, 50, 19, null, title)) }).toEqual({ title, collection: false })
+    }
+    expect(isCollection(card('quest', 1, 50, 19, null, 'Квест: 12 мест Кракова'))).toBe(false)
+    expect(isCollection(card('travel', 1, 50, 19, { type: 'travel', source_id: 1, number_days: 2 }, 'Татры: 5 маршрутов за два дня'))).toBe(false)
+
+    const collection = card('travel', 636, 50.2, 19.83, null, 'Что посмотреть вокруг Кракова: 18 маршрутов')
+    const cards = [collection, KRAKOW[0], KRAKOW[1], KRAKOW[3]]
+    const ids = (days: Array<{ items: Array<{ source_id: number }> }>) => days.flatMap((day) => day.items.map((entry) => entry.source_id))
+    expect(ids(assemblePlan(cards, { days: 2 }))).not.toContain(636)
+    expect(ids(assemblePlan(cards, { days: 2 })).sort()).toEqual([13, 246, 568])
+    // Модель поставила сборник в день — доводка его убирает.
+    const withCollection = parsePlanAnswer(JSON.stringify(plan([[item('travel', 636, 4), item('quest', 246)], [item('travel', 568, 4)]])), { allowed: new Set(cards.map((entry) => `${entry.type}:${entry.source_id}`)), maxDays: 2 }).plan!
+    expect(ids(refinePlan(withCollection, cards, { days: 2 }))).toEqual([246, 568])
+    // Без сборника осталась бы одна карточка — плана из неё не собрать: сборник остаётся.
+    expect(ids(assemblePlan([collection, KRAKOW[1]], { days: 1 })).sort()).toEqual([246, 636])
   })
 
   it('материалов меньше, чем дней: план короче запрошенного', () => {

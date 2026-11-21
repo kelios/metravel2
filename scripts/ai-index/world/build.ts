@@ -40,7 +40,7 @@ import {
 import { DEM_PRODUCTS, DemReader, pruneDemCache } from './dem.ts'
 import { NetworkError, newStats, OfflineError, readJson, sleep, writeJson } from './net.ts'
 import { fetchTaggedRelations, OVERPASS_ENDPOINT } from './overpass.ts'
-import { ASCENT_PARAMS, candidatesToTry, joinList, lengthMismatch, type ListEntry, processTrail, toOpenRecord, type TrailResult, withoutAscent } from './pipeline.ts'
+import { ASCENT_PARAMS, candidatesToTry, joinList, lengthMismatch, type ListEntry, processTrail, referenceLengthKm, toOpenRecord, type TrailResult, withoutAscent } from './pipeline.ts'
 import { ascentCalibrated, checkReference, REFERENCE_TRAILS, type ReferenceVerdict } from './references.ts'
 import { type ClassMember, fetchClassMembers, fetchEntities, fetchPlaceEntities, parseEntity, resolvePlaces, TRAIL_CLASSES, TRAIL_PROPS } from './wikidata.ts'
 
@@ -194,7 +194,7 @@ interface RunSummary {
   ascent_calibrated: boolean
 }
 
-type Target = { qid: string; relation: number; candidates: number[]; wd_length_km?: number }
+type Target = { qid: string; relation: number; candidates: number[]; wd_length_km?: number; tag_distance_km?: number }
 
 /**
  * Вежливость к Overpass: потолок объёма и числа запросов на проход (правило основного экземпляра — меньше
@@ -240,7 +240,9 @@ async function runTrails(paths: Paths, flags: Record<string, string | boolean>, 
     // Отношение из P402 бывает участком или не маршрутом вовсе: пробуются и другие кандидаты элемента.
     const reasons: string[] = []
     let postponed = false
-    for (const relation of candidatesToTry(target, target.wd_length_km)) {
+    // Длина для сверки: Wikidata, иначе тег `distance` отношения OSM.
+    const expectedKm = referenceLengthKm(target)
+    for (const relation of candidatesToTry(target, expectedKm)) {
       const before = stats.overpass.requests
       try {
         const result = await processTrail(target.qid, relation, {
@@ -256,7 +258,7 @@ async function runTrails(paths: Paths, flags: Record<string, string | boolean>, 
         })
         if (stats.overpass.requests > before) failures = 0
         if (!result) reasons.push(`отношение ${relation}: нет геометрии`)
-        else if (lengthMismatch(result.record.distance_km, target.wd_length_km)) reasons.push(`отношение ${relation}: геометрия ${result.record.distance_km} км при длине Wikidata ${target.wd_length_km} км`)
+        else if (lengthMismatch(result.record.distance_km, expectedKm)) reasons.push(`отношение ${relation}: геометрия ${result.record.distance_km} км при длине ${target.wd_length_km !== undefined ? 'Wikidata' : 'по тегу distance OSM'} ${expectedKm} км`)
         else {
           results.set(target.qid, result)
           break

@@ -215,6 +215,9 @@ export function parentRefsOf(entity: RawEntity, kind: PlaceKind): PlaceRef[] {
   return [...itemIds(entity, 'P4552').map((qid) => ({ qid, kind: 'range' as const })), ...itemIds(entity, 'P361').map((qid) => ({ qid, kind: 'part' as const }))]
 }
 
+/** Куда ведёт `parentRefsOf`: у «admin» и «location» родители одни (P131), у рельефа, гряды и «части от» — другие. */
+const parentFamily = (kind: PlaceKind): 'admin' | 'relief' => (kind === 'admin' || kind === 'location' ? 'admin' : 'relief')
+
 export interface PlaceRules {
   /** QID стран всех маршрутов: страна в места не идёт — она у карточки отдельным полем. */
   countries: ReadonlySet<string>
@@ -233,23 +236,31 @@ const isTopLevel = (entity: RawEntity, rules: PlaceRules): boolean =>
  * крупных к мелким: первые места списка самые узнаваемые.
  */
 export function resolvePlaces(refs: readonly PlaceRef[], entities: ReadonlyMap<string, RawEntity>, rules: PlaceRules): TrailPlace[] {
+  // Место входит в список один раз, а вверх от него цепочка идёт по каждому виду связи (#3431, А3): регион,
+  // к которому пришли как к административной единице, а потом как к «части от», раскрывается и к горной
+  // системе — раньше второй приход отбрасывался, и «Альпы» у такого маршрута не появлялись.
   const seen = new Set<string>()
+  const expanded = new Set<string>()
   const found: Array<TrailPlace & { depth: number }> = []
   let level: PlaceRef[] = [...refs]
   for (let depth = 1; depth <= PLACE_MAX_DEPTH && level.length; depth += 1) {
     const next: PlaceRef[] = []
     for (const ref of level) {
-      if (seen.has(ref.qid)) continue
-      seen.add(ref.qid)
+      const family = `${ref.qid}:${parentFamily(ref.kind)}`
+      if (expanded.has(family)) continue
       const entity = entities.get(ref.qid)
       if (!entity || rules.exclude.has(ref.qid) || isTopLevel(entity, rules)) continue
       if ((ref.kind === 'part' || ref.kind === 'location') && !snakValues(entity, 'P625').length) continue
-      const names: TrailPlace['names'] = {}
-      for (const locale of CARD_LOCALES) {
-        const value = entity.labels?.[locale]?.value?.trim()
-        if (value) names[locale] = value
+      expanded.add(family)
+      if (!seen.has(ref.qid)) {
+        seen.add(ref.qid)
+        const names: TrailPlace['names'] = {}
+        for (const locale of CARD_LOCALES) {
+          const value = entity.labels?.[locale]?.value?.trim()
+          if (value) names[locale] = value
+        }
+        if (Object.keys(names).length) found.push({ qid: ref.qid, names, kind: ref.kind, depth })
       }
-      if (Object.keys(names).length) found.push({ qid: ref.qid, names, kind: ref.kind, depth })
       next.push(...parentRefsOf(entity, ref.kind))
     }
     level = next
@@ -267,9 +278,18 @@ export const PLACE_ENTITY_PROPS = 'labels|claims'
  * найденных. Запрашивается надмножество (правила отбора применяет `resolvePlaces`); на стране и части
  * света цепочка не продолжается.
  */
-export async function fetchPlaceEntities(start: readonly PlaceRef[], rules: PlaceRules, options: WikidataFetch): Promise<Map<string, RawEntity>> {
+export async function fetchPlaceEntities(
+  start: readonly PlaceRef[],
+  rules: PlaceRules,
+  options: WikidataFetch,
+  load: typeof fetchEntities = fetchEntities,
+): Promise<Map<string, RawEntity>> {
   const all = new Map<string, RawEntity>()
   const kinds = new Map<string, Set<PlaceKind>>()
+  // Уже раскрытые пары «место + вид связи» (#3431, А3). Место, загруженное уровнем раньше как
+  // административная единица, а теперь найденное как «часть от», раскрывается снова — к горной системе:
+  // иначе его родители по второму виду связи не загружались и `resolvePlaces` обрывал цепочку.
+  const expanded = new Set<string>()
   const note = (ref: PlaceRef): void => {
     const set = kinds.get(ref.qid) ?? new Set<PlaceKind>()
     set.add(ref.kind)
@@ -278,7 +298,7 @@ export async function fetchPlaceEntities(start: readonly PlaceRef[], rules: Plac
   start.forEach(note)
   let level = [...new Set(start.map((ref) => ref.qid))]
   for (let depth = 1; depth <= PLACE_MAX_DEPTH && level.length; depth += 1) {
-    const fetched = await fetchEntities(level.filter((qid) => !all.has(qid)), PLACE_ENTITY_PROPS, options)
+    const fetched = await load(level.filter((qid) => !all.has(qid)), PLACE_ENTITY_PROPS, options)
     const next = new Set<string>()
     for (const qid of level) {
       const entity = fetched.get(qid) ?? all.get(qid)
@@ -286,9 +306,12 @@ export async function fetchPlaceEntities(start: readonly PlaceRef[], rules: Plac
       all.set(qid, entity)
       if (rules.exclude.has(qid) || isTopLevel(entity, rules)) continue
       for (const kind of kinds.get(qid) ?? []) {
+        const family = `${qid}:${parentFamily(kind)}`
+        if (expanded.has(family)) continue
+        expanded.add(family)
         for (const parent of parentRefsOf(entity, kind)) {
           note(parent)
-          if (!all.has(parent.qid)) next.add(parent.qid)
+          if (!expanded.has(`${parent.qid}:${parentFamily(parent.kind)}`)) next.add(parent.qid)
         }
       }
     }

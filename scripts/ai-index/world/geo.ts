@@ -68,9 +68,14 @@ export function stitchWays(ways: readonly (readonly Point[])[]): Point[][] {
   return chains
 }
 
+/** Долгота в пределах −180…180: точка, перешедшая линию перемены дат, возвращается на свою сторону. */
+const wrapLon = (lon: number): number => (lon > 180 ? lon - 360 : lon < -180 ? lon + 360 : lon)
+
 /**
  * Точки вдоль линии с равным шагом (линейная интерполяция по широте и долготе — на шаге в десятки
  * метров отличие от большого круга меньше сантиметра). Первая и последняя точки линии сохраняются.
+ * Отрезок через линию перемены дат (#3431, А4: 179,99° → −179,99°) идёт коротким путём: без этого точки
+ * вставали поперёк всего земного шара и рельеф читался в чужих плитках.
  */
 export function resampleLine(line: readonly Point[], stepM: number): Point[] {
   if (line.length < 2 || !(stepM > 0)) return [...line]
@@ -84,7 +89,7 @@ export function resampleLine(line: readonly Point[], stepM: number): Point[] {
     let at = stepM - carried
     while (at <= segment) {
       const t = at / segment
-      out.push([from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t])
+      out.push([from[0] + (to[0] - from[0]) * t, wrapLon(from[1] + wrapLon(to[1] - from[1]) * t)])
       at += stepM
     }
     carried = segment - (at - stepM)
@@ -95,7 +100,10 @@ export function resampleLine(line: readonly Point[], stepM: number): Point[] {
   return out
 }
 
-/** Граница маршрута: `[южная широта, западная долгота, северная широта, восточная долгота]`. */
+/**
+ * Граница маршрута: `[южная широта, западная долгота, северная широта, восточная долгота]`. У маршрута через
+ * линию перемены дат граница получается во всю ширину карты; сборка индекса эту функцию не вызывает.
+ */
 export function boundsOf(lines: readonly (readonly Point[])[]): [number, number, number, number] | null {
   let south = Infinity
   let west = Infinity

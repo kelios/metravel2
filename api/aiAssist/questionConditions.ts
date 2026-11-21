@@ -28,10 +28,11 @@
  * Модуль без `@/`-импортов: службу грузит `node --experimental-strip-types`.
  */
 
+import { namesPlaceAfterFrom } from './promptPlace.ts'
 import { asksAboutChildren } from './questAudience.ts'
 import { asksAboutService } from './serviceIntent.ts'
 import { detectIntent } from './retrievalQuery.ts'
-import { formatKm, MONTHS_RU, type RouteKind, routeKindOf, type SourceFacts } from './sourceFacts.ts'
+import { formatKm, MONTHS_RU, type QuestRouteKind, questRouteKindOf, type RouteKind, routeKindOf, type SourceFacts } from './sourceFacts.ts'
 import { type TrailFacts, WORLD_CARD_TYPE } from './trailFacts.ts'
 import type { AiCardType, AiSourceType } from './types'
 
@@ -283,8 +284,16 @@ const KM_NOT_LONGER_RE = kmBefore(
 )
 const KM_LONGER_RE = kmBefore('больше', 'более', 'длиннее', 'больш', 'даўжэй', 'більше', 'довше', 'ponad', 'powy[żz]ej', 'wi[ęe]cej\\s+ni[żz]', 'd[łl]u[żz]sz\\p{L}*\\s+ni[żz]', 'more\\s+than', 'over', 'longer\\s+than')
 const KM_SHORTER_RE = kmBefore('короче', 'менее', 'меньше', 'карацей', 'менш', 'коротше', 'менше', 'kr[óo]tsz\\p{L}*\\s+ni[żz]', 'mniej\\s+ni[żz]', 'poni[żz]ej', 'shorter\\s+than', 'less\\s+than')
-/** Расстояние от места, а не длина маршрута: «в 30 км от Минска», «30 km from Krakow», «за 20 км від Львова». */
-const KM_FROM_PLACE_RE = /^\s*(?:от|ад|від|od|from)\s+\p{Lu}/u
+/**
+ * Расстояние от места, а не длина маршрута: «в 30 км от Минска», «30 km from Krakow», «за 20 км від Львова»,
+ * «50 км от минска». Место это или ориентир («маршрут 20 км от вокзала» — длина), решает общий разбор места
+ * (`namesPlaceAfterFrom`, `promptPlace.ts`).
+ */
+const KM_FROM_RE = /^\s*(?:от|ад|від|od|from)(?![\p{L}\p{N}])/iu
+const kmFromPlace = (after: string): boolean => {
+  const from = KM_FROM_RE.exec(after)
+  return from !== null && namesPlaceAfterFrom(after.slice(from[0].length))
+}
 const KM_AWAY_BEFORE_RE = /(?<![\p{L}])(?:в|у|ў|за|w|within)\s+$/iu
 
 /**
@@ -299,7 +308,7 @@ const kmOf = (text: string): { maxKm?: number; minKm?: number } => {
     const start = match.index ?? 0
     const before = text.slice(0, start)
     const after = text.slice(start + match[0].length)
-    if (KM_FROM_PLACE_RE.test(after) || (KM_AWAY_BEFORE_RE.test(before) && /^\s*(?:от|ад|від|od|from|of)(?![\p{L}])/iu.test(after))) continue
+    if (kmFromPlace(after) || (KM_AWAY_BEFORE_RE.test(before) && /^\s*(?:от|ад|від|od|from|of)(?![\p{L}])/iu.test(after))) continue
     const first = kmNumberOf(match[1])
     const second = kmNumberOf(match[2])
     if (first === null) continue
@@ -441,6 +450,10 @@ const WEEKEND_CATEGORY = 'тур выходного дня'
 const ROUTE_RU: Record<RouteKind, string> = { foot: 'пеший маршрут', bike: 'веломаршрут' }
 /** Оценочные дни маршрута мира нарушают условие «на N дней», только когда больше названного во столько раз. */
 export const TRAIL_ESTIMATE_SLACK = 1.5
+/** С какого названного числа дней маршрут мира не должен быть вдвое короче срока: «на неделю» — от четырёх дней. */
+export const TRAIL_MIN_DAYS_FROM = 3
+/** Какую долю названного срока маршрут мира обязан занимать (округление вверх); значение по умолчанию, без замера. */
+export const TRAIL_MIN_DAYS_SHARE = 0.5
 
 const daysLabel = (days: number): string => {
   const tail = days % 10
@@ -538,6 +551,10 @@ export const judgeCard = (
     if (shared.length) match(`без снега по норме: ${shared.map((month) => MONTHS_RU[month - 1]).join(', ')}`)
     else dropped = true
   }
+  // У маршрута мира нет расчёта месяцев (вечный снег по модели либо нет климатических норм, #3431): на
+  // вопрос с месяцем он не предлагается — проверить сезон нечем. У статьи без месяцев условие не нарушено:
+  // её читают, а маршрут мира показан одними фактами.
+  if (conditions.months?.length && trail && !trail.months?.length) dropped = true
 
   const { maxMinutes, maxDays } = conditions
   if (quest?.duration_min) {
@@ -567,13 +584,19 @@ export const judgeCard = (
     if (limit !== undefined) {
       // Дни по этапам источника сверяются как у статьи; оценка от усилия — с запасом.
       if (trail.days_estimated ? trail.days >= limit * TRAIL_ESTIMATE_SLACK : trail.days > limit) dropped = true
+      // «Поход на неделю» — не маршрут на один день (#3431): у маршрута мира число дней — и нижняя граница,
+      // от половины названного срока, когда названо три дня и больше («на выходные» — и однодневный годится).
+      else if (maxDays !== undefined && maxDays >= TRAIL_MIN_DAYS_FROM && trail.days < Math.ceil(maxDays * TRAIL_MIN_DAYS_SHARE)) dropped = true
       else if (maxDays !== undefined && trail.days <= limit) match(trail.days_estimated ? `около ${daysLabel(trail.days)}` : daysLabel(trail.days))
     }
   }
 
   // Вид маршрута (#3353): пеший или вело — по категориям и транспорту статьи; каталог молчит — не нарушено.
-  // Маршрут мира — пеший по составу внешнего индекса.
-  const kind = trail ? 'foot' : travel ? routeKindOf(travel) : null
+  // Маршрут мира — пеший по составу внешнего индекса. У квеста (#3416) вид — по тегам каталога, а пока
+  // запись фактов индекса их не несёт — по названию («Велоквест…», «Quest rowerowy…»): городская прогулка
+  // вида не называет, велоквест и автоквест на вопрос о пешем маршруте — другой вид.
+  const questKind = card.type === 'quest' ? (quest?.route ?? questRouteKindOf(null, card.title)) : null
+  const kind: QuestRouteKind | null = trail ? 'foot' : travel ? routeKindOf(travel) : questKind
   const otherKind = conditions.route !== undefined && kind !== null && kind !== conditions.route
   if (conditions.route && kind === conditions.route) match(ROUTE_RU[kind])
   else if (otherKind) score -= 1

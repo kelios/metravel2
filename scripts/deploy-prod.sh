@@ -97,6 +97,24 @@ check_prod_checkout_clean() {
   echo "✅ Прод-чекаут бэкенда чистый"
 }
 
+# #3416: стадия `stage` заливает кандидата командой `rsync --mkpath`
+# (scripts/web-ssr-publication.sh), а ключ знает только GNU rsync 3.2.3+. На
+# macOS `/usr/bin/rsync` — openrsync без него: выкат собирался несколько минут и
+# падал на `rsync: unrecognized option --mkpath`, когда `/usr/bin` стоял в PATH
+# раньше `/opt/homebrew/bin`. Проверка локальная и идёт до worktree и сборки.
+check_rsync_mkpath() {
+  local bin help
+  bin="$(command -v rsync || true)"
+  # Вывод в переменную, а не в `grep -q`: при pipefail ранний выход grep дал бы
+  # ложный отказ по SIGPIPE.
+  help="$([[ -n "$bin" ]] && "$bin" --help 2>&1 || true)"
+  if [[ "$help" != *"--mkpath"* ]]; then
+    echo "❌ rsync без ключа --mkpath: ${bin:-не найден в PATH}. Выкату нужен GNU rsync 3.2.3+ — сборка не начата, прод не менялся."
+    echo "   macOS: brew install rsync и /opt/homebrew/bin в PATH раньше /usr/bin (docs/WORKFLOW_OPERATIONS.md §3.5)."
+    return 1
+  fi
+}
+
 on_exit() {
   local status=$?
   trap - EXIT
@@ -149,6 +167,7 @@ if [[ "$DEPLOY" == "1" ]]; then
     echo "❌ Выкат $SHORT отклонён до сборки — прод не менялся" | tee -a "$LOG"
     exit 1
   fi
+  check_rsync_mkpath 2>&1 | tee -a "$LOG"
 fi
 
 # Лок у нас, значит оставшийся worktree — след прерванного выката.

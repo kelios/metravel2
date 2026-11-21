@@ -11,7 +11,7 @@ import path from 'node:path'
 
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import type { AiSourcePlace } from '../../api/aiAssist/types.ts'
-import { asksForWorldTrails, gazetteerPlace, namesTrail, titleKeys, type WorldCandidate } from '../../api/aiAssist/worldTrails.ts'
+import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, namesTrail, ownPlaceNames, titleKeys, type WorldCandidate } from '../../api/aiAssist/worldTrails.ts'
 import { decodeVectors, readJsonl } from '../ai-index/format.ts'
 import {
   OPEN_LAYER_FILE,
@@ -52,9 +52,9 @@ export interface LoadWorldIndexOptions {
   expectedModel: string
 }
 
-const placeOf = (open: OpenLayerRecord): AiSourcePlace =>
+const placeOf = (open: OpenLayerRecord, borrowed: ReadonlyMap<string, ReadonlySet<string>>): AiSourcePlace =>
   gazetteerPlace(
-    (open.places ?? []).flatMap((place) => Object.values(place.names)),
+    (open.places ?? []).flatMap((place) => ownPlaceNames(place, borrowed)),
     open.countries.flatMap((country) => Object.values(country.names)),
   )
 
@@ -83,9 +83,11 @@ export function loadWorldIndex(distDir: string, options: LoadWorldIndexOptions):
     if (list) list.push(row)
     else rows.set(chunk.source_id, [row])
   })
+  // Слово чужого места в названии («Альпы» у региона «Прованс — Альпы — Лазурный Берег») — по всему индексу сразу.
+  const borrowed = borrowedPlaceWords([...open.values()].flatMap((record) => record.places ?? []))
   const trails = osm.flatMap((record): WorldTrailEntry[] => {
     const own = open.get(record.source_id)
-    return own ? [{ osm: record, open: own, rows: rows.get(record.source_id) ?? [], place: placeOf(own), titles: titlesOf(own) }] : []
+    return own ? [{ osm: record, open: own, rows: rows.get(record.source_id) ?? [], place: placeOf(own, borrowed), titles: titlesOf(own) }] : []
   })
   return { manifest, trails, vectors, dim: manifest.dim }
 }
