@@ -193,6 +193,5 @@ handoff до evidence, не создавай deploy-only дубль.
 
 ## Проверка по platform impact (обязательное правило)
 
-Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»
-(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).
-Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».
+Общее правило — `docs/AGENT_ROLE_CONTRACTS.md` → «Проверка по platform impact»; прочитай
+раздел до первой правки или проверки.

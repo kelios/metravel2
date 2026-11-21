@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process')
 const minimatchModule = require('minimatch')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
 const { findTestStackDrift, formatDriftMessage } = require('./check-installed-test-deps')
+const { STAGE_FAST, guardsForStage } = require('./pre-push-guards')
 
 const parseArgs = (argv) => {
   const out = {
@@ -286,132 +287,18 @@ const main = () => {
     }
 
     if (args.dryRun) {
-      console.log('fast-scope-checks: dry-run, skipping guard:external-links and eslint.')
+      console.log(`fast-scope-checks: dry-run, skipping ${guardsForStage(STAGE_FAST).length} unconditional guards (scripts/pre-push-guards.js, stage fast) and eslint.`)
       return
     }
 
-    // Первым и безусловно: guard дешёвый (одно чтение `git ls-files`), а
-    // предотвращать одноразовый артефакт в корне надо именно здесь. #1846
-    // показал, что `lint` ловит его уже постфактум — файл к тому моменту уже
-    // на origin/main и красит гейт у каждой сессии.
-    const rootScratchGuardStatus = runCommand('npm', ['run', 'guard:root-scratch-artifacts'])
-    if (rootScratchGuardStatus !== 0) {
-      process.exit(rootScratchGuardStatus)
-    }
-
-    // Read the actual public/ tree even when an extra file is Git-ignored.
-    const publicFilesGuardStatus = runCommand('npm', ['run', 'guard:public-files'])
-    if (publicFilesGuardStatus !== 0) {
-      process.exit(publicFilesGuardStatus)
-    }
-
-    const guardStatus = runCommand('npm', ['run', 'guard:external-links'])
-    if (guardStatus !== 0) {
-      process.exit(guardStatus)
-    }
-
-    // #3242: дёшево и безусловно — адрес статьи, вписанный в код руками,
-    // устаревает от переименования в другом файле (`scripts/seo-redirects.json`),
-    // поэтому scope изменённых файлов здесь ничего не говорит.
-    const travelLinksGuardStatus = runCommand('npm', ['run', 'guard:travel-links'])
-    if (travelLinksGuardStatus !== 0) {
-      process.exit(travelLinksGuardStatus)
-    }
-
-    // Безусловно (#3202): новый сток rich-text появляется в новом файле, а не в
-    // изменённом, и проверка «только изменённого» его бы не увидела.
-    const richTextSinksGuardStatus = runCommand('npm', ['run', 'guard:rich-text-sinks'])
-    if (richTextSinksGuardStatus !== 0) {
-      process.exit(richTextSinksGuardStatus)
-    }
-
-    // Безусловно, как и остальные дешёвые гейты: новая отложенная загрузка
-    // секции появляется в НОВОМ файле (#1475, #818, #2010), и проверка только
-    // изменённых файлов не сверила бы её с реестром в RULES.md (#2012).
-    const deferredLoadingGuardStatus = runCommand('npm', ['run', 'guard:web-deferred-loading'])
-    if (deferredLoadingGuardStatus !== 0) {
-      process.exit(deferredLoadingGuardStatus)
-    }
-
-    // Тоже безусловно: сырой `data-*` и `.css` рядом с компонентом приходят в
-    // новом файле так же часто, как в изменённом (#1642, #2024, #2032).
-    const styleChannelsGuardStatus = runCommand('npm', ['run', 'guard:web-style-channels'])
-    if (styleChannelsGuardStatus !== 0) {
-      process.exit(styleChannelsGuardStatus)
-    }
-
-    // Дёшево и безусловно (#2099): guard проверяет поимённый список экранов-
-    // владельцев шапки (`SCREEN_HEADER_OWNERS`); новый вложенный экран
-    // добавляют в этот список вместе с вызовом useScreenHeader.
-    const screenHeaderGuardStatus = runCommand('npm', ['run', 'guard:screen-header'])
-    if (screenHeaderGuardStatus !== 0) {
-      process.exit(screenHeaderGuardStatus)
-    }
-
-    // Безусловно (#2101): полноширинное «Удалить» и безымянная корзина в теле
-    // экрана деталей появляются в изменённом файле списка `ACTION_SCREENS`.
-    const screenActionsGuardStatus = runCommand('npm', ['run', 'guard:screen-actions'])
-    if (screenActionsGuardStatus !== 0) {
-      process.exit(screenActionsGuardStatus)
-    }
-
-    const bottomChromeGuardStatus = runCommand('npm', ['run', 'guard:bottom-chrome-inset'])
-    if (bottomChromeGuardStatus !== 0) {
-      process.exit(bottomChromeGuardStatus)
-    }
-
-    const queryRetryGuardStatus = runCommand('npm', ['run', 'guard:query-retry-policy'])
-    if (queryRetryGuardStatus !== 0) process.exit(queryRetryGuardStatus)
-
-    const typeDebtGuardStatus = runCommand('npm', ['run', 'guard:type-debt'])
-    if (typeDebtGuardStatus !== 0) {
-      process.exit(typeDebtGuardStatus)
-    }
-
-    // Гейт безусловный, а не по изменённым файлам: четвёртая копия правила
-    // докачки страниц (#1710, класс API-PAGE-SIZE-CAP-001) появляется в НОВОМ
-    // файле рядом со старыми, и проверка «только изменённого» увидела бы её
-    // лишь в том прогоне, где этот файл и правили.
-    const pageFetchLoopGuardStatus = runCommand('npm', ['run', 'guard:no-inline-page-fetch-loop'])
-    if (pageFetchLoopGuardStatus !== 0) {
-      process.exit(pageFetchLoopGuardStatus)
-    }
-
-    // Та же логика для навигации «назад» (#1727): рукописная копия
-    // `canGoBack() ? back() : replace(...)` появляется в новом экране, а не в
-    // изменённом, поэтому гейт безусловный.
-    const backNavigationGuardStatus = runCommand('npm', ['run', 'guard:no-inline-back-navigation'])
-    if (backNavigationGuardStatus !== 0) {
-      process.exit(backNavigationGuardStatus)
-    }
-
-    const questAnswerEvalGuardStatus = runCommand('npm', ['run', 'guard:quest-answer-eval'])
-    if (questAnswerEvalGuardStatus !== 0) {
-      process.exit(questAnswerEvalGuardStatus)
-    }
-
-    const questReviewSnapshotsGuardStatus = runCommand('npm', ['run', 'guard:quest-review-snapshots'])
-    if (questReviewSnapshotsGuardStatus !== 0) {
-      process.exit(questReviewSnapshotsGuardStatus)
-    }
-
-    // Один quest_id — один локальный файл-источник (#1554). Гейт безусловный, а
-    // не по изменённым файлам: дубль появляется как раз тогда, когда НОВЫЙ файл
-    // заводят рядом со старым, и проверка «только изменённого» увидела бы лишь
-    // одну половину пары. Сетевая половина класса — расхождение файла с продом —
-    // живёт отдельной командой `npm run quest:scan-prod-drift`: офлайн-гейт по
-    // построению не знает состояния прода (#1489).
-    const questDataSourcesGuardStatus = runCommand('npm', ['run', 'guard:quest-data-sources'])
-    if (questDataSourcesGuardStatus !== 0) {
-      process.exit(questDataSourcesGuardStatus)
-    }
-
-    // Скрипт, пишущий на прод, не пишет без `--apply` (#3304). Гейт безусловный
-    // по той же причине, что и выше: нарушение приносит НОВЫЙ файл — копия старого
-    // шаблона с ручным `args.includes('--dry-run')`, — а не правка существующего.
-    const prodWriteModeGuardStatus = runCommand('npm', ['run', 'guard:prod-write-mode'])
-    if (prodWriteModeGuardStatus !== 0) {
-      process.exit(prodWriteModeGuardStatus)
+    // Безусловные стражи стадии `fast` — из единого списка `scripts/pre-push-guards.js`
+    // (#3371): порядок, причина каждого и остаток до push записаны там. Здесь
+    // списка нет намеренно — вторая копия уже расходилась с `npm run lint`.
+    for (const guard of guardsForStage(STAGE_FAST)) {
+      const guardStatus = runCommand('npm', ['run', guard.script])
+      if (guardStatus !== 0) {
+        process.exit(guardStatus)
+      }
     }
 
     // #2221: дерево `ios/` закоммичено, и guard сверяет его с app.json и

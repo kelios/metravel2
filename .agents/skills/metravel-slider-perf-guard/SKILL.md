@@ -43,18 +43,23 @@ Load-bearing правило — `docs/RULES.md` → «Web loading and hydration 
 
 ## Процедура (обе стороны, до «done»)
 
-Живой браузер (шаг 2) и перф-страж (шаг 3) в стадии `review` карточки не запускаются: это
-шаг `testing` или прямой запрос пользователя (AGENTS §4.6). Шаг 1 — code-level, идёт до ревью.
+До ревью идёт только шаг 1 — Jest. Шаги 2–4 запускают Playwright или живой браузер и в
+стадии `review` карточки не выполняются: это шаги `testing` либо прямой запрос пользователя
+(`AGENTS.md` §4.6 и §5, `docs/RULES.md` → «Development workflow»).
 
-1. **Свайп-страж (лёгкий, ~15с, мок-фикстура, всегда):**
+1. **Unit-страж свайпа (Jest, до ревью, всегда):**
+   ```
+   npx jest __tests__/components/travel/sliderPointerDrag.touch.test.tsx
+   ```
+
+2. **Свайп-страж (Playwright, ~15с, мок-фикстура; в `testing`):**
    ```
    npm run verify:slider            # e2e/travel-gallery-swipe-mobile.spec.ts @smoke (CDP-touch)
-   npx jest __tests__/components/travel/sliderPointerDrag.touch.test.tsx
    ```
    Ожидание: счётчик 1/N → 2/N → 3/N вперёд/назад; вертикальный жест скроллит
    страницу; тап открывает fullscreen, драг — нет.
 
-2. **Живой браузер (mobile 390, честная проба своими руками — не перекладывать):**
+3. **Живой браузер (mobile 390, честная проба своими руками — не перекладывать; в `testing`):**
    Expo web против обновлённого локального бэкенда `http://localhost:8000`
    (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); связка с прод-API
    (`Api Proxy 4620` + `Expo Web ProxyApi 8089`) — когда нужны прод-данные или медиа
@@ -64,7 +69,7 @@ Load-bearing правило — `docs/RULES.md` → «Web loading and hydration 
    а НЕ на контейнере-предке `travel-details-hero-slider-container` — события не идут
    вниз к детям, диспатч на предок даёт ложный «не листается». Ждать роста счётчика.
 
-3. **Перф-страж (тяжёлый, нужен prod-build):**
+4. **Перф-страж (тяжёлый, нужен prod-build; в `testing`):**
    ```
    npm run verify:slider-perf       # swipe + travel-details + pages perf-budget одним билдом
    # либо по отдельности: npm run e2e:perf-budget ; npm run e2e:perf-budget:pages
@@ -72,7 +77,7 @@ Load-bearing правило — `docs/RULES.md` → «Web loading and hydration 
    Пороги — `e2e/travel-details-perf-budget.spec.ts` (LCP/TBT/CLS/FCP, JS/img/total
    transfer, requests, long tasks). CI-пороги строже (env `PERF_*_MAX_*`).
 
-4. **Сдача только когда обе стороны зелёные.** Если чинил свайп — приложи числа
+5. **Сдача только когда обе стороны зелёные.** Если чинил свайп — приложи числа
    перф-стража; если оптимизировал — приложи прогон свайп-стража. Красная любая
    сторона = не done.
 

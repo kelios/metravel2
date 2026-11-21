@@ -608,8 +608,11 @@ describe('guard-web-style-channels', () => {
     expect(scripts['guard:web-style-channels:json']).toBe('node scripts/guard-web-style-channels.js --json')
     expect(scripts.lint).toContain('npm run guard:web-style-channels')
     expect(scripts['lint:ci']).toContain('npm run guard:web-style-channels')
-    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain(
-      "runCommand('npm', ['run', 'guard:web-style-channels'])",
+    // #3371: безусловные стражи check:fast — стадия `fast` единого списка.
+    const { STAGE_FAST, guardsForStage } = require('@/scripts/pre-push-guards')
+    expect(guardsForStage(STAGE_FAST).map((guard: { script: string }) => guard.script)).toContain(
+      'guard:web-style-channels',
     )
+    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain('guardsForStage(STAGE_FAST)')
   })
 })

@@ -360,8 +360,9 @@ curl с staff token в command arguments.
 Порядок ровно такой:
 
 ```bash
-node .claude/hooks/review-gate.mjs record --task <id> --verdict pass --findings 0 --note "<checked>"
-git add <пути задачи>
+# <список> — пути задачи по одному в строке, например .codex-temp/review-gate/<id>.paths
+node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict pass --findings 0 --note "<checked>"
+git add --pathspec-from-file=<список>
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
 PREFLIGHT_SKIP_E2E=1 git push origin main
 # и только теперь metravel_task_update(task_id=<id>, status="testing")
@@ -371,14 +372,27 @@ PREFLIGHT_SKIP_E2E=1 git push origin main
 сохраняет static/unit/guard checks, но не запускает Playwright до стадии
 `testing`.
 
+**Стражи до push — один список** (#3371, `REVIEW-GATE-LINT-COVERAGE-001`):
+`scripts/pre-push-guards.js`. В нём весь `npm run lint`, весь
+`governance:verify` и `typecheck` (`tsc --noEmit`); pre-push preflight запускает его шагами
+`fast-scope-checks` (стадия `fast`) и `pre-push-guards` (остаток), роль
+`code-review-gate` — одной командой `npm run guard:pre-push`. Свой набор
+стражей гейт не выбирает. Страж, добавленный в `npm run lint` мимо списка,
+краснит `__tests__/scripts/pre-push-guards.test.ts`. Там же записано, что на
+каждый push не запускается и где выполняется (`NOT_BEFORE_EVERY_PUSH`), и
+условие пробной прод-сборки `DEPLOY=0 scripts/deploy-prod.sh <снимок>` для
+диффа с импортами в модулях eager-графа или общих чанков (`BUNDLE_PROBE_RULE`).
+Замер 21.11.2026: preflight без изменённых файлов 11,9 → 54 с, с `typecheck` — около 65 с (шаг `pre-push-guards` — 52,1 с).
+
 - коммит только явными путями задачи. `git add -A` и `git commit` без списка путей в общем
   чекауте запрещены: они забирают незаконченные файлы соседних сессий и выкатывают чужой код
   мимо его собственного гейта;
 - пушится только `main` (`docs/RULES.md` → ветки). Ветка `claude/*` из harness-worktree не
   пушится никогда: итог переносится в основной checkout и коммитится там;
-- pre-push preflight (`githooks/pre-push`) считает набор по рабочему дереву, а не по коммиту.
-  Если `npm run check:preflight:dry` показывает чужой набор файлов, свой набор проверяется узко
-  (lint/jest по своим путям), а push идёт `SKIP_PREFLIGHT=1 git push origin main` —
+- pre-push preflight (`githooks/pre-push`) считает набор по рабочему дереву, а не по коммиту,
+  и стражи списка читают дерево целиком. Если `npm run check:preflight:dry` показывает чужой
+  набор файлов или страж красный только в чужом незакоммиченном файле, свой набор проверяется
+  узко (lint/jest по своим путям), а push идёт `SKIP_PREFLIGHT=1 git push origin main` —
   документированная лазейка самого хука. В тикете и в отчёте владельцу это называется явно;
 - sha коммита дописывается в `description` тикета: приёмка (`board-reviewer`), dev-deploy и
   любой последующий разбор смотрят на запушенный код, а не на чьё-то рабочее дерево;
@@ -387,9 +401,17 @@ PREFLIGHT_SKIP_E2E=1 git push origin main
 - коммит, push и `git pull --ff-only` чужих коммитов вердикт не ломают: в вердикте закреплены
   базис `base` (merge-base `origin/main` и HEAD на момент записи — не сам `origin/main`, иначе
   отставший HEAD тянет в отпечаток «обратные» чужие правки, #2456) и карта `scope`
-  (`path → blob-hash` изменённых tracked и untracked файлов); при проверке отпечаток пересчитывается
-  по содержимому ровно этих путей, поэтому `stale` означает новую правку проверенных файлов или
-  новый незакоммиченный файл вне scope после ревью, а не смену состояния индекса или ветки.
+  (`path → blob-hash`); при проверке отпечаток пересчитывается по содержимому ровно этих путей,
+  поэтому `stale` означает правку после ревью, а не смену состояния индекса или ветки;
+- scope отпечатка — пути задачи (#3371, `REVIEW-GATE-FINGERPRINT-FOREIGN-WORKTREE-001`):
+  `record --paths-file <список>` или `--paths a,b`. Файл из списка входит в отпечаток всегда,
+  каталог раскрывается в свои изменённые и untracked файлы. `stale` дают правка файла из scope
+  и новый незакоммиченный файл в каталоге задачи; незакоммиченные пути вне scope — чужие, вердикт
+  их не видит, а `record` и `show` перечисляют их в `outside_scope`. Путь, которого нет ни в
+  дереве, ни в базисе, и список, где ни один файл не отличается от базиса, запись отклоняет;
+  незакоммиченный сосед файла задачи по каталогу вне списка — предупреждение в stderr. `record` без флага — прежний режим: scope = всё дерево,
+  и любой новый незакоммиченный файл вне него ломает вердикт; в общем чекауте так захватываются
+  и чужие файлы, поэтому гейт пишет вердикт только по путям. Прежние записи читаются по-старому.
 
 Почему это гейт, а не пожелание: `testing` — приёмка реальными пробами, и dev-deploy, браузер,
 устройство и прод-сверка берут код из `main`. Незакоммиченная правка проверяется только в общем

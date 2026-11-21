@@ -14,17 +14,27 @@
  * Режимы:
  *   (stdin JSON)                       hook для `metravel_task_update` (Pre + Post).
  *   record --task <id> --verdict pass|changes_requested [--findings N] [--note "..."]
+ *          [--paths <a,b,…> | --paths-file <файл>]
  *                                      Пишет вердикт агента `code-review-gate` с отпечатком diff'а.
  *   show --task <id>                   Печатает состояние вердикта (exit 0 = пропустит, 1 = нет).
  *
  * Вердикты живут в `.codex-temp/review-gate/<task_id>.json` (ignored-папка).
- * Scope вердикта — карта `path → blob-hash` файлов, отличающихся от базиса ревью (`base` =
- * merge-base `origin/main` и HEAD на момент записи; в неё входят и изменённые tracked-файлы,
- * и untracked). Отпечаток `fingerprint` считается по содержимому ровно этих путей, а при
- * проверке пересчитывается по той же карте, поэтому обязательные для перехода в `testing`
- * `git add`/`commit`/`push origin main` и `git pull --ff-only` чужих коммитов вердикт НЕ ломают,
- * а любая правка содержимого проверенных файлов или новый незакоммиченный файл вне scope
- * после ревью — ломает.
+ * Scope вердикта — карта `path → blob-hash`. Отпечаток `fingerprint` считается по содержимому
+ * ровно этих путей, а при проверке пересчитывается по той же карте, поэтому обязательные для
+ * перехода в `testing` `git add`/`commit`/`push origin main` и `git pull --ff-only` чужих
+ * коммитов вердикт НЕ ломают, а любая правка содержимого проверенных файлов — ломает.
+ *
+ * Два режима scope:
+ *   paths (`--paths` / `--paths-file`, #3371) — scope = пути ЗАДАЧИ. Файл входит в отпечаток
+ *     всегда; каталог раскрывается в свои изменённые и untracked файлы и запоминается: новый
+ *     незакоммиченный файл в нём после ревью ломает вердикт. Незакоммиченные пути вне scope —
+ *     чужие (соседняя сессия в общем дереве): вердикт их не видит и ими не ломается. Коммитить
+ *     после `pass` надо тем же списком путей.
+ *   tree (без флагов, прежнее поведение) — scope = всё, что отличается от базиса ревью (`base` =
+ *     merge-base `origin/main` и HEAD на момент записи): изменённые tracked-файлы и untracked.
+ *     Любой новый незакоммиченный файл вне scope после ревью ломает вердикт — в общем дереве
+ *     это и чужие файлы (REVIEW-GATE-FINGERPRINT-FOREIGN-WORKTREE-001), поэтому режим оставлен
+ *     только для совместимости и для чекаута с одной сессией.
  *
  * Аварийный обход: REVIEW_GATE_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  * Максимальный возраст вердикта: REVIEW_GATE_MAX_AGE_HOURS (по умолчанию 24).
@@ -146,9 +156,86 @@ function fingerprintScope(root, base, paths) {
   };
 }
 
-/** Scope задачи на момент записи вердикта: всё, что отличается от базиса. */
+/** Scope режима `tree` на момент записи вердикта: всё, что отличается от базиса. */
 function recordScope(root, base) {
   return fingerprintScope(root, base, diffPaths(root, base).slice(0, SCOPE_CAP));
+}
+
+const SCOPE_MODE_PATHS = 'paths';
+
+/** Путь задачи → posix-путь от корня репозитория; `null`, если он пустой или выходит за корень. */
+function normalizeTaskPath(root, raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  const relative = path.relative(root, path.resolve(root, text)).split(path.sep).join('/');
+  if (!relative || relative === '..' || relative.startsWith('../') || path.isAbsolute(relative)) return null;
+  return relative;
+}
+
+/** Список путей задачи из `--paths a,b` и/или `--paths-file <файл>` (по одному в строке, `#` — комментарий). */
+function readTaskPaths(root, args) {
+  const raw = [];
+  if (typeof args.paths === 'string') raw.push(...args.paths.split(/[,\n]/));
+  if (typeof args['paths-file'] === 'string') {
+    const file = path.resolve(root, args['paths-file']);
+    raw.push(...readFileSync(file, 'utf8').split(/\r?\n/).filter((line) => !line.trim().startsWith('#')));
+  }
+  const cleaned = raw.map((item) => item.trim()).filter(Boolean);
+  const invalid = cleaned.filter((item) => !normalizeTaskPath(root, item));
+  if (invalid.length) throw new Error(`путь задачи вне репозитория: ${listPaths(invalid)}`);
+  return [...new Set(cleaned.map((item) => normalizeTaskPath(root, item)))].sort();
+}
+
+function isDirectory(root, file) {
+  try {
+    return lstatSync(path.join(root, file)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Scope режима `paths`: объявленные файлы плюс раскрытые каталоги задачи.
+ *
+ * Опечатка в пути не должна давать пустой отпечаток, который «пройдёт» при любом коде, поэтому
+ * путь обязан существовать в дереве либо в базисе (удалённый задачей файл), а каталог — содержать
+ * хотя бы один изменённый или untracked файл.
+ */
+function recordTaskScope(root, base, declared) {
+  const changed = diffPaths(root, base);
+  const files = new Set();
+  const dirs = [];
+  const unknown = [];
+  for (const item of declared) {
+    // Тип в базисе нужен для удалённого задачей: каталога в дереве уже нет, а его файлы — в diff'е.
+    const baseType = git(['cat-file', '-t', `${base}:${item}`], root).trim();
+    if (isDirectory(root, item) || baseType === 'tree') {
+      const inside = changed.filter((file) => file.startsWith(`${item}/`));
+      if (!inside.length) unknown.push(`${item}/ (в каталоге нет изменений)`);
+      dirs.push(item);
+      for (const file of inside) files.add(file);
+      continue;
+    }
+    if (blobHash(root, item) === 'deleted' && baseType !== 'blob') {
+      unknown.push(item);
+      continue;
+    }
+    files.add(item);
+  }
+  if (unknown.length) throw new Error(`путь задачи не найден ни в дереве, ни в базисе: ${listPaths(unknown)}`);
+  if (!files.size) throw new Error('список путей задачи пуст');
+  if (files.size > SCOPE_CAP) throw new Error(`в scope задачи больше ${SCOPE_CAP} путей`);
+  // Список только из нетронутых файлов отпечатывает «ничего» и пропустил бы любой непроверенный diff.
+  const changedSet = new Set(changed);
+  if (![...files].some((file) => changedSet.has(file))) {
+    throw new Error(`ни один путь задачи не отличается от базиса ${base.slice(0, 12)}: ${listPaths([...files].sort())}`);
+  }
+  const scoped = [...files].sort();
+  const outside = uncommittedPaths(root).filter((file) => !files.has(file));
+  // Незакоммиченный сосед файла задачи по каталогу — самый частый забытый в списке путь.
+  const parents = new Set(scoped.map((file) => path.posix.dirname(file)).filter((dir) => dir !== '.'));
+  const neighbours = outside.filter((file) => parents.has(path.posix.dirname(file)));
+  return { ...fingerprintScope(root, base, scoped), dirs: dirs.sort(), outside, neighbours };
 }
 
 function listPaths(paths, limit = 5) {
@@ -222,12 +309,28 @@ function evaluate(root, taskId) {
   }
   if (!legacy) {
     const scopeSet = new Set(scopePaths);
-    const extras = uncommittedPaths(root).filter((file) => !scopeSet.has(file));
-    if (extras.length) {
+    const outside = uncommittedPaths(root).filter((file) => !scopeSet.has(file));
+    if (verdict.scope_mode === SCOPE_MODE_PATHS) {
+      // Scope по путям задачи (#3371): чужие незакоммиченные файлы общего дерева вердикт не
+      // ломают. Ломает только новый файл в каталоге, который задача объявила своим.
+      const dirs = Array.isArray(verdict.scope_dirs) ? verdict.scope_dirs : [];
+      const extras = outside.filter((file) => dirs.some((dir) => file.startsWith(`${dir}/`)));
+      if (extras.length) {
+        return {
+          ok: false,
+          code: 'stale',
+          detail: `после ревью в каталоге задачи появились незакоммиченные файлы вне проверенного scope: ${listPaths(extras)}`,
+          verdict,
+          current,
+        };
+      }
+      return { ok: true, code: 'pass', verdict, current, outside: outside.filter((file) => !extras.includes(file)) };
+    }
+    if (outside.length) {
       return {
         ok: false,
         code: 'stale',
-        detail: `после ревью в рабочем дереве появились незакоммиченные изменения вне проверенного scope: ${listPaths(extras)}`,
+        detail: `после ревью в рабочем дереве появились незакоммиченные изменения вне проверенного scope: ${listPaths(outside)}. Если это файлы соседней сессии — перезапиши вердикт по путям задачи: \`record … --paths-file <список>\``,
         verdict,
         current,
       };
@@ -268,7 +371,7 @@ function autoReviewDirective(taskId, result) {
     `Состояние гейта: ${result.code} — ${result.detail}.`,
     '',
     'Сделай это СЛЕДУЮЩИМ действием:',
-    `1. Вызови Agent tool с subagent_type="${REVIEWER_AGENT}"; в промпте передай id #${taskId}, scope diff'а (файлы/фича) и что уже проверено.`,
+    `1. Вызови Agent tool с subagent_type="${REVIEWER_AGENT}"; в промпте передай id #${taskId}, список путей задачи (он же уйдёт в \`record --paths-file\` и в \`git add\`) и что уже проверено.`,
     `2. Вердикт \`changes_requested\` → агент сам вернёт задачу в \`in_progress\` с findings. Почини их и снова поставь \`${REVIEW_STATUS}\` — ревью прогонится заново автоматически.`,
     `3. Вердикт \`pass\` → агент сам запишет вердикт, закоммитит и запушит diff задачи в \`main\` (\`git add <пути задачи>\` → \`git commit\` → \`git push origin main\`) и только потом переведёт задачу в \`${GUARDED_STATUS}\`. Коммит и push отпечаток ревью не ломают. Руками статус не двигай: PreToolUse-гейт всё равно откажет.`,
     `4. Задачу без своего diff'а (код уже закоммичен и задеплоен, чужой scope в дереве) не гоняй через агента: отметь это в тикете и закрывай по факту приёмки.`,
@@ -402,6 +505,13 @@ function parseArgs(argv) {
     }
     out[key.slice(2)] = next;
     i += 1;
+    // `--paths a b c` (например, `--paths $(cat список)`) — все значения до следующего флага.
+    if (key === '--paths') {
+      while (argv[i + 1] && !argv[i + 1].startsWith('--')) {
+        out.paths += `,${argv[i + 1]}`;
+        i += 1;
+      }
+    }
   }
   return out;
 }
@@ -411,13 +521,19 @@ function runRecord(argv) {
   const taskId = Number(args.task);
   const verdict = String(args.verdict || '');
   if (!taskId || !['pass', 'changes_requested'].includes(verdict)) {
-    process.stderr.write('usage: review-gate.mjs record --task <id> --verdict pass|changes_requested [--findings N] [--note "..."] [--blocking "a;b"] [--reviewer name]\n');
+    process.stderr.write('usage: review-gate.mjs record --task <id> --verdict pass|changes_requested [--paths a,b | --paths-file <file>] [--findings N] [--note "..."] [--blocking "a;b"] [--reviewer name]\n');
     process.exit(2);
+  }
+  // Флаг без значения — ошибка вызова, а не тихий откат к отпечатку по всему дереву.
+  for (const flag of ['paths', 'paths-file']) {
+    if (args[flag] === true) throw new Error(`--${flag} требует значение`);
   }
 
   const root = repoRoot();
   const base = resolveBase(root);
-  const { fingerprint, entries: scope } = recordScope(root, base);
+  const byPaths = args.paths !== undefined || args['paths-file'] !== undefined;
+  const taskScope = byPaths ? recordTaskScope(root, base, readTaskPaths(root, args)) : null;
+  const { fingerprint, entries: scope } = taskScope || recordScope(root, base);
   const payload = {
     task_id: taskId,
     verdict,
@@ -426,6 +542,8 @@ function runRecord(argv) {
     note: args.note ? String(args.note) : '',
     blocking: args.blocking ? String(args.blocking).split(';').map((s) => s.trim()).filter(Boolean) : [],
     base,
+    // Вердикты без `scope_mode` записаны до #3371 и проверяются по всему дереву.
+    ...(taskScope ? { scope_mode: SCOPE_MODE_PATHS, scope_dirs: taskScope.dirs } : {}),
     scope,
     fingerprint,
     recorded_at: new Date().toISOString(),
@@ -433,7 +551,10 @@ function runRecord(argv) {
 
   mkdirSync(path.join(root, GATE_DIR_REL), { recursive: true });
   writeFileSync(verdictPath(root, taskId), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, paths: Object.keys(scope).length, fingerprint: payload.fingerprint })}\n`);
+  if (taskScope?.neighbours.length) {
+    process.stderr.write(`review-gate: ВНИМАНИЕ — рядом с файлами задачи есть незакоммиченные пути вне scope (${taskScope.neighbours.length}): ${listPaths(taskScope.neighbours)}. Если они из задачи — допиши их в список и перезапиши вердикт; чужие оставь.\n`);
+  }
+  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, scope_mode: taskScope ? SCOPE_MODE_PATHS : 'tree', paths: Object.keys(scope).length, ...(taskScope ? { outside_scope: taskScope.outside } : {}), fingerprint: payload.fingerprint })}\n`);
 }
 
 function runShow(argv) {
@@ -445,7 +566,7 @@ function runShow(argv) {
   }
   const root = repoRoot();
   const result = evaluate(root, taskId);
-  process.stdout.write(`${JSON.stringify({ task_id: taskId, gate: result.ok ? 'open' : 'closed', code: result.code, detail: result.detail || null, verdict: result.verdict || null }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ task_id: taskId, gate: result.ok ? 'open' : 'closed', code: result.code, detail: result.detail || null, ...(result.outside ? { outside_scope: result.outside } : {}), verdict: result.verdict || null }, null, 2)}\n`);
   process.exit(result.ok ? 0 : 1);
 }
 

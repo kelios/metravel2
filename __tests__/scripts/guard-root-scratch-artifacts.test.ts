@@ -216,8 +216,11 @@ describe('guard-root-scratch-artifacts', () => {
     expect(packageJson.scripts.lint).toContain('npm run guard:root-scratch-artifacts')
     expect(packageJson.scripts['lint:ci']).toContain('npm run guard:root-scratch-artifacts')
 
-    const fastScopeChecks = readRepoFile('scripts/run-fast-scope-checks.js')
-    expect(fastScopeChecks).toContain("runCommand('npm', ['run', 'guard:root-scratch-artifacts'])")
+    // #3371: безусловные стражи check:fast — стадия `fast` единого списка, и
+    // этот страж в ней первый: он должен сработать до остальных.
+    const { STAGE_FAST, guardsForStage } = require('@/scripts/pre-push-guards')
+    expect(guardsForStage(STAGE_FAST)[0].script).toBe('guard:root-scratch-artifacts')
+    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain('guardsForStage(STAGE_FAST)')
   })
 
   it('records the closed-root contract in AGENTS.md, not only in the guard', () => {

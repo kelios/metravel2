@@ -86,8 +86,12 @@ describe('guard-public-files', () => {
     for (const command of ['lint', 'lint:ci']) {
       expect(scripts[command]).toContain('npm run guard:public-files &&')
     }
+    // #3371: безусловные стражи check:fast читаются из единого списка, а не
+    // записаны в исполнителе отдельными вызовами.
+    const { STAGE_FAST, guardsForStage } = require('@/scripts/pre-push-guards')
+    expect(guardsForStage(STAGE_FAST).map((guard: { script: string }) => guard.script)).toContain('guard:public-files')
     const fastChecks = fs.readFileSync(path.join(repoRoot, 'scripts/run-fast-scope-checks.js'), 'utf8')
-    expect(fastChecks).toContain("runCommand('npm', ['run', 'guard:public-files'])")
-    expect(fastChecks).toContain('process.exit(publicFilesGuardStatus)')
+    expect(fastChecks).toContain('guardsForStage(STAGE_FAST)')
+    expect(fastChecks).toContain('process.exit(guardStatus)')
   })
 })

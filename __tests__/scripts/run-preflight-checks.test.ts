@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { runNodeCli, makeTempDir, writeTextFile } = require('./cli-test-utils')
+const { runCli, runNodeCli, makeTempDir, writeTextFile } = require('./cli-test-utils')
 const {
   CHECKS,
   parseArgs,
@@ -80,6 +80,7 @@ describe('run-preflight-checks', () => {
     expect(payload.checks.map((item) => item.name)).toEqual([
       'fast-scope-checks',
       'guard-file-complexity-changed',
+      'pre-push-guards',
       'e2e-changed',
     ])
 
@@ -88,6 +89,29 @@ describe('run-preflight-checks', () => {
     expect(e2e.payload.reason).toBe('match')
     expect(e2e.payload.matchedCategories).toEqual(['messages'])
     expect(e2e.payload.specs).toEqual(['e2e/messages.spec.ts'])
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('names every failed step at the end of a red run', () => {
+    // Шаги выполняются все, вывод упавшего уезжает на сотни строк вверх (#3371):
+    // без итоговой строки красный прогон читается как зелёный. В пустом каталоге
+    // ни один шаг не стартует — это и есть красный прогон без побочных действий.
+    const dir = makeTempDir('preflight-checks-red-')
+    const changedFilesFile = path.join(dir, 'changed.txt')
+    writeTextFile(changedFilesFile, 'docs/TESTING.md\n')
+
+    const result = runCli(
+      process.execPath,
+      [path.join(process.cwd(), 'scripts/run-preflight-checks.js'), '--changed-files-file', changedFilesFile],
+      { cwd: dir, env: { PREFLIGHT_SKIP_E2E: '1' } },
+    )
+
+    expect(result.status).not.toBe(0)
+    for (const name of ['fast-scope-checks', 'guard-file-complexity-changed', 'pre-push-guards']) {
+      expect(result.stderr).toContain(`preflight-checks: FAILED ${name} (exit `)
+    }
+    expect(result.stderr).not.toContain('FAILED e2e-changed')
 
     fs.rmSync(dir, { recursive: true, force: true })
   })

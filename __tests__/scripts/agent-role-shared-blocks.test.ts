@@ -4,9 +4,15 @@ import path from 'node:path';
 // #3277: блоки «Статус на борде», «Проверка по platform impact» и слои
 // доказательств iOS были скопированы в 7, 8 и 5 ролей. Текст живёт один раз в
 // `docs/AGENT_ROLE_CONTRACTS.md`, роль держит ссылку и свои отличия.
+// #3372: тот же блок «Проверка по platform impact» остался в 13 скиллах
+// `.claude/skills` — тест смотрел только роли. Теперь он читает и скиллы.
 
 const SHARED_DOC = 'docs/AGENT_ROLE_CONTRACTS.md';
 const AGENTS_DIR = '.claude/agents';
+const SKILLS_DIR = '.claude/skills';
+// Тела `openspec-*` генерирует `openspec init`; руками их не правят
+// (`scripts/sync-agent-skills.js` → VENDOR_OWNED_SKILLS), повторы в них — вендорные.
+const VENDOR_OWNED_SKILL = /^openspec-/;
 const BOARD = 'Статус на борде (WIP-видимость)';
 const PLATFORM = 'Проверка по platform impact';
 const IOS_LAYERS = 'Слои доказательств iOS';
@@ -26,6 +32,22 @@ const ROLE_SECTIONS: Record<string, string[]> = {
   'dev-loop': [PLATFORM],
   ...Object.fromEntries(IOS_ROLES.map((role) => [role, [IOS_LAYERS]])),
 };
+
+const PLATFORM_SKILLS = [
+  'android-native-audit',
+  'android-qa-sweep',
+  'metravel-achievements-audit',
+  'metravel-design-audit',
+  'metravel-design-system',
+  'metravel-page-new',
+  'metravel-screen-redesign',
+  'metravel-travel-pdf',
+  'review-architecture',
+  'review-code',
+  'review-performance',
+  'sprint-review',
+  'ticket-flow',
+];
 
 // Формулировки iOS-слоёв в ролях расходились по падежам, поэтому дословная
 // сверка с таблицей документа их не ловит: это маркеры прежнего блока.
@@ -108,6 +130,17 @@ const repeatedAcrossRoles = (
     .map(([unit, names]) => `${[...names].sort().join(', ')}: ${unit.slice(0, 80)}…`);
 };
 
+/** Все `.md` каталога скилла: общий блок может лежать и в приложенном шаблоне, не только в SKILL.md. */
+const markdownFilesOf = (relativeDir: string): string[] =>
+  fs.readdirSync(path.join(process.cwd(), relativeDir), { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = `${relativeDir}/${entry.name}`;
+    if (entry.isDirectory()) return markdownFilesOf(relativePath);
+    return entry.name.endsWith('.md') ? [relativePath] : [];
+  });
+
+const hasPlatformSection = (markdown: string): boolean =>
+  sectionsOf(markdown).some((section) => section.title.startsWith(PLATFORM));
+
 describe('agent role shared blocks (#3277)', () => {
   const doc = readProjectFile(SHARED_DOC);
   const roles: Record<string, string> = Object.fromEntries(
@@ -161,5 +194,66 @@ describe('agent role shared blocks (#3277)', () => {
     const sample = { a: local, b: local, c: local };
     expect(repeatedAcrossRoles(sample, blocksOf, MIN_REPEATED_BLOCK)).toHaveLength(1);
     expect(repeatedAcrossRoles({ a: local, b: local }, blocksOf, MIN_REPEATED_BLOCK)).toEqual([]);
+  });
+});
+
+describe('skill shared blocks (#3372)', () => {
+  const doc = readProjectFile(SHARED_DOC);
+  const skillNames = fs
+    .readdirSync(path.join(process.cwd(), SKILLS_DIR), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !VENDOR_OWNED_SKILL.test(entry.name))
+    .map((entry) => entry.name);
+  const skillFiles: Record<string, string> = Object.fromEntries(
+    skillNames
+      .flatMap((name) => markdownFilesOf(`${SKILLS_DIR}/${name}`))
+      .map((file) => [file.slice(SKILLS_DIR.length + 1), readProjectFile(file)])
+  );
+
+  it('reads the hand-written skills, vendor-owned ones excluded', () => {
+    expect(skillNames.length).toBeGreaterThan(20);
+    expect(Object.keys(skillFiles)).toEqual(expect.arrayContaining(PLATFORM_SKILLS.map((name) => `${name}/SKILL.md`)));
+    expect(Object.keys(skillFiles).some((file) => VENDOR_OWNED_SKILL.test(file))).toBe(false);
+  });
+
+  it('names every skill that carries the platform impact section', () => {
+    const withSection = Object.entries(skillFiles)
+      .filter(([, markdown]) => hasPlatformSection(markdown))
+      .map(([file]) => file.replace(/\/SKILL\.md$/, ''));
+    expect(withSection.sort()).toEqual([...PLATFORM_SKILLS].sort());
+  });
+
+  it.each(PLATFORM_SKILLS)('%s links to the shared platform impact section', (name) => {
+    const section = sectionsOf(skillFiles[`${name}/SKILL.md`] ?? '').find((item) => item.title.startsWith(PLATFORM));
+    expect(section?.body).toContain(SHARED_DOC);
+    expect(section?.body).toContain(`«${PLATFORM}»`);
+  });
+
+  it('does not copy a shared block back into a skill', () => {
+    const copies = Object.entries(skillFiles).flatMap(([file, markdown]) =>
+      copiedFragments(doc, markdown).map((fragment) => `${file}: ${fragment.slice(0, 80)}…`)
+    );
+    expect(copies).toEqual([]);
+  });
+
+  it('does not repeat one long block or section across three or more skills', () => {
+    expect(repeatedAcrossRoles(skillFiles, blocksOf, MIN_REPEATED_BLOCK)).toEqual([]);
+    expect(
+      repeatedAcrossRoles(
+        skillFiles,
+        (markdown) => sectionsOf(markdown).map((section) => section.body),
+        MIN_REPEATED_SECTION
+      )
+    ).toEqual([]);
+  });
+
+  it('detects the block these skills carried before #3372', () => {
+    const legacy =
+      'Platform impact и выбор проверок — `docs/TESTING.md` → «Risk-based validation and evidence reuse»\n' +
+      '(responsive/UI — mobile web first, затем desktop; native QA — в `testing` для отличающейся реализации).\n' +
+      'Parity мобильного вьюпорта и темизация через `useThemedColors()` — `docs/RULES.md` → «UI rules».\n';
+    const skill = `---\nname: sample\n---\n\n## ${PLATFORM} (обязательное правило)\n\n${legacy}`;
+    expect(repeatedAcrossRoles({ a: skill, b: skill, c: skill }, blocksOf, MIN_REPEATED_BLOCK)).toHaveLength(1);
+    expect(hasPlatformSection(skill)).toBe(true);
+    expect(sectionsOf(skill)[0].body).not.toContain(SHARED_DOC);
   });
 });

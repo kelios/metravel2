@@ -316,8 +316,11 @@ describe('guard-web-deferred-loading', () => {
     expect(scripts['guard:web-deferred-loading']).toBe('node scripts/guard-web-deferred-loading.js')
     expect(scripts.lint).toContain('npm run guard:web-deferred-loading')
     expect(scripts['lint:ci']).toContain('npm run guard:web-deferred-loading')
-    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain(
-      "runCommand('npm', ['run', 'guard:web-deferred-loading'])",
+    // #3371: безусловные стражи check:fast — стадия `fast` единого списка.
+    const { STAGE_FAST, guardsForStage } = require('@/scripts/pre-push-guards')
+    expect(guardsForStage(STAGE_FAST).map((guard: { script: string }) => guard.script)).toContain(
+      'guard:web-deferred-loading',
     )
+    expect(readRepoFile('scripts/run-fast-scope-checks.js')).toContain('guardsForStage(STAGE_FAST)')
   })
 })

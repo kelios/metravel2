@@ -13,6 +13,13 @@ const CHECKS = [
     name: 'guard-file-complexity-changed',
     scriptPath: 'scripts/guard-file-complexity-changed.js',
   },
+  // Остаток единого списка стражей до push (`scripts/pre-push-guards.js`, #3371):
+  // весь `npm run lint` и `governance:verify` сверх того, что уже прогнал
+  // `fast-scope-checks`. Стоит до e2e и не зависит от `PREFLIGHT_SKIP_E2E`.
+  {
+    name: 'pre-push-guards',
+    scriptPath: 'scripts/run-pre-push-guards.js',
+  },
   {
     name: 'e2e-changed',
     scriptPath: 'scripts/run-e2e-changed.js',
@@ -147,6 +154,11 @@ const main = () => {
       if (args.output === 'json') {
         if (failed.result.stdout.trim()) process.stdout.write(failed.result.stdout)
         if (failed.result.stderr.trim()) process.stderr.write(failed.result.stderr)
+      }
+      // Шаги идут все, даже после красного, и вывод упавшего уезжает вверх на
+      // сотни строк: без итоговой строки красный preflight выглядит зелёным.
+      for (const check of checks.filter((item) => item.result.status !== 0)) {
+        console.error(`preflight-checks: FAILED ${check.name} (exit ${check.result.status})`)
       }
       process.exit(failed.result.status)
     }

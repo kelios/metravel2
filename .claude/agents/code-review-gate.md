@@ -34,6 +34,10 @@ git diff origin/main --stat
 git diff origin/main
 ```
 
+   Запиши пути задачи в файл, по одному в строке (`.codex-temp/review-gate/<id>.paths`);
+   каталог задачи — одной строкой. Этот же список уходит в `record --paths-file`
+   и в `git add`. Чужие незакоммиченные пути общего дерева в него не входят.
+
 3. Читай изменённые функции целиком и трассируй всех consumers через `rg`.
    Чужие изменения не review'и. Пустой diff — «нечего ревьюить», не `pass`.
 4. Finding требует `path:line`, прослеженный вызов/контракт и конкретный failure
@@ -57,21 +61,36 @@ native runtime или deploy; перечисли эти проверки в `nex
 Severity: P1 bug/security/regression; P2 material duplicate/cost/contract breach;
 P3 non-blocking bounded improvement. Максимум 10 findings.
 
-## Допустимые проверки
+## Обязательные проверки
 
-Запускай только релевантные non-locking guards, например:
+Список стражей до push один — `scripts/pre-push-guards.js`: весь `npm run lint`,
+`governance:verify` и `typecheck`. Тот же список запускает pre-push preflight. Свой набор
+не выбирай (#3371: `guard:unimported-modules` и `guard:env-secrets` ушли в
+`main` красными мимо выборочных стражей):
 
 ```bash
-npm run guard:external-links
-npm run guard:query-keys
-npm run guard:type-debt
+npm run guard:pre-push                 # весь список, около минуты
 npm run guard:file-complexity:changed
-npm run check:image-architecture
+npm run check:image-architecture       # если diff трогает картинки
 ```
 
-Не запускай full/preflight/test/e2e/slider gates. `SKIPPED` — не pass. Красный
-обязательный guard даёт `changes_requested`; недоступный обязательный check
-требует exact unblock, а не финального verdict.
+Пробная прод-сборка до push обязательна, когда diff добавляет или меняет
+импорты в модулях eager-графа или общих чанков (их грузят страницы статьи,
+каталога, главной: `utils/*`, `hooks/*`, общие компоненты), трогает
+именованный чанк из `config/bundle-budget.json` или включает флаг на проде.
+`guard:pre-push` печатает предупреждение, если видит добавленные импорты в
+рантайм-модулях; входит ли модуль в eager-граф, решаешь ты. Снимок
+незакоммиченной правки и команда — `BUNDLE_PROBE_RULE` в том же файле:
+
+```bash
+DEPLOY=0 DEPLOY_QUIET=1 scripts/deploy-prod.sh <снимок>
+```
+
+Сверх этого не запускай full/preflight/test/e2e/slider gates. `SKIPPED` (в том
+числе от занятого quality-gate lock в шаге `test:governance`) — не pass. Красный
+обязательный guard даёт `changes_requested`; красное только в чужом
+незакоммиченном файле назови в `notes` и проверь свои пути узко. Недоступный
+обязательный check требует exact unblock, а не финального verdict.
 
 ## Verdict и board
 
@@ -80,14 +99,19 @@ npm run check:image-architecture
   заблокирует переход.
 
 ```bash
-node .claude/hooks/review-gate.mjs record --task <id> --verdict pass --findings 0 --note "<checked>"
-node .claude/hooks/review-gate.mjs record --task <id> --verdict changes_requested --findings <N> --blocking "<findings>"
+node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict pass --findings 0 --note "<checked>"
+node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict changes_requested --findings <N> --blocking "<findings>"
 ```
+
+  Всегда записывай с `--paths-file` (или `--paths a,b`): отпечаток считается
+  по путям задачи, и чужие незакоммиченные файлы вердикт не ломают. Без флага
+  в отпечаток попадает всё дерево. Ответ `record` называет `outside_scope` —
+  сверь, что там нет файлов задачи.
 
 - `pass` → сначала зафиксируй отревьюенный diff в `main` и только потом двигай статус:
 
 ```bash
-git add <пути задачи>   # только свои пути: `git add -A` и commit без путей запрещены
+git add --pathspec-from-file=<список>   # тот же список; `git add -A` и commit без путей запрещены
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
 PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается только в testing; чужой набор → SKIP_PREFLIGHT=1 + пометка
 ```
