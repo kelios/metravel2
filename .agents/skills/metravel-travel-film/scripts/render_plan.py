@@ -247,7 +247,7 @@ if cues:
         ins += ["-ss", str(c.get("src_in", 0)), "-t", f"{d:.3f}", "-i", c["file"]]
         fc.append(f"[{j}:a]aresample=48000,aformat=channel_layouts=stereo,volume={g:.2f}dB,afade=t=in:d={max(c.get('fade_in', 1.5), 0.01)},afade=t=out:st={max(d - fo, 0):.3f}:d={max(fo, 0.01)},adelay={int(a_ * 1000)}|{int(a_ * 1000)}[m{j}]")
         labs.append(f"[m{j}]")
-    fc.append(f"[0:a]{''.join(labs)}amix=inputs={len(labs) + 1}:normalize=0:duration=first,alimiter=limit=0.66:level=false[a]")   # ~-3 dBFS по сэмплам: после AAC истинный пик <= -1 dBTP
+    fc.append(f"[0:a]{''.join(labs)}amix=inputs={len(labs) + 1}:normalize=0:duration=first[a]")   # пики ограничивает encode_master() ниже
     # дорожки для проверки «на слух» (audit_mix.py): музыка и звуки отдельно, голос за кадром отдельно — 24 кГц моно
     def stem(sel, name):
         idx = [j for j, c in enumerate(cues, 1) if sel(c)]
@@ -257,20 +257,36 @@ if cues:
                         os.path.splitext(out)[0] + name], stdin=subprocess.DEVNULL)
     stem(lambda c: not c["file"].lower().endswith(".wav") or "пи" in c.get("name", "")[:3], "_музыка.wav")
     stem(lambda c: c["file"].lower().endswith(".wav") and not c.get("name", "").startswith("пи"), "_голос.wav")
-    subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", "0:v", "-map", "[a]",
-                    "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
+# сведённый звук — сначала без потерь: пики ограничиваются до AAC, а не перекодированием AAC → AAC
+mixp = os.path.splitext(out)[0] + "_микс.wav"
+if cues:
+    subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", "[a]", "-t", f"{t:.3f}",
+                    "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
 else:
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-c:v", "copy", "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out], check=True, stdin=subprocess.DEVNULL)
-# истинный пик ≤ −1 dBTP: ограничитель по сэмплам не видит межсэмпловых пиков после AAC (4K: −0,7 dBTP) — дожимаем звук без перекодирования видео
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-map", "0:a", "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
 def true_peak(pth):
     r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", pth, "-vn", "-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"], capture_output=True, text=True)
-    m = _re.findall(r"Peak:\s+(-?[\d.]+) dBFS", r.stderr); return float(m[-1]) if m else None
-tp = true_peak(out)
-if tp is not None and tp > -1.0:
-    fix = os.path.splitext(out)[0] + "_tp.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", out, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-af", f"volume={-1.2 - tp:.2f}dB",
-                    "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", fix], check=True, stdin=subprocess.DEVNULL)
-    os.replace(fix, out); print(f"истинный пик {tp} dBTP → звук {-1.2 - tp:+.2f} дБ, сейчас {true_peak(out)} dBTP", flush=True)
+    m = _re.findall(r"Peak:\s+(-?inf|-?[\d.]+) dBFS", r.stderr); return float(m[-1]) if m else None   # тишина → -inf
+# истинный пик ≤ −1 dBTP в ГОТОВОМ файле: ограничитель с 4-кратной передискретизацией видит межсэмпловые пики,
+# AAC добавляет свой выброс — поэтому мерим итоговый файл и при промахе кодируем из того же WAV с потолком ниже.
+# Громкость остальной речи не трогаем: режутся только пики (общий volume вниз топил весь фильм до −16 LUFS).
+def encode_master(ceil_db):
+    lim = max(0.0625, 10 ** (ceil_db / 20))
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-i", mixp, "-map", "0:v", "-map", "1:a", "-c:v", "copy",
+                    "-af", f"aresample=192000,alimiter=limit={lim:.4f}:level=false:latency=1,aresample=48000",
+                    "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out],
+                   check=True, stdin=subprocess.DEVNULL)
+    return true_peak(out)
+TP_TARGET = -1.0
+ceil = -2.0
+for attempt in range(4):
+    tp = encode_master(ceil)
+    print(f"звук: потолок {ceil:.1f} dBFS → истинный пик готового файла {tp} dBTP", flush=True)
+    if tp is not None and tp <= TP_TARGET:
+        break
+    ceil -= (tp - TP_TARGET if tp is not None else 1.0) + 0.3
+TP_FAIL = tp is None or tp > TP_TARGET
+os.remove(mixp)
 # таблица таймкодов отрезков — по фактическим (до кадра) длинам кусков, как собран фильм: аудиты берут кадры по ней
 t = 0.0; rows = []
 for i, s in enumerate(plan["segments"]):
@@ -280,3 +296,5 @@ for i, s in enumerate(plan["segments"]):
     t += d
 json.dump(rows, open(os.path.splitext(out)[0] + ".segments.json", "w"), ensure_ascii=False, indent=1)
 print("готово", out, f"{t/60:.1f} мин")
+if TP_FAIL:                            # успех не объявляется по промаху: файл есть, но код возврата ненулевой
+    raise SystemExit(f"ОШИБКА: истинный пик {tp} dBTP выше {TP_TARGET} после 4 попыток — смотри выброс в плане")
