@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState, Platform } from 'react-native'
 
+import { subscribeAppResume } from '@/utils/appResume'
 import { millisecondsUntilLocalMidnight } from '@/utils/seasonalThemeClock'
 
 type Options = {
@@ -42,28 +43,22 @@ export function useLocalCalendarDate({ readNow = systemNow }: Options = {}): Dat
       }
     }
     refresh()
-    if (!isWeb) {
-      const subscription = AppState.addEventListener('change', (nextState) => {
-        appState = nextState
-        if (nextState === 'active') refresh()
-        else clearTimeout(midnightTimer)
-      })
-      return () => {
-        clearTimeout(midnightTimer)
-        subscription.remove()
-      }
-    }
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    window.addEventListener('focus', refresh)
-    window.addEventListener('pageshow', refresh)
+    const unsubscribe = subscribeAppResume({
+      onResume: () => {
+        if (!isWeb) appState = 'active'
+        refresh()
+      },
+      // На web скрытая вкладка таймер не снимает; native в фоне таймер не держит.
+      onPause: isWeb
+        ? undefined
+        : () => {
+            appState = 'background'
+            clearTimeout(midnightTimer)
+          },
+    })
     return () => {
       clearTimeout(midnightTimer)
-      document.removeEventListener('visibilitychange', onVisible)
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener('pageshow', refresh)
+      unsubscribe()
     }
   }, [])
 

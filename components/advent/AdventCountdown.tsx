@@ -1,11 +1,13 @@
 import { memo, useEffect, useState } from 'react'
 import { StyleSheet, Text } from 'react-native'
 
+import { readDevTodayOverride } from '@/constants/advent'
 import { useThemedColors } from '@/hooks/useTheme'
 import { formatRelativeTime } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import { millisecondsUntilDoor } from '@/utils/advent/adventCalendar'
+import { subscribeAppResume } from '@/utils/appResume'
 import { formatDoorDate } from './AdventDoorTile'
 
 type Props = {
@@ -20,6 +22,16 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
+/**
+ * Сколько прошло от базового «сейчас» хука кампании. #3467: в течение дня хук
+ * отдаёт один и тот же объект Date, поэтому отсчёт идёт от часов, а не от момента
+ * своего монтирования (иначе шторка, открытая вечером, считала бы от утра).
+ * DEV-подмена `?today=` даёт фиктивный полдень: тогда тикаем от старта отсчёта,
+ * иначе завтрашняя дверца показывала бы «через 33 дня».
+ */
+const elapsedSince = (now: Date, startedAt: number): number =>
+  readDevTodayOverride() ? Date.now() - startedAt : Math.max(0, Date.now() - now.getTime())
+
 /** «через 5 часов» / «через 3 дня» — Intl.RelativeTimeFormat языка интерфейса. */
 export const formatUntil = (ms: number): string => {
   if (ms >= DAY) return formatRelativeTime(Math.ceil(ms / DAY), 'day', { numeric: 'always' })
@@ -29,17 +41,24 @@ export const formatUntil = (ms: number): string => {
 
 function AdventCountdown({ nextDoor, now, hydrated }: Props) {
   const colors = useThemedColors()
-  // Тикаем от `now` хука, а не от `Date.now()`: иначе DEV-переопределение даты
-  // показывало бы «через 33 дня» для завтрашней дверцы.
-  const [elapsed, setElapsed] = useState(0)
+  const [elapsed, setElapsed] = useState(() => (hydrated ? elapsedSince(now, Date.now()) : 0))
 
   const nextDay = nextDoor?.day ?? null
   useEffect(() => {
-    setElapsed(0)
-    if (nextDay === null || !hydrated) return
+    if (nextDay === null || !hydrated) {
+      setElapsed(0)
+      return
+    }
     const startedAt = Date.now()
-    const timer = setInterval(() => setElapsed(Date.now() - startedAt), MINUTE)
-    return () => clearInterval(timer)
+    const tick = () => setElapsed(elapsedSince(now, startedAt))
+    tick()
+    const timer = setInterval(tick, MINUTE)
+    // Таймер в фоне заморожен: на возврат во вкладку/приложение догоняем часы сразу.
+    const unsubscribe = subscribeAppResume({ onResume: tick })
+    return () => {
+      clearInterval(timer)
+      unsubscribe()
+    }
     // Перезапуск только при смене дня дверцы или базового «сейчас», не объекта дверцы.
   }, [nextDay, now, hydrated])
 
