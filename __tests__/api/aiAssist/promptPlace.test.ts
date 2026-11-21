@@ -1,5 +1,5 @@
-import { COUNTRY_NAMES } from '@/api/aiAssist/placeCountries'
-import { countryCodeOfWord, countryCodesOf, matchPlaceSources, mentionsAnyPlace, namedCountryCodes, namesPlaceAfterFrom, sameCountryWord, withoutPlace } from '@/api/aiAssist/promptPlace'
+import { CONTINENT_COUNTRIES, COUNTRY_NAMES } from '@/api/aiAssist/placeCountries'
+import { continentsOfCodes, countryCodeOfWord, countryCodesOf, isContinentWord, matchPlaceSources, mentionsAnyPlace, namedContinents, namedCountryCodes, namesPlaceAfterFrom, sameCountryWord, withoutPlace } from '@/api/aiAssist/promptPlace'
 import { arrangeSources, withoutNearby } from '@/api/aiAssist/sourceSelection'
 import type { AiSource } from '@/api/aiAssist/types'
 import { questsGenerated2 as questsBe } from '@/i18n/locales/be/generated/quests_02'
@@ -7,6 +7,8 @@ import { questsGenerated2 as questsEn } from '@/i18n/locales/en/generated/quests
 import { questsGenerated2 as questsPl } from '@/i18n/locales/pl/generated/quests_02'
 import { questsGenerated2 as questsRu } from '@/i18n/locales/ru/generated/quests_02'
 import { questsGenerated2 as questsUk } from '@/i18n/locales/uk/generated/quests_02'
+
+import { WORLD_INDEX_COUNTRIES } from '../../fixtures/worldIndexCountries'
 
 // Отбор по месту — первый шаг цепочки `arrangeSources` (#3289): место не названо, у него нет карточек или
 // названо исключение — подбор идёт дальше как есть. Отдельной обёртки в продукте нет (#3345).
@@ -391,7 +393,9 @@ describe('aiAssist promptPlace: общий разбор места на пяти
     const locales = { ru: questsRu, be: questsBe, uk: questsUk, pl: questsPl, en: questsEn } as Record<string, Record<string, string>>
     const prefix = 'screens.tabs.QuestsScreen.country.'
     const codes = Object.keys(questsRu).filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length))
-    expect(codes.sort()).toEqual(Object.keys(COUNTRY_NAMES).sort())
+    // Таблица — страны сайта и страны внешнего индекса маршрутов мира (#3357), без записей «на всякий случай».
+    const world = WORLD_INDEX_COUNTRIES.flatMap((country) => (country.code ? [country.code] : []))
+    expect(Object.keys(COUNTRY_NAMES).sort()).toEqual([...new Set([...codes, ...world])].sort())
     const missed: string[] = []
     for (const code of codes) {
       for (const [locale, resource] of Object.entries(locales)) {
@@ -402,6 +406,85 @@ describe('aiAssist promptPlace: общий разбор места на пяти
       }
     }
     expect(missed).toEqual([])
+  })
+
+  // #3357, второй круг: часть света во внешнем ярусе — отбор по странам; страна индекса обязана быть в таблице.
+  it('каждая страна внешнего индекса маршрутов есть в таблице на пяти языках и имеет часть света', () => {
+    const missed: string[] = []
+    for (const { qid, code, names } of WORLD_INDEX_COUNTRIES) {
+      for (const name of names) {
+        const found = countryCodesOf([name])
+        // Регион, записанный в Wikidata «страной» маршрута, страной не становится.
+        if (code === null ? found.length > 0 : !found.includes(code) || continentsOfCodes(found).length === 0) missed.push(`${qid}: ${name} → ${found.join(',') || 'нет'}`)
+      }
+    }
+    expect(missed).toEqual([])
+    expect(WORLD_INDEX_COUNTRIES.filter((country) => country.code === null).map((country) => country.names[0])).toEqual([
+      'Северный Рейн-Вестфалия', 'Гессен', 'Рейнланд-Пфальц', 'Родопы', 'Фракия', 'Воеводина', 'Славония', 'Трансданубия',
+    ])
+  })
+
+  it('у каждой страны таблицы ровно одна часть света; страна на границе Европы и Азии — по геосхеме ООН', () => {
+    const listed = Object.values(CONTINENT_COUNTRIES).flat()
+    expect([...listed].sort()).toEqual(Object.keys(COUNTRY_NAMES).sort())
+    expect(continentsOfCodes(['RU'])).toEqual(['europe'])
+    for (const code of ['TR', 'KZ', 'GE', 'AM', 'AZ', 'CY']) expect({ code, continents: continentsOfCodes([code]) }).toEqual({ code, continents: ['asia'] })
+    expect(continentsOfCodes(['PL', 'DE'])).toEqual(['europe'])
+    // Маршрут по нескольким странам — во всех их частях света (Sultans Trail: Вена — Стамбул).
+    expect(continentsOfCodes(['HU', 'BG', 'TR'])).toEqual(['europe', 'asia'])
+    expect(continentsOfCodes(countryCodesOf(['Новая Зеландия', 'United States', 'ЮАР', 'Чили']))).toEqual(['oceania', 'north-america', 'africa', 'south-america'])
+    expect(continentsOfCodes(countryCodesOf(['Нарния']))).toEqual([])
+  })
+
+  it.each<[string, string, string[] | null]>([
+    ['RU', 'Пеший маршрут в Европе в ноябре до 100 км', ['europe']],
+    ['BE', 'Пешы маршрут у Еўропе да 100 км', ['europe']],
+    ['UK', 'Піший маршрут у Європі до 100 км', ['europe']],
+    ['PL', 'Szlak pieszy w Europie do 100 km', ['europe']],
+    ['EN', 'Hiking trail in Europe under 100 km', ['europe']],
+    ['RU', 'Пеший маршрут в Азии', ['asia']],
+    ['BE', 'Пешы маршрут у Азіі', ['asia']],
+    ['UK', 'Піший маршрут в Азії', ['asia']],
+    ['PL', 'Szlak pieszy w Azji', ['asia']],
+    ['EN', 'Hiking trail in Asia', ['asia']],
+    ['BE', 'Пешы маршрут у Афрыцы', ['africa']],
+    ['UK', 'Піший маршрут в Африці', ['africa']],
+    ['PL', 'Szlak pieszy w Afryce', ['africa']],
+    ['RU', 'Пеший маршрут в Океании', ['oceania']],
+    ['RU', 'Пеший маршрут в Америке', ['north-america', 'south-america']],
+    ['RU', 'Пеший маршрут в Южной Америке', ['south-america']],
+    ['BE', 'Пешы маршрут у Паўднёвай Амерыцы', ['south-america']],
+    ['UK', 'Піший маршрут у Північній Америці', ['north-america']],
+    ['PL', 'Szlak pieszy w Ameryce Północnej', ['north-america']],
+    ['EN', 'Hiking trail in South America', ['south-america']],
+    ['RU', 'Пеший маршрут в Евразии', ['europe', 'asia']],
+    // Вопрос без заглавных букв: часть света читается после предлога, и короткая («в азии»).
+    ['RU', 'пеший маршрут в европе', ['europe']],
+    ['RU', 'пеший маршрут в азии', ['asia']],
+    ['EN', 'hiking trail in north america', ['north-america']],
+    // У Антарктиды стран нет: часть света названа, маршрутов не будет.
+    ['RU', 'Пеший маршрут в Антарктиде', []],
+    // Не часть света: похожее начало, исключение, слово без предлога и заглавной, спутник.
+    ['RU', 'Пеший маршрут в Нарнии', null],
+    ['RU', 'Пеший маршрут в Альпах', null],
+    ['RU', 'Европейский маршрут E4', null],
+    ['EN', 'A hike with American friends', null],
+    ['RU', 'Пеший маршрут в мире, кроме Европы', null],
+    ['RU', 'маршруты азиатской кухни', null],
+    ['EN', 'Hiking with Asia in May', null],
+  ])('%s: часть света в вопросе — «%s»', (_lang, query, expected) => {
+    expect(namedContinents(query)).toEqual(expected)
+  })
+
+  it('слово части света узнаётся в любом падеже; похожее слово — нет', () => {
+    for (const word of ['европе', 'еуропе', 'європі', 'europie', 'europe', 'азии', 'azji', 'афрыцы', 'африці', 'afryce', 'америки', 'амерыкі', 'ameryce', 'океании', 'евразии']) expect({ word, continent: isContinentWord(word) }).toEqual({ word, continent: true })
+    for (const word of ['европейский', 'european', 'американский', 'азимут', 'африканская', 'океан', 'нарнии']) expect({ word, continent: isContinentWord(word) }).toEqual({ word, continent: false })
+  })
+
+  it('часть света — не место материалов сайта: карточки по ней не отбираются', () => {
+    expect(matchPlaceSources('Куда съездить в Европе на неделю?', cards)).toBeNull()
+    expect(matchPlaceSources('Маршруты в Азии', cards)).toBeNull()
+    expect(namedCountryCodes('Пеший маршрут в Европе')).toEqual([])
   })
 
   it('упоминание страны в тексте сверяется на всех языках сайта (`mentionsAnyPlace`)', () => {

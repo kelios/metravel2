@@ -17,12 +17,13 @@
  * слова вопроса с признаками «заглавная буква», «после предлога места», «откуда», «с кем»; падежные формы
  * названия (`stemsOf`); страна на любом из пяти языков по таблице `placeCountries.ts`; «N км от места» в
  * разборе условий (`namesPlaceAfterFrom`). Правило о регистре одно: заглавная буква — признак названия,
- * пока автор вопроса ею пользуется; вопрос, набранный без заглавных, читается по предлогам.
+ * пока автор вопроса ею пользуется; вопрос, набранный без заглавных, читается по предлогам. Часть света
+ * (`namedContinents`) — отбор по странам только у маршрутов мира; карточки сайта по ней не отбираются.
  *
  * Модуль без `@/`-импортов: службу грузит `node --experimental-strip-types`.
  */
 
-import { COUNTRY_NAMES } from './placeCountries.ts'
+import { type Continent, CONTINENT_COUNTRIES, CONTINENT_NAMES, COUNTRY_NAMES } from './placeCountries.ts'
 import type { AiSource } from './types'
 
 const MIN_WORD_LENGTH = 3
@@ -292,13 +293,15 @@ const isCompanion = (word: Word, name: string): boolean => {
 
 /**
  * Слово вопроса называет место: падежная форма названия с заглавной буквы или после предлога места.
- * «Гродненская» и «варшавские» (прилагательные со строчной) названием не считаются.
+ * «Гродненская» и «варшавские» (прилагательные со строчной) названием не считаются. `anyLength` — короткое
+ * название после предлога читается и со строчной («в азии»): так сверяется только список частей света, где
+ * омонимов обычных слов нет.
  */
-const asksAbout = (word: Word, name: string): boolean => {
+const asksAbout = (word: Word, name: string, anyLength = false): boolean => {
   if (!startsWithName(word.text, name, MAX_ENDING_LENGTH) || isCompanion(word, name)) return false
   const common = COMMON_WORD_NAMES.has(name)
   // Строчная буква после предлога места («квесты в гродно»); название-омоним обычного слова так не читается.
-  if (word.afterPreposition && !common && name.length > SHORT_NAME_LENGTH) return true
+  if (word.afterPreposition && !common && (anyLength || name.length > SHORT_NAME_LENGTH)) return true
   if (!word.capital) return false
   // Заглавная в начале фразы — правило письма (#3369): «Глубокой ночью приезжаем…» — не Глубокое, «Most
   // interesting quests» — не Мосты. Первым словом место называет только само название («Гродно за день?»)
@@ -397,6 +400,61 @@ export const namedCountryCodes = (query: string | null | undefined): string[] =>
     }
   }
   return [...codes]
+}
+
+const CONTINENT_BY_COUNTRY = new Map<string, Continent>()
+for (const [continent, codes] of Object.entries(CONTINENT_COUNTRIES) as Array<[Continent, readonly string[]]>) {
+  for (const code of codes) CONTINENT_BY_COUNTRY.set(code, continent)
+}
+const CONTINENT_FORMS = CONTINENT_NAMES.map(([continents, names]) => ({ continents, names: names.map(foldName) }))
+/** «Северная» и «Южная» рядом со словом «Америка» — как после `normalize`, на пяти языках. */
+const NORTH_RE = /^(?:северн|пауночн|північн|po[lł]nocn|north)/u
+const SOUTH_RE = /^(?:южн|пауднев|південн|po[lł]udniow|south)/u
+
+/**
+ * Части света стран по кодам таблицы (`countryCodesOf`): у маршрута по нескольким странам их бывает две.
+ * Пустой список — страну определить нельзя: под отбор по части света такая карточка не проходит.
+ */
+export const continentsOfCodes = (codes: readonly string[]): Continent[] => [...new Set(codes.flatMap((code) => CONTINENT_BY_COUNTRY.get(code) ?? []))]
+
+/** Слово — название части света в любом падеже («europie», «азии», «америки»); как после `foldWord`. */
+export const isContinentWord = (word: string): boolean =>
+  word.length >= MIN_WORD_LENGTH && CONTINENT_FORMS.some(({ names }) => names.some((name) => startsWithName(word, name, MAX_ENDING_LENGTH)))
+
+/** Слово рядом с частью света, которое её уточняет («Северной Америке», «South America»), — не своё место. */
+export const isContinentSide = (word: string): boolean => {
+  const folded = foldName(word)
+  return NORTH_RE.test(folded) || SOUTH_RE.test(folded)
+}
+
+/**
+ * Части света, названные в вопросе (#3357); `null` — не названа. Слово с заглавной буквы либо после
+ * предлога места в любом регистре: список закрытый, омонимов обычных слов в нём нет («в европе», «в азии»).
+ * «Америка» — обе, пока рядом нет «Северная» или «Южная»: «в Южной Америке», «w Ameryce Północnej», «in North
+ * America». Пустой список — названа часть света без стран (Антарктида). Вопрос с исключением («в мире, кроме
+ * Европы») часть света не называет — как страну и город.
+ */
+export const namedContinents = (query: string | null | undefined): Continent[] | null => {
+  const text = String(query ?? '')
+  if (!text.trim() || EXCLUSION_RE.test(text)) return null
+  const words = wordsOf(text)
+  const found = new Set<Continent>()
+  let named = false
+  for (let at = 0; at < words.length; at += 1) {
+    const before = words[at - 1]
+    const sides = [before, words[at + 1]].map((side) => side?.text ?? '')
+    // Предлог стоит перед уточнением: «в северной америке», «in north america».
+    const word: Word = before?.afterPreposition && isContinentSide(before.text) ? { ...words[at], afterPreposition: true } : words[at]
+    for (const { continents, names } of CONTINENT_FORMS) {
+      if (!names.some((name) => asksAbout(word, name, true))) continue
+      named = true
+      const north = sides.some((side) => NORTH_RE.test(side))
+      const south = sides.some((side) => SOUTH_RE.test(side))
+      const america = continents.includes('north-america') && north !== south
+      for (const continent of america ? ([north ? 'north-america' : 'south-america'] as const) : continents) found.add(continent)
+    }
+  }
+  return named ? [...found] : null
 }
 
 /**

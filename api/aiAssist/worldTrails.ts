@@ -15,8 +15,10 @@
  *      («w Niemczech», «in Poland») по таблице `placeCountries.ts`. Общий список предлогов места
  *      (`topicGate.ts`) не расширяется: «на выходные» и «на два дня» местом не становятся.
  *      Вопрос называет место, которого газеттир не знает («в Беларуси», «в беларуси»), — блока нет: чужие
- *      маршруты на вопрос о конкретном месте не показываются. Часть света и месяц после предлога местом не
- *      считаются.
+ *      маршруты на вопрос о конкретном месте не показываются. Месяц после предлога местом не считается.
+ *      Часть света («в Европе», «in Asia», «w Ameryce Południowej») — отбор по странам этой части света
+ *      (`namedContinents`, таблица `placeCountries.ts`): маршрут, чью страну таблица не знает, не проходит.
+ *      В газеттир слово части света не идёт.
  *   3. Условия вопроса сверяет тот же `judgeCard`, что у материалов сайта: длиннее названной границы, вне
  *      расчётного сезона, заметно дольше названного числа дней — карточка в блок не идёт.
  *   4. Порядок: сколько условий совпало, затем смешанный ранг смысловой близости к вопросу и известности
@@ -27,7 +29,7 @@
  */
 
 import { AI_MAX_RECOMMENDATIONS } from './policy.ts'
-import { countryCodesOf, isPlaceForm, matchPlaceSources, namedCountryCodes, sameCountryWord, samePlaceWord } from './promptPlace.ts'
+import { continentsOfCodes, countryCodesOf, isContinentSide, isContinentWord, isPlaceForm, matchPlaceSources, namedContinents, namedCountryCodes, sameCountryWord, samePlaceWord } from './promptPlace.ts'
 import { judgeCard, parseConditions, type QuestionConditions } from './questionConditions.ts'
 import { namedDestinations } from './topicGate.ts'
 import type { AiWorldTrail } from './trailFacts.ts'
@@ -41,12 +43,15 @@ export type WorldCandidate = {
   fame: number
   /**
    * Место маршрута для газеттира (`gazetteerPlace`): `cities` — места ниже страны (регион, остров, горная
-   * система), `countries` — страны; названия на всех языках индекса.
+   * система), `countries` — страны; названия на всех языках индекса. `codes` — коды стран маршрута по
+   * таблице `placeCountries.ts`; пусто или нет поля — страну определить нельзя.
    */
-  place: AiSourcePlace
+  place: WorldPlace
   /** Ключи названий и псевдонимов маршрута (`titleKeys`): по ним вопрос называет сам маршрут. */
   titles: readonly string[]
 }
+
+export type WorldPlace = AiSourcePlace & { codes?: readonly string[] }
 
 /** Внешний подбор нужен: вопрос о пешем маршруте. */
 export const asksForWorldTrails = (conditions: QuestionConditions): boolean => conditions.route === 'foot'
@@ -54,7 +59,11 @@ export const asksForWorldTrails = (conditions: QuestionConditions): boolean => c
 /** Константа слияния рангов — та же, что у гибрида подбора (`RRF_K`, `scripts/ai-assist/search.ts`). */
 const RANK_K = 60
 
-/** Часть света и «весь мир» местом отбора не служат: «пеший маршрут в Европе» — вопрос без места. */
+/**
+ * Часть света и «весь мир» — не место, которого газеттир не знает: блок они не закрывают. Часть света
+ * отбирает маршруты по странам (`namedContinents`; её падежные формы — `isContinentWord`), «в мире» — вопрос
+ * без места.
+ */
 const BROAD_PLACE_RE = /^(?:европ|еўроп|європ|europ|ази|азі|asia|azj|америк|амерык|americ|ameryk|африк|афрык|afri|afry|мир|свет|світ|world|świat|swiat)/iu
 
 const fold = (value: unknown): string =>
@@ -114,16 +123,6 @@ export const gazetteerWords = (names: ReadonlyArray<string | null | undefined>):
   }
   return [...words]
 }
-
-/**
- * Часть света — не место отбора (#3357, D2): «пеший маршрут в Европе» — вопрос без места. В газеттире слово
- * появлялось из названий вроде «Северная Европа» (общее слово «Северная» отброшено) у одного маршрута на
- * 2 733 км, и вопрос о Европе получал пустой блок. Названия — как после `fold`.
- */
-const CONTINENT_WORDS: ReadonlySet<string> = new Set([
-  'европа', 'еуропа', 'європа', 'europa', 'europe', 'азия', 'азія', 'azja', 'asia', 'евразия', 'еуразія', 'євразія', 'eurazja', 'eurasia',
-  'америка', 'амерыка', 'ameryka', 'america', 'африка', 'афрыка', 'afryka', 'africa', 'океания', 'акіянія', 'океанія', 'oceania', 'антарктида', 'антарктыда', 'antarktyda', 'antarctica',
-])
 
 /** Названия одного места на языках индекса: язык → название. */
 export type PlaceNames = Readonly<Record<string, string | undefined>>
@@ -197,14 +196,18 @@ export const ownPlaceNames = (place: { qid: string; names: PlaceNames }, borrowe
  * Место маршрута для сверки: слова газеттира мест ниже страны и стран. Слово, которым названа и страна
  * маршрута — в любом падеже и на любом языке (остров «Великобритания», «метрополия Франции», «Jura
  * Szwabska w Niemczech»), — остаётся только у страны: иначе вопрос о стране находил бы лишь маршруты, у
- * которых названо такое место («w Niemczech» — 24 маршрута из всех немецких, #3416). Часть света местом
- * отбора не служит (`CONTINENT_WORDS`).
+ * которых названо такое место («w Niemczech» — 24 маршрута из всех немецких, #3416).
+ *
+ * Слово части света в газеттир не идёт (#3357, D2) — ни из места («Северная Европа» у одного маршрута на
+ * 2 733 км: вопрос о Европе получал пустой блок), ни из названия страны («Сполучені Штати Америки»,
+ * «Południowa Afryka»: «в Южной Америке» находил бы маршруты США). Часть света считается по кодам стран
+ * `codes`: их даёт название страны целиком, до разбора на слова («Новая Зеландия», «United States», «ЮАР»).
  */
-export const gazetteerPlace = (places: ReadonlyArray<string | null | undefined>, countries: ReadonlyArray<string | null | undefined>): AiSourcePlace => {
-  const countryWords = gazetteerWords(countries)
+export const gazetteerPlace = (places: ReadonlyArray<string | null | undefined>, countries: ReadonlyArray<string | null | undefined>): WorldPlace => {
+  const countryWords = gazetteerWords(countries).filter((word) => !isContinentWord(fold(word)))
   const taken = countryWords.map(fold)
   const ofCountry = (word: string): boolean => taken.some((country) => samePlaceWord(country, word) || sameCountryWord(country, word))
-  return { cities: gazetteerWords(places).filter((word) => !CONTINENT_WORDS.has(fold(word)) && !ofCountry(fold(word))), countries: countryWords }
+  return { cities: gazetteerWords(places).filter((word) => !isContinentWord(fold(word)) && !ofCountry(fold(word))), countries: countryWords, codes: countryCodesOf(countries) }
 }
 
 const titleKey = (value: unknown): string => fold(value).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
@@ -320,20 +323,31 @@ export const selectWorldTrails = (query: string | null | undefined, candidates: 
       : null
   }
   const inPlace = ofLevel('cities')
-  const inCountry = ofLevel('countries')
+  // Страна, чьё название газеттир на слова не раскладывает («США», «ЮАР»), находится по коду таблицы.
+  const byCode = askedCountries.length ? candidates.filter((candidate) => candidate.place.codes?.some((code) => askedCountries.includes(code))) : []
+  const byWord = ofLevel('countries')
+  const inCountry = byCode.length ? [...new Set([...(byWord ?? []), ...byCode])] : byWord
   const both = inPlace && inCountry ? inPlace.filter((candidate) => inCountry.includes(candidate)) : null
   // Названы и место, и страна, а общих маршрутов нет — слово вопроса называет страну, а место лишь носит её
   // имя (#3357): «в Швейцарии» — это Швейцария, а не три маршрута Саксонской Швейцарии.
   const ofPlace = both?.length ? both : (inCountry ?? inPlace)
+  // Часть света — отбор по странам (#3357): «в Европе» — маршруты стран Европы, а не весь индекс.
+  const continents = namedContinents(placeText)
   let pool: readonly WorldCandidate[]
   if (ofPlace) pool = ofPlace
   else {
-    // «in June», «w lipcu»: название месяца после предлога места — условие сезона, а не место.
-    const unknown = namedDestinations(placeText).filter((place) => !BROAD_PLACE_RE.test(place) && !parseConditions(place).months?.length)
+    // «in June», «w lipcu»: название месяца после предлога места — условие сезона, а не место. «Северной» перед
+    // «Америке» — уточнение части света; у остальных («в Северной Европе») — место, которого газеттир не знает.
+    const narrowed = continents?.length === 1 && (continents[0] === 'north-america' || continents[0] === 'south-america')
+    const unknown = namedDestinations(placeText).filter(
+      (place) => !BROAD_PLACE_RE.test(place) && !isContinentWord(fold(place)) && !(narrowed && isContinentSide(place)) && !parseConditions(place).months?.length,
+    )
     // Страна из общей таблицы названа и со строчной буквы («в беларуси»): её маршрутов в индексе нет.
     if (unknown.length || askedCountries.length) return namedCards.slice(0, limit)
     pool = candidates
   }
+  // Маршрут, чью страну таблица не знает, под отбор по части света не проходит.
+  if (continents) pool = pool.filter((candidate) => continentsOfCodes(candidate.place.codes ?? []).some((continent) => continents.includes(continent)))
 
   // 3–4. Условия и порядок.
   const taken = new Set(named)

@@ -11,8 +11,8 @@ You may copy, distribute and adapt it as long as you credit OpenStreetMap
 contributors and keep the result under the same licence.
 
 Состав / Contents
-- Одна строка JSON на маршрут: 781 маршрут, сборка 2026-11-21.
-  One JSON line per route: 781 routes, built 2026-11-21.
+- Одна строка JSON на маршрут: 771 маршрут, сборка 2026-11-21.
+  One JSON line per route: 771 routes, built 2026-11-21.
 - osm_relation — идентификатор отношения OpenStreetMap (route=hiking|foot).
 - distance_km, loop, lat, lng, grade (sac_scale) — посчитаны по геометрии и
   тегам OpenStreetMap / computed from OpenStreetMap geometry and tags.

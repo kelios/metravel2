@@ -234,7 +234,8 @@ describe('маршруты мира: условия вопроса сверяе�
   })
 
   it('велосипедный вопрос маршрут мира не совпадает и по длине не сверяет; вид материала к нему не относится', () => {
-    expect(judge('Веломаршрут до 30 км', PEDDARS)).toMatchObject({ dropped: false, reasons: [], score: -1 })
+    // Другой вид маршрута — явное нарушение (#3416): на вопрос о веломаршруте блок «Ещё в мире» и не строится.
+    expect(judge('Веломаршрут до 30 км', PEDDARS)).toMatchObject({ dropped: true, reasons: [], score: -1 })
     // «Какие статьи о походах» — вид материала `travel`: маршруту мира это ни плюс, ни минус.
     const conditions = parseConditions('Пеший маршрут до 100 км')
     expect(conditions.kind).toBe('travel')
@@ -398,7 +399,7 @@ describe('маршруты мира: подбор второго яруса', ()
     const TATRAS_TWIN: Place = { qid: 'Q999001', names: { ru: 'Татры', pl: 'Tatry', en: 'Tatras' } }
     const SAXON: Place = { qid: 'Q157080', names: { ru: 'Саксонская Швейцария', pl: 'Szwajcaria Saksońska', en: 'Saxon Switzerland' } }
     const plain = (qid: string, ...names: string[]): Place => ({ qid, names: Object.fromEntries(names.map((name, index) => [['ru', 'be', 'uk', 'pl', 'en'][index], name])) })
-    const trails: Array<{ id: string; places: Place[]; countries: string[] }> = [
+    const trails: Array<{ id: string; places: Place[]; countries: string[]; km?: number; months?: number[] }> = [
       { id: 'tmb', places: [GRAIAN, ALPS], countries: ['Франция', 'France', 'Francja'] },
       { id: 'graian-only', places: [GRAIAN], countries: ['Италия', 'Italy', 'Włochy'] },
       { id: 'gr2013', places: [PACA], countries: ['Франция', 'France', 'Francja'] },
@@ -416,11 +417,23 @@ describe('маршруты мира: подбор второго яруса', ()
       { id: 'tatra-twin', places: [TATRAS_TWIN], countries: ['Польша', 'Poland', 'Polska'] },
       { id: 'malerweg', places: [SAXON], countries: ['Германия', 'Germany', 'Niemcy'] },
       { id: 'swiss', places: [], countries: ['Швейцария', 'Switzerland', 'Szwajcaria'] },
-      { id: 'e1', places: [plain('Q9', 'Северная Европа', 'Паўночная Еўропа', 'Північна Європа', 'Europa Północna', 'Northern Europe')], countries: ['Норвегия', 'Norway'] },
+      { id: 'e1', places: [plain('Q9', 'Северная Европа', 'Паўночная Еўропа', 'Північна Європа', 'Europa Północna', 'Northern Europe')], countries: ['Норвегия', 'Norway'], km: 2733 },
+      // Второй круг: страны других частей света — названиями, как их отдаёт Wikidata (см. `worldIndexCountries.ts`).
+      { id: 'rota', places: [], countries: ['Португалия', 'Portugal', 'Portugalia'], km: 220 },
+      { id: 'kungs', places: [], countries: ['Швеция', 'Sweden', 'Szwecja'], months: [6, 7, 8, 9] },
+      { id: 'lycian', places: [], countries: ['Турция', 'Турцыя', 'Туреччина', 'Turcja', 'Turkey'] },
+      { id: 'sultans', places: [], countries: ['Венгрия', 'Hungary', 'Болгария', 'Bulgaria', 'Турция', 'Turkey'] },
+      { id: 'annapurna', places: [], countries: ['Непал', 'Nepal'] },
+      { id: 'appalachian', places: [], countries: ['США', 'Злучаныя Штаты Амерыкі', 'Сполучені Штати Америки', 'Stany Zjednoczone', 'United States'] },
+      { id: 'condor', places: [], countries: ['Чили', 'Чылі', 'Чилі', 'Chile'] },
+      { id: 'kepler', places: [], countries: ['Новая Зеландия', 'Новая Зеландыя', 'Нова Зеландія', 'Nowa Zelandia', 'New Zealand'] },
+      { id: 'otter', places: [], countries: ['ЮАР', 'Паўднёва-Афрыканская Рэспубліка', 'Південно-Африканська Республіка', 'Południowa Afryka', 'South Africa'] },
+      // Страны нет в таблице: часть света определить нельзя.
+      { id: 'nowhere', places: [], countries: ['Зеленогория', 'Zelenogoria'] },
     ]
     const borrowed = borrowedPlaceWords(trails.flatMap((trail) => trail.places))
     const pool: WorldCandidate[] = trails.map((trail, index) => ({
-      card: { ...cardOf(WHW), source_id: trail.id, title: trail.id, distance_km: trail.id === 'e1' ? 2733 : 60, days: 3, months: YEAR },
+      card: { ...cardOf(WHW), source_id: trail.id, title: trail.id, distance_km: trail.km ?? 60, days: 3, months: trail.months ?? YEAR },
       similarity: 1 - index / 100,
       fame: 10,
       place: gazetteerPlace(trail.places.flatMap((place) => ownPlaceNames(place, borrowed)), trail.countries),
@@ -474,15 +487,66 @@ describe('маршруты мира: подбор второго яруса', ()
       expect(found('Hiking trail in Switzerland')).toEqual(['swiss'])
     })
 
-    // D2: часть света — не место отбора.
-    it.each(['Пеший маршрут в Европе в ноябре до 100 км', 'Пешы маршрут у Еўропе да 100 км', 'Піший маршрут у Європі до 100 км', 'Szlak pieszy w Europie do 100 km', 'Hiking trail in Europe under 100 km'])('«%s» — часть света местом не служит: блок не пуст', (question) => {
-      const ids = found(question)
-      expect(ids.length).toBe(pool.length - 1)
-      expect(ids).not.toContain('e1')
+    // D2 и второй круг: часть света — не слово газеттира, а отбор по странам этой части света. В первом круге
+    // «в Европе … до 100 км» отдавал весь индекс — в блоке стоял Main Range walk (Австралия).
+    const EUROPE_UNDER_100 = ['albacete', 'alfold', 'alta', 'gr2013', 'graian-only', 'kungs', 'malerweg', 'norrbotten', 'premuzic', 'schwab', 'sultans', 'swiss', 'tatra', 'tatra-twin', 'tmb', 'whw']
+    it.each(['Пеший маршрут в Европе до 100 км', 'Пешы маршрут у Еўропе да 100 км', 'Піший маршрут у Європі до 100 км', 'Szlak pieszy w Europie do 100 km', 'Hiking trail in Europe under 100 km', 'пеший маршрут в европе до 100 км'])(
+      '«%s» — только страны Европы: ни Канады, ни Японии, ни США, ни Турции, ни страны вне таблицы',
+      (question) => {
+        expect(found(question)).toEqual(EUROPE_UNDER_100)
+      },
+    )
+
+    it.each(['Пеший маршрут в Азии', 'Пешы маршрут у Азіі', 'Піший маршрут в Азії', 'Szlak pieszy w Azji', 'Hiking trail in Asia', 'пеший маршрут в азии'])('«%s» — страны Азии, европейских нет; Турция — Азия, маршрут через обе части света — в обеих', (question) => {
+      expect(found(question)).toEqual(['annapurna', 'lycian', 'nara', 'sultans'])
     })
 
-    it('часть света в газеттир не идёт ни сама, ни из названия «Северная Европа»', () => {
+    it('часть света пересекается с месяцем и длиной: «в Европе в ноябре до 100 км» применяет все три условия', () => {
+      // Без «rota» (220 км), «e1» (2 733 км) и «kungs» (месяцы июнь — сентябрь).
+      expect(found('Пеший маршрут в Европе в ноябре до 100 км')).toEqual(EUROPE_UNDER_100.filter((id) => id !== 'kungs'))
+      expect(found('Пеший маршрут в Европе')).toEqual([...EUROPE_UNDER_100, 'e1', 'rota'].sort())
+      expect(found('Пеший маршрут в Европе длиннее 200 км')).toEqual(['e1', 'rota'])
+    })
+
+    it('обе Америки, одна из них, Океания, Африка, Евразия — на языке вопроса', () => {
+      expect(found('Пеший маршрут в Америке')).toEqual(['alberta', 'appalachian', 'condor', 'skyline'])
+      for (const question of ['Пеший маршрут в Южной Америке', 'Пешы маршрут у Паўднёвай Амерыцы', 'Піший маршрут у Південній Америці', 'Szlak pieszy w Ameryce Południowej', 'Hiking trail in South America', 'пеший маршрут в южной америке']) {
+        expect({ question, ids: found(question) }).toEqual({ question, ids: ['condor'] })
+      }
+      for (const question of ['Пеший маршрут в Северной Америке', 'Szlak pieszy w Ameryce Północnej', 'Hiking trail in North America']) {
+        expect({ question, ids: found(question) }).toEqual({ question, ids: ['alberta', 'appalachian', 'skyline'] })
+      }
+      expect(found('Пеший маршрут в Океании')).toEqual(['kepler'])
+      for (const question of ['Пеший маршрут в Африке', 'Пешы маршрут у Афрыцы', 'Піший маршрут в Африці', 'Szlak pieszy w Afryce', 'Hiking trail in Africa']) expect({ question, ids: found(question) }).toEqual({ question, ids: ['otter'] })
+      expect(found('Пеший маршрут в Евразии до 100 км')).toEqual([...EUROPE_UNDER_100, 'annapurna', 'lycian', 'nara'].sort())
+      expect(found('Пеший маршрут в Антарктиде')).toEqual([])
+    })
+
+    it('часть света рядом с местом и страной сужает отбор; уточнение «Северная Европа» газеттир не знает', () => {
+      expect(found('Пеший маршрут в Европе, в Польше')).toEqual(['tatra-twin'])
+      expect(found('Пеший маршрут в Альпах в Европе')).toEqual(['graian-only', 'tmb'])
+      expect(found('Пеший маршрут в Азии в Альпах')).toEqual([])
+      expect(found('Пеший маршрут в Северной Европе')).toEqual([])
+      // Исключение часть света не называет — как страну и город: отбора нет.
+      expect(found('Пеший маршрут в мире, кроме Европы')).toHaveLength(pool.length)
+    })
+
+    it('страна, чьё название газеттир на слова не раскладывает, находится по коду таблицы: «в США», «в ЮАР»', () => {
+      expect(found('Пеший маршрут в США')).toEqual(['appalachian'])
+      expect(found('Hiking trail in the USA')).toEqual(['appalachian'])
+      expect(found('Пеший маршрут в ЮАР')).toEqual(['otter'])
+      expect(found('Поход в Новой Зеландии')).toEqual(['kepler'])
+      expect(found('Пеший маршрут в Чили')).toEqual(['condor'])
+    })
+
+    it('часть света в газеттир не идёт ни сама, ни из названия «Северная Европа», ни из названия страны', () => {
       expect(gazetteerPlace(['Европа', 'Северная Европа', 'Northern Europe', 'Азия', 'North America', 'Корсика'], ['Франция']).cities).toEqual(['Корсика'])
+      const usa = gazetteerPlace([], ['США', 'Злучаныя Штаты Амерыкі', 'Сполучені Штати Америки', 'United States'])
+      expect(usa.countries).toEqual(['Злучаныя', 'Штаты', 'Сполучені', 'Штати', 'States'])
+      expect(usa.codes).toEqual(['US'])
+      expect(gazetteerPlace([], ['Południowa Afryka', 'South Africa'])).toEqual({ cities: [], countries: [], codes: ['ZA'] })
+      // Страны нет в таблице — кодов нет: под отбор по части света маршрут не пройдёт.
+      expect(gazetteerPlace([], ['Зеленогория']).codes).toEqual([])
     })
   })
 
@@ -514,7 +578,7 @@ describe('маршруты мира: подбор второго яруса', ()
       'Шотландия', 'Scottish', 'Highlands', 'Зеландия', 'Loch', 'Lomond', 'Trossachs', 'Англия', 'Великобритания',
     ])
     // Слово страны в названии места («метрополия Франции») остаётся только у страны.
-    expect(gazetteerPlace(['метрополия Франции', 'Корсика', 'Great Britain'], ['Франция', 'France'])).toEqual({ cities: ['Корсика', 'Britain'], countries: ['Франция', 'France'] })
+    expect(gazetteerPlace(['метрополия Франции', 'Корсика', 'Great Britain'], ['Франция', 'France'])).toEqual({ cities: ['Корсика', 'Britain'], countries: ['Франция', 'France'], codes: ['FR'] })
   })
 
   it('общее слово названия место не называет: «Новая тропа» — не Новая Зеландия, «North» — не Северный остров', () => {

@@ -264,33 +264,55 @@ describe('условия вопроса (#3353): длина и вид маршр
     expect(judgeCard({ maxKm: 20, children: { ages: [] } }, quest({ duration_min: 90, audience: 'family' }))).toMatchObject({ dropped: false })
   })
 
-  it('вид маршрута: по категориям и транспорту каталога; не тот вид опускает, но не убирает; каталог молчит — не нарушено', () => {
+  it('вид маршрута: по категориям и транспорту каталога; не тот вид — явное нарушение; каталог молчит — не нарушено', () => {
     expect(judgeCard({ route: 'foot' }, hike())).toEqual({ reasons: ['пеший маршрут'], score: 1, dropped: false, unfit: false })
     expect(judgeCard({ route: 'bike' }, travel({ categories: ['Веломаршрут'] }))).toEqual({ reasons: ['веломаршрут'], score: 1, dropped: false, unfit: false })
     expect(judgeCard({ route: 'bike' }, travel({ categories: ['Автопутешествие'], transports: ['Велосипед'] }))).toMatchObject({ reasons: ['веломаршрут'] })
-    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Веломаршрут'] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
-    expect(judgeCard({ route: 'bike' }, hike())).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
-    // У маршрута другого вида длина не сверяется: не совпала и не нарушена.
-    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 15 }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
-    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 48.7 }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    // Вопрос назвал вид сам: материал другого вида в подсказку не идёт, пока остаётся чем ответить (#3416, lv121).
+    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Веломаршрут'] }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    expect(judgeCard({ route: 'bike' }, hike())).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    // Статья с категориями обоих видов — пешая: на вопрос о пешем маршруте совпала, на вопрос о вело — нет.
+    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Веломаршрут', 'Поход'] }))).toMatchObject({ reasons: ['пеший маршрут'], dropped: false })
+    // Убирает только однозначный вид: статья с категориями обоих видов, подборка и велосипед только в
+    // транспорте другим видом опускаются, но не убираются.
+    expect(judgeCard({ route: 'bike' }, travel({ categories: ['Веломаршрут', 'Поход'] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard({ route: 'foot' }, travel({ categories: ['Самостоятельное путешествие'], transports: ['Велосипед'] }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    for (const title of ['Что посмотреть вокруг Кракова: 18 маршрутов', 'Куда поехать в Беларуси на выходные: 4 маршрута', '5 tras rowerowych pod Krakowem']) {
+      expect({ title, verdict: judgeCard({ route: 'foot' }, { ...travel({ categories: ['Веломаршрут', 'Тур выходного дня'] }), title }) }).toEqual({
+        title,
+        verdict: { reasons: [], score: -1, dropped: false, unfit: false },
+      })
+    }
+    // Число в названии не о маршрутах — статья однозначно о веломаршруте.
+    expect(judgeCard({ route: 'foot' }, { ...travel({ categories: ['Веломаршрут'] }), title: 'Веломаршрут 15 км на лесное озеро «Дикое»' })).toMatchObject({ dropped: true })
+    // У маршрута другого вида длина не сверяется и в «почему подходит» не идёт: убирает его вид, а не километры.
+    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 15 }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    expect(judgeCard({ route: 'foot', maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 48.7 }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    // Вопрос без вида маршрута веломаршрут не трогает.
+    expect(judgeCard({ maxKm: 20 }, travel({ categories: ['Веломаршрут'], distance_km: 15 }))).toMatchObject({ dropped: false, reasons: ['15 км'] })
     // Статья не о маршруте («Автопутешествие») и статья без категорий — не совпало и не нарушено.
     expect(judgeCard({ route: 'foot' }, travel({ categories: ['Автопутешествие'], transports: ['Машина'] }))).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
     expect(judgeCard({ route: 'foot' }, travel())).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })
   })
 
   // #3416 п.3: у квеста вид маршрута — по тегу каталога (запись фактов) либо по названию.
-  it('вид маршрута квеста: велоквест и автоквест на вопрос о пешем маршруте опускаются, поход совпадает, прогулка по городу — не нарушено', () => {
+  it('вид маршрута квеста: велоквест и автоквест на вопрос о пешем маршруте — явное нарушение, поход совпадает, прогулка по городу — не нарушено', () => {
     const foot = parseConditions('Szlak pieszy do 30 km w Polsce')
     expect(foot).toMatchObject({ route: 'foot', maxKm: 30 })
     // Тег каталога в записи фактов.
-    expect(judgeCard(foot, quest({ route: 'bike' }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
-    expect(judgeCard(foot, quest({ route: 'car' }))).toEqual({ reasons: [], score: -1, dropped: false, unfit: false })
+    expect(judgeCard(foot, quest({ route: 'bike' }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    expect(judgeCard(foot, quest({ route: 'car' }))).toEqual({ reasons: [], score: -1, dropped: true, unfit: false })
+    // Симметрично: пеший поход и автоквест на вопрос о веломаршруте.
+    expect(judgeCard({ route: 'bike' }, quest({ route: 'foot' }))).toMatchObject({ score: -1, dropped: true })
+    expect(judgeCard({ route: 'bike' }, quest({ route: 'car' }))).toMatchObject({ score: -1, dropped: true })
+    // Вопрос без вида маршрута («квесты в Барановичах») велоквест не убирает.
+    expect(judgeCard({ kind: 'quest' }, quest({ route: 'bike' }))).toMatchObject({ score: 1, dropped: false })
     expect(judgeCard(foot, quest({ route: 'foot' }))).toEqual({ reasons: ['пеший маршрут'], score: 1, dropped: false, unfit: false })
     expect(judgeCard({ route: 'bike' }, quest({ route: 'bike' }))).toEqual({ reasons: ['веломаршрут'], score: 1, dropped: false, unfit: false })
     // Запись фактов старого индекса вида не несёт — вид читается из названия карточки на пяти языках.
     for (const title of ['Велоквест из Барановичей', 'Велаквэст з Баранавічаў', 'Велоквест із Кракова', 'Quest rowerowy z Baranowicz', 'Bike quest from Krakow']) {
-      expect({ title, verdict: judgeCard(foot, { ...quest(), title }) }).toEqual({ title, verdict: { reasons: [], score: -1, dropped: false, unfit: false } })
-      expect(judgeCard(foot, { type: 'quest', facts: null, title })).toMatchObject({ score: -1, dropped: false })
+      expect({ title, verdict: judgeCard(foot, { ...quest(), title }) }).toEqual({ title, verdict: { reasons: [], score: -1, dropped: true, unfit: false } })
+      expect(judgeCard(foot, { type: 'quest', facts: null, title })).toMatchObject({ score: -1, dropped: true })
     }
     // Городской квест вида маршрута не называет: не совпал и не нарушил.
     expect(judgeCard(foot, { ...quest(), title: 'Квест по Кракову: легенды Вавеля' })).toEqual({ reasons: [], score: 0, dropped: false, unfit: false })

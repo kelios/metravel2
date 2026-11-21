@@ -14,8 +14,9 @@
  *   - `judgeCard` — условия против фактов одной карточки: что совпало, балл для порядка и признак
  *     «убрать». Условие сверяется только с фактом, который у карточки ЕСТЬ: без факта карточка не
  *     совпала и не нарушила (неизвестно ≠ нарушено). Убирается карточка только при явном нарушении
- *     числового условия — длительность больше названной, возраст вне диапазона квеста. Нарушение
- *     без числа («без собаки», другой месяц, только на машине) карточку опускает, но не убирает.
+ *     числового условия — длительность больше названной, возраст вне диапазона квеста — и однозначного
+ *     другого вида маршрута: велоквест на «пеший маршрут». Нарушение без числа («без собаки», другой месяц,
+ *     только на машине) карточку опускает, но не убирает.
  *     Детский квест на вопрос с личным условием, в котором детей нет, — карточка другой аудитории
  *     (`unfit`): в подсказку не идёт никогда.
  *
@@ -32,7 +33,18 @@ import { namesPlaceAfterFrom } from './promptPlace.ts'
 import { asksAboutChildren } from './questAudience.ts'
 import { asksAboutService } from './serviceIntent.ts'
 import { detectIntent } from './retrievalQuery.ts'
-import { formatKm, MONTHS_RU, type QuestRouteKind, questRouteKindOf, type RouteKind, routeKindOf, type SourceFacts } from './sourceFacts.ts'
+import {
+  BIKE_ROUTE_CATEGORIES,
+  FOOT_ROUTE_CATEGORIES,
+  formatKm,
+  MONTHS_RU,
+  type QuestRouteKind,
+  questRouteKindOf,
+  type RouteKind,
+  routeKindOf,
+  type SourceFacts,
+  type TravelFacts,
+} from './sourceFacts.ts'
 import { type TrailFacts, WORLD_CARD_TYPE } from './trailFacts.ts'
 import type { AiCardType, AiSourceType } from './types'
 
@@ -429,7 +441,7 @@ export type CardVerdict = {
   reasons: string[]
   /** Балл для порядка: совпало +1, явно нарушено без числа −1, факта нет 0. */
   score: number
-  /** Явное нарушение числового условия: карточка в подсказку не идёт. */
+  /** Явное нарушение числового условия или однозначный другой вид маршрута: карточка в подсказку не идёт. */
   dropped: boolean
   /**
    * Карточка адресована другой аудитории: детский квест на вопрос взрослого с условием («с собакой», «на
@@ -462,6 +474,22 @@ const daysLabel = (days: number): string => {
 }
 
 const lower = (values: readonly string[] | undefined): string[] => (values ?? []).map((value) => String(value).trim().toLowerCase())
+
+/** Название статьи о нескольких маршрутах: «Что посмотреть вокруг Кракова: 18 маршрутов», «4 маршрута». */
+const SEVERAL_ROUTES_RE = /(?<![\p{L}\p{N}])(?:[2-9]|[1-9]\d+)\s+(?:маршрут\p{L}*|trasy|tras|szlak\p{L}*|routes|trails)(?![\p{L}\p{N}])/iu
+
+/**
+ * Вид маршрута статьи однозначен (#3416 п.3): категории каталога называют маршрут ровно одного вида, и
+ * статья не подборка. Подборка с одной категорией «Веломаршрут» (t636 «…: 18 маршрутов», t566) несёт и
+ * пешие прогулки; категории обоих видов («велодорожка и треккинг») — оба маршрута; велосипед только в
+ * транспорте — способ добраться, а не вид маршрута. Такие статьи другой вид опускает, но не убирает.
+ */
+const definiteTravelKind = (travel: Pick<TravelFacts, 'categories'>, title: string | null | undefined): boolean => {
+  const categories = lower(travel.categories)
+  const foot = categories.some((name) => FOOT_ROUTE_CATEGORIES.has(name))
+  const bike = categories.some((name) => BIKE_ROUTE_CATEGORIES.has(name))
+  return foot !== bike && !SEVERAL_ROUTES_RE.test(String(title ?? ''))
+}
 
 /**
  * Условия вопроса против фактов одной карточки. Вид материала сверяется с типом карточки, остальное —
@@ -595,11 +623,19 @@ export const judgeCard = (
   // Маршрут мира — пеший по составу внешнего индекса. У квеста (#3416) вид — по тегам каталога, а пока
   // запись фактов индекса их не несёт — по названию («Велоквест…», «Quest rowerowy…»): городская прогулка
   // вида не называет, велоквест и автоквест на вопрос о пешем маршруте — другой вид.
+  // Другой ОДНОЗНАЧНЫЙ вид — явное нарушение, как длина сверх границы: вопрос назвал вид сам («Szlak
+  // pieszy…»), и велоквест либо веломаршрут в подсказку не идёт, пока остаётся чем ответить
+  // (`arrangeSources`). Одного балла мало: при шести карточках о велосипеде из восьми велоквест добирал
+  // подсказку до трёх (lv121). Вид, который материал не называет однозначно (`definiteTravelKind`), опускает,
+  // но не убирает.
   const questKind = card.type === 'quest' ? (quest?.route ?? questRouteKindOf(null, card.title)) : null
   const kind: QuestRouteKind | null = trail ? 'foot' : travel ? routeKindOf(travel) : questKind
   const otherKind = conditions.route !== undefined && kind !== null && kind !== conditions.route
   if (conditions.route && kind === conditions.route) match(ROUTE_RU[kind])
-  else if (otherKind) score -= 1
+  else if (otherKind) {
+    score -= 1
+    if (!travel || definiteTravelKind(travel, card.title)) dropped = true
+  }
 
   // Длина маршрута (#3353): сверяется только у статьи с фактом длины; длиннее верхней границы или короче
   // нижней — явное нарушение числового условия. У маршрута другого вида длина не сверяется: веломаршрут на

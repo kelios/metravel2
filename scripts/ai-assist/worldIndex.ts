@@ -10,8 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
-import type { AiSourcePlace } from '../../api/aiAssist/types.ts'
-import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, namesTrail, ownPlaceNames, titleKeys, type WorldCandidate } from '../../api/aiAssist/worldTrails.ts'
+import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, namesTrail, ownPlaceNames, titleKeys, type WorldCandidate, type WorldPlace } from '../../api/aiAssist/worldTrails.ts'
 import { decodeVectors, readJsonl } from '../ai-index/format.ts'
 import {
   OPEN_LAYER_FILE,
@@ -33,8 +32,8 @@ export interface WorldTrailEntry {
   open: OpenLayerRecord
   /** Строки векторов фрагментов маршрута. */
   rows: number[]
-  /** Место маршрута для газеттира: слова названий мест ниже страны и стран на всех языках индекса. */
-  place: AiSourcePlace
+  /** Место маршрута для газеттира: слова названий мест ниже страны и стран на всех языках индекса, коды стран по общей таблице. */
+  place: WorldPlace
   /** Ключи названий и псевдонимов: по ним вопрос называет сам маршрут. */
   titles: string[]
 }
@@ -52,7 +51,7 @@ export interface LoadWorldIndexOptions {
   expectedModel: string
 }
 
-const placeOf = (open: OpenLayerRecord, borrowed: ReadonlyMap<string, ReadonlySet<string>>): AiSourcePlace =>
+const placeOf = (open: OpenLayerRecord, borrowed: ReadonlyMap<string, ReadonlySet<string>>): WorldPlace =>
   gazetteerPlace(
     (open.places ?? []).flatMap((place) => ownPlaceNames(place, borrowed)),
     open.countries.flatMap((country) => Object.values(country.names)),

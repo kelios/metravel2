@@ -415,8 +415,8 @@ describe('цепочка порядка карточек (#3353): длина м�
   it('«пеший маршрут не более 100 километров»: длиннее названного — в «рядом», подходящие первыми и названы в «почему подходит»', () => {
     const { sources, conditions } = arrangeSources('Пеший маршрут не более 100 километров', found)
     expect(conditions).toMatchObject({ maxKm: 100, route: 'foot' })
-    // 186 и 112 км уходят в «рядом»; веломаршрут без длины опущен видом маршрута, но не убран.
-    expect(groupOf(sources, 'nearby')).toEqual(expect.arrayContaining(['t628', 't761']))
+    // 186 и 112 км уходят в «рядом»; веломаршрут без длины — тоже: вопрос назвал пеший маршрут (#3416).
+    expect(groupOf(sources, 'nearby').sort()).toEqual(['t483', 't628', 't761'])
     expect(groupOf(sources, 'match').slice(0, 2)).toEqual(['t544', 't559'])
     expect(sources.find((source) => source.source_id === '544')?.why).toBe('пеший маршрут, 97 км')
     expect(sources.find((source) => source.source_id === '559')?.why).toBe('пеший маршрут, 9,6 км')
@@ -454,5 +454,65 @@ describe('цепочка порядка карточек (#3353): длина м�
   it('вопрос без условия длины порядок не меняет', () => {
     const quests = [quest({ id: 7, title: 'Квест по Гродно', city: 'Гродно', country: 'Беларусь', facts: { duration_min: 100 } }), quest({ id: 53, title: 'Городница', city: 'Гродно', country: 'Беларусь', facts: { duration_min: 90 } })]
     expect(ids(arrangeSources('Какие квесты есть в Гродно?', [...quests, mnikowska]).sources)).toEqual(['q7', 'q53', 't559'])
+  })
+
+  // #3416 п.3, второй круг. Подбор lv121 «Szlak pieszy do 100 km w marcu» (оценка 21.11.2026): шесть карточек
+  // из восьми — о велосипеде. Балл −1 опускал их, но велоквест Барановичей добирал подсказку до трёх и попадал
+  // в ответ; на lv106 «…w Polsce» его убирал отбор по стране, а не вид маршрута.
+  describe('вид маршрута: материал другого вида в подсказку не идёт (#3416)', () => {
+    const paris = quest({ id: 48, title: 'Quest po Paryżu: od kilometra zerowego', city: 'Paryż', country: 'Франция', facts: { points: 12, duration_min: 180, difficulty: 'easy' } })
+    const camino = travel({ id: 556, title: 'Польское Камино: Малопольская дорога Якова', country: 'Польша', facts: { number_days: 6, months: [10, 11, 12], categories: HIKE } })
+    const baranovichi = quest({ id: 160, title: 'Quest rowerowy z Baranowicz: majątki Kotłubajów i Bohwiczów', city: 'Baranowicze', country: 'Беларусь', facts: { points: 11, duration_min: 300, route: 'bike' } })
+    const grodno = quest({ id: 162, title: 'Quest rowerowy z Grodna: forty Twierdzy Grodzieńskiej', city: 'Grodno', country: 'Беларусь', facts: { points: 10, duration_min: 330, route: 'bike' } })
+    // Запись фактов старого индекса вида не несёт — он читается из названия.
+    const krakow = quest({ id: 125, title: 'Quest rowerowy z Krakowa: Twardowski, Tyniec i biała góra', city: 'Kraków', country: 'Польша' })
+    const greenVelo = travel({ id: 541, title: 'Велопоход по Польше: GreenVelo и ночёвки', country: 'Польша', facts: { categories: ['Велопоход'], transports: ['Велосипед', 'Машина'] } })
+    const lv121 = [baranovichi, grodno, camino, krakow, paris, greenVelo, vistula]
+    const promptOf = (question: string, cards: readonly AiSource[]) => ids(selectPromptSources(arrangeSources(question, cards).sources, 8, null, true))
+
+    it('lv121 «Szlak pieszy do 100 km w marcu» (страна не названа): велоквестов и веломаршрутов в подсказке нет', () => {
+      const { sources, conditions } = arrangeSources('Szlak pieszy do 100 km w marcu', lv121)
+      expect(conditions).toMatchObject({ route: 'foot', maxKm: 100, months: [3] })
+      expect(groupOf(sources, 'match')).toEqual(['t556', 'q48'])
+      expect(groupOf(sources, 'nearby').sort()).toEqual(['q125', 'q160', 'q162', 't483', 't541'])
+      expect(promptOf('Szlak pieszy do 100 km w marcu', lv121)).toEqual(['t556', 'q48'])
+    })
+
+    it('lv106 «Szlak pieszy do 30 km w Polsce» (страна названа): то же правило, а не только отбор по стране', () => {
+      // Велоквест и велопоход Польши отбор по стране оставляет — убирает их вид маршрута.
+      expect(promptOf('Szlak pieszy do 30 km w Polsce', lv121)).toEqual(['t556'])
+      expect(promptOf('Szlak pieszy do 30 km w Polsce', [krakow, greenVelo, camino, mnikowska])).toEqual(['t559', 't556'])
+    })
+
+    it.each(['Пеший маршрут до 100 км в марте', 'Пешы маршрут да 100 км у сакавіку', 'Піший маршрут до 100 км у березні', 'A hiking trail under 100 km in March'])('«%s» — тот же отбор на языке вопроса', (question) => {
+      expect(promptOf(question, lv121)).toEqual(['t556', 'q48'])
+    })
+
+    it('симметрично: на вопрос о веломаршруте пеший поход в подсказку не идёт, велоквесты остаются', () => {
+      expect(promptOf('Trasa rowerowa do 60 km', lv121)).not.toContain('t556')
+      expect(promptOf('Trasa rowerowa do 60 km', lv121)).toEqual(expect.arrayContaining(['q160', 'q162', 'q125', 't541', 't483']))
+    })
+
+    it('ответить больше нечем — материал другого вида остаётся как ближайшее, без строки «почему подходит»', () => {
+      const { sources } = arrangeSources('Szlak pieszy do 100 km w marcu', [baranovichi, grodno, greenVelo])
+      expect(ids(sources)).toEqual(['q160', 'q162', 't541'])
+      expect(sources.every((source) => !source.why && !source.group)).toBe(true)
+    })
+
+    it('граница: единственный материал — другого вида, подсказка не пустеет', () => {
+      expect(promptOf('Szlak pieszy do 100 km w marcu', [baranovichi])).toEqual(['q160'])
+    })
+
+    it('подборка с одной категорией «Веломаршрут» опускается, но не убирается; однозначные велоквест и велопоход — убираются', () => {
+      const krakowRoutes = travel({ id: 636, title: 'Что посмотреть вокруг Кракова: 18 маршрутов', country: 'Польша', facts: { categories: ['Веломаршрут', 'Самостоятельное путешествие', 'Тур выходного дня'] } })
+      const { sources } = arrangeSources('Szlak pieszy do 100 km w marcu', [krakowRoutes, baranovichi, greenVelo, camino, paris])
+      expect(groupOf(sources, 'match')).toEqual(['t556', 'q48', 't636'])
+      expect(groupOf(sources, 'nearby').sort()).toEqual(['q160', 't541'])
+    })
+
+    it('вопрос без вида маршрута велоквесты не убирает', () => {
+      expect(promptOf('Co zobaczyć w marcu?', lv121)).toEqual(expect.arrayContaining(['q160', 'q162', 'q125']))
+      expect(promptOf('Jakie questy macie w Baranowiczach?', lv121)).toEqual(['q160'])
+    })
   })
 })
