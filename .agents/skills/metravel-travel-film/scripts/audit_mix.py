@@ -18,6 +18,12 @@ segments.json — таблица отрезков рендера (start, end, no
   ПРОВАЛ   ниже −50 dBFS дольше 0,5 с в сведённом звуке; или все дорожки (музыка, «без музыки», голос)
            тише −35 дБ подряд ≥ 1,5 с — дыра на видах, которую сведённый звук ещё не считает тишиной
   ПАУЗА    то же внутри отрезка с живой речью — пауза в разговоре, сведения, не находка
+  НАЛОЖЕНИЕ голос за кадром (> −35 дБ) одновременно со звуком кадра (> −30 дБ) ≥ 0,5 с: две речи сразу (s7 v2, В5 на роликах);
+           с --words-root — только если в исходнике на этом месте есть слова (нет расшифровки = нет речи), иначе это
+           поезд, ветер и шаги; без --words-root — по одной энергии
+  ЧУЖОЙ ЗВУК отрезок из чужого смонтированного ролика (/Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias)
+           звучит громче −40 дБ: там чужая озвучка и музыка (s7 v2, «Тропа ведьм»); render_plan глушит их сам,
+           кроме отрезков с "own_audio": true — такой звук должен быть нашим и нужным
 Те же пороги, что у рецензента: сборщик видит их до film_gate.py request.
 """
 import json, math, os, re, subprocess, sys, tempfile, unicodedata
@@ -162,10 +168,46 @@ if root and "--no-asr" not in a:             # разборчивость: whisp
         rec = sum(1 for w in src if w in heard) / len(src)
         if rec < 0.6: F.append((s["start"], "НЕСЛЫШНО", s["note"], f"узнано {rec:.0%} слов исходника ({len(src)} слов)", None))
 
+# НАЛОЖЕНИЕ: голос за кадром поверх звука кадра — по окнам 0,5 с, подряд идущие окна — одна находка
+seg_at = lambda t: next((x for x in segs if x["start"] <= t < x["end"]), None)
+def words_at(sg, t0, t1):
+    """Есть ли слова исходника в окне фильма [t0, t1) (None — расшифровки нет)."""
+    if not sg or not root: return None
+    p, off = sg["src"], 0.0
+    if p in alias: p, off = alias[p][0], float(alias[p][1])
+    w = idx.get(unicodedata.normalize("NFC", os.path.splitext(os.path.basename(p))[0]))
+    if not w: return None
+    a0, b0 = sg["in"] + off + (t0 - sg["start"]), sg["in"] + off + (t1 - sg["start"])
+    return any(a0 - 0.2 <= x["start"] < b0 + 0.2 for y in json.load(open(w))["segments"] for x in y.get("words", []))
+if R_voi and R_base:
+    i, n_o = 0, min(len(R_voi), len(R_base))
+    while i < n_o:
+        if at(R_voi, i) > -35 and at(R_base, i) > -30:
+            j = i
+            while j < n_o and at(R_voi, j) > -35 and at(R_base, j) > -30: j += 1
+            sg = seg_at(i * WIN); hw = words_at(sg, i * WIN, j * WIN)
+            if hw or (hw is None and not root):   # расшифровки есть только у клипов с речью: нет файла — нет речи
+                F.append((i * WIN, "НАЛОЖЕНИЕ", sg["note"] if sg else "", f"{(j - i) * WIN:.1f} с голос за кадром {max(at(R_voi, k) for k in range(i, j)):.0f} дБ"
+                          f" поверх звука кадра {max(at(R_base, k) for k in range(i, j)):.0f} дБ" + (" — в исходнике речь" if hw else ""), None))
+            i = j
+        else:
+            i += 1
+
+# ЧУЖОЙ ЗВУК: отрезок чужого ролика слышен в «без музыки»
+FOREIGN = re.compile(r"/Собраны/|/НАШИ ФОТКИ/|metravel-film-work", re.I)
+if R_base:
+    for sg in segs:
+        p = sg["src"]; q = alias[p][0] if p in alias else p
+        if not (FOREIGN.search(p) or FOREIGN.search(q)): continue
+        i0, i1 = int(round(sg["start"] / WIN)), int(round(sg["end"] / WIN))
+        e = energy_db(R_base, i0, i1)
+        if e > -40:
+            F.append((sg["start"], "ЧУЖОЙ ЗВУК", sg["note"], f"звук ролика «{os.path.basename(q)}» {e:.0f} дБ (нужно ≤ −40: глушить; свой — \"own_audio\": true)", None))
+
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
 lines = [f"# Проверка на слух: {os.path.basename(film)}, находок {len(F)}", ""]
-for k in ["ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
+for k in ["ЧУЖОЙ ЗВУК", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
 txt = "\n".join(lines)

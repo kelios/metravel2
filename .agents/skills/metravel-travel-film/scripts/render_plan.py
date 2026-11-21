@@ -11,8 +11,10 @@ render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 38
 Покраска: ключ "grade" у отрезка или перебивки (его пишет grade.py) — цепочка фильтров после масштабирования,
 до полей «contain», чтобы поля оставались чёрными. Без ключа картинка идёт как есть.
 Заглушённые планом отрезки (gain_db <= -40) идут без звука. Таймкод склейки = таймкод проекта Filmora.
+Чужие смонтированные ролики (FOREIGN: /Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias или alias*.json
+рядом с планом) по умолчанию без звука: там чужая озвучка и музыка. Свой звук — только ключом отрезка "own_audio": true.
 Рядом с фильмом: <out>.segments.json (таймкоды отрезков), <out>_без_музыки.mov, _музыка.wav, _голос.wav."""
-import json, os, subprocess, sys
+import glob as _glob_mod, json, os, re, subprocess, sys
 
 plan = json.load(open(sys.argv[1])); out = sys.argv[2]
 a = sys.argv[3:]
@@ -87,10 +89,21 @@ _miss = sorted({p_ for s_ in SEG for p_ in [plan["sources"][s_["src"]]] + [o["fi
 if _miss:
     print("ОШИБКА: нет входных файлов (" + str(len(_miss)) + "):"); [print("  " + x) for x in _miss[:20]]
     print("  копии «памяти», вертикальные и размытые дорендерить: memory_grade.py / vertical_render.py / faces.py"); sys.exit(1)
+# чужой звук: дикторская озвучка «Тропы ведьм» звучала в s7 v2 («наши пути») — глушим по умолчанию, свой звук — "own_audio": true
+FOREIGN = re.compile(r"/Собраны/|/НАШИ ФОТКИ/|metravel-film-work", re.I)
+_fal = {}
+for _f in ([sys.argv[sys.argv.index("--alias") + 1]] if "--alias" in sys.argv else
+           sorted(_glob_mod.glob(os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "alias*.json")))):
+    _fal.update(json.load(open(_f)))
+def foreign(p):
+    return bool(FOREIGN.search(p) or FOREIGN.search((_fal.get(p) or [p])[0]))
+for s_ in SEG:
+    if foreign(plan["sources"][s_["src"]]) and not s_.get("own_audio") and (s_.get("gain_db", 0) or 0) > -40:
+        s_["gain_db"] = -60; print("чужой звук заглушён:", s_.get("note", "")[:60])
 # Кеш кусков: картинка и звук отрезка — отдельные файлы с отдельными ключами. Правка громкости, затуханий
 # или музыки не перекодирует картинку; блоки склейки тоже кешируются по ключам своих кусков и стыков.
 import hashlib, glob as _glob, time as _time
-AUDIO_KEYS = {"note", "loud_gain", "gain_db", "fade_in", "fade_out", "audio_cut_out", "audio_in_hard", "afilter", "audio_src"}
+AUDIO_KEYS = {"note", "loud_gain", "gain_db", "fade_in", "fade_out", "audio_cut_out", "audio_in_hard", "afilter", "audio_src", "own_audio"}
 VSIG = f"{W}x{H}@{FPS}|{' '.join(VENC)}"
 KEY = lambda obj: hashlib.md5(json.dumps(obj, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
 USED, FRESH_V, FRESH_A = set(), set(), set()   # FRESH_*: куски, записанные этой сборкой, — их блоки собираются заново
