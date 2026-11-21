@@ -280,75 +280,76 @@ export default function TabLayout() {
                     freezeOnBlur: false,      // не замораживаем экраны при потере фокуса
                 }}
             >
+                {/* #3467: экраны объявлены РОВНО в том порядке, в каком expo-router сортирует
+                    файлы группы (sortRoutesWithInitial). Иначе у навигатора объявленные routeNames
+                    расходятся с начальным состоянием, и на каждой загрузке из layout-эффекта уходит
+                    синхронный ROUTE_NAMES_CHANGED: состояние навигации над ещё не гидратированными
+                    Suspense-границами меняется, и React догидратирует всю страницу одной задачей —
+                    в том числе внутри первого тапа (INP 450–850 мс на mobile).
+                    expo-router 58 (#2727): маршрут, не объявленный здесь, становится placeholder-табом
+                    (appendMissingPlaceholderTabRoutes) и в статическом экспорте рендерится пустым,
+                    поэтому каждый файл-маршрут группы объявлен явно. Порядок и полноту держит
+                    __tests__/app/tabsLayoutScreenOrder.test.ts. */}
                 <Tabs.Screen name="index" />
-                <Tabs.Screen name="search" options={HIDDEN} />
-
-                {/* адресуемые, но скрытые в таббаре */}
-                <Tabs.Screen name="travelsby" options={HIDDEN} />
                 <Tabs.Screen name="map" options={HIDDEN} />
-                <Tabs.Screen name="places" options={HIDDEN} />
-                <Tabs.Screen name="places/help" options={HIDDEN} />
-                <Tabs.Screen name="roulette" options={HIDDEN} />
+                <Tabs.Screen name="more" options={HIDDEN} />
+                <Tabs.Screen name="about" options={HIDDEN} />
                 <Tabs.Screen name="games" options={HIDDEN} />
+                <Tabs.Screen name="login" options={HIDDEN} />
+                <Tabs.Screen name="terms" options={HIDDEN} />
                 <Tabs.Screen name="advent" options={HIDDEN} />
+                <Tabs.Screen name="export" options={HIDDEN} />
+                <Tabs.Screen name="places" options={HIDDEN} />
+                <Tabs.Screen name="search" options={HIDDEN} />
+                <Tabs.Screen name="cookies" options={HIDDEN} />
+                <Tabs.Screen name="history" options={HIDDEN} />
+                <Tabs.Screen name="offline" options={HIDDEN} />
+                <Tabs.Screen name="privacy" options={HIDDEN} />
+                <Tabs.Screen name="profile" options={HIDDEN} />
+                <Tabs.Screen name="articles" options={HIDDEN} />
+                <Tabs.Screen name="calendar" options={HIDDEN} />
+                <Tabs.Screen name="messages" options={HIDDEN} />
+                <Tabs.Screen name="metravel" options={HIDDEN} />
+                <Tabs.Screen name="roulette" options={HIDDEN} />
+                <Tabs.Screen name="settings" options={HIDDEN} />
+                <Tabs.Screen name="trips/my" options={HIDDEN} />
+                <Tabs.Screen name="app-stats" options={HIDDEN} />
                 <Tabs.Screen name="assistant" options={HIDDEN} />
                 <Tabs.Screen name="favorites" options={HIDDEN} />
-                <Tabs.Screen name="history" options={HIDDEN} />
-                <Tabs.Screen name="calendar" options={HIDDEN} />
-                <Tabs.Screen name="settings" options={HIDDEN} />
-                <Tabs.Screen name="offline" options={HIDDEN} />
-                <Tabs.Screen name="userpoints" options={HIDDEN} />
-                <Tabs.Screen name="app-stats" options={HIDDEN} />
-                <Tabs.Screen name="messages" options={HIDDEN} />
-                <Tabs.Screen name="subscriptions" options={HIDDEN} />
-                <Tabs.Screen name="travels/[param]" options={travelDetailsOptions} />
-                <Tabs.Screen name="quests/index" options={HIDDEN} />
-                <Tabs.Screen name="quests/map" options={HIDDEN} />
-                <Tabs.Screen name="quests/[city]/index" options={HIDDEN} />
-                <Tabs.Screen name="quests/[city]/[questId]" options={HIDDEN} />
-                <Tabs.Screen name="trips/index" options={HIDDEN} />
-                <Tabs.Screen name="trips/my" options={HIDDEN} />
-                <Tabs.Screen name="trips/[id]" options={HIDDEN} />
-                <Tabs.Screen name="trips/community" options={HIDDEN} />
-                <Tabs.Screen name="trips/plan/index" options={HIDDEN} />
-                <Tabs.Screen name="trips/plan/create" options={HIDDEN} />
-                <Tabs.Screen name="trips/plan/[id]" options={HIDDEN} />
-                <Tabs.Screen name="user/[id]" options={HIDDEN} />
-                {/* expo-router 58 (#2727): маршрут, не объявленный здесь, становится placeholder-табом
-                    (appendMissingPlaceholderTabRoutes) и в статическом экспорте рендерится пустым —
-                    без шапки и контента (были пустыми /more, /articles, /article/[id], /cookies,
-                    /export, /quests/scenario, /quests/theme/*, /quests/country/*). Каждый файл-маршрут
-                    группы объявлен явно. */}
-                <Tabs.Screen name="more" options={HIDDEN} />
-                <Tabs.Screen name="articles" options={HIDDEN} />
-                <Tabs.Screen name="article/[id]" options={HIDDEN} />
-                <Tabs.Screen name="export" options={HIDDEN} />
-                <Tabs.Screen name="book-exports/[job_id]" options={HIDDEN} />
-                <Tabs.Screen name="books/index" options={HIDDEN} />
-                <Tabs.Screen name="books/[slug]" options={HIDDEN} />
-                <Tabs.Screen name="quests/scenario" options={HIDDEN} />
-                <Tabs.Screen name="quests/theme/[theme]" options={HIDDEN} />
-                <Tabs.Screen name="quests/country/[country]/index" options={HIDDEN} />
-
-                {/* служебные, auth- и правовые страницы; профиль адресуем и для router.push нижнего дока */}
-                <Tabs.Screen name="about" options={HIDDEN} />
-                <Tabs.Screen name="become-author" options={HIDDEN} />
-                <Tabs.Screen name="privacy" options={HIDDEN} />
+                <Tabs.Screen name="travelsby" options={HIDDEN} />
                 <Tabs.Screen name="disclaimer" options={HIDDEN} />
-                <Tabs.Screen name="terms" options={HIDDEN} />
-                <Tabs.Screen name="community-rules" options={HIDDEN} />
                 <Tabs.Screen name="trip-rules" options={HIDDEN} />
-                <Tabs.Screen name="cookies" options={HIDDEN} />
-                <Tabs.Screen name="login" options={HIDDEN} />
+                <Tabs.Screen name="userpoints" options={HIDDEN} />
+                <Tabs.Screen name="quests/map" options={HIDDEN} />
+                <Tabs.Screen name="travel/new" options={HIDDEN} />
+                <Tabs.Screen name="books/index" options={HIDDEN} />
+                <Tabs.Screen name="places/help" options={HIDDEN} />
+                <Tabs.Screen name="trips/index" options={HIDDEN} />
                 <Tabs.Screen name="registration" options={HIDDEN} />
                 <Tabs.Screen name="set-password" options={HIDDEN} />
-                <Tabs.Screen name="travel/new" options={HIDDEN} />
-                <Tabs.Screen name="travel/[id]" options={HIDDEN} />
-                <Tabs.Screen name="metravel" options={HIDDEN} />
-                <Tabs.Screen name="profile" options={HIDDEN} />
-                <Tabs.Screen name="accountconfirmation" options={HIDDEN} />
+                <Tabs.Screen name="quests/index" options={HIDDEN} />
+                <Tabs.Screen name="become-author" options={HIDDEN} />
+                <Tabs.Screen name="subscriptions" options={HIDDEN} />
+                <Tabs.Screen name="community-rules" options={HIDDEN} />
+                <Tabs.Screen name="quests/scenario" options={HIDDEN} />
+                <Tabs.Screen name="trips/community" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/index" options={HIDDEN} />
                 <Tabs.Screen name="subscribe/confirm" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/create" options={HIDDEN} />
+                <Tabs.Screen name="accountconfirmation" options={HIDDEN} />
                 <Tabs.Screen name="subscribe/unsubscribe" options={HIDDEN} />
+                <Tabs.Screen name="quests/[city]/[questId]" options={HIDDEN} />
+                <Tabs.Screen name="article/[id]" options={HIDDEN} />
+                <Tabs.Screen name="book-exports/[job_id]" options={HIDDEN} />
+                <Tabs.Screen name="books/[slug]" options={HIDDEN} />
+                <Tabs.Screen name="quests/[city]/index" options={HIDDEN} />
+                <Tabs.Screen name="quests/country/[country]/index" options={HIDDEN} />
+                <Tabs.Screen name="quests/theme/[theme]" options={HIDDEN} />
+                <Tabs.Screen name="travel/[id]" options={HIDDEN} />
+                <Tabs.Screen name="travels/[param]" options={travelDetailsOptions} />
+                <Tabs.Screen name="trips/[id]" options={HIDDEN} />
+                <Tabs.Screen name="trips/plan/[id]" options={HIDDEN} />
+                <Tabs.Screen name="user/[id]" options={HIDDEN} />
             </Tabs>
         </>
     );

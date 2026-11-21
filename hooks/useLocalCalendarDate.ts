@@ -10,6 +10,9 @@ type Options = {
 
 const systemNow = () => new Date()
 
+const isSameLocalDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
 /**
  * Местная календарная дата с пересчётом по гражданской полуночи (23/25-часовые
  * сутки DST), на возврат вкладки (visibilitychange/focus/pageshow) и на AppState
@@ -30,7 +33,10 @@ export function useLocalCalendarDate({ readNow = systemNow }: Options = {}): Dat
     const refresh = () => {
       clearTimeout(midnightTimer)
       const current = readNowRef.current()
-      setNow(current)
+      // #3467: тот же календарный день — прежний объект. Новый Date на каждом
+      // монтировании менял контекст темы над ещё не гидратированными границами,
+      // и React догидратировал всю страницу синхронно (в том числе внутри тапа).
+      setNow((previous) => (isSameLocalDay(previous, current) ? previous : current))
       if (isWeb || appState == null || appState === 'active') {
         midnightTimer = setTimeout(refresh, millisecondsUntilLocalMidnight(current))
       }

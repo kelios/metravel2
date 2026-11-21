@@ -3,7 +3,7 @@
  * Handles light/dark mode switching with persistence
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Appearance, Platform, useColorScheme } from 'react-native';
 import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
 import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate';
@@ -217,15 +217,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     readPersistedThemePrefs((prefs) => {
       if (!mounted) return;
-      if (!explicitlyChanged.current.theme) {
-        const theme = prefs.theme ?? 'auto';
-        setSavedTheme(theme);
-        setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
-      }
-      if (!explicitlyChanged.current.seasonalTheme && prefs.seasonalTheme) {
-        setSeasonalThemeState(prefs.seasonalTheme);
-      }
-      setPrefsRead(true);
+      // #3467: контекст темы стоит над всеми Suspense-границами. Обновление с
+      // обычным приоритетом во время гидратации (а внутри первого тапа — с
+      // синхронным) заставляет React догидратировать всю страницу одной
+      // задачей; в transition гидратация идёт нарезкой (тот же приём, что #2899).
+      startTransition(() => {
+        if (!explicitlyChanged.current.theme) {
+          const theme = prefs.theme ?? 'auto';
+          setSavedTheme(theme);
+          setIsDark(resolveIsDark(theme, systemColorSchemeRef.current));
+        }
+        if (!explicitlyChanged.current.seasonalTheme && prefs.seasonalTheme) {
+          setSeasonalThemeState(prefs.seasonalTheme);
+        }
+        setPrefsRead(true);
+      });
     });
     return () => { mounted = false; };
   }, []);

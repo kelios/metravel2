@@ -156,6 +156,21 @@ describe('useTheme web contract', () => {
     expect(oldValues.every((value) => value === 'dark')).toBe(true)
   })
 
+  it('applies the stored preferences on mount inside a transition (#3467)', async () => {
+    // Контекст темы стоит над всеми Suspense-границами: обновление с обычным или
+    // синхронным приоритетом во время гидратации догидратировало бы страницу одной задачей.
+    const react = jest.requireActual('react') as typeof import('react')
+    const spy = jest.spyOn(react, 'startTransition')
+    localStorage.setItem('theme', 'dark')
+    try {
+      const { result } = renderHook(() => useTheme(), { wrapper })
+      await waitFor(() => expect(result.current.isDark).toBe(true))
+      expect(spy).toHaveBeenCalled()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('ignores an unknown persisted seasonal value and stays on auto', async () => {
     localStorage.setItem('seasonal-theme', 'unknown-theme')
 
