@@ -14,7 +14,8 @@
  *   2. Условия (`questionConditions.ts`): карточка с явным нарушением числового условия уходит в
  *      «рядом» (если после этого остаётся чем ответить); остальные встают по числу совпавших условий,
  *      при равенстве — в порядке подбора. Совпавшее записывается в `why` — строку «почему подходит»
- *      карточки подсказки.
+ *      карточки подсказки. Однозначно другой вид маршрута («велоквест» на «пеший маршрут», #3416) убирается,
+ *      только когда остаётся карточка названного вида; иначе он опущен баллом и остаётся в подсказке.
  *   3. Превосходная степень (`detectSuperlative`, #3287): «самый короткий детский квест в Минске» —
  *      среди квестов места, прошедших условия, первыми встают до `AI_MAX_RECOMMENDATIONS` по факту.
  *      Служба отдаёт кандидатами все квесты индекса (`pool`): самого короткого может не быть в подборе.
@@ -128,9 +129,18 @@ export const arrangeSources = (query: string | null | undefined, sources: readon
   const movable = (source: AiSource): boolean => !about || about.has(source)
   const judge = (source: AiSource) => {
     const verdict = judgeCard(conditions, source)
-    return movable(source) ? verdict : { reasons: [], score: 0, dropped: verdict.dropped, unfit: verdict.unfit }
+    // Карточка вне названного места совпадением по виду маршрута не считается (другой вид за ней остаётся);
+    // у места совсем нет карточек — все они «ближайшее», и совпадение по виду ищется среди всех.
+    return movable(source) ? verdict : { reasons: [], score: 0, dropped: verdict.dropped, unfit: verdict.unfit, route: noPlace || verdict.route === 'other' ? verdict.route : undefined }
   }
-  const judged = candidates.map((source, index) => ({ source, index, ...judge(source) }))
+  const verdicts = candidates.map((source, index) => ({ source, index, ...judge(source) }))
+  // Вид маршрута (#3416 п.3, третий круг): однозначно другой вид убирается, только когда в подсказке остаётся
+  // настоящее совпадение — карточка названного вида без нарушений (и названного места, если у него есть карточки).
+  // «Не нарушает» для этого мало: на «Szlak pieszy w Szkocji» велоквест уходил, оставалась одна карточка без
+  // вида маршрута, и модель отвечала отказом (lv132); на «…powyżej 300 km» из семи осталась автопоездка (lv122).
+  // Без совпадения другой вид только опущен баллом — состав подсказки не сокращается.
+  const ofKind = verdicts.some((entry) => entry.route === 'match' && !entry.dropped)
+  const judged = ofKind ? verdicts : verdicts.map((entry) => (entry.route === 'other' ? { ...entry, dropped: false } : entry))
   // Убирать можно, когда остаётся чем ответить — карточка, которая условий не нарушает. «Квесты в Гродно
   // до часа» при квестах от 90 минут: без них остались бы одни статьи (не тот вид материала), поэтому
   // квесты остаются как «ближайшее из того, что есть» — без строки «почему подходит».

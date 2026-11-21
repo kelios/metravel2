@@ -449,6 +449,12 @@ export type CardVerdict = {
    * честное «подходящего нет» лучше детского квеста на вопрос «где погулять с собакой».
    */
   unfit: boolean
+  /**
+   * Вид маршрута против названного в вопросе (#3416 п.3): `match` — тот же; `other` — однозначно другой, и
+   * `dropped` выставлен только из-за него. Отбор подсказки (`arrangeSources`) убирает `other`, лишь когда
+   * остаётся карточка `match`; без неё другой вид только опущен баллом.
+   */
+  route?: 'match' | 'other'
 }
 
 /** Детский квест под вопрос о детях весит больше семейного — как места `childrenRank` (#3276). */
@@ -624,17 +630,20 @@ export const judgeCard = (
   // запись фактов индекса их не несёт — по названию («Велоквест…», «Quest rowerowy…»): городская прогулка
   // вида не называет, велоквест и автоквест на вопрос о пешем маршруте — другой вид.
   // Другой ОДНОЗНАЧНЫЙ вид — явное нарушение, как длина сверх границы: вопрос назвал вид сам («Szlak
-  // pieszy…»), и велоквест либо веломаршрут в подсказку не идёт, пока остаётся чем ответить
-  // (`arrangeSources`). Одного балла мало: при шести карточках о велосипеде из восьми велоквест добирал
-  // подсказку до трёх (lv121). Вид, который материал не называет однозначно (`definiteTravelKind`), опускает,
-  // но не убирает.
+  // pieszy…»), и велоквест либо веломаршрут в подсказку не идёт, пока в ней остаётся материал названного
+  // вида (`arrangeSources`, признак `route`). Одного балла мало: при шести карточках о велосипеде из восьми
+  // велоквест добирал подсказку до трёх (lv121). Вид, который материал не называет однозначно
+  // (`definiteTravelKind`), опускает, но не убирает.
   const questKind = card.type === 'quest' ? (quest?.route ?? questRouteKindOf(null, card.title)) : null
   const kind: QuestRouteKind | null = trail ? 'foot' : travel ? routeKindOf(travel) : questKind
   const otherKind = conditions.route !== undefined && kind !== null && kind !== conditions.route
-  if (conditions.route && kind === conditions.route) match(ROUTE_RU[kind])
-  else if (otherKind) {
+  let route: CardVerdict['route']
+  if (conditions.route && kind === conditions.route) {
+    match(ROUTE_RU[kind])
+    route = 'match'
+  } else if (otherKind) {
     score -= 1
-    if (!travel || definiteTravelKind(travel, card.title)) dropped = true
+    if (!travel || definiteTravelKind(travel, card.title)) route = 'other'
   }
 
   // Длина маршрута (#3353): сверяется только у статьи с фактом длины; длиннее верхней границы или короче
@@ -648,5 +657,7 @@ export const judgeCard = (
     else match(`${formatKm(distance)} км`)
   }
 
-  return { reasons, score, dropped, unfit: false }
+  // Другой вид при числовом нарушении признака `other` не несёт: карточку убирает число, а не один вид.
+  const offKind = route === 'other'
+  return { reasons, score, dropped: dropped || offKind, unfit: false, ...(route && !(offKind && dropped) ? { route } : {}) }
 }

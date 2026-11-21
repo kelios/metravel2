@@ -514,5 +514,53 @@ describe('цепочка порядка карточек (#3353): длина м�
       expect(promptOf('Co zobaczyć w marcu?', lv121)).toEqual(expect.arrayContaining(['q160', 'q162', 'q125']))
       expect(promptOf('Jakie questy macie w Baranowiczach?', lv121)).toEqual(['q160'])
     })
+
+    // #3416 п.3, третий круг (приёмка 21.11.2026). «Остаётся чем ответить» значило «осталась карточка без
+    // нарушения»: велоквест уходил, а в подсказке оставалась одна карточка без вида маршрута — добор, а не ответ.
+    describe('другой вид убирается, только когда остаётся карточка названного вида', () => {
+      const szczuczyn = quest({ id: 71, title: 'Quest po Szczuczynie: mały Wersal i miasto lotników', city: 'Szczuczyn', country: 'Беларусь', facts: { points: 8, duration_min: 90, difficulty: 'easy' } })
+      const rabka = travel({ id: 603, title: 'Зимний поход из Рабки-Здруй к Schronisko PTTK na Maciejowej', country: 'Польша', facts: { number_days: 1, categories: HIKE, distance_km: 5 } })
+      const ruins = travel({ id: 591, title: 'Две руины по дороге к Балтике: Kamionna и Otyń', country: 'Польша', facts: { number_days: 1, categories: ['Автопутешествие'], transports: ['Машина'] } })
+      const montBlanc = travel({ id: 470, title: 'Tour du Mont Blanc - Вокруг Монблана 170км за 10 дней', country: 'Франция', facts: { number_days: 10, categories: HIKE, distance_km: 170 } })
+
+      it('lv132 «Szlak pieszy w Szkocji»: карточки места — квест без вида маршрута и велоквест, велоквест остаётся', () => {
+        // Служба отбирает карточки места по всему тексту источника: у места их две, поход Рабки — вне места.
+        const ofPlace = new Set([szczuczyn, krakow])
+        const { sources, noPlace } = arrangeSources('Szlak pieszy w Szkocji', [szczuczyn, krakow, greenVelo, rabka, paris], { mentions: (source) => ofPlace.has(source) })
+        expect(noPlace).toBe(false)
+        expect(groupOf(sources, 'match')).toEqual(['q71', 'q125'])
+        expect(groupOf(sources, 'nearby')).toEqual(['t541', 't603', 'q48'])
+        // Балл −1 у велоквеста остаётся: без совпадения он опущен, а не убран.
+        expect(sources.every((source) => !source.why)).toBe(true)
+      })
+
+      it('карточка названного вида среди карточек места есть — велоквест уходит в «рядом»', () => {
+        const ofPlace = new Set([szczuczyn, krakow, rabka])
+        const { sources } = arrangeSources('Szlak pieszy w Szkocji', [szczuczyn, krakow, greenVelo, rabka, paris], { mentions: (source) => ofPlace.has(source) })
+        expect(groupOf(sources, 'match')).toEqual(['t603', 'q71'])
+        expect(groupOf(sources, 'nearby')).toEqual(['q125', 't541', 'q48'])
+      })
+
+      it('lv122 «…szlak pieszy powyżej 300 km»: поход короче границы совпадением не считается — веломаршруты остаются', () => {
+        const question = 'Jaki długi szlak pieszy powyżej 300 km polecacie?'
+        const { sources, conditions } = arrangeSources(question, [ruins, greenVelo, baranovichi, vistula, montBlanc])
+        expect(conditions).toMatchObject({ route: 'foot', minKm: 300 })
+        expect(groupOf(sources, 'match')).toEqual(['t591', 't541', 'q160', 't483'])
+        // Числовое нарушение убирает по-прежнему: поход на 170 км — в «рядом».
+        expect(groupOf(sources, 'nearby')).toEqual(['t470'])
+      })
+
+      it('у названного места нет карточек — все они «ближайшее», совпадение по виду ищется среди всех', () => {
+        const { sources, noPlace } = arrangeSources('Szlak pieszy w Szkocji', [szczuczyn, krakow, rabka], { mentions: () => false })
+        expect(noPlace).toBe(true)
+        expect(groupOf(sources, 'match')).toEqual(['q71', 't603'])
+        expect(groupOf(sources, 'nearby')).toEqual(['q125'])
+      })
+
+      it('граница: карточка без вида маршрута и велоквест — подсказка не сжимается до одной карточки', () => {
+        expect(promptOf('Szlak pieszy do 100 km w marcu', [paris, baranovichi])).toEqual(['q48', 'q160'])
+        expect(promptOf('Trasa rowerowa do 60 km', [paris, camino]).sort()).toEqual(['q48', 't556'])
+      })
+    })
   })
 })
