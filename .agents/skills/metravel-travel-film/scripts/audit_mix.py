@@ -11,10 +11,14 @@ segments.json — таблица отрезков рендера (start, end, no
 Находки:
   ТОНЕТ    на отрезке с речью музыка тише речи меньше чем на 10 LU (цель 12–15) — голос «не слышно»
   НЕСЛЫШНО слова исходника в расшифровке готового звука узнаются меньше чем на 60% (нужен --words-root, долго: whisper по фильму)
+  ЗАПАС    на отрезке с речью энергия речи минус энергия музыки < 10 дБ (цель 12–15): 10·log10(mean(x²))
+           по окнам 0,5 с на «без музыки» (живая речь, нужен --words-root) или на голосе за кадром против «музыки»
   ГРОМКО   без речи музыка громче соседней речи больше чем на 3 LU
-  ПРОВАЛ   ниже −50 dBFS дольше 0,5 с
+  ПРОВАЛ   ниже −50 dBFS дольше 0,5 с в сведённом звуке; или все дорожки (музыка, «без музыки», голос)
+           тише −35 дБ подряд ≥ 1,5 с — дыра на видах, которую сведённый звук ещё не считает тишиной
+Те же пороги, что у рецензента: сборщик видит их до film_gate.py request.
 """
-import json, os, re, subprocess, sys, tempfile, unicodedata
+import json, math, os, re, subprocess, sys, tempfile, unicodedata
 
 a = sys.argv[1:]
 film = a[0]
@@ -48,6 +52,22 @@ def lufs_series(path, step=0.4):
         if m and t_ is not None: out_.append((t_, float(m.group(1)) if m.group(1) != "-inf" else -120.0)); t_ = None
     return out_
 
+WIN = 0.5                                   # окно 0,5 с: 4000 сэмплов при 8 кГц, как у рецензента
+def rms_windows(path):
+    """RMS (дБ) по окнам 0,5 с, моно 8 кГц: [дБ, ...], индекс окна i = время i*0.5 с. Нет файла — []."""
+    if not path or not os.path.exists(path): return []
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", path, "-vn", "-af",
+                        "aformat=channel_layouts=mono,aresample=8000,asetnsamples=n=4000:p=0,astats=metadata=1:reset=1,"
+                        "ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"], capture_output=True, text=True)
+    v = re.findall(r"lavfi\.astats\.Overall\.RMS_level=(-?inf|-?[\d.]+)", r.stdout + r.stderr)
+    return [max(float(x), -120.0) for x in v]
+
+def energy_db(w, i0, i1, mask=None):
+    """Энергия отрезка 10·log10(mean(x²)) по окнам [i0, i1) (mask — только эти окна)."""
+    idx_ = [i for i in range(max(0, i0), min(len(w), i1)) if mask is None or mask(i)]
+    if not idx_: return -120.0
+    return 10 * math.log10(sum(10 ** (w[i] / 10) for i in idx_) / len(idx_) + 1e-12)
+
 def mean_db(series, a0, b0):
     v = [m for t, m in series if a0 <= t < b0 and m > -70]
     if not v: return -99.0
@@ -58,6 +78,43 @@ F = []; SPEECH = {}
 S_base = lufs_series(base) if base else []
 S_mus = lufs_series(music) if music else []
 S_voi = lufs_series(voice) if voice else []
+R_base, R_mus, R_voi = rms_windows(base), rms_windows(music), rms_windows(voice)
+at = lambda w, i: w[i] if i < len(w) else -120.0
+for s in segs:                              # ЗАПАС: энергия речи против энергии музыки на отрезке
+    i0, i1 = int(round(s["start"] / WIN)), int(round(s["end"] / WIN))
+    if i1 - i0 < 2 or not R_mus: continue
+    em = energy_db(R_mus, i0, i1)
+    if em < -60: continue
+    vo_on = lambda i: at(R_voi, i) > -45
+    if R_voi and sum(1 for i in range(i0, i1) if vo_on(i)) >= 2:       # голос за кадром: тизер, «ранее», связки
+        ev, emv = energy_db(R_voi, i0, i1, vo_on), energy_db(R_mus, i0, i1, vo_on)
+        if ev - emv < 10:
+            F.append((s["start"], "ЗАПАС", s["note"], f"голос за кадром {ev:.1f}, музыка {emv:.1f} дБ — запас {ev - emv:.1f} (нужно ≥ 10, цель 12–15)", round(ev - emv, 1)))
+        continue
+    sw = src_words(s) if root else None
+    nw = len([w for w in sw if len(w) > 1]) if sw else 0
+    # речь, а не вид: whisper находит в ветре 3–4 «слова» (s3 v12: «город сверху», «поля», «мол и маяк»)
+    if nw >= 5 and nw >= (s["end"] - s["start"]) * 0.3 and R_base:
+        eb = energy_db(R_base, i0, i1)
+        if eb > -45 and eb - em < 10:
+            F.append((s["start"], "ЗАПАС", s["note"], f"речь {eb:.1f}, музыка {em:.1f} дБ — запас {eb - em:.1f} (нужно ≥ 10, цель 12–15)", round(eb - em, 1)))
+
+n_w = max(len(R_base), len(R_mus), len(R_voi))   # ПРОВАЛ на видах: все дорожки тише −35 дБ подряд ≥ 1,5 с
+HOLES = []
+if R_mus and R_base:
+    i = 0
+    while i < n_w:
+        if all(at(w, i) < -35 for w in (R_mus, R_base, R_voi or [])):
+            j = i
+            while j < n_w and all(at(w, j) < -35 for w in (R_mus, R_base, R_voi or [])): j += 1
+            if (j - i) * WIN >= 1.5:
+                HOLES.append((i * WIN, j * WIN))
+                note = next((x["note"] for x in segs if x["start"] <= i * WIN < x["end"]), "")
+                F.append((i * WIN, "ПРОВАЛ", note, f"{(j - i) * WIN:.1f} с все дорожки тише −35 дБ (музыка, без музыки, голос)", None))
+            i = j
+        else:
+            i += 1
+
 for s in segs:
     a0, b0 = s["start"] + 0.3, s["end"] - 0.3
     if b0 - a0 < 1: continue
@@ -77,6 +134,7 @@ for s, mu in SPEECH.get("quiet", []):           # музыка без речи �
     if mu - ref > 3: F.append((s["start"], "ГРОМКО", s["note"], f"музыка без речи {mu:.1f}, речь рядом {ref:.1f} LUFS", None))
 r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", film, "-vn", "-af", "silencedetect=n=-50dB:d=0.5", "-f", "null", "-"], capture_output=True, text=True)
 for st, du in zip(re.findall(r"silence_start: ([\d.]+)", r.stderr), re.findall(r"silence_duration: ([\d.]+)", r.stderr)):
+    if any(h0 - 0.5 <= float(st) <= h1 for h0, h1 in HOLES): continue   # уже названо как дыра по дорожкам
     F.append((float(st), "ПРОВАЛ", "", f"{float(du):.1f} с ниже −50 dBFS", None))
 
 if root and "--no-asr" not in a:             # разборчивость: whisper по готовому звуку против слов исходника
@@ -97,7 +155,7 @@ if root and "--no-asr" not in a:             # разборчивость: whisp
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
 lines = [f"# Проверка на слух: {os.path.basename(film)}, находок {len(F)}", ""]
-for k in ["ТОНЕТ", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ"]:
+for k in ["ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
 txt = "\n".join(lines)
