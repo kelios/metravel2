@@ -138,6 +138,9 @@ for s in segs:
     talking = vo > -35 or (sw is not None and len([w for w in sw if len(w) > 1]) >= 3) or (sw is None and not root)
     sp = max(mean_db(S_base, a0, b0) if (sw and len(sw) >= 3) or not root else -99, vo)
     mu = mean_db(S_mus, a0, b0)
+    if vo > -35 and vo >= sp - 0.01:            # голос за кадром: музыку меряем в те же моменты, а не по всему отрезку —
+        on_t = {round(t, 1) for t, m in S_voi if a0 <= t < b0 and m > -45}   # хвост фразы в 0,3 с на виде под музыкой (s1 v21, 41:00.7)
+        mu = mean_db([(t, m) for t, m in S_mus if round(t, 1) in on_t], a0, b0) if len(on_t) * 0.1 >= 0.5 else -99.0
     if talking and sp > -40 and mu > -60 and sp - mu < 10:
         F.append((s["start"], "ТОНЕТ", s["note"], f"речь {sp:.1f}, музыка {mu:.1f} LUFS — разница {sp - mu:.1f} LU (нужно ≥ 10)", round(sp - mu, 1)))
     if not talking and mu > -60:
