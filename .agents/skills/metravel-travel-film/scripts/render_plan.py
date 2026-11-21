@@ -2,6 +2,7 @@
 """Рендер фильма по плану (тот же план, из которого make_wfp строит проект Filmora).
 
 render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [60M]] [--crf N] [--prune]
+               [--words-root DIR] [--alias alias.json]   — для "music": {"auto_level": true}: речь по словам расшифровки
   без --size — черновик 640x360 для рецензента; --size 3840x2160 --hw — финал аппаратным кодером Mac.
 Каждый отрезок главной дорожки рендерится отдельно (перебивки и титры поверх по времени): картинка и звук —
 отдельные куски с отдельными ключами, поэтому правка громкости или музыки не перекодирует картинку. Кеш общий на
@@ -314,11 +315,14 @@ for cur, nxt in zip(seq, seq[1:]):
         cur["_b"] += 1.0; cur["fade_out"] = 2.0
         sh = min(1.0, nxt.get("src_in", 0)); nxt["_a"] -= sh; nxt["src_in"] = nxt.get("src_in", 0) - sh; nxt["fade_in"] = max(sh * 2, 0.2)
 cues = seq + [c for c in (plan.get("music") or {}).get("cues", []) if isvoice(c)] + (plan.get("music") or {}).get("sfx", [])
+AUTO = bool((plan.get("music") or {}).get("auto_level")) and bool(seq)
+_tmp_auto = []
 if cues:
     ins = ["-i", base]; fc = []; labs = []
     for j, c in enumerate(cues, 1):
         a_, b_ = (c["_a"], c["_b"]) if "_a" in c else (film(*c["a"]), film(*c["b"])); d = b_ - a_
         g = (-36.0 + c.get("level_db", 0)) - lufs(c["file"])
+        if AUTO and any(c is x for x in seq): g = -23.0 - lufs(c["file"])   # автоуровни: трек к −23 LUFS, дальше огибающая
         fo = c.get("fade_out", 3.0)
         ins += ["-ss", str(c.get("src_in", 0)), "-t", f"{d:.3f}", "-i", c["file"]]
         fc.append(f"[{j}:a]aresample=48000,aformat=channel_layouts=stereo,volume={g:.2f}dB,afade=t=in:d={max(c.get('fade_in', 1.5), 0.01)},afade=t=out:st={max(d - fo, 0):.3f}:d={max(fo, 0.01)},adelay={int(a_ * 1000)}|{int(a_ * 1000)}[m{j}]")
@@ -331,8 +335,56 @@ if cues:
         sfc = [fc[j - 1].replace(f"[m{j}]", f"[s{j}]") for j in idx] + ["".join(f"[s{j}]" for j in idx) + f"amix=inputs={len(idx)}:normalize=0,aresample=24000,pan=mono|c0=0.5*c0+0.5*c1[o]"]
         subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(sfc), "-map", "[o]", "-t", f"{t:.3f}", "-c:a", "pcm_s16le",
                         os.path.splitext(out)[0] + name], stdin=subprocess.DEVNULL)
-    stem(lambda c: not c["file"].lower().endswith(".wav") or "пи" in c.get("name", "")[:3], "_музыка.wav")
+    is_mus = lambda c: not c["file"].lower().endswith(".wav") or "пи" in c.get("name", "")[:3]   # музыка, звуки и «пи»
+    voicep = os.path.splitext(out)[0] + "_голос.wav"
+    if AUTO and os.path.exists(voicep): os.remove(voicep)   # голос прежней сборки не должен приглушать музыку
     stem(lambda c: c["file"].lower().endswith(".wav") and not c.get("name", "").startswith("пи"), "_голос.wav")
+    if not AUTO:
+        stem(is_mus, "_музыка.wav")
+    else:
+        # автоуровни (auto_level.py): музыка под речью на 13 дБ ниже речи, на видах — к уровню речи фильма; поправка трека — auto_adj_db
+        import math, auto_level as AL
+        WR = a[a.index("--words-root") + 1] if "--words-root" in a else None
+        if WR and not os.path.isdir(WR): raise SystemExit(f"ОШИБКА: нет папки расшифровок --words-root {WR}")   # иначе музыка в полную силу под всей речью
+        ALIAS = json.load(open(a[a.index("--alias") + 1])) if "--alias" in a else {}
+        mus_j = [j for j, c in enumerate(cues, 1) if any(c is x for x in seq)]
+        rest_j = [j for j in range(1, len(cues) + 1) if j not in mus_j]
+        rawp, ctrlp = os.path.splitext(out)[0] + "_музыка_сырая.wav", os.path.splitext(out)[0] + "_огибающая.wav"
+        _tmp_auto += [rawp, ctrlp]
+        rfc = [fc[j - 1] for j in mus_j] + ["".join(f"[m{j}]" for j in mus_j) + f"amix=inputs={len(mus_j)}:normalize=0[r]"]
+        subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(rfc), "-map", "[r]", "-t", f"{t:.3f}",
+                        "-c:a", "pcm_f32le", rawp], check=True, stdin=subprocess.DEVNULL)   # float: поднятые пики не режутся до огибающей
+        n_w = int(math.ceil(t / AL.WIN))
+        R_m, R_b, R_v = AL.rms_windows(rawp, half_sum=True), AL.rms_windows(base), AL.rms_windows(voicep)
+        segi = [(plan["sources"][s_["src"]], s_["in"], s_["out"], p_[3], p_[4], (s_.get("gain_db", 0) or 0) <= -40) for s_, p_ in zip(SEG, pos)]
+        if WR:
+            speech = AL.live_speech(segi, WR, ALIAS)
+            if not speech: print("автоуровни: в расшифровках --words-root не нашлось слов отрезков — живая речь не приглушает музыку", flush=True)
+        else:                                # без расшифровок — по энергии живого звука в незаглушённых отрезках (грубее)
+            print("автоуровни: нет --words-root — речь по энергии, виды с громким ветром приглушат музыку", flush=True)
+            loud = [(i * AL.WIN, (i + 1) * AL.WIN) for i in range(n_w) if i < len(R_b) and R_b[i] > -32
+                    and not any(m_ and t0_ <= i * AL.WIN < t0_ + (b_ - a_) * k_ for _, a_, b_, t0_, k_, m_ in segi)]
+            speech = AL.merge(loud)
+        adj = [(c["_a"], c["_b"], float(c["auto_adj_db"])) for c in seq if c.get("auto_adj_db")]
+        gains, ref = AL.envelope(n_w, R_m, R_b, R_v, speech, adj)
+        AL.write_ctrl(gains, ctrlp)
+        K = len(cues) + 1
+        mus_chain = [f"[{K}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[mr]",
+                     f"[{K + 1}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=mono,pan=stereo|c0=c0|c1=c0[cg]",
+                     "[mr][cg]amultiply[mus]"]
+        ins = ins + ["-i", rawp, "-i", ctrlp]
+        extra_j = [j for j in rest_j if is_mus(cues[j - 1])]   # звуки и «пи» — в стем музыки, как без автоуровней
+        sfc = mus_chain + [fc[j - 1] for j in extra_j] + ["[mus]" + "".join(f"[m{j}]" for j in extra_j)
+               + f"amix=inputs={len(extra_j) + 1}:normalize=0,aresample=24000,pan=mono|c0=0.5*c0+0.5*c1[o]"]
+        subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(sfc), "-map", "[o]", "-t", f"{t:.3f}", "-c:a", "pcm_s16le",
+                        os.path.splitext(out)[0] + "_музыка.wav"], check=True, stdin=subprocess.DEVNULL)
+        fc = [fc[j - 1] for j in rest_j] + mus_chain + [f"[0:a]{''.join(f'[m{j}]' for j in rest_j)}[mus]amix=inputs={len(rest_j) + 2}:normalize=0:duration=first[a]"]
+        _tm = [False] * n_w
+        for s0, s1 in speech:
+            for i_ in range(max(0, int(math.ceil(s0 / AL.WIN - 1e-9))), min(n_w, int(math.ceil(s1 / AL.WIN - 1e-9)))): _tm[i_] = True
+        talk_g = sorted(g_ for g_, m_ in zip(gains, _tm) if m_)
+        print(f"автоуровни: речь фильма {ref:.1f} дБ, фраз {len(speech)}, музыка под речью в среднем "
+              f"{(talk_g[len(talk_g) // 2] if talk_g else 0):+.1f} дБ к −23 LUFS", flush=True)
 # сведённый звук — сначала без потерь: пики ограничиваются до AAC, а не перекодированием AAC → AAC
 mixp = os.path.splitext(out)[0] + "_микс.wav"
 if cues:
@@ -340,6 +392,8 @@ if cues:
                     "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
 else:
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-map", "0:a", "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
+for p_ in _tmp_auto:                          # сырая музыка (float) и огибающая — временные (≈0,9 ГБ на 40 мин)
+    if os.path.exists(p_): os.remove(p_)
 def true_peak(pth):
     r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", pth, "-vn", "-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"], capture_output=True, text=True)
     m = _re.findall(r"Peak:\s+(-?inf|-?[\d.]+) dBFS", r.stderr); return float(m[-1]) if m else None   # тишина → -inf
