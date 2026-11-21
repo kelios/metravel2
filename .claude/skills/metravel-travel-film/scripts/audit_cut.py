@@ -105,11 +105,11 @@ for i, s in enumerate(SEG):
         if st and prev_live and st < prev_live[0] - timedelta(minutes=15):
             add("ВРЕМЯ", T[i], note, f"снято {st:%d.%m %H:%M}, а предыдущая живая сцена «{prev_live[1][:40]}» — {prev_live[0]:%H:%M}")
         if st: prev_live = (st, note)
-    key = alias.get(p, [p])[0]
+    key, sh = (alias[p][0], float(alias[p][1])) if p in alias else (p, 0.0)   # производная копия: время исходника = время копии + сдвиг
     for a_, b_, n_ in used.get(key, []):
-        if min(b_, s["out"]) - max(a_, s["in"]) > 1.0:
+        if min(b_, s["out"] + sh) - max(a_, s["in"] + sh) > 1.0:
             add("ПОВТОР", T[i], note, f"кусок уже был в «{n_[:40]}»")
-    used.setdefault(key, []).append((s["in"], s["out"], note))
+    used.setdefault(key, []).append((s["in"] + sh, s["out"] + sh, note))
     for o in s.get("broll", []):                       # перебивки тоже: один кадр второй раз без замысла
         if o.get("flash") or o.get("bridge"): continue
         f0 = o.get("orig", {}).get("file", o["file"]); i0 = o.get("orig", {}).get("in", o.get("in", 0))
