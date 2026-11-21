@@ -305,7 +305,9 @@
       "krakow-bike-tyniec|2-zakrzowek|dict-color|лазурная",
       "krakow-bike-tyniec|2-zakrzowek|dict-color|лазурный",
       "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленая",
-      "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленый"
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|сине зеленый",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|синий",
+      "krakow-bike-tyniec|2-zakrzowek|dict-color|синяя"
     ],
     "scripts/krakow-dragon-quest-data.js": [
       "krakow-dragon|2-mariacki|dict-color|золотая корона",
