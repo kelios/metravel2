@@ -15,6 +15,7 @@ UNDER = 13.0         # музыка под речью ниже речи на с�
 VIEW_BELOW = 1.0     # на видах музыка ниже типичной речи фильма на столько дБ — в полную силу, но не громче речи
 ATTACK, RELEASE = 0.4, 0.6   # приглушение начинается до первого слова и отпускается после последнего, с
 GAP = 0.8            # паузы между словами короче этого — одна фраза
+VO_GAP = 2.0         # голос за кадром: паузы между фразами короче этого — музыка не поднимается (s3 v14: «ранее», запас 9 дБ)
 MAX_CUT, MAX_LIFT = 40.0, 12.0
 
 
@@ -43,8 +44,18 @@ def _norm(x):
     return unicodedata.normalize("NFC", x)
 
 
+TALK_MIN_WORDS, TALK_DENSITY = 5, 0.3   # разговор, а не вид: слов (длиннее 1 буквы) не меньше 5 и не реже 0,3 в секунду
+
+
+def is_talk(nwords, dur):
+    """Отрезок — разговор: whisper находит в ветре и прибое 3–4 «слова» (s3 v12: «город сверху», «мол и маяк»).
+    Общий порог с audit_mix.py (ЗАПАС, ТОНЕТ): рендер и проверка одинаково решают, где речь."""
+    return nwords >= TALK_MIN_WORDS and nwords >= dur * TALK_DENSITY
+
+
 def live_speech(segs, words_root, alias):
-    """Интервалы живой речи на шкале фильма по словам исходников. segs: [(src_path, in, out, film_start, k, muted)]."""
+    """Отрезки-разговоры на шкале фильма целиком: [(начало, конец)]. segs: [(src_path, in, out, film_start, k, muted)].
+    Целиком, а не по словам: в паузе между фразами музыка не должна вставать до уровня вида (s3 v14 — запас 4–9 дБ)."""
     idx = {}
     for dp, _, fs in os.walk(words_root):
         for f in fs:
@@ -61,11 +72,11 @@ def live_speech(segs, words_root, alias):
         if not wf:
             continue
         if wf not in cache:
-            cache[wf] = [(x["start"], x.get("end", x["start"] + 0.3)) for y in json.load(open(wf))["segments"] for x in y.get("words", [])]
-        for ws, we in cache[wf]:
-            if a + off <= ws < b + off:
-                iv.append((t0 + (ws - off - a) * k, t0 + (min(we, b + off) - off - a) * k))
-    return merge(iv)
+            cache[wf] = [(x["start"], re.sub(r"[^\w]", "", x.get("word", ""))) for y in json.load(open(wf))["segments"] for x in y.get("words", [])]
+        nw = sum(1 for ws, w in cache[wf] if a + off <= ws < b + off and len(w) > 1)
+        if is_talk(nw, (b - a) * k):
+            iv.append((t0, t0 + (b - a) * k))
+    return [(s, e) for s, e in sorted(iv)]
 
 
 def merge(iv, gap=GAP):
@@ -78,45 +89,49 @@ def merge(iv, gap=GAP):
     return [(s, e) for s, e in out]
 
 
+def speech_windows(w, rng):
+    """Окна речи: громче −45 дБ и не тише максимума отрезка на 20 дБ — как speech_mask в audit_mix.py."""
+    rng = [i for i in rng if 0 <= i < len(w)]
+    top = max((w[i] for i in rng), default=-120.0)
+    on = [i for i in rng if w[i] > -45 and w[i] >= top - 20]
+    return on or rng
+
+
 def envelope(n, music, live, voice, speech_iv, adj):
-    """Усиление музыки (дБ) по окнам WIN. music/live/voice — RMS окон; speech_iv — живая речь; adj — [(t0, t1, дБ)]."""
+    """Усиление музыки (дБ) по окнам WIN. music/live/voice — RMS окон; speech_iv — отрезки-разговоры; adj — [(t0, t1, дБ)].
+    Уровень речи — свой у каждого разговора и каждой фразы голоса за кадром (энергия в окнах речи, как меряет audit_mix);
+    музыка под ней — на UNDER ниже по 3-секундной громкости трека."""
     at = lambda w, i: w[i] if i < len(w) else -120.0
-    talk = [False] * n
-    for s, e in speech_iv:
-        for i in range(max(0, int(s / WIN)), min(n, int(math.ceil(e / WIN)))):
-            talk[i] = True
-    vo_iv = merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > -45])
-    for s, e in vo_iv:
-        for i in range(max(0, int(s / WIN)), min(n, int(math.ceil(e / WIN)))):
-            talk[i] = True
-    runs, i = [], 0                                     # фразы: подряд идущие окна речи
-    while i < n:
-        j = i
-        while j < n and talk[j] == talk[i]:
-            j += 1
-        runs.append((i, j, talk[i]))
-        i = j
-    levels = []
-    for i0, i1, sp in runs:
-        if sp:
-            rng = range(i0, i1)
-            lv = max(energy(live, rng), energy(voice, rng))
-            levels.append(lv)
+    win = lambda s, e: range(max(0, int(s / WIN)), min(n, int(math.ceil(e / WIN))))
+    spans = [(win(s, e), live) for s, e in speech_iv]
+    spans += [(win(s, e), voice) for s, e in merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > -45], VO_GAP)]
+    h = int(1.5 / WIN)
+    loc = lambda i, lo, hi: energy(music, range(max(lo, i - h), min(hi, i + h)))
+    talk, levels = [None] * n, []
+    for rng, w in spans:
+        if not rng:
+            continue
+        on = set(speech_windows(w, rng))
+        lv = energy(w, on)
+        levels.append(lv)
+        for i in rng:                                # речь рядом (±1,5 с): тихая фраза в громком блоке — своя музыка;
+            near = [q for q in range(max(rng.start, i - h), min(rng.stop, i + h)) if q in on]
+            lvi = energy(w, near) if len(near) >= 5 else lv   # в паузе (речи рядом < 0,5 с) — уровень всего отрезка, без подъёма до вида
+            lm = loc(i, rng.start, rng.stop)
+            g = 0.0 if lm < -70 else max(-MAX_CUT, min(MAX_LIFT, (lvi - UNDER) - lm))
+            talk[i] = g if talk[i] is None else min(talk[i], g)   # голос за кадром поверх разговора — по тихому
     ref = sorted(levels)[len(levels) // 2] if levels else -20.0   # типичная речь фильма
-    tgt = [0.0] * n
-    for i0, i1, sp in runs:
-        if sp:
-            rng = range(i0, i1)
-            lv = max(energy(live, rng), energy(voice, rng))
-            lm = energy(music, rng)
-            g = 0.0 if lm < -70 else (lv - UNDER) - lm
-            for i in rng:
-                tgt[i] = max(-MAX_CUT, min(MAX_LIFT, g))
-        else:
-            h = int(1.5 / WIN)                       # вид: к уровню речи фильма по 3-секундной громкости трека
-            for i in range(i0, i1):
-                lm = energy(music, range(max(i0, i - h), min(i1, i + h)))
-                tgt[i] = 0.0 if lm < -70 else max(-MAX_CUT, min(MAX_LIFT, (ref - VIEW_BELOW) - lm))
+    tgt, i = [0.0] * n, 0
+    while i < n:                                     # виды: к уровню речи фильма по 3-секундной громкости трека
+        if talk[i] is not None:
+            tgt[i] = talk[i]; i += 1; continue
+        j = i
+        while j < n and talk[j] is None:
+            j += 1
+        for q in range(i, j):
+            lm = loc(q, i, j)
+            tgt[q] = 0.0 if lm < -70 else max(-MAX_CUT, min(MAX_LIFT, (ref - VIEW_BELOW) - lm))
+        i = j
     a_, r_ = int(ATTACK / WIN), int(RELEASE / WIN)    # приглушение заранее и отпуск после фразы: минимум по окну
     g1 = [min(tgt[max(0, i - r_):min(n, i + a_ + 1)]) for i in range(n)]
     m = int(0.4 / WIN)                                # сглаживание 0,4 с — без щелчков и «качелей»

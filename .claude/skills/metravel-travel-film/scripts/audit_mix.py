@@ -27,6 +27,8 @@ segments.json — таблица отрезков рендера (start, end, no
 Те же пороги, что у рецензента: сборщик видит их до film_gate.py request.
 """
 import json, math, os, re, subprocess, sys, tempfile, unicodedata
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from auto_level import is_talk   # порог «разговор, а не вид» — общий с автоуровнями render_plan
 
 a = sys.argv[1:]
 film = a[0]
@@ -105,7 +107,7 @@ for s in segs:                              # ЗАПАС: энергия реч�
     sw = src_words(s) if root else None
     nw = len([w for w in sw if len(w) > 1]) if sw else 0
     # речь, а не вид: whisper находит в ветре 3–4 «слова» (s3 v12: «город сверху», «поля», «мол и маяк»)
-    if nw >= 5 and nw >= (s["end"] - s["start"]) * 0.3 and R_base:
+    if is_talk(nw, s["end"] - s["start"]) and R_base:
         TALK_SEGS.append((s["start"], s["end"]))
         on = speech_mask(R_base, i0, i1)
         if sum(1 for i in range(i0, i1) if on(i)) < 2: continue
@@ -135,8 +137,9 @@ for s in segs:
     a0, b0 = s["start"] + 0.3, s["end"] - 0.3
     if b0 - a0 < 1: continue
     vo = mean_db(S_voi, a0, b0); sw = src_words(s) if root else None
-    talking = vo > -35 or (sw is not None and len([w for w in sw if len(w) > 1]) >= 3) or (sw is None and not root)
-    sp = max(mean_db(S_base, a0, b0) if (sw and len(sw) >= 3) or not root else -99, vo)
+    live = (sw is not None and is_talk(len([w for w in sw if len(w) > 1]), s["end"] - s["start"])) or not root
+    talking = vo > -35 or live                  # тот же порог разговора, что у ЗАПАС и автоуровней: 3–4 «слова» ветра — вид
+    sp = max(mean_db(S_base, a0, b0) if live else -99, vo)
     mu = mean_db(S_mus, a0, b0)
     if vo > -35 and vo >= sp - 0.01:            # голос за кадром: музыку меряем в те же моменты, а не по всему отрезку —
         on_t = {round(t, 1) for t, m in S_voi if a0 <= t < b0 and m > -45}   # хвост фразы в 0,3 с на виде под музыкой (s1 v21, 41:00.7)
