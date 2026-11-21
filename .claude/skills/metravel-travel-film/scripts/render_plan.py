@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Рендер фильма по плану (тот же план, из которого make_wfp строит проект Filmora).
 
-render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [60M]] [--crf N]
+render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [60M]] [--crf N] [--prune]
   без --size — черновик 640x360 для рецензента; --size 3840x2160 --hw — финал аппаратным кодером Mac.
-Каждый отрезок главной дорожки рендерится отдельно (перебивки и титры поверх по времени), куски кешируются
-по содержимому отрезка; потом склейка с переходами, музыка и озвучка, дорожки для проверки на слух.
+Каждый отрезок главной дорожки рендерится отдельно (перебивки и титры поверх по времени): картинка и звук —
+отдельные куски с отдельными ключами, поэтому правка громкости или музыки не перекодирует картинку. Кеш общий на
+серию и размер (<папка фильма>/sN_<H>p_parts, серия — из имени плана); блоки склейки тоже кешируются. Неиспользованные
+файлы кеша старше 14 дней удаляются, --prune — все неиспользованные. Потом музыка и озвучка, дорожки для проверки на слух.
 Покраска: ключ "grade" у отрезка или перебивки (его пишет grade.py) — цепочка фильтров после масштабирования,
 до полей «contain», чтобы поля оставались чёрными. Без ключа картинка идёт как есть.
 Заглушённые планом отрезки (gain_db <= -40) идут без звука. Таймкод склейки = таймкод проекта Filmora.
@@ -29,6 +31,9 @@ try:
 except BlockingIOError:
     print("жду: идёт другой рендер (render_plan.py), один рендер на машину", flush=True)
     fcntl.flock(_lock, fcntl.LOCK_EX)
+SERIES = film_gate.plan_series(sys.argv[1])
+if "--workdir" not in a and SERIES:    # общий кеш серии и размера: версии плана берут готовые куски друг друга
+    wd = os.path.join(os.path.dirname(os.path.abspath(out)), f"{SERIES}_{H}p_parts")
 os.makedirs(wd, exist_ok=True)
 CRF = a[a.index("--crf") + 1] if "--crf" in a else ("28" if W <= 640 else "18")
 PRESET = "veryfast" if W <= 640 else "fast"
@@ -81,9 +86,36 @@ _miss = sorted({p_ for s_ in SEG for p_ in [plan["sources"][s_["src"]]] + [o["fi
 if _miss:
     print("ОШИБКА: нет входных файлов (" + str(len(_miss)) + "):"); [print("  " + x) for x in _miss[:20]]
     print("  копии «памяти», вертикальные и размытые дорендерить: memory_grade.py / vertical_render.py / faces.py"); sys.exit(1)
-parts, hand, cores = [], [], []
+# Кеш кусков: картинка и звук отрезка — отдельные файлы с отдельными ключами. Правка громкости, затуханий
+# или музыки не перекодирует картинку; блоки склейки тоже кешируются по ключам своих кусков и стыков.
+import hashlib, glob as _glob, time as _time
+AUDIO_KEYS = {"note", "loud_gain", "gain_db", "fade_in", "fade_out", "audio_cut_out", "audio_in_hard", "afilter", "audio_src"}
+VSIG = f"{W}x{H}@{FPS}|{' '.join(VENC)}"
+KEY = lambda obj: hashlib.md5(json.dumps(obj, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
+USED, FRESH_V, FRESH_A = set(), set(), set()   # FRESH_*: куски, записанные этой сборкой, — их блоки собираются заново
+def _legacy_split(h, vf, af):
+    """Кусок прежнего формата (картинка+звук в одном .mov, ключ по всему отрезку) с тем же содержимым и размером —
+    разложить копированием потоков, без перекодирования: первая сборка после обновления не идёт с нуля."""
+    dirs = [wd] + sorted(_glob.glob(os.path.join(os.path.dirname(os.path.abspath(out)), f"{SERIES or '__нет__'}_*parts")))
+    for d_ in dirs:
+        for c in _glob.glob(os.path.join(d_, f"*_{h}.mov")):
+            if os.path.basename(c).startswith("._"): continue
+            r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height:stream_tags=encoder",
+                                "-of", "csv=p=0", c], capture_output=True, text=True)
+            # тот же размер и тот же кодер: в старом ключе не было ни --crf, ни --hw, а VSIG нового ключа их обещает
+            if not r.stdout.strip().startswith(f"{W},{H},") or not r.stdout.strip().endswith(VENC[1]): continue
+            if VENC[1] == "libx264":
+                with open(c, "rb") as fh:
+                    if f"crf={float(CRF):.1f} ".encode() not in fh.read(1 << 20): continue
+            ok = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", c, "-map", "0:v", "-c", "copy", vf + ".part.mov"]).returncode == 0 \
+                and subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", c, "-map", "0:a", "-c", "copy", af + ".part.wav"]).returncode == 0
+            if ok:
+                os.replace(vf + ".part.mov", vf); os.replace(af + ".part.wav", af); return True
+    return False
+
+parts, aparts, vkeys, akeys, hand, cores = [], [], [], [], [], []
+n_v = n_a = n_legacy = 0
 for i, s in enumerate(SEG):
-    import hashlib
     src = plan["sources"][s["src"]]
     dur = s["out"] - s["in"]
     # запас перехода всегда полный (0,5 с): если исходник кончается на склейке, недостающее доигрывает повтор крайнего кадра —
@@ -95,110 +127,135 @@ for i, s in enumerate(SEG):
     nfL, nf, nfR = int(round(hL * FPS)), max(1, int(round(dur * FPS))), int(round(hR * FPS))
     hL, hR = nfL / FPS, nfR / FPS
     hand.append((hL, hR)); cores.append(nf / FPS)
-    h = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode() + f"{nfL}|{nfR}|edges2{'+3' if hL - hLa > 0.001 and hR - hRa > 0.001 else ''}|{LOOKSUM if (s.get('grade') or any(o.get('grade') for o in s.get('broll', []))) else ''}".encode()).hexdigest()[:8]
-    f = os.path.join(wd, f"{i:03d}_{h}.mov")   # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
-    if not os.path.exists(f):   # кусок с тем же содержимым под другим номером (сцены переставлены) — взять его, а не рендерить заново
-        _old = [x for x in os.listdir(wd) if x.endswith(f"_{h}.mov") and not x.startswith("._")] if os.path.isdir(wd) else []
-        if _old: os.rename(os.path.join(wd, _old[0]), f)
-    parts.append(f)
-    if only is not None and i not in only and os.path.exists(f):
-        continue
-    if os.path.exists(f) and only is None:
-        continue
+    edges = f"{nfL}|{nfR}|edges2{'+3' if hL - hLa > 0.001 and hR - hRa > 0.001 else ''}"
+    graded = s.get("grade") or any(o.get("grade") for o in s.get("broll", []))
+    vk = KEY([{k: v for k, v in s.items() if k not in AUDIO_KEYS}, src, edges, LOOKSUM if graded else "", VSIG])
+    ak = KEY([{k: v for k, v in s.items() if k in AUDIO_KEYS - {"note", "audio_in_hard"} or k in ("src", "in", "out")}, src,
+              edges, round(hLa, 3), round(hRa, 3), FPS])
+    vf, af = os.path.join(wd, f"v_{vk}.mov"), os.path.join(wd, f"a_{ak}.wav")
+    vkeys.append(vk); akeys.append(ak); parts.append(vf); aparts.append(af); USED.update({vf, af})
+    force = only is not None and i in only
+    if not force and not (os.path.exists(vf) and os.path.exists(af)):
+        h_old = hashlib.md5(json.dumps({k: v for k, v in s.items() if k != "note"}, sort_keys=True).encode() + src.encode()
+                            + f"{edges}|{LOOKSUM if graded else ''}".encode()).hexdigest()[:8]
+        if _legacy_split(h_old, vf, af): n_legacy += 1; FRESH_V.add(i); FRESH_A.add(i)
     a0 = s["in"] - hL; full = (nfL + nf + nfR) / FPS          # a0 — начало куска на шкале исходника (может уйти за начало файла)
     dL, dR = max(0.0, hL - hLa), max(0.0, hR - hRa)              # нехватка исходника слева/справа
-    inputs = ["-ss", f"{s['in'] - hLa:.3f}", "-t", f"{full - dL - dR + 0.1:.3f}", "-i", src]
-    fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{TP(dL, dR)}[base0]"]
-    cur = "base0"; k = 1
-    OV = s.get("broll", []) + s.get("cards", [])
-    vids = [o for o in OV if not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))]
-    def neighbour(o, x):     # другое видео-перекрытие того же слоя (окошко/полный кадр) начинается или кончается в точке x
-        return any(q is not o and bool(q.get("pip")) == bool(o.get("pip")) and
-                   (abs(q["at"] - x) < 0.1 or abs(q["at"] + q["dur"] - x) < 0.1) for q in vids)
-    for o in OV:
-        t0 = o["at"] - a0; d = min(o["dur"], s["out"] - o["at"])
-        if d <= 0 or t0 + d <= hL or t0 >= hL + dur:
-            continue
-        is_img = o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
-        # перекрытие у края отрезка с переходом продлевается в запас перехода: иначе на 0,5 с до растворения
-        # мелькает кадр под перебивкой (рассказчик целиком) — «вспышка перед переходом» (владелец 15.11, 24:21)
-        eL = hL if o["at"] - s["in"] < 0.1 else 0.0
-        eR = hR if s["out"] - (o["at"] + d) < 0.1 else 0.0
-        t0 -= eL; d += eL + eR
-        # внутри отрезка видео-перекрытие входит и уходит растворением 0,3 с (не обрывом), если встык нет соседнего
-        XF = 0.3 if not is_img else 0.0
-        # перебивки встык (рецензия v12, «впечатления» 29:59): предыдущая продлевается на XF, следующая проявляется поверх —
-        # растворение между ними, без жёсткой склейки и без мелькания кадра под ними
-        same = [q for q in vids if q is not o and bool(q.get("pip")) == bool(o.get("pip"))]
-        next_adj = any(abs(q["at"] - (o["at"] + o["dur"])) < 0.1 for q in same)
-        fin = XF if XF and not eL and o["at"] - s["in"] >= 0.1 else 0.0
-        fout = XF if XF and not eR and s["out"] - (o["at"] + min(o["dur"], s["out"] - o["at"])) >= 0.1 and not next_adj else 0.0
-        tail = XF if XF and not eR and next_adj and o["at"] + o["dur"] + XF < s["out"] else 0.0
-        d += tail; eRp = eR + tail
-        if is_img:
-            inputs += ["-loop", "1", "-t", f"{d:.3f}", "-i", o["file"]]
-        else:
-            ss = float(o.get("in", 0)) - eL; pre = max(0.0, -ss)
-            inputs += ["-ss", f"{max(0.0, ss):.3f}", "-t", f"{d:.3f}", "-i", o["file"]]
-        lab = f"o{k}"
-        pos = "0:0"
-        if o.get("pip"):
-            pw = int(W * float(o["pip"].get("scale", 0.3))) // 2 * 2
-            fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
-            pos = f"{float(o['pip'].get('x', 0.5)) * W:.0f}-w/2:{float(o['pip'].get('y', 0.5)) * H:.0f}-h/2"
-        elif is_img:
-            fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
-        else:
-            fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
-        fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
-        cur = f"v{k}"; k += 1
     NF = nfL + nf + nfR                           # ровно NF кадров и NF*1600 сэмплов — звук и картинка куска одной длины
-    fc.append(f"[{cur}]format=yuv420p,trim=end_frame={NF},setpts=PTS-STARTPTS[vout]")
-    mute = (s.get("gain_db", 0) or 0) <= -40 or not has_audio(src)
-    cmd = ["ffmpeg", "-v", "error", "-y"] + inputs
-    if mute:
-        cmd += ["-f", "lavfi", "-t", f"{full:.3f}", "-i", "anullsrc=r=48000:cl=stereo"]
-        fc.append(f"[{k}:a]apad,atrim=end_sample={NF * 1600}[aout]")
-    else:
-        fades = ""
-        if s.get("fade_in") and not hL: fades += f",afade=t=in:d={float(s['fade_in']):.3f}"
-        if s.get("fade_out") and not hR: fades += f",afade=t=out:st={max(0.0, full - float(s['fade_out'])):.3f}:d={float(s['fade_out']):.3f}"
-        if s.get("audio_cut_out"):   # речь продолжается за склейкой: звук гаснет на склейке (не уезжает в запас растворения)
-            _d = float(s["audio_cut_out"]); fades += f",afade=t=out:st={max(0.0, (nfL + nf) / FPS - _d):.3f}:d={_d:.3f}"
-        dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
-        fc.append(f"[0:a:0]volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}[aout]")
-    cmd += ["-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]",
-            ] + VENC + ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", f + ".part.mov"]   # прерванный рендер не оставляет битый кусок под готовым именем
-    r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True)
-    if r.returncode != 0:
-        print("ОШИБКА", i, s.get("note"), r.stderr[-500:]); sys.exit(1)
-    os.replace(f + ".part.mov", f)
-    print(i, s.get("note", "")[:50], flush=True)
+    src_in = ["-ss", f"{s['in'] - hLa:.3f}", "-t", f"{full - dL - dR + 0.1:.3f}", "-i", src]
+    if force or not os.path.exists(vf):
+        inputs = list(src_in)
+        fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{TP(dL, dR)}[base0]"]
+        cur = "base0"; k = 1
+        OV = s.get("broll", []) + s.get("cards", [])
+        vids = [o for o in OV if not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))]
+        for o in OV:
+            t0 = o["at"] - a0; d = min(o["dur"], s["out"] - o["at"])
+            if d <= 0 or t0 + d <= hL or t0 >= hL + dur:
+                continue
+            is_img = o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
+            # перекрытие у края отрезка с переходом продлевается в запас перехода: иначе на 0,5 с до растворения
+            # мелькает кадр под перебивкой (рассказчик целиком) — «вспышка перед переходом» (владелец 15.11, 24:21)
+            eL = hL if o["at"] - s["in"] < 0.1 else 0.0
+            eR = hR if s["out"] - (o["at"] + d) < 0.1 else 0.0
+            t0 -= eL; d += eL + eR
+            # внутри отрезка видео-перекрытие входит и уходит растворением 0,3 с (не обрывом), если встык нет соседнего
+            XF = 0.3 if not is_img else 0.0
+            # перебивки встык (рецензия v12, «впечатления» 29:59): предыдущая продлевается на XF, следующая проявляется поверх —
+            # растворение между ними, без жёсткой склейки и без мелькания кадра под ними
+            same = [q for q in vids if q is not o and bool(q.get("pip")) == bool(o.get("pip"))]
+            next_adj = any(abs(q["at"] - (o["at"] + o["dur"])) < 0.1 for q in same)
+            fin = XF if XF and not eL and o["at"] - s["in"] >= 0.1 else 0.0
+            fout = XF if XF and not eR and s["out"] - (o["at"] + min(o["dur"], s["out"] - o["at"])) >= 0.1 and not next_adj else 0.0
+            tail = XF if XF and not eR and next_adj and o["at"] + o["dur"] + XF < s["out"] else 0.0
+            d += tail; eRp = eR + tail
+            if is_img:
+                inputs += ["-loop", "1", "-t", f"{d:.3f}", "-i", o["file"]]
+            else:
+                ss = float(o.get("in", 0)) - eL; pre = max(0.0, -ss)
+                inputs += ["-ss", f"{max(0.0, ss):.3f}", "-t", f"{d:.3f}", "-i", o["file"]]
+            lab = f"o{k}"
+            pos = "0:0"
+            if o.get("pip"):
+                pw = int(W * float(o["pip"].get("scale", 0.3))) // 2 * 2
+                fc.append(f"[{k}:v]fps={FPS},scale={pw}:-2{G(o)},setsar=1,pad=iw+4:ih+4:2:2:white{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+                pos = f"{float(o['pip'].get('x', 0.5)) * W:.0f}-w/2:{float(o['pip'].get('y', 0.5)) * H:.0f}-h/2"
+            elif is_img:
+                fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            else:
+                fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+            fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
+            cur = f"v{k}"; k += 1
+        fc.append(f"[{cur}]format=yuv420p,trim=end_frame={NF},setpts=PTS-STARTPTS[vout]")
+        r = subprocess.run(["ffmpeg", "-v", "error", "-y"] + inputs + ["-filter_complex", ";".join(fc), "-map", "[vout]"] + VENC
+                           + [vf + ".part.mov"], stdin=subprocess.DEVNULL, capture_output=True, text=True)   # прерванный рендер не оставляет битый кусок
+        if r.returncode != 0:
+            print("ОШИБКА картинки", i, s.get("note"), r.stderr[-500:]); sys.exit(1)
+        os.replace(vf + ".part.mov", vf); n_v += 1; FRESH_V.add(i)
+        print(i, s.get("note", "")[:50], flush=True)
+    if force or not os.path.exists(af):
+        # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
+        mute = (s.get("gain_db", 0) or 0) <= -40 or not has_audio(src)
+        if mute:
+            cmd = ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-t", f"{full + 0.1:.3f}", "-i", "anullsrc=r=48000:cl=stereo",
+                   "-af", f"apad,atrim=end_sample={NF * 1600}"]
+        else:
+            fades = ""
+            if s.get("fade_in") and not hL: fades += f",afade=t=in:d={float(s['fade_in']):.3f}"
+            if s.get("fade_out") and not hR: fades += f",afade=t=out:st={max(0.0, full - float(s['fade_out'])):.3f}:d={float(s['fade_out']):.3f}"
+            if s.get("audio_cut_out"):   # речь продолжается за склейкой: звук гаснет на склейке (не уезжает в запас растворения)
+                _d = float(s["audio_cut_out"]); fades += f",afade=t=out:st={max(0.0, (nfL + nf) / FPS - _d):.3f}:d={_d:.3f}"
+            dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
+            cmd = ["ffmpeg", "-v", "error", "-y"] + src_in + ["-map", "0:a:0", "-af",
+                   f"volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}"]
+        r = subprocess.run(cmd + ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", "-f", "wav", af + ".part.wav"],
+                           stdin=subprocess.DEVNULL, capture_output=True, text=True)
+        if r.returncode != 0:
+            print("ОШИБКА звука", i, s.get("note"), r.stderr[-500:]); sys.exit(1)
+        os.replace(af + ".part.wav", af); n_a += 1; FRESH_A.add(i)
+print(f"куски: картинка заново {n_v}, звук заново {n_a}, из прежнего кеша {n_legacy}, всего {len(SEG)}", flush=True)
 
-# склейка: цепочка xfade/acrossfade (стык без перехода — concat); рендер блоками по 20 кусков, потом блоки встык
+# склейка: цепочка xfade (картинка) и acrossfade (звук) отдельно; стык без перехода — concat.
+# Блоки по ~20 кусков режутся на стыках без перехода и кешируются по ключам кусков и стыков.
 base = os.path.splitext(out)[0] + "_без_музыки.mov"
-def chain(idx, outp):
+def _joint(i):       # длина перехода перед куском i (0 — встык)
+    d = hand[i - 1][1] + hand[i][0]
+    return round(d, 4) if d >= 2 / FPS else 0.0
+def vchain(idx, outp):
     ins, fc = [], []
     for j, i in enumerate(idx):
         ins += ["-i", os.path.abspath(parts[i])]
         # метки bt709 на кадрах: флаги -color_* кодера не перекрывают «unknown» кадров из исходников без меток (дрон)
-        fc.append(f"[{j}:v]settb=AVTB,fps={FPS},format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv[v{j}];"
-                  f"[{j}:a]aformat=sample_rates=48000:channel_layouts=stereo[a{j}]")
-    vcur, acur = "v0", "a0"; L = hand[idx[0]][0] + cores[idx[0]] + hand[idx[0]][1]
+        fc.append(f"[{j}:v]settb=AVTB,fps={FPS},format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv[v{j}]")
+    cur = "v0"; L = hand[idx[0]][0] + cores[idx[0]] + hand[idx[0]][1]
     for j in range(1, len(idx)):
-        i = idx[j]; d = hand[i - 1][1] + hand[i][0]
-        if d >= 2 / FPS:
-            off = L - d
-            fc.append(f"[{vcur}][v{j}]xfade=transition=fade:duration={d:.4f}:offset={off:.4f}[x{j}]")
-            fc.append(f"[{acur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2={'nofade' if SEG[i].get('audio_in_hard') else 'log'}[y{j}]")   # audio_in_hard: речь входящего отрезка с первого слова на полной громкости
+        i = idx[j]; d = _joint(i)
+        if d:
+            fc.append(f"[{cur}][v{j}]xfade=transition=fade:duration={d:.4f}:offset={L - d:.4f}[x{j}]")
         else:
-            fc.append(f"[{vcur}][{acur}][v{j}][a{j}]concat=n=2:v=1:a=1[c{j}][y{j}];[c{j}]settb=AVTB,fps={FPS}[x{j}]"); d = 0.0
-        vcur, acur = f"x{j}", f"y{j}"
-        L = L - d + hand[i][0] + cores[i] + hand[i][1]
-    r = subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", f"[{vcur}]", "-map", f"[{acur}]",
-                        ] + VENC + ["-c:a", "pcm_s16le", outp],
+            fc.append(f"[{cur}][v{j}]concat=n=2:v=1:a=0[c{j}];[c{j}]settb=AVTB,fps={FPS}[x{j}]")
+        cur = f"x{j}"; L = L - d + hand[i][0] + cores[i] + hand[i][1]
+    r = subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", f"[{cur}]"] + VENC + [outp + ".part.mov"],
                        stdin=subprocess.DEVNULL, capture_output=True, text=True)
-    if r.returncode: print("ОШИБКА склейки", ";".join(fc)[-1500:], r.stderr[-1500:]); sys.exit(1)
+    if r.returncode: print("ОШИБКА склейки картинки", ";".join(fc)[-1500:], r.stderr[-1500:]); sys.exit(1)
+    os.replace(outp + ".part.mov", outp)
+def achain(idx, outp):
+    ins, fc = [], []
+    for j, i in enumerate(idx):
+        ins += ["-i", os.path.abspath(aparts[i])]
+        fc.append(f"[{j}:a]aformat=sample_rates=48000:channel_layouts=stereo[a{j}]")
+    cur = "a0"
+    for j in range(1, len(idx)):
+        i = idx[j]; d = _joint(i)
+        if d:   # audio_in_hard: речь входящего отрезка с первого слова на полной громкости
+            fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2={'nofade' if SEG[i].get('audio_in_hard') else 'log'}[y{j}]")
+        else:
+            fc.append(f"[{cur}][a{j}]concat=n=2:v=0:a=1[y{j}]")
+        cur = f"y{j}"
+    r = subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", f"[{cur}]", "-c:a", "pcm_s16le",
+                        "-f", "wav", outp + ".part.wav"], stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    if r.returncode: print("ОШИБКА склейки звука", ";".join(fc)[-1500:], r.stderr[-1500:]); sys.exit(1)
+    os.replace(outp + ".part.wav", outp)
 # блоки режем только на стыках без перехода — тогда блоки встают встык без потерь
 cuts = [0] + [i + 1 for i in range(len(SEG) - 1) if not joined(i)] + [len(SEG)]
 blocks, cur_ = [], []
@@ -206,14 +263,33 @@ for a_, b_ in zip(cuts, cuts[1:]):
     cur_ += list(range(a_, b_))
     if len(cur_) >= 20 or b_ == len(SEG): blocks.append(cur_); cur_ = []
 if cur_: blocks.append(cur_)
-bfiles = []
+vb, ab, n_vb = [], [], 0
 for n_, idx in enumerate(blocks):
-    bf = os.path.join(wd, f"block_{n_:02d}.mov"); chain(idx, bf); bfiles.append(bf); print("блок", n_, len(idx), flush=True)
-lst = os.path.join(wd, "list.txt")
-open(lst, "w").write("".join(f"file '{os.path.abspath(p)}'\n" for p in bfiles))
-subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", base], check=True, stdin=subprocess.DEVNULL)
-# музыка и озвучка по plan["music"]["cues"] — те же уровни, что в проекте: трек к -36 LUFS + level_db
+    joints = [_joint(i) for i in idx[1:]]
+    vbf = os.path.join(wd, f"vb_{KEY([[vkeys[i] for i in idx], joints, VSIG])}.mov")
+    abf = os.path.join(wd, f"ab_{KEY([[akeys[i] for i in idx], joints, [bool(SEG[i].get('audio_in_hard')) for i in idx]])}.wav")
+    # кусок переписан этой сборкой (--only, удалённый вручную, из прежнего кеша) — блок с тем же ключом устарел
+    if not os.path.exists(vbf) or FRESH_V.intersection(idx): vchain(idx, vbf); n_vb += 1; print("блок", n_, len(idx), flush=True)
+    if not os.path.exists(abf) or FRESH_A.intersection(idx): achain(idx, abf)
+    vb.append(vbf); ab.append(abf); USED.update({vbf, abf})
+print(f"блоки: картинка заново {n_vb} из {len(blocks)}", flush=True)
+vlst, alst = os.path.join(wd, "list_v.txt"), os.path.join(wd, "list_a.txt")
+open(vlst, "w").write("".join(f"file '{os.path.abspath(p)}'\n" for p in vb))
+open(alst, "w").write("".join(f"file '{os.path.abspath(p)}'\n" for p in ab))
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", vlst, "-f", "concat", "-safe", "0", "-i", alst,
+                "-map", "0:v", "-map", "1:a", "-c", "copy", base], check=True, stdin=subprocess.DEVNULL)
+# чистка кеша: неиспользованные этой сборкой файлы, к которым 14 дней не обращалась ни одна сборка (используемые
+# получают свежий mtime — куски соседней версии плана не стареют от возраста), с --prune — все неиспользованные.
+# Удаляются только файлы кеша по имени: --workdir может указывать на папку с чужими файлами.
 import re as _re
+for p_ in USED: os.utime(p_)
+_now = _time.time()
+_CACHE = _re.compile(r"^(?:(?:v|vb)_[0-9a-f]{12}\.mov|(?:a|ab)_[0-9a-f]{12}\.wav|\d{3}_[0-9a-f]{8}\.mov|block_\d+\.mov)(?:\.part\.(?:mov|wav))?$|^list\.txt$")
+for p_ in _glob.glob(os.path.join(wd, "*")):
+    if p_ in USED or not _CACHE.match(os.path.basename(p_)) or not os.path.isfile(p_): continue
+    if "--prune" in a or _now - os.path.getmtime(p_) > 14 * 86400:
+        os.remove(p_)
+# музыка и озвучка по plan["music"]["cues"] — те же уровни, что в проекте: трек к -36 LUFS + level_db
 pos = []; t = 0.0
 # фактическая длина отрезка — cores (округление до кадров копится ~1 с на фильм): музыку ставим по ней
 for s, d_ in zip(plan["segments"], cores):
