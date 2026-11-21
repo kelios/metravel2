@@ -4,6 +4,7 @@ const {
   acquireQualityGateLock,
   formatQualityGateSkipMessage,
   isQualityGateBusyError,
+  resolveQualityGateBusyExitCode,
 } = require('./quality-gate-lock')
 
 module.exports = async function jestQualityGateSetup() {
@@ -15,6 +16,6 @@ module.exports = async function jestQualityGateSetup() {
   } catch (error) {
     if (!isQualityGateBusyError(error)) throw error
     console.log(formatQualityGateSkipMessage(error))
-    process.exit(0)
+    process.exit(resolveQualityGateBusyExitCode())
   }
 }

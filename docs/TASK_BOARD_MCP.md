@@ -364,9 +364,27 @@ curl с staff token в command arguments.
 node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict pass --findings 0 --note "<checked>"
 git add --pathspec-from-file=<список>
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
+git fetch origin   # origin/main ушёл вперёд → слить или rebase ДО push, затем `show --task <id>`
 PREFLIGHT_SKIP_E2E=1 git push origin main
 # и только теперь metravel_task_update(task_id=<id>, status="testing")
 ```
+
+Слияние или rebase на ушедший `origin/main` приносит чужие строки в файл из списка (чаще всего
+в общий `docs/PROBLEM_MEMORY.md`): blob меняется, `show` отвечает `stale`, хотя diff задачи
+прежний. Сверь, что в файл приехало только чужое, и перезапиши вердикт тем же списком с явным
+базисом — повторное ревью того же diff'а не нужно (правка своего кода при разрешении конфликта
+— нужно):
+
+```bash
+# до push: базис — merge-base (он же базис по умолчанию, флаг можно не писать)
+node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict pass --findings 0 --note "<checked>" --base "$(git merge-base origin/main HEAD)"
+# после push: базис — sha до коммита задачи; без флага базис равен HEAD и запись отклоняется
+node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список> --verdict pass --findings 0 --note "<checked>" --base "$(git rev-parse <sha коммита задачи>^)"
+```
+
+`--base` — коммит-предок HEAD и только вместе со списком путей; от него считаются раскрытие
+каталогов и защита, причём с явным базисом от него обязан отличаться КАЖДЫЙ путь списка, отпечаток — по содержимому
+рабочего дерева. В вердикте остаются `base_explicit: true` и `base_distance` — число коммитов от базиса до HEAD (`show` их печатает).
 
 `PREFLIGHT_SKIP_E2E=1` обязателен на этом code-review переходе: pre-push
 сохраняет static/unit/guard checks, но не запускает Playwright до стадии

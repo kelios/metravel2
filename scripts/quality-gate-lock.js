@@ -9,6 +9,10 @@ const defaultLockPath = path.join(repoRoot, '.codex-temp', 'ops', 'quality-gate.
 const ownerFileName = 'owner.json'
 const MALFORMED_LOCK_STALE_MS = 90 * 60 * 1000
 const QUALITY_GATE_BUSY_CODE = 'QUALITY_GATE_BUSY'
+// Прямой Jest при занятом гейте выходит нейтрально, с кодом 0: за красное отвечает
+// владелец lock. Обязательный шаг (`scripts/run-pre-push-guards.js`) такой выход
+// пройденным считать не может и называет здесь код, с которым Jest должен выйти.
+const QUALITY_GATE_BUSY_EXIT_ENV = 'MT_QUALITY_GATE_BUSY_EXIT_CODE'
 
 const QUALITY_PROCESS_PATTERNS = [
   /node_modules[\\/](?:\.bin[\\/])?jest(?:\s|$|[\\/])/i,
@@ -36,6 +40,11 @@ function formatQualityGateSkipMessage(error) {
     `quality-gate-lock: SKIPPED — ${String(error?.message || error)}. ` +
     'The active gate owner is responsible for failures; do not wait, poll, or rerun this command.'
   )
+}
+
+function resolveQualityGateBusyExitCode(env = process.env) {
+  const code = Number(env[QUALITY_GATE_BUSY_EXIT_ENV])
+  return Number.isInteger(code) && code > 0 && code < 256 ? code : 0
 }
 
 function isProcessAlive(pid) {
@@ -232,6 +241,7 @@ function acquireQualityGateLock({
 module.exports = {
   QUALITY_PROCESS_PATTERNS,
   QUALITY_GATE_BUSY_CODE,
+  QUALITY_GATE_BUSY_EXIT_ENV,
   acquireQualityGateLock,
   defaultLockPath,
   findConflictingQualityProcesses,
@@ -240,4 +250,5 @@ module.exports = {
   isProcessAlive,
   parseProcessTable,
   releaseQualityGateLock,
+  resolveQualityGateBusyExitCode,
 }

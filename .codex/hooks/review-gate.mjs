@@ -14,7 +14,7 @@
  * Режимы:
  *   (stdin JSON)                       hook для `metravel_task_update` (Pre + Post).
  *   record --task <id> --verdict pass|changes_requested [--findings N] [--note "..."]
- *          [--paths <a,b,…> | --paths-file <файл>]
+ *          [--paths <a,b,…> | --paths-file <файл>] [--base <rev>]
  *                                      Пишет вердикт агента `code-review-gate` с отпечатком diff'а.
  *   show --task <id>                   Печатает состояние вердикта (exit 0 = пропустит, 1 = нет).
  *
@@ -35,6 +35,15 @@
  *     Любой новый незакоммиченный файл вне scope после ревью ломает вердикт — в общем дереве
  *     это и чужие файлы (REVIEW-GATE-FINGERPRINT-FOREIGN-WORKTREE-001), поэтому режим оставлен
  *     только для совместимости и для чекаута с одной сессией.
+ *
+ * Явный базис (`record … --paths-file <список> --base <rev>`, #3371, доработка 21.11.2026): базис
+ * по умолчанию — merge-base `origin/main` и HEAD. После `push` он равен HEAD, все пути задачи с
+ * ним совпадают, и запись отклоняется защитой «ни один путь не отличается от базиса». Между тем
+ * перезаписать вердикт бывает нужно именно тогда: слияние или rebase на ушедший `origin/main`
+ * принесли чужие строки в файл из scope, blob изменился, вердикт `stale`. `--base <sha до коммита
+ * задачи>` считает защиту и раскрытие каталогов от названного коммита, отпечаток — по содержимому
+ * рабочего дерева, как всегда. Базис обязан быть коммитом-предком HEAD, и от него обязан
+ * отличаться каждый путь списка; в вердикт пишутся `base_explicit: true` и `base_distance`.
  *
  * Аварийный обход: REVIEW_GATE_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  * Максимальный возраст вердикта: REVIEW_GATE_MAX_AGE_HOURS (по умолчанию 24).
@@ -93,6 +102,17 @@ function resolveBase(root) {
     if (common) return common;
   }
   return origin || head || 'empty';
+}
+
+/** Явный базис `record --base <rev>`: существующий коммит-предок HEAD, иначе запись отклоняется. */
+function resolveExplicitBase(root, rev) {
+  const sha = rev.startsWith('-') ? '' : git(['rev-parse', '--verify', '--quiet', `${rev}^{commit}`], root).trim();
+  if (!sha) throw new Error(`--base ${rev}: такого коммита в репозитории нет`);
+  const head = git(['rev-parse', '--verify', '--quiet', 'HEAD'], root).trim();
+  if (!head || git(['merge-base', sha, head], root).trim() !== sha) {
+    throw new Error(`--base ${rev} (${sha.slice(0, 12)}) не предок HEAD: базис — коммит, от которого задача ушла (sha до коммита задачи или merge-base с origin/main)`);
+  }
+  return sha;
 }
 
 function zList(output) {
@@ -201,7 +221,7 @@ function isDirectory(root, file) {
  * путь обязан существовать в дереве либо в базисе (удалённый задачей файл), а каталог — содержать
  * хотя бы один изменённый или untracked файл.
  */
-function recordTaskScope(root, base, declared) {
+function recordTaskScope(root, base, declared, explicitBase = false) {
   const changed = diffPaths(root, base);
   const files = new Set();
   const dirs = [];
@@ -228,7 +248,15 @@ function recordTaskScope(root, base, declared) {
   // Список только из нетронутых файлов отпечатывает «ничего» и пропустил бы любой непроверенный diff.
   const changedSet = new Set(changed);
   if (![...files].some((file) => changedSet.has(file))) {
-    throw new Error(`ни один путь задачи не отличается от базиса ${base.slice(0, 12)}: ${listPaths([...files].sort())}`);
+    // После push базис по умолчанию равен HEAD — выход из тупика называет само сообщение.
+    const hint = explicitBase ? '' : '. Diff задачи уже закоммичен и запушен — передай базис явно: --base <sha до коммита задачи>';
+    throw new Error(`ни один путь задачи не отличается от базиса ${base.slice(0, 12)}: ${listPaths([...files].sort())}${hint}`);
+  }
+  // Явный базис выбирает сам вызывающий: от далёкого предка «отличается» почти любой файл, поэтому
+  // здесь каждый путь списка обязан быть изменён относительно него — иначе это не базис задачи.
+  const unchanged = explicitBase ? [...files].filter((file) => !changedSet.has(file)).sort() : [];
+  if (unchanged.length) {
+    throw new Error(`с явным базисом ${base.slice(0, 12)} каждый путь задачи должен от него отличаться; совпадают: ${listPaths(unchanged)}`);
   }
   const scoped = [...files].sort();
   const outside = uncommittedPaths(root).filter((file) => !files.has(file));
@@ -521,18 +549,23 @@ function runRecord(argv) {
   const taskId = Number(args.task);
   const verdict = String(args.verdict || '');
   if (!taskId || !['pass', 'changes_requested'].includes(verdict)) {
-    process.stderr.write('usage: review-gate.mjs record --task <id> --verdict pass|changes_requested [--paths a,b | --paths-file <file>] [--findings N] [--note "..."] [--blocking "a;b"] [--reviewer name]\n');
+    process.stderr.write('usage: review-gate.mjs record --task <id> --verdict pass|changes_requested [--paths a,b | --paths-file <file>] [--base <rev>] [--findings N] [--note "..."] [--blocking "a;b"] [--reviewer name]\n');
     process.exit(2);
   }
   // Флаг без значения — ошибка вызова, а не тихий откат к отпечатку по всему дереву.
-  for (const flag of ['paths', 'paths-file']) {
+  for (const flag of ['paths', 'paths-file', 'base']) {
     if (args[flag] === true) throw new Error(`--${flag} требует значение`);
   }
 
   const root = repoRoot();
-  const base = resolveBase(root);
   const byPaths = args.paths !== undefined || args['paths-file'] !== undefined;
-  const taskScope = byPaths ? recordTaskScope(root, base, readTaskPaths(root, args)) : null;
+  // По всему дереву явный базис затянул бы в scope чужие коммиты между ним и HEAD.
+  if (args.base !== undefined && !byPaths) throw new Error('--base работает только со списком путей задачи (--paths / --paths-file)');
+  const explicitBase = args.base === undefined ? null : resolveExplicitBase(root, String(args.base));
+  const base = explicitBase || resolveBase(root);
+  const taskScope = byPaths ? recordTaskScope(root, base, readTaskPaths(root, args), Boolean(explicitBase)) : null;
+  // Сколько коммитов между явным базисом и HEAD: далёкий предок виден в записи, а не только в sha.
+  const baseDistance = explicitBase ? Number(git(['rev-list', '--count', `${explicitBase}..HEAD`], root).trim() || 0) : null;
   const { fingerprint, entries: scope } = taskScope || recordScope(root, base);
   const payload = {
     task_id: taskId,
@@ -542,6 +575,8 @@ function runRecord(argv) {
     note: args.note ? String(args.note) : '',
     blocking: args.blocking ? String(args.blocking).split(';').map((s) => s.trim()).filter(Boolean) : [],
     base,
+    // Базис назван в `record --base`, а не выведен из `origin/main` (перезапись после merge/rebase/push).
+    ...(explicitBase ? { base_explicit: true, base_distance: baseDistance } : {}),
     // Вердикты без `scope_mode` записаны до #3371 и проверяются по всему дереву.
     ...(taskScope ? { scope_mode: SCOPE_MODE_PATHS, scope_dirs: taskScope.dirs } : {}),
     scope,
@@ -554,7 +589,7 @@ function runRecord(argv) {
   if (taskScope?.neighbours.length) {
     process.stderr.write(`review-gate: ВНИМАНИЕ — рядом с файлами задачи есть незакоммиченные пути вне scope (${taskScope.neighbours.length}): ${listPaths(taskScope.neighbours)}. Если они из задачи — допиши их в список и перезапиши вердикт; чужие оставь.\n`);
   }
-  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, scope_mode: taskScope ? SCOPE_MODE_PATHS : 'tree', paths: Object.keys(scope).length, ...(taskScope ? { outside_scope: taskScope.outside } : {}), fingerprint: payload.fingerprint })}\n`);
+  process.stdout.write(`${JSON.stringify({ recorded: verdictPath(root, taskId), verdict: payload.verdict, base: payload.base, ...(explicitBase ? { base_explicit: true, base_distance: baseDistance } : {}), scope_mode: taskScope ? SCOPE_MODE_PATHS : 'tree', paths: Object.keys(scope).length, ...(taskScope ? { outside_scope: taskScope.outside } : {}), fingerprint: payload.fingerprint })}\n`);
 }
 
 function runShow(argv) {

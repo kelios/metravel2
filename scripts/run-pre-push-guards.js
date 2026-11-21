@@ -9,6 +9,12 @@
  *   … --changed-files-file <файл> | --base-ref <ref>    scope для предупреждения о пробной сборке
  *                                                       и для Jest-контрактов изменённых документов
  *
+ * Занятый quality-gate lock: Jest-шаг (`test:governance`, контракты документов) при
+ * прямом `npm run guard:pre-push` выходил нейтрально с кодом 0, и прогон печатал
+ * `PASS` без обязательного шага. Теперь шаг выходит с `SKIPPED_EXIT_CODE`, прогон
+ * печатает `SKIPPED` и завершается этим кодом. Внутри `check:preflight` lock уже
+ * принадлежит обёртке, там пропуска нет.
+ *
  * Стражи читают рабочее дерево целиком, а не коммит: красное в чужом
  * незакоммиченном файле соседней сессии остановит и чужой push. Порядок на этот
  * случай — `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
@@ -18,6 +24,7 @@ const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 const { resolveChangedFilesInput } = require('./run-local-selective-checks')
+const { QUALITY_GATE_BUSY_EXIT_ENV } = require('./quality-gate-lock')
 const {
   STAGE_PRE_PUSH,
   PRE_PUSH_GUARDS,
@@ -30,6 +37,15 @@ const {
 const CHECK_NAME = 'pre-push-guards'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
 const JEST_BIN_PATH = path.resolve(process.cwd(), 'node_modules/jest/bin/jest.js')
+// EX_TEMPFAIL: обязательный шаг не выполнен, потому что quality-gate lock занят.
+const SKIPPED_EXIT_CODE = 75
+
+const guardEnv = () => ({ ...process.env, [QUALITY_GATE_BUSY_EXIT_ENV]: String(SKIPPED_EXIT_CODE) })
+
+/** Итоговая строка невыполненного шага: `SKIPPED` из-за занятого lock — не `FAILED` и не `PASS`. */
+const formatGuardFailure = (label, status, why) => (status === SKIPPED_EXIT_CODE
+  ? `${CHECK_NAME}: SKIPPED ${label} (exit ${status}) — quality-gate lock занят другим прогоном; шаг обязателен и НЕ выполнен, это не PASS. Повтори, когда владелец lock закончит.`
+  : `${CHECK_NAME}: FAILED ${label} (exit ${status}) — ${why}`)
 
 const parseArgs = (argv) => {
   const out = {
@@ -87,6 +103,7 @@ const runGuard = (item) => {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
     stdio: 'inherit',
+    env: guardEnv(),
     shell: process.platform === 'win32' && command !== process.execPath,
   })
   return result.status ?? 1
@@ -161,6 +178,7 @@ const runDocContractTests = (tests) => {
   const result = spawnSync(process.execPath, [JEST_BIN_PATH, '--runInBand', '--watchAll=false', ...tests], {
     encoding: 'utf8',
     stdio: 'inherit',
+    env: guardEnv(),
   })
   return result.status ?? 1
 }
@@ -222,14 +240,14 @@ const main = () => {
     for (const item of guards) {
       const status = runGuard(item)
       if (status !== 0) {
-        console.error(`${CHECK_NAME}: FAILED ${item.id} (exit ${status}) — ${item.why}`)
+        console.error(formatGuardFailure(item.id, status, item.why))
         process.exit(status)
       }
     }
     if (docContractTests.length) {
       const status = runDocContractTests(docContractTests)
       if (status !== 0) {
-        console.error(`${CHECK_NAME}: FAILED doc-contract tests (exit ${status}) — тест читает изменённый документ по пути: ${docContractTests.join(', ')}`)
+        console.error(formatGuardFailure('doc-contract tests', status, `тест читает изменённый документ по пути: ${docContractTests.join(', ')}`))
         process.exit(status)
       }
     }
@@ -246,6 +264,9 @@ if (require.main === module) {
 
 module.exports = {
   CHECK_NAME,
+  SKIPPED_EXIT_CODE,
+  guardEnv,
+  formatGuardFailure,
   parseArgs,
   selectGuards,
   buildGuardInvocation,

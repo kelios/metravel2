@@ -45,6 +45,7 @@ const write = (root: string, rel: string, content: string) => {
 
 type Verdict = {
   base: string;
+  base_explicit?: boolean;
   scope: Record<string, string>;
   scope_mode?: string;
   scope_dirs?: string[];
@@ -407,5 +408,150 @@ describe('review-gate fingerprint by task paths (#3371)', () => {
   it('keeps the Codex adapter mirror byte-identical to the hook', () => {
     const mirror = path.join(process.cwd(), '.codex/hooks/review-gate.mjs');
     expect(fs.readFileSync(mirror, 'utf8')).toBe(fs.readFileSync(HOOK, 'utf8'));
+  });
+});
+
+/**
+ * Явный базис `record --base <rev>` (#3371, доработка 21.11.2026).
+ *
+ * Первая боевая запись по путям протухла в тот же день: вердикт `pass` записан, diff закоммичен,
+ * `origin/main` за это время ушёл вперёд, и в файл из scope (`docs/PROBLEM_MEMORY.md`) приехали
+ * чужие строки. После push базис по умолчанию равен HEAD, пути задачи с ним совпадают, и защита
+ * «ни один путь не отличается от базиса» отклоняла перезапись — карточка не могла уйти в `testing`.
+ */
+const SHARED_DOC = 'docs/memory.md';
+const SHARED_LINES = Array.from({ length: 12 }, (_, index) => `entry ${index + 1}`);
+const BASE_TASK_PATHS = ['scripts/ai-assist/app.ts', SHARED_DOC];
+
+const head = (): string => git(work, 'rev-parse', 'HEAD').trim();
+
+/** Общий документ, который правят и задача, и соседняя сессия: он есть в базисе обоих клонов. */
+const seedSharedDoc = (): void => {
+  write(work, SHARED_DOC, `${SHARED_LINES.join('\n')}\n`);
+  git(work, 'add', SHARED_DOC);
+  git(work, 'commit', '-qm', 'docs: shared memory');
+  git(work, 'push', '-q', 'origin', 'main');
+  git(peer, 'pull', '-q', '--ff-only', 'origin', 'main');
+};
+
+/** Задача: новый файл и запись в конец общего документа. */
+const makeSharedDocTask = (): void => {
+  write(work, 'scripts/ai-assist/app.ts', 'export const app = 1;\n');
+  fs.appendFileSync(path.join(work, SHARED_DOC), 'task entry\n');
+};
+
+/** Сосед пушит запись в начало того же документа; рабочий чекаут её только получил (fetch). */
+const pushForeignEntryIntoSharedDoc = (): void => {
+  write(peer, SHARED_DOC, `${['foreign entry', ...SHARED_LINES].join('\n')}\n`);
+  git(peer, 'commit', '-qam', 'docs: foreign entry in shared memory');
+  git(peer, 'push', '-q', 'origin', 'main');
+  git(work, 'fetch', '-q', 'origin');
+};
+
+const commitTask = (): void => {
+  git(work, 'add', ...BASE_TASK_PATHS);
+  git(work, 'commit', '-qm', 'feat: task (#2456)');
+};
+
+describe('review-gate explicit base (#3371)', () => {
+  it('re-records after push when a merge brought foreign lines into a scope file', () => {
+    seedSharedDoc();
+    makeSharedDocTask();
+    makeForeignChanges();
+    const beforeTask = head();
+    expect(recordWith('--paths', BASE_TASK_PATHS.join(',')).status).toBe(0);
+    commitTask();
+    expectOpen();
+
+    pushForeignEntryIntoSharedDoc();
+    git(work, 'merge', '-q', '--no-edit', 'origin/main');
+    expectStale(SHARED_DOC);
+    git(work, 'push', '-q', 'origin', 'main');
+
+    // Прежнее лекарство после push не работает: базис = HEAD. Отказ называет выход.
+    const plain = recordWith('--paths', BASE_TASK_PATHS.join(','));
+    expect(plain.status).toBe(2);
+    expect(plain.stderr).toContain('ни один путь задачи не отличается от базиса');
+    expect(plain.stderr).toContain('--base <sha до коммита задачи>');
+    expectStale(SHARED_DOC);
+
+    const { status, output, verdict } = recordWith('--paths', BASE_TASK_PATHS.join(','), '--base', beforeTask);
+    expect(status).toBe(0);
+    // Между базисом и HEAD: коммит задачи, чужой коммит и слияние — расстояние видно в записи.
+    expect(output).toMatchObject({ base: beforeTask, base_explicit: true, base_distance: 3, scope_mode: 'paths', paths: 2 });
+    expect(verdict).toMatchObject({ base: beforeTask, base_explicit: true, base_distance: 3, scope_mode: 'paths' });
+    expect(Object.keys(verdict?.scope ?? {}).sort()).toEqual([...BASE_TASK_PATHS].sort());
+    expectOpen();
+    const shown = runNodeCli([HOOK, 'show', '--task', String(TASK_ID)], { CLAUDE_PROJECT_DIR: work });
+    expect(JSON.parse(shown.stdout).verdict.base_explicit).toBe(true);
+
+    // Сосед продолжает работать в общем дереве — вердикт держится; правка файла scope — ломает.
+    fs.appendFileSync(path.join(work, 'docs/other.md'), 'second foreign edit\n');
+    write(work, 'scripts/foreign-tool.js', 'module.exports = 1;\n');
+    expectOpen();
+    fs.appendFileSync(path.join(work, SHARED_DOC), 'late task edit\n');
+    expectStale(SHARED_DOC);
+  });
+
+  it('re-records before push against the merge-base, the same as the default base, and survives the push', () => {
+    seedSharedDoc();
+    makeSharedDocTask();
+    recordWith('--paths', BASE_TASK_PATHS.join(','));
+    commitTask();
+    pushForeignEntryIntoSharedDoc();
+    git(work, 'merge', '-q', '--no-edit', 'origin/main');
+    expectStale(SHARED_DOC);
+
+    const mergeBase = git(work, 'merge-base', 'origin/main', 'HEAD').trim();
+    const explicit = recordWith('--paths', BASE_TASK_PATHS.join(','), '--base', mergeBase).verdict;
+    const byDefault = recordWith('--paths', BASE_TASK_PATHS.join(',')).verdict;
+    expect(explicit?.base_explicit).toBe(true);
+    expect(byDefault?.base_explicit).toBeUndefined();
+    expect(byDefault?.base).toBe(mergeBase);
+    expect(byDefault?.fingerprint).toBe(explicit?.fingerprint);
+
+    git(work, 'push', '-q', 'origin', 'main');
+    expectOpen();
+  });
+
+  it('refuses a base that is not a commit, not an ancestor of HEAD, or equal to the task content', () => {
+    seedSharedDoc();
+    const beforeTask = head();
+    makeSharedDocTask();
+    pushForeignEntryIntoSharedDoc();
+    const paths = BASE_TASK_PATHS.join(',');
+
+    const unknown = recordWith('--paths', paths, '--base', 'no-such-rev');
+    expect(unknown.status).toBe(2);
+    expect(unknown.stderr).toContain('такого коммита в репозитории нет');
+
+    // origin/main ушёл вперёд и не слит: коммит существует, но HEAD от него не происходит.
+    const ahead = recordWith('--paths', paths, '--base', 'origin/main');
+    expect(ahead.status).toBe(2);
+    expect(ahead.stderr).toContain('не предок HEAD');
+
+    const bare = recordWith('--paths', paths, '--base');
+    expect(bare.status).toBe(2);
+    expect(bare.stderr).toContain('--base требует значение');
+
+    // Без списка путей явный базис затянул бы в scope чужие коммиты.
+    const tree = recordWith('--base', beforeTask);
+    expect(tree.status).toBe(2);
+    expect(tree.stderr).toContain('только со списком путей задачи');
+
+    // С явным базисом каждый путь обязан от него отличаться: нетронутый файл в списке — отказ.
+    const padded = recordWith('--paths', `${paths},package.json`, '--base', beforeTask);
+    expect(padded.status).toBe(2);
+    expect(padded.stderr).toContain('каждый путь задачи должен от него отличаться');
+    expect(padded.stderr).toContain('package.json');
+
+    // Базис, с которым содержимое путей совпадает, отпечатал бы «ничего».
+    commitTask();
+    const same = recordWith('--paths', paths, '--base', 'HEAD');
+    expect(same.status).toBe(2);
+    expect(same.stderr).toContain('ни один путь задачи не отличается от базиса');
+    expect(same.stderr).not.toContain('передай базис явно');
+
+    expect(fs.existsSync(verdictFile())).toBe(false);
   });
 });

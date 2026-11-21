@@ -132,4 +132,22 @@ describe('quality-gate-lock', () => {
     expect(result.stdout).toContain('quality-gate-lock: SKIPPED')
     expect(result.stdout).toContain('active gate owner is responsible for failures')
   })
+
+  it('exits with the code a mandatory step asks for instead of a neutral zero (#3371)', () => {
+    const setupPath = require.resolve('@/scripts/jest-quality-gate-setup')
+    const script = `Promise.resolve(require(${JSON.stringify(setupPath)})()).then(()=>process.exit(41))`
+    ensureGateHeld()
+
+    const mandatory = runNodeCli(['-e', script], {
+      MT_QUALITY_GATE_LOCK_OWNED: '',
+      [lockModule.QUALITY_GATE_BUSY_EXIT_ENV]: '75',
+    })
+    expect(mandatory.status).toBe(75)
+    expect(mandatory.stdout).toContain('quality-gate-lock: SKIPPED')
+
+    // Мусор в переменной не превращает пропуск в произвольный код.
+    expect(lockModule.resolveQualityGateBusyExitCode({ [lockModule.QUALITY_GATE_BUSY_EXIT_ENV]: 'yes' })).toBe(0)
+    expect(lockModule.resolveQualityGateBusyExitCode({ [lockModule.QUALITY_GATE_BUSY_EXIT_ENV]: '300' })).toBe(0)
+    expect(lockModule.resolveQualityGateBusyExitCode({})).toBe(0)
+  })
 })

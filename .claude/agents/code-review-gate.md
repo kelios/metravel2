@@ -87,7 +87,8 @@ DEPLOY=0 DEPLOY_QUIET=1 scripts/deploy-prod.sh <снимок>
 ```
 
 Сверх этого не запускай full/preflight/test/e2e/slider gates. `SKIPPED` (в том
-числе от занятого quality-gate lock в шаге `test:governance`) — не pass. Красный
+числе от занятого quality-gate lock в шаге `test:governance`: `guard:pre-push`
+тогда выходит с кодом 75 и строкой `SKIPPED`) — не pass. Красный
 обязательный guard даёт `changes_requested`; красное только в чужом
 незакоммиченном файле назови в `notes` и проверь свои пути узко. Недоступный
 обязательный check требует exact unblock, а не финального verdict.
@@ -113,8 +114,13 @@ node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список
 ```bash
 git add --pathspec-from-file=<список>   # тот же список; `git add -A` и commit без путей запрещены
 git commit -m "<type>(<scope>): <что сделано> (#<id>)"
+git fetch origin   # origin/main ушёл вперёд → слей до push и проверь `show --task <id>`
 PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается только в testing; чужой набор → SKIP_PREFLIGHT=1 + пометка
 ```
+
+  Слияние принесло чужие строки в файл из списка и `show` отвечает `stale` — перезапиши
+  вердикт тем же списком с явным базисом: до push `--base "$(git merge-base origin/main HEAD)"`,
+  после push `--base <sha до коммита задачи>` (без флага базис равен HEAD, запись отклоняется).
 
   Код при этом не правь: коммитится ровно то, что ты отревьюил, поэтому вердикт остаётся
   валидным — отпечаток гейта считается по содержимому файлов, а не по индексу или ветке.

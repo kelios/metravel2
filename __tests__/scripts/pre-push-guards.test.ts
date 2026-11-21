@@ -37,7 +37,11 @@ const {
   buildGuardInvocation,
   findDocContractTests,
   formatBundleProbeWarning,
+  formatGuardFailure,
+  guardEnv,
+  SKIPPED_EXIT_CODE,
 } = require('@/scripts/run-pre-push-guards');
+const { QUALITY_GATE_BUSY_EXIT_ENV, resolveQualityGateBusyExitCode } = require('@/scripts/quality-gate-lock');
 
 type Guard = { id: string; script?: string; command?: string; stage: string; sources: string[]; why: string };
 
@@ -224,6 +228,22 @@ describe('prod build probe warning', () => {
     writeTextFile(path.join(root, '__tests__/mentions.test.ts'), '// правило — `docs/x.md`\n');
     writeTextFile(path.join(root, '__tests__/helper.ts'), "const DOC = 'docs/x.md';\n");
     expect(findDocContractTests(['docs/x.md'], root)).toEqual(['__tests__/a/reads.test.ts']);
+  });
+
+  it('reports a step skipped on a busy quality-gate lock as SKIPPED with a non-zero code, never as PASS', () => {
+    expect(SKIPPED_EXIT_CODE).toBeGreaterThan(0);
+    const skipped = formatGuardFailure('test:governance', SKIPPED_EXIT_CODE, 'Jest-контракты governance');
+    expect(skipped).toContain('pre-push-guards: SKIPPED test:governance');
+    expect(skipped).toContain('это не PASS');
+    expect(skipped).not.toContain('FAILED');
+
+    const failed = formatGuardFailure('typecheck', 2, 'tsc --noEmit');
+    expect(failed).toBe('pre-push-guards: FAILED typecheck (exit 2) — tsc --noEmit');
+
+    // Шаг получает код пропуска в окружении, и Jest при занятом lock выходит именно им
+    // (сам выход — `quality-gate-lock.test.ts`).
+    expect(guardEnv()[QUALITY_GATE_BUSY_EXIT_ENV]).toBe(String(SKIPPED_EXIT_CODE));
+    expect(resolveQualityGateBusyExitCode(guardEnv())).toBe(SKIPPED_EXIT_CODE);
   });
 
   it('prints the rule only when there is something to probe', () => {
