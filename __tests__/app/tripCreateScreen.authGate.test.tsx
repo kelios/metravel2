@@ -30,7 +30,10 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }));
 
+// Подменяется только построитель предзаполнения: `utils/tripPlanDraftIntake` берёт из этого же
+// модуля `firstParam`, `clip` и константы (#3431, В1), поэтому остальные экспорты — настоящие.
 jest.mock('@/utils/tripPlanLinks', () => ({
+  ...jest.requireActual('@/utils/tripPlanLinks'),
   buildTripPlanPrefill: (...args: unknown[]) => mockBuildTripPlanPrefill(...args),
 }));
 
