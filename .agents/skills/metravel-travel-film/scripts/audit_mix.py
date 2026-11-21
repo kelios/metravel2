@@ -12,10 +12,12 @@ segments.json — таблица отрезков рендера (start, end, no
   ТОНЕТ    на отрезке с речью музыка тише речи меньше чем на 10 LU (цель 12–15) — голос «не слышно»
   НЕСЛЫШНО слова исходника в расшифровке готового звука узнаются меньше чем на 60% (нужен --words-root, долго: whisper по фильму)
   ЗАПАС    на отрезке с речью энергия речи минус энергия музыки < 10 дБ (цель 12–15): 10·log10(mean(x²))
-           по окнам 0,5 с на «без музыки» (живая речь, нужен --words-root) или на голосе за кадром против «музыки»
+           в окнах речи (0,5 с; окно не тише максимума отрезка на 20 дБ и громче −45) на «без музыки»
+           (живая речь, нужен --words-root) или на голосе за кадром против «музыки» в тех же окнах
   ГРОМКО   без речи музыка громче соседней речи больше чем на 3 LU
   ПРОВАЛ   ниже −50 dBFS дольше 0,5 с в сведённом звуке; или все дорожки (музыка, «без музыки», голос)
            тише −35 дБ подряд ≥ 1,5 с — дыра на видах, которую сведённый звук ещё не считает тишиной
+  ПАУЗА    то же внутри отрезка с живой речью — пауза в разговоре, сведения, не находка
 Те же пороги, что у рецензента: сборщик видит их до film_gate.py request.
 """
 import json, math, os, re, subprocess, sys, tempfile, unicodedata
@@ -80,23 +82,29 @@ S_mus = lufs_series(music) if music else []
 S_voi = lufs_series(voice) if voice else []
 R_base, R_mus, R_voi = rms_windows(base), rms_windows(music), rms_windows(voice)
 at = lambda w, i: w[i] if i < len(w) else -120.0
-for s in segs:                              # ЗАПАС: энергия речи против энергии музыки на отрезке
+TALK_SEGS = []                              # отрезки с живой речью: пауза в разговоре — сведения, а не ПРОВАЛ
+def speech_mask(w, i0, i1):
+    """Окна речи отрезка: не тише максимума отрезка на 20 дБ и громче −45 дБ (рецензент 21.11)."""
+    top = max((at(w, i) for i in range(i0, i1)), default=-120.0)
+    return lambda i: at(w, i) > -45 and at(w, i) >= top - 20
+for s in segs:                              # ЗАПАС: энергия речи против энергии музыки в моменты речи
     i0, i1 = int(round(s["start"] / WIN)), int(round(s["end"] / WIN))
     if i1 - i0 < 2 or not R_mus: continue
-    em = energy_db(R_mus, i0, i1)
-    if em < -60: continue
-    vo_on = lambda i: at(R_voi, i) > -45
+    vo_on = speech_mask(R_voi, i0, i1)
     if R_voi and sum(1 for i in range(i0, i1) if vo_on(i)) >= 2:       # голос за кадром: тизер, «ранее», связки
         ev, emv = energy_db(R_voi, i0, i1, vo_on), energy_db(R_mus, i0, i1, vo_on)
-        if ev - emv < 10:
+        if emv > -60 and ev - emv < 10:
             F.append((s["start"], "ЗАПАС", s["note"], f"голос за кадром {ev:.1f}, музыка {emv:.1f} дБ — запас {ev - emv:.1f} (нужно ≥ 10, цель 12–15)", round(ev - emv, 1)))
         continue
     sw = src_words(s) if root else None
     nw = len([w for w in sw if len(w) > 1]) if sw else 0
     # речь, а не вид: whisper находит в ветре 3–4 «слова» (s3 v12: «город сверху», «поля», «мол и маяк»)
     if nw >= 5 and nw >= (s["end"] - s["start"]) * 0.3 and R_base:
-        eb = energy_db(R_base, i0, i1)
-        if eb > -45 and eb - em < 10:
+        TALK_SEGS.append((s["start"], s["end"]))
+        on = speech_mask(R_base, i0, i1)
+        if sum(1 for i in range(i0, i1) if on(i)) < 2: continue
+        eb, em = energy_db(R_base, i0, i1, on), energy_db(R_mus, i0, i1, on)
+        if em > -60 and eb - em < 10:
             F.append((s["start"], "ЗАПАС", s["note"], f"речь {eb:.1f}, музыка {em:.1f} дБ — запас {eb - em:.1f} (нужно ≥ 10, цель 12–15)", round(eb - em, 1)))
 
 n_w = max(len(R_base), len(R_mus), len(R_voi))   # ПРОВАЛ на видах: все дорожки тише −35 дБ подряд ≥ 1,5 с
@@ -110,7 +118,9 @@ if R_mus and R_base:
             if (j - i) * WIN >= 1.5:
                 HOLES.append((i * WIN, j * WIN))
                 note = next((x["note"] for x in segs if x["start"] <= i * WIN < x["end"]), "")
-                F.append((i * WIN, "ПРОВАЛ", note, f"{(j - i) * WIN:.1f} с все дорожки тише −35 дБ (музыка, без музыки, голос)", None))
+                talk = any(t0 <= i * WIN < t1 for t0, t1 in TALK_SEGS)
+                F.append((i * WIN, "ПАУЗА" if talk else "ПРОВАЛ", note, f"{(j - i) * WIN:.1f} с все дорожки тише −35 дБ"
+                          + (" — пауза в разговоре, сведения" if talk else " (музыка, без музыки, голос)"), None))
             i = j
         else:
             i += 1
@@ -155,7 +165,7 @@ if root and "--no-asr" not in a:             # разборчивость: whisp
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
 lines = [f"# Проверка на слух: {os.path.basename(film)}, находок {len(F)}", ""]
-for k in ["ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ"]:
+for k in ["ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
 txt = "\n".join(lines)
