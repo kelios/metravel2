@@ -6,23 +6,32 @@
 Координаты — доли кадра 0..1. s5 v1 (рецензент 22.11): справка справа внизу длинной строкой уходила под окошко
 рассказчика слева внизу — «…чими и в шерсти»; поле 40 px в titry.py меряет край кадра, а не окошко.
 """
-import functools, json, os, subprocess
+import functools, json, os, re, subprocess
 
 FRAME = 16 / 9
 
 
 @functools.lru_cache(None)
 def card_box(png):
-    """Видимая часть плашки (x0, y0, x1, y1) в долях кадра; пустая или нечитаемая — None."""
-    from PIL import Image
+    """Видимая часть плашки (x0, y0, x1, y1) в долях кадра; пустая или нет файла — None.
+    Через ffmpeg (alphaextract + bbox), без PIL: скрипт работает в любом python3, где есть ffmpeg."""
     if not os.path.exists(png):
         return None
-    im = Image.open(png)
-    if im.mode != "RGBA":
-        return (0.0, 0.0, 1.0, 1.0)
-    b = im.getchannel("A").getbbox()
-    w, h = im.size
-    return (b[0] / w, b[1] / h, b[2] / w, b[3] / h) if b else None
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,pix_fmt",
+                        "-of", "json", png], capture_output=True, text=True)
+    st = json.loads(r.stdout or "{}").get("streams", [{}])[0]
+    w, h = st.get("width"), st.get("height")
+    if not w or not h:
+        return None
+    if "a" not in st.get("pix_fmt", "").replace("gray", "g").replace("ya", "a") and "pal" not in st.get("pix_fmt", ""):
+        return (0.0, 0.0, 1.0, 1.0)                     # без прозрачности — плашка на весь кадр
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", png, "-vf", "alphaextract,bbox=min_val=1", "-f", "null", "-"],
+                       capture_output=True, text=True)
+    m = re.findall(r"x1:(\d+) x2:(\d+) y1:(\d+) y2:(\d+)", r.stderr)
+    if not m:
+        return None
+    x1, x2, y1, y2 = map(int, m[-1])
+    return (x1 / w, y1 / h, (x2 + 1) / w, (y2 + 1) / h)
 
 
 @functools.lru_cache(None)
