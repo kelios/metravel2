@@ -15,11 +15,14 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   ВРЕМЯ     живые сцены идут не в порядке съёмки (откат больше 15 минут)
   ПОВТОР    один и тот же кусок исходника в фильме дважды
   ПЛАШКА    титр короче 3 с; две плашки одновременно
+  ОКНО      плашка заходит на окошко «картинка в картинке» (рассказчик) того же отрезка — текст под ним (overlay_geom.py)
   МУЗЫКА    участок фильма дольше 1 с без музыки и без голоса
   МЕЛЬК     главный план виден меньше 2 с между перебивками (кроме тизера)
   ВЫХОД     возврат из воспоминания к событиям без плашки места/времени
 """
 import json, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import overlay_geom as OG   # где плашка и окошко — та же геометрия, что у раскладки плана
 from datetime import datetime, timedelta
 
 a = sys.argv[1:]
@@ -122,6 +125,8 @@ for i, s in enumerate(SEG):
     for c in cards:
         if c.get("cont"): continue                     # продолжение плашки поверх стыка — меряется по первому куску ("span")
         if c.get("span", c["dur"]) < 3.0 and not teaser: add("ПЛАШКА", T[i] + c["at"] - s["in"], note, f"{os.path.basename(c['file'])} на экране {c.get('span', c['dur']):.1f} с")
+    for c, p in OG.clashes(s):
+        add("ОКНО", T[i] + max(c["at"], p["at"]) - s["in"], note, f"{os.path.basename(c['file'])} заходит на окошко рассказчика — текст под ним")
     if not teaser and not recap:
         br = sorted([o for o in s.get("broll", []) if not o.get("flash")], key=lambda o: o["at"])
         edges = [s["in"]] + [x for o in br for x in (o["at"], o["at"] + o["dur"])] + [s["out"]]
@@ -140,7 +145,7 @@ if t > end + 1.0: add("МУЗЫКА", end, "", f"{t - end:.1f} с без муз�
 
 F.sort()
 lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""]
-for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "МУЗЫКА", "МЕЛЬК", "ВЫХОД"]:
+for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "МЕЛЬК", "ВЫХОД"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
