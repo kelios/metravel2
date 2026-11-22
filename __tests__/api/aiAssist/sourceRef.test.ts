@@ -2,7 +2,7 @@
  * #2897: ссылка на страницу-источник ассистента — общий модуль экрана, клиента `ask`
  * и сервера `/ai/ask`; формат параметра роута задаёт `utils/aiAssistantConfig.ts`.
  */
-import { formatSourceRef, leavesPage, leftPageSources, pageSources, parseSourceRef, pinSourceFirst } from '@/api/aiAssist/sourceRef'
+import { formatSourceRef, leavesPage, leftPageSources, pageSources, parseSourceRef } from '@/api/aiAssist/sourceRef'
 import { namedDestinations, namedPlaces } from '@/api/aiAssist/topicGate'
 import type { AiSource } from '@/api/aiAssist/types'
 import { buildAssistantSourceHref } from '@/utils/aiAssistantConfig'
@@ -35,18 +35,6 @@ describe('aiAssist sourceRef (#2897)', () => {
     const param = new URL(href, 'https://metravel.by').searchParams.get('source')
     expect(parseSourceRef(param)).toEqual({ type: 'travel', id: 816 })
     expect(formatSourceRef({ type: 'quest', id: 5 })).toBe('quest:5')
-  })
-
-  it('закреплённая карточка первой, без дубля по type:source_id, в пределах лимита', () => {
-    const pinned = card('quest', '1', 'https://metravel.by/quests/1-pl')
-    const found = [card('travel', '816'), card('quest', '1'), card('travel', '761')]
-    expect(pinSourceFirst(pinned, found, 8).map((s) => `${s.type}:${s.source_id}`)).toEqual(['quest:1', 'travel:816', 'travel:761'])
-    // фрагмент подбора той же страницы подобран под вопрос — он вместо закреплённой карточки
-    expect(pinSourceFirst(pinned, found, 8)[0].url).toBe('https://metravel.by/quests/1')
-    expect(pinSourceFirst(pinned, [card('travel', '816'), card('travel', '761'), card('travel', '790')]).map((s) => s.source_id)).toEqual(['1', '816', '761'])
-    expect(pinSourceFirst(null, [card('travel', '816')]).length).toBe(1)
-    expect(pinSourceFirst(pinned, found, 2).map((s) => s.source_id)).toEqual(['1', '816'])
-    expect(pinSourceFirst(null, found, 2)).toEqual(found.slice(0, 2))
   })
 })
 

@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server.node'
 import { act, fireEvent, render, renderHook } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
-import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/prompt'
+import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/policy'
 import { AssistantVoiceButton, AssistantVoiceStatus } from '@/components/screens/assistant/AssistantVoiceButton'
 import { createAssistantStyles } from '@/components/screens/assistant/assistantStyles'
 import { useAssistantVoiceInput, type AssistantVoiceInputArgs } from '@/components/screens/assistant/useAssistantVoiceInput'

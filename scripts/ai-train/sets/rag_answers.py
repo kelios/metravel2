@@ -1,5 +1,5 @@
 """Set `rag_answers`: the site assistant's mode (#2712) — a visitor's question
-plus the cards that retrieval found, in the exact format of api/aiAssist/prompt.ts
+plus the cards that retrieval found, in the exact format of scripts/ai-assist/prompt.ts
 (sets/assistant_prompt.py), → a short answer built from the site's own data.
 
 Why: metravel-llm v2 never saw the assistant's prompt. On the assistant screen

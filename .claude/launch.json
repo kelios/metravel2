@@ -120,17 +120,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8081"
-      ],
-      "port": 8081,
-      "autoPort": false
-    },
-    {
-      "name": "Assistant Eval LlamaCpp Web 8081",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_PROVIDER=llamacpp EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8081"
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-2460\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-2460\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 npx expo start --web --port 8081"
       ],
       "port": 8081,
       "autoPort": false
@@ -838,16 +828,6 @@
       "autoPort": false
     },
     {
-      "name": "Assistant Eval Base Web 8085",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "cd .codex-temp/wt-eval-base && mkdir -p \"$PWD/.codex-temp/metro-tmp-eval\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-eval\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 npx expo start --web --port 8085"
-      ],
-      "port": 8085,
-      "autoPort": false
-    },
-    {
       "name": "Llama Server v3 GPU 8090",
       "runtimeExecutable": "llama-server",
       "runtimeArgs": [
@@ -1092,7 +1072,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-s29\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-s29\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8093"
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-s29\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-s29\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8093"
       ],
       "port": 8093,
       "autoPort": false
@@ -1128,16 +1108,6 @@
       "autoPort": false
     },
     {
-      "name": "AI Sprint29 Web 8094 (llamacpp)",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "mkdir -p \"$PWD/.codex-temp/metro-tmp-s29b\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-s29b\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_PROVIDER=llamacpp EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8094"
-      ],
-      "port": 8094,
-      "autoPort": false
-    },
-    {
       "name": "Books Catalog 2970 Web 8171",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
@@ -1164,6 +1134,26 @@
         "NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --port 8088"
       ],
       "port": 8088,
+      "autoPort": false
+    },
+    {
+      "name": "Assistant Local Stack 8787 (llama v7 :8080 + служба /ai/ask)",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/assistant-local\" && export PATH=/opt/homebrew/opt/node@22/bin:$PATH; if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then llama-server -m \"$HOME/metravel-ai/gguf/metravel-llm-v7-Q4_K_M.gguf\" --host 127.0.0.1 --port 8080 -c 8192 --parallel 2 -ngl 99 --jinja --no-warmup >\"$PWD/.codex-temp/assistant-local/llama-server.log\" 2>&1 & LLAMA=$!; trap 'kill $LLAMA 2>/dev/null' EXIT INT TERM; fi; AI_INDEX_DIR=.codex-temp/ai-index/dist BACKEND_URL=https://metravel.by AI_LLM_URL=http://127.0.0.1:8080 AI_DEMAND_LOG=.codex-temp/assistant-local/demand.jsonl PORT=8787 npm run -s ai:assist:dev"
+      ],
+      "port": 8787,
+      "autoPort": false
+    },
+    {
+      "name": "Assistant Local Web 8093 (экран → служба :8787, API через прокси :4622)",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-assistant-local\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-assistant-local\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8093"
+      ],
+      "port": 8093,
       "autoPort": false
     }
   ]

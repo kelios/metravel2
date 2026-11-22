@@ -3,7 +3,7 @@
  * `/assistant?source=travel:816` (`quest:<id>`), и карточка этой страницы стоит
  * ПЕРВОЙ в списке карточек промпта на всех ходах диалога — подбор добавляет остальные.
  *
- * Модуль общий для экрана (`useAssistantChat`), клиента `ask` и сервера `/ai/ask`
+ * Модуль общий для экрана (`AssistantScreen`), клиента `/ai/ask` и сервера `/ai/ask`
  * (`scripts/ai-assist/ask.ts`), поэтому без `@/`-импортов: сервер собирается
  * `node --experimental-strip-types` без алиасов Metro. Формат параметра `type:id`
  * задаёт `utils/aiAssistantConfig.ts` (`buildAssistantSourceHref`) — страницы
@@ -12,7 +12,7 @@
  */
 
 import type { AiSource, AiSourceType } from './types'
-import { AI_PAGE_NEARBY_LIMIT, AI_SOURCES_LIMIT, AI_SOURCES_LIMIT_PINNED } from './policy.ts'
+import { AI_PAGE_NEARBY_LIMIT, AI_SOURCES_LIMIT } from './policy.ts'
 import { mentionsAnyPlace } from './promptPlace.ts'
 import { namedPlaces } from './topicGate.ts'
 
@@ -52,23 +52,6 @@ export const parseSourceRef = (value: unknown): AiSourceRef | null => {
 export const formatSourceRef = (ref: AiSourceRef): string => `${ref.type}:${ref.id}`
 
 const sourceKeyOf = (source: Pick<AiSource, 'type' | 'source_id'>): string => `${source.type}:${source.source_id}`
-
-/**
- * Карточка источника первой, подбор — следом без дубля той же карточки, всего не
- * больше `limit` (с закреплённой страницей — `AI_SOURCES_LIMIT_PINNED`, иначе `AI_SOURCES_LIMIT`). Квест лежит в индексе на нескольких локалях с разными URL, поэтому
- * дубль ищется по `type:source_id`, а не по адресу.
- */
-export const pinSourceFirst = (
-  pinned: AiSource | null | undefined,
-  sources: readonly AiSource[],
-  limit: number = pinned ? AI_SOURCES_LIMIT_PINNED : AI_SOURCES_LIMIT,
-): AiSource[] => {
-  if (!pinned) return sources.slice(0, limit)
-  const key = sourceKeyOf(pinned)
-  // Подбор нашёл ту же страницу — его фрагмент подобран под вопрос, он и идёт первым.
-  const found = sources.find((source) => sourceKeyOf(source) === key)
-  return [found ?? pinned, ...sources.filter((source) => sourceKeyOf(source) !== key)].slice(0, limit)
-}
 
 /**
  * Вопрос уводит со страницы (#3290): в нём названо место, которого нет ни в названии, ни в тексте

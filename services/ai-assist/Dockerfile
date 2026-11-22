@@ -4,8 +4,8 @@
 #   docker build -f services/ai-assist/Dockerfile -t metravel-assist .
 #
 # В образ запекаются только рантайм-зависимость (@huggingface/transformers + onnxruntime-node),
-# код scripts/ai-index + scripts/ai-assist, общие с экраном модули api/aiAssist (фильтр тем,
-# промпт, страж ссылок, клиент модели — #2713) и веса модели EmbeddingGemma-300M q8
+# код scripts/ai-index + scripts/ai-assist (в том числе промпт, стражи и клиент модели — #2713,
+# #3297), общие с экраном модули api/aiAssist (политика, типы, разбор места и условий) и веса модели EmbeddingGemma-300M q8
 # (~330 МБ), чтобы прод не ходил в интернет. Индекс (#2454) в образ НЕ входит: он
 # доставляется выкатом фронта и монтируется в /index (compose — #2457).
 #

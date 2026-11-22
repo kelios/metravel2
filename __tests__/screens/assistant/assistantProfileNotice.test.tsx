@@ -4,22 +4,8 @@
  */
 import { act, render, renderHook, screen } from '@testing-library/react-native'
 
-jest.mock('@/api/aiAssist/limits', () => ({
-  AI_ASK_DAILY_LIMIT: 20,
-  AI_OFFTOPIC_STRIKES_TO_BLOCK: 3,
-  consumeQuestion: jest.fn(async () => 19),
-  readRemainingQuestions: jest.fn(async () => 20),
-  readOffTopicState: jest.fn(async () => ({ strikes: 0, blocked: false })),
-  registerOffTopicStrike: jest.fn(async () => ({ strikes: 1, blocked: false })),
-}))
-jest.mock('@/api/aiAssist/demandLog', () => ({ logDemand: jest.fn(async () => []) }))
-jest.mock('@/api/aiAssist/retrieval', () => ({
-  searchSiteMaterials: jest.fn(async () => []),
-  buildRetrievalQuery: jest.requireActual('@/api/aiAssist/retrieval').buildRetrievalQuery,
-}))
 
 import { type AskClient, AskError, type AskResult } from '@/api/aiAssist/askProvider'
-import type { Generator } from '@/api/aiAssist/generator'
 import { AssistantProfileNotice } from '@/components/screens/assistant/AssistantProfileNotice'
 import type { AssistantStyles } from '@/components/screens/assistant/assistantStyles'
 import { useAssistantChat } from '@/components/screens/assistant/useAssistantChat'
@@ -132,17 +118,5 @@ describe('строка о личном контексте (#3354)', () => {
       await result.current.ask('Куда съездить в Литве?')
     })
     expect(result.current.profileActive).toBe(true)
-  })
-
-  it('провайдер llamacpp личного контекста не получает', async () => {
-    const generator: Generator = {
-      generate: async () => ({ text: 'На сайте такого материала пока нет.', usage: { prompt_tokens: 1, completion_tokens: 1, ttft_ms: 1, tokens_per_s: 1 } }),
-    }
-    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
-    await act(async () => {
-      await result.current.ask('Куда поехать на выходные?')
-    })
-    expect(result.current.turns).toHaveLength(1)
-    expect(result.current.profileActive).toBe(false)
   })
 })

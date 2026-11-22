@@ -6,7 +6,7 @@
  * redis (опционально) → лимиты и журнал `/ai/ask` → HTTP. Любая ошибка до listen — выход с кодом 1 и понятным сообщением.
  */
 import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '../../api/aiAssist/policy.ts'
-import { createGenerator } from '../../api/aiAssist/generator.ts'
+import { createGenerator } from './generator.ts'
 import { createEmbedder } from '../ai-index/embed.ts'
 import { indexAgeDays } from '../ai-index/format.ts'
 import { DEFAULT_MAX_AGE_DAYS } from '../ai-index/freshness.ts'

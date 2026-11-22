@@ -7,7 +7,7 @@ import type { AddressInfo } from 'net'
 import path from 'path'
 
 import { createAskClient } from '@/api/aiAssist/askProvider'
-import type { GenerateRequest, Generator } from '@/api/aiAssist/generator'
+import type { GenerateRequest, Generator } from '@/scripts/ai-assist/generator'
 import { createApp } from '@/scripts/ai-assist/app'
 import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { createDemandLog } from '@/scripts/ai-assist/demandLog'
@@ -337,16 +337,18 @@ describe('путь службы /ai/ask в контуре оценки (#3286)',
   })
 })
 
-describe('команда прогона: режим --provider ask (#3286)', () => {
-  it('флаги: служба по умолчанию на :8787, --model-url — сверка модели; чужой провайдер и --ask-url без режима — ошибка', () => {
+describe('команда прогона: путь службы — единственный (#3286, #3297)', () => {
+  it('флаги: служба по умолчанию на :8787, --model-url — сверка модели; чужой провайдер и флаги пути экрана — ошибка', () => {
     expect(parseRunArgs(['--provider', 'ask'])).toMatchObject({ provider: 'ask', askUrl: 'http://127.0.0.1:8787' })
     expect(parseRunArgs(['--provider', 'ask']).expectModelUrl).toBeUndefined()
     expect(parseRunArgs(['--provider=ask', '--ask-url', 'http://127.0.0.1:8788/', '--model-url', 'http://127.0.0.1:8080'])).toMatchObject({ askUrl: 'http://127.0.0.1:8788', expectModelUrl: 'http://127.0.0.1:8080' })
     expect(() => parseRunArgs(['--provider', 'llamacpp'])).toThrow('--provider: только ask')
-    expect(() => parseRunArgs(['--ask-url', 'http://127.0.0.1:8787'])).toThrow('--ask-url нужен только с --provider ask')
-    // Прогон через экран флагами службы не задет.
-    expect(parseRunArgs([])).toMatchObject({ baseUrl: 'http://localhost:8081', modelUrl: 'http://127.0.0.1:8080' })
-    expect(parseRunArgs([]).provider).toBeUndefined()
+    // Без флагов прогон идёт в службу: `--provider ask` — режим по умолчанию и единственный.
+    expect(parseRunArgs([])).toMatchObject({ provider: 'ask', askUrl: 'http://127.0.0.1:8787', modelUrl: 'http://127.0.0.1:8080' })
+    expect(parseRunArgs(['--ask-url', 'http://127.0.0.1:8788/'])).toMatchObject({ provider: 'ask', askUrl: 'http://127.0.0.1:8788' })
+    // Путь экрана удалён вместе с клиентским пайплайном (#3297): старая команда не идёт молча другим путём.
+    expect(() => parseRunArgs(['--base', 'http://localhost:8081'])).toThrow('--base: путь экрана удалён (#3297)')
+    expect(() => parseRunArgs(['--headed'])).toThrow('--headed: путь экрана удалён (#3297)')
   })
 
   describe('папка прогона', () => {

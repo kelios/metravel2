@@ -387,24 +387,29 @@ describe('команда приёмки и опись оценочных вхо�
     const count = (name: string) => readLines(path.join(casesDir, name)).length
 
     it('одинаковые входы для базы и кандидата, целевые вопросы есть в наборе', () => {
-      const plan = (side: string, url: string) => planRuns(thresholds, side, url, `/out/${side}`, 'http://localhost:8081', { casesDir })
+      const plan = (side: string, url: string) => planRuns(thresholds, side, url, `/out/${side}`, { casesDir, askUrl: 'http://127.0.0.1:8787' })
       const base = plan('base', 'http://127.0.0.1:8080')
       const candidate = plan('candidate', 'http://127.0.0.1:8090')
       const shape = (runs: { name: string; expected: number; command: string[] }[], url: string, side: string) => runs.map((run) => [run.name, run.expected, run.command.slice(1).join(' ').replaceAll(url, '<model>').replaceAll(`/out/${side}`, '<out>')])
       expect(shape(base, 'http://127.0.0.1:8080', 'base')).toEqual(shape(candidate, 'http://127.0.0.1:8090', 'candidate'))
-      // Без адреса службы прогон живых вопросов в план не входит.
-      expect(base.map((run) => run.name)).toEqual(['targets', 'holdout', 'holdout_fresh', 'offtopic', 'quality-1', 'quality-2', 'quality-3'])
+      expect(base.map((run) => run.name)).toEqual(['targets', 'holdout', 'holdout_fresh', 'offtopic', 'live', 'quality-1', 'quality-2', 'quality-3'])
       const targets = base[0]
       expect(targets.expected).toBe(thresholds.targets.length * 3)
       expect(targets.command.join(' ')).toContain(`--only ${thresholds.targets.join(',')}`)
       expect(base[3].command.join(' ')).toContain('--group off_topic,injection')
-      // Свежий отложенный срез — тот же экран и те же три повтора, что у прежнего.
+      // Свежий отложенный срез — тот же путь службы и те же три повтора, что у прежнего.
       expect(base[2]).toMatchObject({ kind: 'contour', expected: count('cases.holdout-2026-11.jsonl') * 3 })
-      expect(base[2].command.join(' ')).toContain(`--base http://localhost:8081 --model-url http://127.0.0.1:8080 --cases ${path.join(casesDir, 'cases.holdout-2026-11.jsonl')} --repeat 3`)
+      expect(base[2].command.join(' ')).toContain(`run.mjs --provider ask --ask-url http://127.0.0.1:8787 --model-url http://127.0.0.1:8080 --cases ${path.join(casesDir, 'cases.holdout-2026-11.jsonl')} --repeat 3`)
+      // #3297: пути экрана нет — ни один прогон плана не зовёт Metro.
+      for (const run of base) expect(run.command.join(' ')).not.toContain('--base ')
     })
 
-    it('#3286: с --provider ask в плане есть прогон живых вопросов через службу своей стороны', () => {
-      const plan = (side: string) => planRuns(thresholds, side, `<${side}-url>`, `/out/${side}`, 'http://localhost:8081', { casesDir, askUrl: `<${side}-ask-url>` })
+    it('#3297: без адреса службы стороны план не собирается', () => {
+      expect(() => planRuns(thresholds, 'base', 'http://127.0.0.1:8080', '/out/base', { casesDir })).toThrow('base: нужен адрес службы metravel-assist этой стороны')
+    })
+
+    it('#3286: в плане есть прогон живых вопросов через службу своей стороны', () => {
+      const plan = (side: string) => planRuns(thresholds, side, `<${side}-url>`, `/out/${side}`, { casesDir, askUrl: `<${side}-ask-url>` })
       const live = plan('base').find((run: { name: string }) => run.name === 'live')
       expect(live).toMatchObject({ kind: 'ask', side: 'base', dir: '/out/base/live', expected: count('cases.live.jsonl') })
       const command = live.command.slice(1).join(' ')
@@ -421,7 +426,7 @@ describe('команда приёмки и опись оценочных вхо�
     it('набора вопросов нет в папке — ошибка называет прогон и файл', () => {
       const empty = makeTempDir('ai-accept-empty-', { root: path.join(ROOT, '.codex-temp') })
       try {
-        expect(() => planRuns(thresholds, 'base', 'u', '/out/base', 's', { casesDir: empty })).toThrow('runs.targets: нет набора вопросов cases.jsonl')
+        expect(() => planRuns(thresholds, 'base', 'u', '/out/base', { casesDir: empty, askUrl: 'a' })).toThrow('runs.targets: нет набора вопросов cases.jsonl')
       } finally {
         removeDir(empty)
       }
@@ -434,10 +439,11 @@ describe('команда приёмки и опись оценочных вхо�
     expect(() => parseAcceptArgs(['--skip', 'judge'])).toThrow('--skip')
   })
 
-  it('#3286: --provider ask принимает адреса двух служб; без него адреса служб — ошибка', () => {
+  it('#3286, #3297: адреса двух служб принимаются и без --provider — путь службы единственный; чужой провайдер и --screen — ошибка', () => {
     expect(parseAcceptArgs(['--provider', 'ask', '--base-ask-url', 'http://127.0.0.1:8787/', '--candidate-ask-url=http://127.0.0.1:8788'])).toMatchObject({ provider: 'ask', baseAskUrl: 'http://127.0.0.1:8787', candidateAskUrl: 'http://127.0.0.1:8788' })
+    expect(parseAcceptArgs(['--base-ask-url', 'http://127.0.0.1:8787'])).toMatchObject({ provider: 'ask', baseAskUrl: 'http://127.0.0.1:8787' })
     expect(() => parseAcceptArgs(['--provider', 'llamacpp'])).toThrow('--provider: только ask')
-    expect(() => parseAcceptArgs(['--base-ask-url', 'http://127.0.0.1:8787'])).toThrow('только с --provider ask')
+    expect(() => parseAcceptArgs(['--screen', 'http://localhost:8081'])).toThrow('неизвестный флаг --screen')
   })
 
   describe('папка приёмки', () => {

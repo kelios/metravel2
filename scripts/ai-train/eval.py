@@ -93,7 +93,7 @@ DEGENERATE_RE = re.compile(r"([^\W\d_])\1{5,}")
 PLACEHOLDER_RE = re.compile(r"\{\{[^}]*\}\}")
 POLISH = set("ąćęłńśźżó")
 CYRILLIC_NEVER = {"ru": "іўїєґ", "be": "ищъїєґ", "uk": "ыэёъў"}  # dict order breaks the last tie
-# Evidence for an equal letter score (#3369) — the same lists as api/aiAssist/language.ts: letters only one
+# Evidence for an equal letter score (#3369) — the same lists as scripts/ai-assist/language.ts: letters only one
 # language has and its function words. A Belarusian phrase with a typo ("…ўзровень гадин") and a Ukrainian one
 # without і/ї/є scored the same as Russian, and the tie went to Russian.
 CYRILLIC_ONLY = {"ru": "", "be": "ў", "uk": "їєґ"}

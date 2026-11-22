@@ -29,22 +29,8 @@ jest.mock('@/components/ui/CardRail', () => {
     return <View testID={testID}>{children}</View>
   }
 })
-jest.mock('@/api/aiAssist/limits', () => ({
-  AI_ASK_DAILY_LIMIT: 20,
-  AI_OFFTOPIC_STRIKES_TO_BLOCK: 3,
-  consumeQuestion: jest.fn(async () => 19),
-  readRemainingQuestions: jest.fn(async () => 20),
-  readOffTopicState: jest.fn(async () => ({ strikes: 0, blocked: false })),
-  registerOffTopicStrike: jest.fn(async () => ({ strikes: 1, blocked: false })),
-}))
-jest.mock('@/api/aiAssist/demandLog', () => ({ logDemand: jest.fn(async () => []) }))
-jest.mock('@/api/aiAssist/retrieval', () => ({
-  searchSiteMaterials: jest.fn(async () => []),
-  buildRetrievalQuery: jest.requireActual('@/api/aiAssist/retrieval').buildRetrievalQuery,
-}))
 
 import type { AskClient, AskResult } from '@/api/aiAssist/askProvider'
-import type { Generator } from '@/api/aiAssist/generator'
 import type { AiTripPlan, PlanClient } from '@/api/aiAssist/planProvider'
 import { ASSISTANT_PLAN_OPEN_EVENT, planDescription, planToDraft } from '@/components/screens/assistant/AssistantPlanDays'
 import { AssistantTurnCard } from '@/components/screens/assistant/AssistantTurnCard'
@@ -148,17 +134,6 @@ describe('хук ассистента: намерение «план» (#3298)',
     })
     expect(noPlan.result.current.turns[0].plan).toBeUndefined()
     expect(asks.ask).toHaveBeenCalledTimes(4)
-  })
-
-  it('провайдер llamacpp плана не получает', async () => {
-    const plans = planClient({ plan: PLAN, aborted: false })
-    const generator: Generator = { generate: async () => ({ text: 'На сайте такого материала пока нет.', usage: { prompt_tokens: 1, completion_tokens: 1, ttft_ms: 1, tokens_per_s: 1 } }) }
-    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator, planClient: plans.client }))
-    await act(async () => {
-      await result.current.ask(QUESTION)
-    })
-    expect(plans.plan).not.toHaveBeenCalled()
-    expect(result.current.turns[0].plan).toBeUndefined()
   })
 })
 

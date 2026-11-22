@@ -457,7 +457,7 @@ export type CardVerdict = {
   route?: 'match' | 'other'
 }
 
-/** Детский квест под вопрос о детях весит больше семейного — как места `childrenRank` (#3276). */
+/** Детский квест под вопрос о детях весит больше семейного (#3276). */
 const AUDIENCE_SCORE = { kids: 1, family: 0.5 } as const
 const AUDIENCE_RU = { kids: 'детский', family: 'семейный' } as const
 // Названия словаря транспорта каталога (`facts.jsonl`), в нижнем регистре.

@@ -8,11 +8,11 @@
  * потом не пропускает в ответ ни одного адреса вне этого блока.
  */
 
-import { AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_PROMPT_SOURCES_LIMIT } from './policy.ts'
+import { AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_PROMPT_SOURCES_LIMIT, MAX_QUESTION_LENGTH } from '../../api/aiAssist/policy.ts'
 import { arrangeSources, isArranged, withoutNearby } from './sourceSelection.ts'
-import { buildRetrievalQuery, resolveRetrievalAnchor } from './retrievalQuery.ts'
-import type { AiChatMessage, AiHistoryItem, AiSource } from './types'
-import { formatVisitorBlock, VISITOR_RULE_RU, type VisitorContext } from './visitorContext.ts'
+import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
+import type { AiChatMessage, AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
+import { formatVisitorBlock, VISITOR_RULE_RU, type VisitorContext } from '../../api/aiAssist/visitorContext.ts'
 
 /** Копия `SYSTEM` из `scripts/ai-train/sets/common.py` — менять синхронно. */
 export const ASSISTANT_SYSTEM_PROMPT =
@@ -57,7 +57,7 @@ export const NO_PLACE_NOTE_RU = 'О месте из вопроса на сайт
 /** Какие новые строки подсказки включены; по умолчанию — обе. Служба читает их из окружения. */
 export type PromptHints = { whyFits?: boolean; noPlace?: boolean }
 
-export const MAX_QUESTION_LENGTH = 500
+export { MAX_QUESTION_LENGTH }
 export const MAX_HISTORY_ITEMS = 6
 export const MAX_ANSWER_CHARS = 1200
 const MAX_HISTORY_TEXT_LENGTH = 1200

@@ -1,6 +1,6 @@
 import { CONTINENT_COUNTRIES, COUNTRY_NAMES } from '@/api/aiAssist/placeCountries'
 import { continentsOfCodes, countryCodeOfWord, countryCodesOf, isContinentWord, matchPlaceSources, mentionsAnyPlace, namedContinents, namedCountryCodes, namesPlaceAfterFrom, sameCountryWord, withoutPlace } from '@/api/aiAssist/promptPlace'
-import { arrangeSources, withoutNearby } from '@/api/aiAssist/sourceSelection'
+import { arrangeSources, withoutNearby } from '@/scripts/ai-assist/sourceSelection'
 import type { AiSource } from '@/api/aiAssist/types'
 import { questsGenerated2 as questsBe } from '@/i18n/locales/be/generated/quests_02'
 import { questsGenerated2 as questsEn } from '@/i18n/locales/en/generated/quests_02'

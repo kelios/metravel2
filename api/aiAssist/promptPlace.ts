@@ -587,21 +587,6 @@ export const matchPlaceSources = <T extends AiSource>(
 }
 
 /**
- * Слово называет место отправления маршрута «из X в Y» (#3277) — по названиям мест из `sources`
- * (каталог квестов экрана). Подбор экрана такие слова в балл квеста не считает: иначе восемь квестов
- * города отправления вытесняли квест места назначения. Нет маршрута — ни одно слово не подходит.
- */
-export const routeOriginMatcher = (query: string | null | undefined, sources: ReadonlyArray<Pick<AiSource, 'place'>>): ((word: string) => boolean) => {
-  const text = String(query ?? '')
-  const origins = text.trim() ? namedPlacesOf(text, sources, PLACE_LEVELS).flatMap((entry) => entry.origins) : []
-  if (!origins.length) return () => false
-  return (word) => {
-    const folded = normalize(word).toLowerCase()
-    return origins.some((name) => startsWithName(folded, name, MAX_ENDING_LENGTH))
-  }
-}
-
-/**
  * Карточка без служебных полей — для списка источников, который уходит посетителю: место (#3315),
  * запись фактов и строка «почему подходит» (#3289) нужны только отбору и подсказке.
  */

@@ -1,6 +1,6 @@
-import { selectPromptSources } from '@/api/aiAssist/prompt'
+import { selectPromptSources } from '@/scripts/ai-assist/prompt'
 import type { QuestFacts, TravelFacts } from '@/api/aiAssist/sourceFacts'
-import { arrangeSources, isArranged, withoutNearby } from '@/api/aiAssist/sourceSelection'
+import { arrangeSources, isArranged, withoutNearby } from '@/scripts/ai-assist/sourceSelection'
 import type { AiSource } from '@/api/aiAssist/types'
 
 type TravelInput = { id: number; title: string; country: string; snippet?: string; facts?: Partial<TravelFacts> | null }

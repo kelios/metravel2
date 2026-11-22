@@ -46,7 +46,7 @@ const sources = [
 
 const answer = 'Начните с [квеста по Минску для семьи](https://metravel.by/quests/minsk/minsk-family), а на второй день — выходные с детьми.';
 
-/** Считает запросы к модели напрямую: при провайдере `ask` их быть не должно. */
+/** Считает запросы к модели напрямую: их быть не должно — экран ходит только в службу `/ai/ask` (#3297). */
 async function trackModelRequests(page: Page): Promise<string[]> {
   const direct: string[] = [];
   await page.route('**/v1/chat/completions', async (route) => {
@@ -57,10 +57,10 @@ async function trackModelRequests(page: Page): Promise<string[]> {
 }
 
 /**
- * Экран виден из статического HTML раньше скриптов, а чанк экрана приходит уже после
- * начала гидрации: React заменяет серверную разметку живым экраном. Поле «живое», когда
- * экран смонтирован: `data-live` он ставит сам после монтирования, в статике его нет.
- * Сценарии живого ввода ждут именно этого; ввод ДО гидрации проверяет отдельный сценарий (#3346).
+ * Экран виден из статического HTML раньше скриптов. Чанк экрана стоит в тегах <script> роута,
+ * и страница гидрируется на месте (#3370). Поле «живое», когда экран смонтирован: `data-live` он
+ * ставит сам после монтирования, в статике его нет. Сценарии живого ввода ждут именно этого;
+ * ввод ДО гидрации (#3346) и ВО ВРЕМЯ гидрации (#3370) проверяют отдельные сценарии.
  */
 async function waitForLiveInput(page: Page): Promise<void> {
   await expect(
@@ -263,9 +263,8 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     expect(direct).toEqual([]);
   });
 
-  // #3346: статический HTML показывает поле раньше скриптов. Чанк экрана приходит позже
-  // начала гидрации, и React рисует экран заново — набранное обязано перейти в новое поле,
-  // стать черновиком и уйти одним запросом.
+  // #3346: статический HTML показывает поле раньше скриптов. Событий ввода до гидрации React
+  // не воспроизводит — набранное обязано стать черновиком живого экрана и уйти одним запросом.
   test('a question typed into the static page before hydration survives it and is sent', async ({ page }) => {
     const direct = await trackModelRequests(page);
     const asks: Array<{ q?: string }> = [];
@@ -306,6 +305,65 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
     await expect(input).toHaveValue('');
     expect(direct).toEqual([]);
   });
+
+  // #3370: чанк экрана стоит в тегах <script> HTML роута, поэтому страница оживает на месте:
+  // поле вопроса остаётся тем же узлом, запасной вид роута не показывается, фокус и символы,
+  // набранные во время гидрации, не теряются. Телефон и desktop — оба брейкпоинта карточки.
+  for (const viewport of [{ width: 390, height: 844 }, VIEWPORT]) {
+    test(`typing character by character while the page hydrates loses nothing and keeps focus (${viewport.width}px)`, async ({ page }) => {
+      const direct = await trackModelRequests(page);
+      const question = 'Куда поехать на выходные из Минска?';
+      const typedBeforeScripts = question.slice(0, 8);
+      const releaseScripts = await holdAppScripts(page);
+
+      await page.setViewportSize(viewport);
+      await preacceptCookies(page);
+      // `commit`: DOMContentLoaded ждёт defer-скрипты, а они придержаны.
+      await page.goto('/assistant', { waitUntil: 'commit' });
+      test.skip(!(await waitForScreen(page.getByTestId('assistant-screen'))), 'бандл собран без EXPO_PUBLIC_AI_ASSISTANT');
+
+      // Сборочный уровень: чанк экрана — один из собственных тегов <script> страницы, раньше входного файла.
+      const scripts = await page
+        .locator('script[src*="/_expo/static/js/"]')
+        .evaluateAll((nodes) => nodes.map((node) => (node as HTMLScriptElement).src.split('/').pop() ?? ''));
+      const screenChunk = scripts.findIndex((name) => /^AssistantScreen-[0-9a-f]+\.js$/.test(name));
+      const entryChunk = scripts.findIndex((name) => /^entry-[0-9a-f]+\.js$/.test(name));
+      expect(screenChunk).toBeGreaterThanOrEqual(0);
+      expect(screenChunk).toBeLessThan(entryChunk);
+
+      const input = page.getByTestId('assistant-input');
+      await input.click();
+      // Метка на узле статики и наблюдатель: экран не должен исчезать из документа ни на кадр.
+      await page.evaluate(() => {
+        const state = window as unknown as { __assistantStaticInput?: Element | null; __assistantScreenReplaced?: boolean };
+        const screen = document.querySelector('[data-testid="assistant-screen"]');
+        state.__assistantStaticInput = document.querySelector('[data-testid="assistant-input"]');
+        state.__assistantScreenReplaced = false;
+        new MutationObserver(() => {
+          if (!document.contains(screen)) state.__assistantScreenReplaced = true;
+        }).observe(document.body, { childList: true, subtree: true });
+      });
+
+      await page.keyboard.type(typedBeforeScripts, { delay: 30 });
+      releaseScripts();
+      // Посетитель продолжает печатать, пока скрипты грузятся и страница гидрируется.
+      await page.keyboard.type(question.slice(typedBeforeScripts.length), { delay: 30 });
+
+      await waitForLiveInput(page);
+      await expect(input).toHaveValue(question);
+      await expect(input).toBeFocused();
+      const outcome = await page.evaluate(() => {
+        const state = window as unknown as { __assistantStaticInput?: Element | null; __assistantScreenReplaced?: boolean };
+        return {
+          sameNode: state.__assistantStaticInput === document.querySelector('[data-testid="assistant-input"]'),
+          replaced: state.__assistantScreenReplaced,
+        };
+      });
+      expect(outcome).toEqual({ sameNode: true, replaced: false });
+      await expect(page.getByTestId('assistant-send')).toBeEnabled();
+      expect(direct).toEqual([]);
+    });
+  }
 
   test('service down → unavailable with retry; 429 offtopic_blocked → block notice and disabled composer', async ({ page }) => {
     const direct = await trackModelRequests(page);

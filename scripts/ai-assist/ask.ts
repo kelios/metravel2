@@ -18,7 +18,7 @@
  * Событие `text` несёт накопленный текст после стража (`{text}`), не дельту:
  * страж может убрать уже показанный чужой адрес.
  *
- * Страж содержания (#3291, `api/aiAssist/answerGuard.ts`) работает по готовому ответу: подпись ссылки
+ * Страж содержания (#3291, `scripts/ai-assist/answerGuard.ts`) работает по готовому ответу: подпись ссылки
  * приводится к названию карточки уже в стриме, а пояснение пункта от чужой карточки и фраза с числом
  * без опоры убираются в последнем `text`. Событие `done` получает необязательные счётчики
  * `relabeled`, `dropped_descriptions`, `ungrounded_numbers`, `prompt_leaks` (вырезано эхо разметки подсказки) и флаг `fallback: true` — ответ пустой
@@ -38,7 +38,7 @@
  * подсказку не попадает (первой карточкой модель называла её ответом на вопрос о другом месте).
  *
  * Условия вопроса (#3289): подбор отдаёт карточки расставленными цепочкой «место → условия →
- * превосходная степень» (`api/aiAssist/sourceSelection.ts`). Карточки, прошедшие отбор, уходят в
+ * превосходная степень» (`scripts/ai-assist/sourceSelection.ts`). Карточки, прошедшие отбор, уходят в
  * событие `sources` с `group: 'match'`, остальные — с `group: 'nearby'` и в подсказку не идут; если
  * отделять нечего, поля нет. Строка «Почему подходит» карточки подсказки и строка «материала о месте
  * нет» выключаются переменными окружения (`promptHints`).
@@ -89,13 +89,13 @@
  */
 import type http from 'node:http'
 
-import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
-import { guardAnswer } from '../../api/aiAssist/answerGuard.ts'
-import { questionLanguage } from '../../api/aiAssist/language.ts'
-import { admitsNoMaterial } from '../../api/aiAssist/noMaterial.ts'
-import { countKeptSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
+import { type Generator, isAiGeneratorError } from './generator.ts'
+import { guardAnswer } from './answerGuard.ts'
+import { questionLanguage } from './language.ts'
+import { admitsNoMaterial } from './noMaterial.ts'
+import { countKeptSourceLinks, guardStreamingText } from './linkGuard.ts'
 import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from '../../api/aiAssist/policy.ts'
-import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources, visitorBlockFor } from '../../api/aiAssist/prompt.ts'
+import { buildAssistantMessages, MAX_HISTORY_ITEMS, type PromptHints, selectPromptSources, visitorBlockFor } from './prompt.ts'
 import { withoutPlace } from '../../api/aiAssist/promptPlace.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, leftPageSources, pageSources, parseSourceRef } from '../../api/aiAssist/sourceRef.ts'

@@ -396,14 +396,45 @@ function mergeLazyGroupsWithinForeignBudget(groups, budgetBytes, stats) {
   return [...rest, ...live.filter(Boolean)]
 }
 
+// #3370: a route may deliver a lazy screen in its own HTML. The route file keeps the
+// `import()` (the screen stays out of builds without its flag, #2738, and out of every
+// other route's files), but a boundary whose lazy chunk arrives after hydration started
+// cannot hydrate: the first update from above makes React drop the server markup for the
+// fallback, with the focused field in it. A route listed here REQUIRES the chunks of its
+// lazy screen: they stand in its <script> set before the entry file, so Expo's loader
+// resolves that import() synchronously (`_result`) and the boundary hydrates in place.
+// Only requirements change: grouping, owners and every other route's files stay as planned.
+// Paths are relative to the project root; a pair whose route or screen is not an entry
+// point of this build (the feature is compiled out) is skipped.
+const ROUTE_EAGER_LAZY_SCREENS = Object.freeze([
+  ['app/(tabs)/assistant.tsx', 'components/screens/assistant/AssistantScreen.tsx'],
+])
+
+function resolveRouteLazyScreens(root, pairs = ROUTE_EAGER_LAZY_SCREENS) {
+  return pairs.map(([route, screen]) => [path.join(root, route), path.join(root, screen)])
+}
+
+/** Adds the chunks a lazy screen requires to the route that delivers it; order kept, no duplicates. */
+function deliverLazyScreensWithRoutes(requiredChunksByEntryPath, routeLazyScreens) {
+  for (const [route, screen] of routeLazyScreens ?? []) {
+    const own = requiredChunksByEntryPath.get(route)
+    const lazy = requiredChunksByEntryPath.get(screen)
+    if (!own || !lazy) continue
+    const seen = new Set(own)
+    requiredChunksByEntryPath.set(route, [...own, ...lazy.filter((chunk) => !seen.has(chunk))])
+  }
+  return requiredChunksByEntryPath
+}
+
 /**
  * @param plan result of upstream `computeBitSetChunkPlan`
  * @param context granular strategy context ({ options: { projectRoot, serverRoot } })
  * @param options.routeForeignBudgetBytes foreign shared bytes a route may receive; negative: merge identical sets only
  * @param options.stats optional `{ quotes, candidates }` counters of the budget merge, incremented in place
+ * @param options.routeLazyScreens `[route, screen]` path pairs relative to the root (default: ROUTE_EAGER_LAZY_SCREENS)
  * @returns the plan with `chunks` and `requiredChunksByEntryPath` replaced
  */
-function mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes = ROUTE_FOREIGN_BUDGET_BYTES, appDir, stats } = {}) {
+function mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes = ROUTE_FOREIGN_BUDGET_BYTES, appDir, stats, routeLazyScreens } = {}) {
   const { entryPoints, rawAtoms, dependentEntriesByModule } = plan
   const root = context?.options?.serverRoot ?? context?.options?.projectRoot ?? process.cwd()
   const entryPaths = entryPoints.map((entry) => entry.module.path)
@@ -473,9 +504,14 @@ function mergeGranularChunkPlan(plan, context, { routeForeignBudgetBytes = ROUTE
     for (const module of chunk.modules) requiredBy |= dependentEntriesByModule.get(module) ?? 0n
     for (const index of ownerIndices(requiredBy)) requiredByEntry[index].push(chunk)
   }
-  const requiredChunksByEntryPath = new Map(entryPaths.map((entryPath, index) => [entryPath, requiredByEntry[index]]))
+  // #3370: the pairs travel with the plan, so the refinement recomputes the same requirements.
+  const lazyScreens = resolveRouteLazyScreens(root, routeLazyScreens)
+  const requiredChunksByEntryPath = deliverLazyScreensWithRoutes(
+    new Map(entryPaths.map((entryPath, index) => [entryPath, requiredByEntry[index]])),
+    lazyScreens,
+  )
 
-  return { ...plan, chunks: packedChunks, requiredChunksByEntryPath }
+  return { ...plan, chunks: packedChunks, requiredChunksByEntryPath, routeLazyScreens: lazyScreens }
 }
 
 /** Measure only registered module factories, never scripts or raw source files. */
@@ -687,7 +723,11 @@ function withChunkRequirements(plan, chunks) {
     for (const module of chunk.modules) owners |= plan.dependentEntriesByModule.get(module) ?? 0n
     for (const index of ownerIndices(owners)) required[index].push(chunk)
   }
-  return { ...plan, chunks, requiredChunksByEntryPath: new Map(plan.entryPoints.map((entry, index) => [entry.module.path, required[index]])) }
+  const requiredChunksByEntryPath = deliverLazyScreensWithRoutes(
+    new Map(plan.entryPoints.map((entry, index) => [entry.module.path, required[index]])),
+    plan.routeLazyScreens,
+  )
+  return { ...plan, chunks, requiredChunksByEntryPath }
 }
 
 function sourceRouteKey(route, applicationDir) {
@@ -1063,6 +1103,6 @@ function mergeGroups(left, right) {
 mergeGranularChunkPlan.refine = refineGranularChunkPlan
 
 module.exports = {
-  mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES,
+  mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES, ROUTE_EAGER_LAZY_SCREENS,
   refineGranularChunkPlan, recordedSerialization, cloneSerializationInputs,
 }

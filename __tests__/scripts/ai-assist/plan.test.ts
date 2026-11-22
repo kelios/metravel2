@@ -8,7 +8,7 @@ import http from 'http'
 import type { AddressInfo } from 'net'
 import { join } from 'path'
 
-import { AiGeneratorError, type Generator } from '@/api/aiAssist/generator'
+import { AiGeneratorError, type Generator } from '@/scripts/ai-assist/generator'
 import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PLAN_DAILY_LIMIT } from '@/api/aiAssist/policy'
 import type { SourceFacts } from '@/api/aiAssist/sourceFacts'
 import type { AiChatMessage } from '@/api/aiAssist/types'

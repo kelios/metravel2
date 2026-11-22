@@ -1,4 +1,4 @@
-import { detectLanguage, judgeLanguage, questionLanguage } from '@/api/aiAssist/language'
+import { detectLanguage, judgeLanguage, questionLanguage } from '@/scripts/ai-assist/language'
 
 // #3369: один определитель языка для службы `/ai/ask` (язык справочного ответа) и контура оценки.
 describe('aiAssist language: язык текста и язык вопроса (#3369)', () => {

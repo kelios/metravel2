@@ -25,6 +25,8 @@ const MAX_EAGER_BROTLI_KB = 690
 const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
   'index.html': 469.3,
   '(tabs)/travels/[param].html': 558,
+  // #3370: the production build (assistant flag off) — the not-found shell; see the budget description.
+  '(tabs)/assistant.html': 394.3,
 }
 // #3362: full delivered bytes of eligible retained canonical source 39c7ab584e,
 // including loader metadata. Its failed report is measurement, not publication.
@@ -47,7 +49,8 @@ const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'
 //     "(tabs)/profile.html": 26,
 //     "(tabs)/articles.html": 16,
 //     "(tabs)/roulette.html": 21,
-//     "(tabs)/trips/plan/[id].html": 22
+//     "(tabs)/trips/plan/[id].html": 22,
+//     "(tabs)/assistant.html": 8
 //   }
 // }
 // bundle-budget-sync:eager-requests:end

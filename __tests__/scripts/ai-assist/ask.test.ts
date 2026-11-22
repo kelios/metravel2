@@ -7,15 +7,14 @@ import type { AddressInfo } from 'net'
 import { join } from 'path'
 
 import { ASK_HISTORY_TEXT_LIMIT } from '@/api/aiAssist/askProvider'
-import { AiGeneratorError, type GenerateRequest, type Generator } from '@/api/aiAssist/generator'
-import { HELP_MODE_RULE_RU, NO_PLACE_NOTE_RU, OFFTOPIC_REPLY_RU, PAGE_MODE_RULE_RU, type PromptHints } from '@/api/aiAssist/prompt'
+import { AiGeneratorError, type GenerateRequest, type Generator } from '@/scripts/ai-assist/generator'
+import { HELP_MODE_RULE_RU, NO_PLACE_NOTE_RU, OFFTOPIC_REPLY_RU, PAGE_MODE_RULE_RU, type PromptHints } from '@/scripts/ai-assist/prompt'
 import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_NEARBY_LIMIT } from '@/api/aiAssist/policy'
-import type { DemandEntry as ClientDemandEntry, DemandReason as ClientDemandReason } from '@/api/aiAssist/demandLog'
 import { createApp, opensWithYesNo } from '@/scripts/ai-assist/app'
 import { clientIp, GENERATOR_RETRY_AFTER_SEC } from '@/scripts/ai-assist/ask'
 import { ResponseCache } from '@/scripts/ai-assist/cache'
 import { loadConfig } from '@/scripts/ai-assist/config'
-import { createDemandLog, type DemandEntry, type DemandReason } from '@/scripts/ai-assist/demandLog'
+import { createDemandLog } from '@/scripts/ai-assist/demandLog'
 import { AskLimits, createCounterStore, createDayClock, MemoryCounterStore } from '@/scripts/ai-assist/limits'
 import { ASK_FRAGMENT_CHARS, SNIPPET_CHARS } from '@/scripts/ai-assist/search'
 import type { SourceFacts } from '@/scripts/ai-index/format'
@@ -96,10 +95,6 @@ describe('metravel-assist /ai/ask: календарный день по Europe/M
   it('числа политики — общие с клиентом', () => {
     expect(AI_ASK_DAILY_LIMIT).toBe(20)
     expect(AI_OFFTOPIC_STRIKES_TO_BLOCK).toBe(3)
-    // Форма строки журнала и причины совпадают с клиентским demandLog.ts — один отчёт читает оба.
-    const entry: ClientDemandEntry = { ts: '', q: '', locale: '', reason: 'offtopic_blocked' } satisfies DemandEntry
-    const reason: ClientDemandReason = 'no_sources' satisfies DemandReason
-    expect([entry, reason]).toBeTruthy()
   })
 })
 

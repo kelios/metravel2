@@ -19,7 +19,7 @@ import {
 } from '../../scripts/ai-assistant-eval/checks.mjs'
 import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from '../../scripts/ai-assistant-eval/report.mjs'
 import { loadCases } from '../../scripts/ai-assistant-eval/run-core.mjs'
-import { formatSourcesBlock } from '@/api/aiAssist/prompt'
+import { formatSourcesBlock } from '@/scripts/ai-assist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 
 describe('fixed-context quality report', () => {

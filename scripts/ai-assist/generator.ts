@@ -9,10 +9,14 @@
  *
  * Стрим читается через `ReadableStream` там, где он есть (web); native `fetch`
  * тела не стримит — тогда SSE разбирается целиком из `text()`, контракт тот же
- * (`consumeSseResponse`, общий с провайдером `ask`).
+ * (`consumeSseResponse` из `api/aiAssist/sse.ts`, общий с клиентом `/ai/ask`).
  */
 
-import type { AiChatMessage, AiGenerateResult, AiUsage } from './types'
+import { consumeSseResponse, GENERATION_TIMEOUT_MS, splitSseEvents } from '../../api/aiAssist/sse.ts'
+import type { AiChatMessage, AiGenerateResult, AiUsage } from '../../api/aiAssist/types.ts'
+
+// Разбор потока SSE общий с клиентом `/ai/ask` и живёт в `api/aiAssist/sse.ts`.
+export { consumeSseResponse, GENERATION_TIMEOUT_MS, splitSseEvents }
 
 export const LLAMACPP_MAX_TOKENS = 400
 export const LLAMACPP_TEMPERATURE = 0.3
@@ -25,7 +29,6 @@ export const LLAMACPP_TEMPERATURE = 0.3
  */
 export const LLAMACPP_PRESENCE_PENALTY = 1.5
 export const LLAMACPP_MODEL_NAME = 'metravel-llm'
-export const GENERATION_TIMEOUT_MS = 120_000
 const DEFAULT_RETRY_AFTER_SEC = 30
 
 export type AiGeneratorErrorKind = 'unavailable' | 'busy' | 'aborted' | 'bad_response'
@@ -71,48 +74,6 @@ export type ParsedSseEvent = {
   delta: string
   done: boolean
   usage: SseUsage | null
-}
-
-/** Делит буфер SSE на готовые события; хвост без завершающей пустой строки возвращается. */
-export const splitSseEvents = (buffer: string): { events: string[]; rest: string } => {
-  const normalized = buffer.replace(/\r\n/g, '\n')
-  const parts = normalized.split('\n\n')
-  const rest = parts.pop() ?? ''
-  return { events: parts.filter((part) => part.trim().length > 0), rest }
-}
-
-/**
- * Читает SSE-ответ до конца или пока `isFinished()` не скажет, что событий больше не
- * ждём: по мере прихода через `ReadableStream` (web) или целиком из `text()` (native
- * `fetch` тела не стримит). Все события одного куска отдаются `consume` — финальный
- * `usage` llama.cpp приходит после `finish_reason` в том же куске. Общий для
- * провайдеров `llamacpp` и `ask` (#2884).
- */
-export const consumeSseResponse = async (
-  response: Response,
-  { consume, isFinished }: { consume: (event: string) => void; isFinished: () => boolean },
-): Promise<void> => {
-  const body = response.body as ReadableStream<Uint8Array> | null | undefined
-  if (body && typeof body.getReader === 'function' && typeof TextDecoder !== 'undefined') {
-    const reader = body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-    while (!isFinished()) {
-      const { value, done } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const { events, rest } = splitSseEvents(buffer)
-      buffer = rest
-      for (const event of events) consume(event)
-    }
-    if (!isFinished() && buffer.trim()) consume(buffer)
-    if (isFinished()) void reader.cancel().catch(() => undefined)
-    return
-  }
-  const text = await response.text()
-  const { events, rest } = splitSseEvents(text)
-  for (const event of events) consume(event)
-  if (rest.trim()) consume(rest)
 }
 
 /** Одно событие SSE → дельта текста, признак конца и usage из финального чанка. */

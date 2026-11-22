@@ -1,4 +1,4 @@
-import { buildSourceByLinkKey, normalizeLinkKey } from '@/api/aiAssist/linkGuard'
+import { buildSourceByLinkKey, normalizeLinkKey } from '@/api/aiAssist/linkKey'
 import { AI_SOURCE_DISPLAY_FIELDS, type AiSource } from '@/api/aiAssist/types'
 
 /**
@@ -26,7 +26,7 @@ export const splitAnswerSources = (answer: string, sources: readonly AiSource[])
 
 /**
  * Карточку можно нарисовать с обложкой и действиями: служба прислала поля показа (#3295). У справки о
- * сайте их нет по смыслу; старая служба и провайдер `llamacpp` полей не дают — источник идёт прежней строкой.
+ * сайте их нет по смыслу; старая служба полей не даёт — источник идёт прежней строкой.
  */
 export const hasDisplayFields = (source: AiSource): boolean => source.type !== 'help' && AI_SOURCE_DISPLAY_FIELDS.some((field) => source[field] !== undefined)
 

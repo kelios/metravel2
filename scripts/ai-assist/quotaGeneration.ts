@@ -13,7 +13,7 @@
  */
 import type http from 'node:http'
 
-import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
+import { type Generator, isAiGeneratorError } from './generator.ts'
 import type { AiChatMessage } from '../../api/aiAssist/types.ts'
 import { clientIp, GENERATOR_RETRY_AFTER_SEC } from './ask.ts'
 import type { AskLimits } from './limits.ts'

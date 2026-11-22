@@ -28,12 +28,12 @@
  * Модуль общий для службы и тестов, без `@/`-импортов.
  */
 
-import { AI_MAX_RECOMMENDATIONS } from './policy.ts'
-import { continentsOfCodes, countryCodesOf, isContinentSide, isContinentWord, isPlaceForm, matchPlaceSources, namedContinents, namedCountryCodes, sameCountryWord, samePlaceWord } from './promptPlace.ts'
-import { judgeCard, parseConditions, type QuestionConditions } from './questionConditions.ts'
-import { namedDestinations } from './topicGate.ts'
-import type { AiWorldTrail } from './trailFacts.ts'
-import type { AiSource, AiSourcePlace } from './types'
+import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
+import { continentsOfCodes, countryCodesOf, isContinentSide, isContinentWord, isPlaceForm, matchPlaceSources, namedContinents, namedCountryCodes, sameCountryWord, samePlaceWord } from '../../api/aiAssist/promptPlace.ts'
+import { judgeCard, parseConditions, type QuestionConditions } from '../../api/aiAssist/questionConditions.ts'
+import { namedDestinations } from '../../api/aiAssist/topicGate.ts'
+import type { AiWorldTrail } from '../../api/aiAssist/trailFacts.ts'
+import type { AiSource, AiSourcePlace } from '../../api/aiAssist/types.ts'
 
 export type WorldCandidate = {
   card: AiWorldTrail

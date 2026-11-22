@@ -9,17 +9,17 @@
  * подбор / фильтр тем / промпт / страж / модель / инфраструктура.
  *
  * Слой стража содержания (#3291) считает показанный ответ тем же кодом, что и продукт
- * (`api/aiAssist/answerGuard.ts`), поэтому модуль грузит TypeScript. Команды `ai:assistant:*` и
+ * (`scripts/ai-assist/answerGuard.ts`), поэтому модуль грузит TypeScript. Команды `ai:assistant:*` и
  * дочерние прогоны `accept.mjs` подключают загрузчик `scripts/lib/ts-runtime.mjs` — он работает на
  * Node 20 и 22 без ручных флагов; прямой вызов `node …/run.mjs` подключает его сам (#3345), остальным
  * точкам входа нужен тот же `--import` либо Node со встроенным снятием типов (22.18+). jest собирает
  * модуль своим преобразованием.
  */
 
-import { findUngroundedNumbers, guardAnswer, leaksPrompt } from '../../api/aiAssist/answerGuard.ts'
-import { detectLanguage } from '../../api/aiAssist/language.ts'
-import { isSameTitle } from '../../api/aiAssist/linkGuard.ts'
-import { admitsNoMaterial } from '../../api/aiAssist/noMaterial.ts'
+import { findUngroundedNumbers, guardAnswer, leaksPrompt } from '../ai-assist/answerGuard.ts'
+import { detectLanguage } from '../ai-assist/language.ts'
+import { isSameTitle } from '../ai-assist/linkGuard.ts'
+import { admitsNoMaterial } from '../ai-assist/noMaterial.ts'
 import { detectSuperlative } from '../../api/aiAssist/sourceFacts.ts'
 
 export const LAYERS = ['infra', 'retrieval', 'gate', 'prompt', 'guard', 'model']
@@ -39,7 +39,7 @@ export const LAYER_RU = {
  */
 export const EXPECTS = ['answer', 'no_material', 'any_on_topic', 'help', 'refuse', 'refuse_block', 'blocked']
 
-/** Предел длины ответа и число рекомендаций — те же, что в `buildSystemPrompt` (`api/aiAssist/prompt.ts`; тест сверяет со слепком). */
+/** Предел длины ответа и число рекомендаций — те же, что в `buildSystemPrompt` (`scripts/ai-assist/prompt.ts`; тест сверяет со слепком). */
 export const MAX_ANSWER_CHARS = 1200
 export const MAX_RECOMMENDATIONS = 3
 /**
@@ -183,12 +183,12 @@ export const hasTemplate = (text) => {
 
 /**
  * Фразы системного промпта и разметки карточек в ответе — промпт утёк. Детектор общий со стражем содержания
- * (`leaksPrompt` в `api/aiAssist/answerGuard.ts`): заголовок «Материалы сайта:» на пяти локалях, строка
+ * (`leaksPrompt` в `scripts/ai-assist/answerGuard.ts`): заголовок «Материалы сайта:» на пяти локалях, строка
  * вопроса, номер карточки в квадратных скобках.
  */
 export { leaksPrompt }
 export const isOfftopicRefusal = (text) => OFFTOPIC_REFUSAL_RE.test(String(text ?? ''))
-/** «На сайте такого нет» — общий определитель службы и контура (`api/aiAssist/noMaterial.ts`, #3296). */
+/** «На сайте такого нет» — общий определитель службы и контура (`scripts/ai-assist/noMaterial.ts`, #3296). */
 export const isNoMaterial = (text) => admitsNoMaterial(text)
 
 /**
@@ -216,7 +216,7 @@ export const admitsNotInCards = (text) => NOT_IN_CARDS_RE.test(String(text ?? ''
 /**
  * Слой модели (#3277): число с единицей в СЫРОМ ответе — цена, часы, минуты, время суток, точки,
  * километры и годы — должно стоять в карточках подсказки или в вопросе. Правило опоры — общее со стражем
- * (`findUngroundedNumbers`, `api/aiAssist/answerGuard.ts`). Страж вырезает такое число из показанного
+ * (`findUngroundedNumbers`, `scripts/ai-assist/answerGuard.ts`). Страж вырезает такое число из показанного
  * ответа, и ход проходил автопроверку, хотя модель число выдумала: «Сколько длится квест по Гродно?» —
  * «120» и «150 минут» при карточках без длительности засчитывались 3 из 3 (замер #3268). Возвращает
  * числа без опоры как в ответе.
@@ -272,7 +272,7 @@ export const countRecommendations = (raw, cards) => {
 }
 
 /**
- * Язык по буквам и служебным словам — общий определитель службы и контура (`api/aiAssist/language.ts`,
+ * Язык по буквам и служебным словам — общий определитель службы и контура (`scripts/ai-assist/language.ts`,
  * #3369): проверка «ответ на языке вопроса» и язык справочного ответа службы читают текст одним правилом.
  */
 export const detectLang = (text) => detectLanguage(text)

@@ -11,7 +11,7 @@ import {
   findRepetitionLoopCut,
   parseSseEvent,
   splitSseEvents,
-} from '@/api/aiAssist/generator'
+} from '@/scripts/ai-assist/generator'
 import type { AiChatMessage } from '@/api/aiAssist/types'
 
 const messages: AiChatMessage[] = [

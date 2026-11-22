@@ -1,25 +1,21 @@
 #!/usr/bin/env node
 /**
- * Контур оценки ассистента /assistant (#2710): вопросы посетителя задаются через
- * тот же экран, что у человека, — подбор `api/aiAssist/retrieval.ts` → промпт
- * `prompt.ts` → `llama-server` → страж `linkGuard.ts` работают без подмен.
- * Playwright перехватывает только запрос к модели: пересылает его в `--model-url`
- * и сохраняет карточки промпта и сырой ответ до стража.
+ * Контур оценки ассистента /assistant (#2710): вопросы посетителя уходят в службу `/ai/ask` тем же
+ * клиентом, что у экрана (`ask-path.mjs`), — подбор по индексу, подсказка, модель и стражи работают
+ * без подмен. Путь один (#3286, #3297); Playwright и Metro не нужны.
  *
- *   npm run ai:assistant:eval                         # все вопросы, модель :8080, экран :8081
+ *   npm run ai:assistant:eval                         # все вопросы, служба :8787
  *   npm run ai:assistant:eval -- --group off_topic --label v2
- *   npm run ai:assistant:eval -- --model-url http://127.0.0.1:8090 --label v3
- *   npm run ai:assistant:eval -- --base http://localhost:8085 --tree .codex-temp/wt-eval-base --label before
+ *   npm run ai:assistant:eval -- --ask-url http://127.0.0.1:8788 --model-url http://127.0.0.1:8090 --label v3
+ *   npm run ai:assistant:eval -- --cases scripts/ai-assistant-eval/cases.live.jsonl --repeat 3
  *   npm run ai:assistant:eval -- --report <папка>     # пересчитать проверки и отчёт (+ judge.jsonl судьи)
  *   npm run ai:assistant:eval -- --report <папка> --out <другая папка>   # то же копией: исходный прогон не меняется
- *   npm run ai:assistant:eval -- --provider ask --ask-url http://127.0.0.1:8787 --cases scripts/ai-assistant-eval/cases.live.jsonl
  *
- * `--provider ask` (#3286) — путь службы `/ai/ask`, который получит посетитель на проде: вопрос
- * уходит в службу клиентом экрана, Playwright и Metro не нужны (`ask-path.mjs`). Служба запущена с
- * `AI_ASSIST_EVAL_TRACE=1`; `--model-url` здесь — сверка, что служба смотрит на эту модель.
+ * Служба запущена с `AI_ASSIST_EVAL_TRACE=1` (иначе прогон откажет до первого вопроса); `--model-url` —
+ * сверка, что служба смотрит на эту модель. `--provider ask` принимается ради старых команд.
  *
- * Нужен локальный стек: прокси прод-API, `llama-server`, Metro с ассистентом
- * (`docs/features/ai-assistant.md` → «Контур оценки»). Результат — в
+ * Нужен локальный стек: прокси прод-API, `llama-server` и служба
+ * (`docs/features/ai-assistant.md` → «Локальный стек для проверки», «Контур оценки»). Результат — в
  * `.codex-temp/ai-assistant-eval/<время>[-метка]/`: `results.jsonl`, `report.md`,
  * `judge-task.md` (задание судье-агенту).
  *

@@ -1,6 +1,6 @@
 import path from 'path'
 
-import { questToSource, travelToSource } from '@/api/aiAssist/retrieval'
+import { questToSource, travelToSource } from '@/api/aiAssist/sourceCard'
 import {
   detectSuperlative,
   factsKey,
@@ -140,7 +140,7 @@ describe('факты источника в карточке ассистента
   ])('место статьи в строке фактов — страна, точка маршрута в неё не идёт: статья %s «%s»', (id, name, countryName, cityName, expected) => {
     const withFacts = expected.includes('Дней')
     const item = travel({ id: id ?? 1, name, countryName, cityName, number_days: withFacts ? 1 : null, month: withFacts ? [5] : [] })
-    const card = travelToSource(item as never, [])
+    const card = travelToSource(item as never)
     const line = String(card?.snippet).split('. Каждый год')[0]
     expect(line).toBe(expected)
     expect(card?.snippet).not.toContain(cityName)
@@ -149,14 +149,12 @@ describe('факты источника в карточке ассистента
   })
 
   it('карточка экрана строится тем же построителем: квест — строка фактов, статья — строка фактов и начало описания', () => {
-    expect(questToSource(QUESTS[0] as never, [], 'quest')?.snippet).toBe(
+    expect(questToSource(QUESTS[0] as never)?.snippet).toBe(
       'Детский городской квест по городу Несвиж (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 3. Длительность: 90 мин. Сложность: лёгкий. Можно с собакой',
     )
-    expect(travelToSource(TRAVELS[0] as never, [])?.snippet).toBe(
+    expect(travelToSource(TRAVELS[0] as never)?.snippet).toBe(
       'Польша. Дней: 3. Месяцы: ноябрь, декабрь. Каждый год в конце ноября в польских городах открываются ярмарки.',
     )
-    // Балл статьи считается по месту и описанию: слова фактов её под вопрос не выбирают.
-    expect(travelToSource(TRAVELS[0] as never, ['ноябрь', 'декабрь'])?.score).toBe(travelToSource(travel({ month: [] }) as never, ['ноябрь', 'декабрь'])?.score)
   })
 
   it('слепок обучения строит ту же строку фактов для квеста и для статьи: quest_card(facts=True) и travel_facts_line(facts=True)', () => {
@@ -180,12 +178,12 @@ describe('факты источника в карточке ассистента
     expect(run.status).toBe(0)
     const snapshot = JSON.parse(run.stdout)
 
-    const questLines = QUESTS.map((item) => questToSource(item as never, [], 'quest')?.snippet)
+    const questLines = QUESTS.map((item) => questToSource(item as never)?.snippet)
     expect(snapshot.quests).toEqual(questLines)
     const travelFacts = TRAVELS.map((item) => travelFactsOf(Number(item.id), { number_days: item.number_days, month: item.month }))
     const travelLines = TRAVELS.map((item, index) => travelFactsLine(travelFacts[index], { country: item.countryName as string }))
     expect(snapshot.travels).toEqual(travelLines)
-    expect(snapshot.travel_cards).toEqual(TRAVELS.map((item) => travelToSource(item as never, [])?.snippet))
+    expect(snapshot.travel_cards).toEqual(TRAVELS.map((item) => travelToSource(item as never)?.snippet))
 
     // Сверка не пустая: есть карточки с новым полем и без него, со днями, месяцами и «круглый год».
     expect(questLines.filter((line) => line?.endsWith('Можно с собакой'))).toHaveLength(3)

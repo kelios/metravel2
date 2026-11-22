@@ -8,21 +8,28 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { ASSISTANT_INPUT_TEST_ID, isAiAssistantEnabled } from '@/utils/aiAssistantConfig'
 import { translate as i18nT } from '@/i18n'
 import { ASSISTANT_SEO } from '@/components/screens/assistant/assistantSeo'
+import { lazyHydratedInPlace } from '@/utils/lazyHydratedInPlace'
 import { notFoundRouteMetadata, routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+
+type AssistantScreenProps = { sourceParam: string | string[] | null }
 
 // #2460: экран грузится отложенным чанком и только под флагом — в сборке с
 // выключенным ассистентом (прод) его код на страницу не попадает.
 // #2738: и в сборку тоже — условие литералом `process.env` (см. aiAssistantConfig).
-const AssistantScreen = React.lazy(() => {
-  // #3346: экран есть в статическом HTML, а его чанк запрашивается только сейчас.
-  // Обновление от предков приходит раньше чанка, React бросает гидрацию этой границы
-  // и заменяет серверную разметку — вместе с полем, в которое уже могли печатать.
-  // Узел поля запоминается, пока разметка цела; композер заберёт набранное из него.
-  rememberPrehydrationInput(ASSISTANT_INPUT_TEST_ID)
-  return process.env.EXPO_PUBLIC_AI_ASSISTANT
+// #3370: экран есть в статическом HTML, и его чанк стоит в тегах <script> этого роута
+// (`ROUTE_EAGER_LAZY_SCREENS` в scripts/lib/granularChunkMerge.js) — к гидрации модуль уже
+// исполнен, экран рисуется сразу и граница гидрируется на месте: поле вопроса, фокус в
+// нём и набранные символы остаются теми же узлами.
+const AssistantScreen = lazyHydratedInPlace<AssistantScreenProps>(
+  () => (process.env.EXPO_PUBLIC_AI_ASSISTANT
     ? import('@/components/screens/assistant/AssistantScreen')
-    : Promise.resolve({ default: NotFoundContent })
-})
+    : Promise.resolve({ default: NotFoundContent })),
+  // #3346: узел поля запоминается, пока серверная разметка цела; композер заберёт из него
+  // набранное до гидрации. Нужно в обоих исходах: на месте первый повторный рендер
+  // контролируемого поля записал бы пустой state поверх набранного, а если чанк экрана не
+  // готов (сбой загрузки тега), React заменит разметку вместе с полем.
+  () => rememberPrehydrationInput(ASSISTANT_INPUT_TEST_ID),
+)
 
 function AssistantFallback() {
   const colors = useThemedColors()

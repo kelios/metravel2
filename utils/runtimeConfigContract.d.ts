@@ -46,7 +46,6 @@ export type RuntimeConfigDiagnostic = {
 export const ROUTING_API_KEY_CANDIDATES: RoutingApiKeyCandidate[];
 export const MOCK_FLAG_NAMES: DevMockFlagName[];
 export const AI_ASSISTANT_FLAG_NAME: 'EXPO_PUBLIC_AI_ASSISTANT';
-export const AI_ASSISTANT_URL_NAME: 'EXPO_PUBLIC_AI_ASSISTANT_URL';
 export const AI_ASSISTANT_PROVIDER_NAME: 'EXPO_PUBLIC_AI_ASSISTANT_PROVIDER';
 export const AI_PICKS_FLAG_NAME: 'EXPO_PUBLIC_AI_PICKS';
 export const AI_PICKS_URL_NAME: 'EXPO_PUBLIC_AI_PICKS_URL';

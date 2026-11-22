@@ -116,6 +116,36 @@ describe('AI feature build gate (#2738)', () => {
     expect(references.filter((r) => r.kind === 'ungated')).toEqual([])
   })
 
+  // #3297: пайплайн ответа ассистента (подсказка, генератор, стражи) живёт в `scripts/ai-assist/` и
+  // исполняется только службой. Общий с экраном код лежит в `api/aiAssist/`; импорт `scripts/` из кода
+  // приложения вернул бы генератор и стражей в чанк экрана.
+  describe('app code never imports scripts/ (#3297)', () => {
+    const SCRIPTS_SPECIFIER = /^(?:@\/scripts\/|(?:\.\.\/)+scripts\/)/
+    const collectScriptImports = (posix: string, source: string): string[] =>
+      [...source.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm)]
+        .filter((match) => SCRIPTS_SPECIFIER.test(match[1]))
+        .map((match) => `${posix}: ${match[1]}`)
+
+    it('finds no import of scripts/ under the app roots', () => {
+      const found = ROOTS.flatMap(listSources).flatMap((file) =>
+        collectScriptImports(file.split(path.sep).join('/'), fs.readFileSync(path.join(repoRoot, file), 'utf8')),
+      )
+      expect(found).toEqual([])
+    })
+
+    it('recognises static, type, dynamic and require imports of scripts/, so the scan is not vacuous', () => {
+      expect(collectScriptImports('components/Fixture.tsx', "import { guardAnswer } from '@/scripts/ai-assist/answerGuard'")).toHaveLength(1)
+      expect(collectScriptImports('components/Fixture.tsx', "import type { Generator } from '../../scripts/ai-assist/generator.ts'")).toHaveLength(1)
+      expect(collectScriptImports('components/Fixture.tsx', "const m = await import('@/scripts/ai-assist/prompt')")).toHaveLength(1)
+      expect(collectScriptImports('components/Fixture.tsx', "const m = require('../scripts/ai-assist/linkGuard')")).toHaveLength(1)
+      expect(collectScriptImports('components/Fixture.tsx', "import { parseSourceRef } from '@/api/aiAssist/sourceRef'")).toEqual([])
+      // Сами модули пайплайна на месте: правило сторожит настоящую границу.
+      for (const name of ['generator', 'prompt', 'linkGuard', 'answerGuard', 'answerGuardRules', 'sourceSelection']) {
+        expect([name, fs.existsSync(path.join(repoRoot, 'scripts/ai-assist', `${name}.ts`)), fs.existsSync(path.join(repoRoot, 'api/aiAssist', `${name}.ts`))]).toEqual([name, true, false])
+      }
+    })
+  })
+
   it.each(['PICKS', 'ASSISTANT', 'SIMILAR_SOURCE'])('scans the literal %s condition and rejects unguarded/helper imports', (flag) => {
     const guarded = `const feature = process.env.EXPO_PUBLIC_AI_${flag} ? import('@/api/aiPicks') : null`
     expect(collectSourceReferences('components/Fixture.tsx', guarded)).toMatchObject([{ kind: 'gated' }])

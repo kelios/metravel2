@@ -14,7 +14,7 @@ describe('getRuntimeConfigDiagnostics', () => {
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: 'false', EXPO_PUBLIC_AI_ASSISTANT_URL: 'nope' }).some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
     });
 
-    it('provider ask (default, #2884): no llama-server url needed; the shared service url is checked when picks are off', () => {
+    it('the only path is /ai/ask (#2884, #3297): no model url is read; the shared service url is checked when picks are off', () => {
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1' }).some((c) => c.startsWith('AI_'))).toBe(false);
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'ask', EXPO_PUBLIC_AI_ASSISTANT_URL: 'nope' }).some((c) => c.startsWith('AI_'))).toBe(false);
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_PICKS_URL: 'ws://x' })).toContain('AI_PICKS_URL_INVALID:error');
@@ -36,22 +36,26 @@ describe('getRuntimeConfigDiagnostics', () => {
       expect(codes({ ...base, EXPO_PUBLIC_AI_PICKS: '1', EXPO_PUBLIC_AI_SIMILAR_SOURCE: 'service' }).some((c) => c.startsWith('AI_SIMILAR'))).toBe(false);
     });
 
-    it('provider llamacpp requires an absolute http(s) llama-server url', () => {
+    it('provider llamacpp is removed (#3297): a configuration error with a hint, with or without a model url', () => {
       const llama = { ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp' };
-      expect(codes(llama)).toContain('AI_ASSISTANT_URL_INVALID:error');
-      expect(codes({ ...llama, EXPO_PUBLIC_AI_ASSISTANT: 'true', EXPO_PUBLIC_AI_ASSISTANT_URL: 'ws://x' })).toContain('AI_ASSISTANT_URL_INVALID:error');
-      const dev = codes({ ...llama, EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080/' });
-      expect(dev.some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
+      expect(codes(llama)).toContain('AI_ASSISTANT_PROVIDER_REMOVED:error');
+      expect(codes({ ...llama, EXPO_PUBLIC_AI_ASSISTANT: 'true', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: ' LlamaCpp ', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080/' })).toContain('AI_ASSISTANT_PROVIDER_REMOVED:error');
+      expect(codes(llama)).not.toContain('AI_ASSISTANT_PROVIDER_INVALID:error');
+      const [removed] = getRuntimeConfigDiagnostics(llama).filter((d) => d.code === 'AI_ASSISTANT_PROVIDER_REMOVED');
+      expect(removed.message).toContain('/ai/ask');
+      expect(removed.message).toContain('docs/features/ai-assistant.md');
+      // Адрес службы у такой сборки проверяется как у любой другой.
+      expect(codes({ ...llama, EXPO_PUBLIC_AI_PICKS_URL: 'ws://x' })).toContain('AI_PICKS_URL_INVALID:error');
+      // Выключенный ассистент переменную провайдера не читает.
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp' }).some((c) => c.startsWith('AI_'))).toBe(false);
     });
 
-    it('flags a local model url and the enabled assistant in a production build', () => {
-      const prod = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080' });
-      expect(prod).toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
-      expect(prod).toContain('AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning');
+    it('flags the enabled assistant in a production build; the old model url variable is ignored', () => {
       expect(codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1' })).toContain('AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning');
-      const prodRemote = codes({ ...base, EXPO_PUBLIC_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp', EXPO_PUBLIC_AI_ASSISTANT_URL: 'https://metravel.by/ai' });
-      expect(prodRemote).toEqual(expect.arrayContaining(['AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning']));
-      expect(prodRemote).not.toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
+      const prodOldUrl = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080' });
+      expect(prodOldUrl.filter((c) => c.startsWith('AI_'))).toEqual(['AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning']);
+      const prodRemoved = codes({ ...base, EXPO_PUBLIC_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp' });
+      expect(prodRemoved).toEqual(expect.arrayContaining(['AI_ASSISTANT_PROVIDER_REMOVED:error', 'AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning']));
     });
   });
 

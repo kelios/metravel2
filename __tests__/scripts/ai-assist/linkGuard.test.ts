@@ -1,5 +1,5 @@
-import { admitsNoAnswer, echoesQuestion, extractNumberFacts, guardAnswer, leaksPrompt } from '@/api/aiAssist/answerGuard'
-import { enforceSourceLinks, guardStreamingText, isSameTitle, stripThinking } from '@/api/aiAssist/linkGuard'
+import { admitsNoAnswer, echoesQuestion, extractNumberFacts, guardAnswer, leaksPrompt } from '@/scripts/ai-assist/answerGuard'
+import { enforceSourceLinks, guardStreamingText, isSameTitle, stripThinking } from '@/scripts/ai-assist/linkGuard'
 import { questFactsLine, travelFactsLine } from '@/api/aiAssist/sourceFacts'
 import type { AiSource } from '@/api/aiAssist/types'
 
@@ -568,5 +568,24 @@ describe('страж ссылок: маршруты мира (#3357)', () => {
       relabeled: 1,
       removedWorld: 1,
     })
+  })
+})
+
+describe('страж ссылок во время стрима', () => {
+  it('недописанный адрес придерживается, остальное проходит через страж', () => {
+    const source: AiSource = {
+      type: 'travel',
+      source_id: '1',
+      title: 'Выходные под Гродно',
+      url: 'https://metravel.by/travels/vyhodnye-pod-grodno',
+      path: '/travels/vyhodnye-pod-grodno',
+      snippet: 'Беларусь, Гродно. Два дня по замкам.',
+      score: 3,
+    }
+    expect(guardStreamingText('Смотрите https://metravel.by/travels/vyho', [source]).text).toBe('Смотрите')
+    expect(guardStreamingText('Смотрите https://metravel.by/travels/vyhodnye-pod-grodno ', [source]).text).toBe(
+      'Смотрите https://metravel.by/travels/vyhodnye-pod-grodno',
+    )
+    expect(guardStreamingText('Смотрите https://evil.example/x ', [source])).toEqual({ text: 'Смотрите', removed: 1, relabeled: 0, removedWorld: 1 })
   })
 })

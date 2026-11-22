@@ -1,5 +1,4 @@
 import { buildRetrievalQuery, isFollowUpQuestion, isStandaloneQuestion, resolveRetrievalAnchor } from '@/api/aiAssist/retrievalQuery'
-import { buildRetrievalQuery as reExportedBuildRetrievalQuery } from '@/api/aiAssist/retrieval'
 
 /**
  * Опора уточнений (#2719) в общем для экрана и сервера `/ai/ask` модуле (#2884):
@@ -43,8 +42,7 @@ describe('aiAssist retrievalQuery: опора уточнений (#2719 → #288
     expect(isFollowUpQuestion('I gdzie zaparkować?')).toBe(true)
   })
 
-  it('retrieval.ts отдаёт ту же функцию: клиент llamacpp и сервер не расходятся', () => {
-    expect(reExportedBuildRetrievalQuery).toBe(buildRetrievalQuery)
+  it('самостоятельный вопрос: с местом — да, уточнение без места — нет', () => {
     expect(isStandaloneQuestion('Какие квесты есть в Гродно?')).toBe(true)
     expect(isStandaloneQuestion('А в Бресте?')).toBe(true)
     expect(isStandaloneQuestion('А какой из них подойдёт детям?')).toBe(false)

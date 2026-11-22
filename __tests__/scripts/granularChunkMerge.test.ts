@@ -3,7 +3,7 @@ const path = require('path')
 const vm = require('node:vm')
 const fs = require('node:fs')
 const zlib = require('node:zlib')
-const { mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES } = require('../../scripts/lib/granularChunkMerge')
+const { mergeGranularChunkPlan, createRouteCoverage, ROUTE_FOREIGN_BUDGET_BYTES, ROUTE_EAGER_LAZY_SCREENS } = require('../../scripts/lib/granularChunkMerge')
 
 const ROOT = '/repo'
 const APP = path.join(ROOT, 'app')
@@ -273,6 +273,64 @@ function randomPlan(seed: number) {
   atoms.forEach(([, [file]]) => setFactory(plan, file, 2100 + next(58 * KB)))
   return plan
 }
+
+// #3370: роут доставляет чанк своего отложенного экрана в собственном HTML — без статического импорта.
+describe('route delivers its lazy screen (#3370)', () => {
+  const entries: [string, 'initial' | 'dynamic'][] = [
+    ['entry.js', 'initial'],
+    ['app/(tabs)/assistant.tsx', 'dynamic'],
+    ['app/(tabs)/search.tsx', 'dynamic'],
+    ['components/screens/assistant/AssistantScreen.tsx', 'dynamic'],
+  ]
+  const atoms: [number[], string[]][] = [
+    [[0], ['entry-only.ts']],
+    [[1], ['app/(tabs)/assistant.tsx']],
+    [[2], ['app/(tabs)/search.tsx']],
+    [[3], ['components/screens/assistant/AssistantScreen.tsx', 'screen-only.ts']],
+    [[2, 3], ['cards.ts']],
+  ]
+  const required = (merged: { requiredChunksByEntryPath: Map<string, Atom[]> }, entry: string) =>
+    merged.requiredChunksByEntryPath.get(at(entry))!.flatMap(names).sort()
+
+  it('the route requires the chunks of its lazy screen; grouping and every other entry stay as planned', () => {
+    const plain = mergeGranularChunkPlan(makePlan(entries, atoms), context, { routeLazyScreens: [] })
+    const merged = mergeGranularChunkPlan(makePlan(entries, atoms), context)
+    // Без объявления чанк экрана в набор роута не входит: он приходит после начала гидрации.
+    expect(required(plain, 'app/(tabs)/assistant.tsx')).toEqual(['app/(tabs)/assistant.tsx'])
+    expect(required(merged, 'app/(tabs)/assistant.tsx')).toEqual([
+      'app/(tabs)/assistant.tsx', 'cards.ts', 'components/screens/assistant/AssistantScreen.tsx', 'screen-only.ts',
+    ])
+    // Сам экран, соседний роут и входной файл требуют то же, что и без объявления.
+    for (const entry of ['entry.js', 'app/(tabs)/search.tsx', 'components/screens/assistant/AssistantScreen.tsx']) {
+      expect([entry, required(merged, entry)]).toEqual([entry, required(plain, entry)])
+    }
+    // Состав чанков не меняется: объявление не добавляет владельцев модулям.
+    const shape = (plan: { chunks: Atom[] }) => plan.chunks.map((chunk) => names(chunk).sort().join(',')).sort()
+    expect(shape(merged)).toEqual(shape(plain))
+    // Набор без повторов: общий чанк входит один раз.
+    const own = merged.requiredChunksByEntryPath.get(at('app/(tabs)/assistant.tsx'))
+    expect(new Set(own).size).toBe(own.length)
+  })
+
+  it('a build without the screen (feature compiled out) is left untouched', () => {
+    const flagOff: [string, 'initial' | 'dynamic'][] = entries.slice(0, 3)
+    const merged = mergeGranularChunkPlan(makePlan(flagOff, atoms.slice(0, 3)), context)
+    expect(required(merged, 'app/(tabs)/assistant.tsx')).toEqual(['app/(tabs)/assistant.tsx'])
+  })
+
+  it('every declared pair names a route that loads exactly that screen through lazyHydratedInPlace', () => {
+    const repo = path.resolve(__dirname, '../..')
+    expect(ROUTE_EAGER_LAZY_SCREENS.length).toBeGreaterThan(0)
+    for (const [route, screen] of ROUTE_EAGER_LAZY_SCREENS) {
+      expect([route, fs.existsSync(path.join(repo, route))]).toEqual([route, true])
+      expect([screen, fs.existsSync(path.join(repo, screen))]).toEqual([screen, true])
+      const source = fs.readFileSync(path.join(repo, route), 'utf8')
+      // Доставка чанка в HTML имеет смысл только вместе с синхронным чтением готового модуля.
+      expect([route, source.includes('lazyHydratedInPlace')]).toEqual([route, true])
+      expect([route, source.includes(`import('@/${screen.replace(/\.tsx?$/, '')}')`)]).toEqual([route, true])
+    }
+  })
+})
 
 describe('route foreign budget (#3316)', () => {
   const homeMapPlan = (engineBytes: number) => {

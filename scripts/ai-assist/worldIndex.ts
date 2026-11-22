@@ -10,7 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
-import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, namesTrail, ownPlaceNames, titleKeys, type WorldCandidate, type WorldPlace } from '../../api/aiAssist/worldTrails.ts'
+import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, namesTrail, ownPlaceNames, titleKeys, type WorldCandidate, type WorldPlace } from './worldTrails.ts'
 import { decodeVectors, readJsonl } from '../ai-index/format.ts'
 import {
   OPEN_LAYER_FILE,

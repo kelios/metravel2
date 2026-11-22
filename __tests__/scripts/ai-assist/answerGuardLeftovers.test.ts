@@ -1,4 +1,4 @@
-import { guardAnswer } from '@/api/aiAssist/answerGuard'
+import { guardAnswer } from '@/scripts/ai-assist/answerGuard'
 import type { AiSource } from '@/api/aiAssist/types'
 
 // #3345, пятый заход (замер r4): повтор вопроса режется как единица-предложение, остаток с фактом из

@@ -20,9 +20,11 @@ that family. Dataset regression slices use `scripts/ai-train/README.md` →
 - Dataset skill retention: `scripts/ai-train/eval.py`, with fixed prompt/cache
   hashes and explicit adapters or server identities; include S1/S2 slices named
   in the contract, not only the assistant score.
-- Retrieval/topic gate/link guard/screen integration: `ai:assistant:eval` on the
-  task's explicit target. Browser/backend readiness applies to this layer only.
-  Do not silently replace a required screen test with fixed-card inference.
+- Retrieval/topic gate/link guard: `ai:assistant:eval` through the
+  metravel-assist service (`--ask-url`, `AI_ASSIST_EVAL_TRACE=1`); since #3297
+  this is the only answer path, there is no screen/Playwright mode (`--base`,
+  `--headed` are rejected). Do not silently replace a required service run with
+  fixed-card inference.
 
 Runtime collection follows code review in `testing` and the operation gate in
 `docs/WORKFLOW_OPERATIONS.md` section 3.4. Use the canonical quality-lock wrapper
@@ -32,9 +34,9 @@ from local fixtures. Model-only work does not require a frontend deploy.
 
 ## Acceptance in one command
 
-`npm run ai:assistant:accept -- --base-url <база> --candidate-url <кандидат>`
-(Node ≥ 22.6, two `llama-server` instances, the screen stack of the contour)
-runs base and candidate on identical inputs — screen targets ×3, held-out
+`npm run ai:assistant:accept -- --base-url <база> --candidate-url <кандидат> --base-ask-url <служба базы> --candidate-ask-url <служба кандидата>`
+(Node ≥ 22.6, two `llama-server` instances and two metravel-assist services on
+one index) runs base and candidate on identical inputs — targets ×3, held-out
 questions ×3, off-topic and injection, the quality set ×3 and the `eval.py`
 slices — and prints «замер — база — кандидат — порог — пройдено» from
 `scripts/ai-assistant-eval/acceptance.thresholds.json`. Do not assemble that
@@ -54,6 +56,11 @@ recomputes checks after an evaluator fix.
   the training data of the adapter's lineage are not held-out evidence; the
   `osm_intents` slice compares the whole filter and shows the earlier lenient
   metric beside it.
+- Since #3297 the rows titled «экран: …» run through the service retrieval,
+  not the removed in-app word retrieval. Absolute rows (`targets`, `offtopic`)
+  need a calibration run of the base through the service before the next model
+  acceptance (`docs/features/ai-assistant.md` → «Приёмка кандидата одной
+  командой»); earlier acceptance folders are not comparable on these rows.
 - The report line «Сверка автопроверок с судьёй» is part of the result. A turn
   the checks passed and the judge failed (a Brest quest in an answer about
   Kraków) or the reverse is investigated as an evaluator defect or a wrong
@@ -65,7 +72,8 @@ recomputes checks after an evaluator fix.
 
 1. Identify baseline/candidate by artifact SHA256, tokenizer/template, server
    build and generation parameters. Freeze cases, cards/history, scorer/rubric,
-   source cache and app pipeline (`prompt.ts`, `generator.ts`, `linkGuard.ts`).
+   source cache and the service pipeline (`scripts/ai-assist/prompt.ts`,
+   `generator.ts`, `linkGuard.ts`).
    Store code SHA **and dirty input hashes**; a Git SHA alone is insufficient.
 2. Prove the evaluated inputs/answers were excluded from training. Disclose a
    contaminated slice; use the independently constructed holdout for the claim.

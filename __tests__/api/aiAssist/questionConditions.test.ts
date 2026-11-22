@@ -127,7 +127,7 @@ describe('условия вопроса (#3289): проверка по факт�
       dropped: false,
       unfit: false,
     })
-    // Семейный квест весит меньше детского — как места `childrenRank` (#3276).
+    // Семейный квест весит меньше детского (#3276).
     expect(judgeCard({ children: { ages: [] } }, quest({ audience: 'family' }))).toEqual({ reasons: ['семейный'], score: 0.5, dropped: false, unfit: false })
     expect(judgeCard({ months: [1, 2, 12], maxDays: 1 }, travel({ number_days: 1, months: [1, 2, 7] }))).toEqual({
       reasons: ['месяцы: январь, февраль', '1 день'],

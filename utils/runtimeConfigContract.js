@@ -13,14 +13,14 @@ const MOCK_FLAG_NAMES = [
   'EXPO_PUBLIC_OSRM_MOCK',
 ]
 
-// #2460: ассистент сайта под фича-флагом. Провайдер (#2884): `ask` (по умолчанию) —
-// серверный `/ai/ask` по адресу службы metravel-assist (как у смыслового подбора);
-// `llamacpp` — прямой `llama-server`, требует адреса модели; локальный адрес в
-// production-сборке — ошибка конфигурации.
+// #2460: ассистент сайта под фича-флагом. Путь ответа один (#3297) — серверный `/ai/ask`
+// по адресу службы metravel-assist (как у смыслового подбора). Переменная провайдера
+// (#2884) осталась только ради диагностики: `ask` или пусто; `llamacpp` (прямой
+// `llama-server` из приложения) удалён — такая сборка получает ошибку с подсказкой.
 const AI_ASSISTANT_FLAG_NAME = 'EXPO_PUBLIC_AI_ASSISTANT'
-const AI_ASSISTANT_URL_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_URL'
 const AI_ASSISTANT_PROVIDER_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_PROVIDER'
-const AI_ASSISTANT_PROVIDERS = ['ask', 'llamacpp']
+const AI_ASSISTANT_PROVIDERS = ['ask']
+const AI_ASSISTANT_REMOVED_PROVIDER = 'llamacpp'
 const AI_PICKS_FLAG_NAME = 'EXPO_PUBLIC_AI_PICKS'
 const AI_PICKS_URL_NAME = 'EXPO_PUBLIC_AI_PICKS_URL'
 const AI_SIMILAR_SOURCE_NAME = 'EXPO_PUBLIC_AI_SIMILAR_SOURCE'
@@ -83,36 +83,20 @@ const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false
   if (!isTruthyFlag(env[AI_ASSISTANT_FLAG_NAME])) return []
   const diagnostics = []
   const rawProvider = String(env[AI_ASSISTANT_PROVIDER_NAME] || '').trim().toLowerCase()
-  if (rawProvider && !AI_ASSISTANT_PROVIDERS.includes(rawProvider)) {
+  if (rawProvider === AI_ASSISTANT_REMOVED_PROVIDER) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_PROVIDER_REMOVED',
+      severity: 'error',
+      message: `${AI_ASSISTANT_PROVIDER_NAME}=${AI_ASSISTANT_REMOVED_PROVIDER} is no longer supported: the in-app pipeline was removed (#3297) and the screen always calls the metravel-assist service (POST /ai/ask). Unset the variable and run the service next to the model — docs/features/ai-assistant.md, "Локальный стек для проверки".`,
+    })
+  } else if (rawProvider && !AI_ASSISTANT_PROVIDERS.includes(rawProvider)) {
     diagnostics.push({
       code: 'AI_ASSISTANT_PROVIDER_INVALID',
       severity: 'error',
-      message: `${AI_ASSISTANT_PROVIDER_NAME} must be one of ${AI_ASSISTANT_PROVIDERS.join('|')} (empty means ask).`,
+      message: `${AI_ASSISTANT_PROVIDER_NAME} must be ${AI_ASSISTANT_PROVIDERS.join('|')} or empty.`,
     })
   }
-  const provider = rawProvider === 'llamacpp' ? 'llamacpp' : 'ask'
-  if (provider === 'llamacpp') {
-    const rawUrl = String(env[AI_ASSISTANT_URL_NAME] || '').trim()
-    let parsed = null
-    try {
-      parsed = rawUrl ? new URL(rawUrl) : null
-    } catch {
-      parsed = null
-    }
-    if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
-      diagnostics.push({
-        code: 'AI_ASSISTANT_URL_INVALID',
-        severity: 'error',
-        message: `${AI_ASSISTANT_PROVIDER_NAME}=llamacpp requires ${AI_ASSISTANT_URL_NAME} with an absolute http/https URL of the llama-server.`,
-      })
-    } else if (isProduction && isLocalHost(parsed.hostname)) {
-      diagnostics.push({
-        code: 'AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION',
-        severity: 'error',
-        message: `${AI_ASSISTANT_URL_NAME} points to a local host in a production build; the site assistant would call a server that does not exist for visitors.`,
-      })
-    }
-  } else if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) {
+  if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) {
     // Адрес службы общий со смысловым подбором; при выключенных блоках подбора его
     // проверяет ассистент, иначе та же диагностика пришла бы дважды.
     diagnostics.push(...getAiServiceUrlDiagnosticsCore(env, { isProduction, consumer: 'the site assistant' }))
@@ -294,7 +278,6 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 module.exports = {
   AI_ASSISTANT_FLAG_NAME,
   AI_ASSISTANT_PROVIDER_NAME,
-  AI_ASSISTANT_URL_NAME,
   AI_PICKS_FLAG_NAME,
   AI_PICKS_URL_NAME,
   AI_SIMILAR_SOURCE_NAME,

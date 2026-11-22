@@ -4,7 +4,7 @@
 import http from 'http'
 import type { AddressInfo } from 'net'
 
-import { AiGeneratorError, type GenerateRequest, type Generator } from '@/api/aiAssist/generator'
+import { AiGeneratorError, type GenerateRequest, type Generator } from '@/scripts/ai-assist/generator'
 import { AI_AUTHOR_DRAFT_DAILY_LIMIT, AI_AUTHOR_DRAFT_MAX_TEXT_CHARS, AI_AUTHOR_DRAFT_SHAPES } from '@/api/aiAssist/policy'
 import { createApp } from '@/scripts/ai-assist/app'
 import { AUTHOR_DRAFT_LIMITS_PREFIX, clampVariant, parseAuthorDraftVariants } from '@/scripts/ai-assist/authorDraft'

@@ -8,7 +8,7 @@ import http from 'http'
 import type { AddressInfo } from 'net'
 import { join } from 'path'
 
-import type { Generator } from '@/api/aiAssist/generator'
+import type { Generator } from '@/scripts/ai-assist/generator'
 import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/policy'
 import { createApp } from '@/scripts/ai-assist/app'
 import { ResponseCache } from '@/scripts/ai-assist/cache'

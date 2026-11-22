@@ -98,9 +98,9 @@ import {
   stripQuestions,
   wholeSentences,
 } from './answerGuardRules.ts'
-import { asksAboutChildren } from './questAudience.ts'
-import { parseConditions } from './questionConditions.ts'
-import type { AiSource } from './types'
+import { asksAboutChildren } from '../../api/aiAssist/questAudience.ts'
+import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
+import type { AiSource } from '../../api/aiAssist/types.ts'
 
 // Правила, вынесенные в `answerGuardRules.ts`, читаются отсюда же: у стража, службы и контура оценки один вход.
 export { type AnswerGuardContext, echoesQuestion, extractNumberFacts, findUngroundedNumbers } from './answerGuardRules.ts'

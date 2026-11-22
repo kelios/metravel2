@@ -33,12 +33,12 @@
  * Модуль общий для экрана и службы, без `@/`-импортов.
  */
 
-import { AI_MAX_RECOMMENDATIONS } from './policy.ts'
-import { matchPlaceSources, mentionsAnyPlace, namesOnlyOrigin } from './promptPlace.ts'
-import { judgeCard, parseConditions, type QuestionConditions } from './questionConditions.ts'
-import { detectSuperlative, rankBySuperlative, superlativeReason } from './sourceFacts.ts'
-import { namedDestinations } from './topicGate.ts'
-import type { AiSource } from './types'
+import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
+import { matchPlaceSources, mentionsAnyPlace, namesOnlyOrigin } from '../../api/aiAssist/promptPlace.ts'
+import { judgeCard, parseConditions, type QuestionConditions } from '../../api/aiAssist/questionConditions.ts'
+import { detectSuperlative, rankBySuperlative, superlativeReason } from '../../api/aiAssist/sourceFacts.ts'
+import { namedDestinations } from '../../api/aiAssist/topicGate.ts'
+import type { AiSource } from '../../api/aiAssist/types.ts'
 
 export type ArrangeOptions = {
   /**

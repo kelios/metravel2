@@ -1,7 +1,7 @@
 /**
  * POST /ai/author-draft (#2885): помощник автора в визарде статьи. Текст статьи →
  * `metravel-llm` → варианты заголовка, лида или SEO-описания только по этому тексту:
- * без выдуманных фактов, без ссылок (страж `api/aiAssist/linkGuard.ts` с пустым
+ * без выдуманных фактов, без ссылок (страж `scripts/ai-assist/linkGuard.ts` с пустым
  * списком карточек режет любой адрес), в пределах длины `AI_AUTHOR_DRAFT_SHAPES`.
  *
  *   {text, kind: title|lead|meta|trip, locale?} → 200 {variants: string[], remaining}
@@ -13,7 +13,7 @@
  *   503 generator_unavailable — `AI_LLM_URL` не задан, модель не ответила или не дала
  *     ни одного пригодного варианта. Неудачный запрос лимит не тратит.
  */
-import { enforceSourceLinks } from '../../api/aiAssist/linkGuard.ts'
+import { enforceSourceLinks } from './linkGuard.ts'
 import {
   AI_AUTHOR_DRAFT_KINDS,
   AI_AUTHOR_DRAFT_MAX_TEXT_CHARS,

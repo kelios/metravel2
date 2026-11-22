@@ -1,27 +1,24 @@
 #!/usr/bin/env node
 /**
  * Одна команда приёмки кандидата metravel-llm (#3267): база и кандидат на одинаковых входах —
- * целевые вопросы экрана ×3, отложенные ×3, «не по теме» и попытки сломать, набор quality ×3 и
+ * целевые вопросы ×3, отложенные ×3, «не по теме» и попытки сломать, живые вопросы, набор quality ×3 и
  * срезы `eval.py`; на выходе таблица «замер — база — кандидат — порог — пройдено» по
  * `acceptance.thresholds.json`.
  *
- *   npm run ai:assistant:accept -- --base-url http://127.0.0.1:8080 --candidate-url http://127.0.0.1:8090
+ *   npm run ai:assistant:accept -- --base-url http://127.0.0.1:8090 --candidate-url http://127.0.0.1:8080 \
+ *     --base-ask-url http://127.0.0.1:8787 --candidate-ask-url http://127.0.0.1:8788
  *   npm run ai:assistant:accept -- --plan                      # показать команды, ничего не запускать
- *   npm run ai:assistant:accept -- --provider ask --base-ask-url http://127.0.0.1:8787 --candidate-ask-url http://127.0.0.1:8788 …
  *   npm run ai:assistant:accept -- --merge-judge <папка>       # вердикты судьи → прогоны → таблица
  *   npm run ai:assistant:accept -- --table <папка>             # пересчитать проверки и таблицу
  *   npm run ai:assistant:accept -- --freeze                    # переписать опись оценочных входов
  *
  * Нужен тот же локальный стек, что у контура (`docs/features/ai-assistant.md` → «Контур оценки»):
- * прокси прод-API, Metro с ассистентом (`--screen`, по умолчанию :8081) и ДВА `llama-server` — с
- * базой и с кандидатом. Обе модели идут через один и тот же экран: `run.mjs` перехватывает запрос
- * к модели и пересылает его на нужный сервер. Незавершённую приёмку можно продолжить тем же `--out`:
- * готовые прогоны не повторяются.
- *
- * `--provider ask` (#3286) добавляет прогоны пути службы `/ai/ask` (в `runs` — `"provider": "ask"`):
- * живые вопросы идут в две службы metravel-assist — `--base-ask-url` смотрит на `llama-server` базы,
- * `--candidate-ask-url` — на кандидата; обе запущены с `AI_ASSIST_EVAL_TRACE=1` и на одном индексе.
- * Без флага эти прогоны не собираются, а их строки таблицы остаются «не оценено».
+ * прокси прод-API, ДВА `llama-server` — с базой и с кандидатом — и ДВЕ службы metravel-assist:
+ * `--base-ask-url` смотрит на `llama-server` базы, `--candidate-ask-url` — на кандидата; обе запущены с
+ * `AI_ASSIST_EVAL_TRACE=1` и на одном индексе. Все прогоны вопросов идут путём службы `/ai/ask`
+ * (#3286, #3297): пути экрана с прямым запросом приложения к модели больше нет. `--provider ask`
+ * принимается ради старых команд. Незавершённую приёмку можно продолжить тем же `--out`: готовые прогоны
+ * не повторяются.
  *
  * Судья — обязательный шаг: после сбора в `<папка>/judge/A` и `<папка>/judge/B` лежат задания со
  * слепыми метками (сырой и показанный ответ, без имён версий). Судья пишет `judge.jsonl` рядом с
@@ -76,9 +73,9 @@ export function buildInventory() {
 }
 
 export function parseAcceptArgs(argv) {
-  const args = { screen: 'http://localhost:8081', aiHome: path.join(os.homedir(), 'metravel-ai'), skip: new Set() }
+  const args = { provider: 'ask', aiHome: path.join(os.homedir(), 'metravel-ai'), skip: new Set() }
   const keys = {
-    '--base-url': 'baseUrl', '--candidate-url': 'candidateUrl', '--screen': 'screen', '--out': 'out', '--ai-home': 'aiHome', '--merge-judge': 'mergeJudge', '--table': 'table',
+    '--base-url': 'baseUrl', '--candidate-url': 'candidateUrl', '--out': 'out', '--ai-home': 'aiHome', '--merge-judge': 'mergeJudge', '--table': 'table',
     '--provider': 'provider', '--base-ask-url': 'baseAskUrl', '--candidate-ask-url': 'candidateAskUrl',
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -92,35 +89,32 @@ export function parseAcceptArgs(argv) {
       args[keys[flag]] = value
     } else throw new Error(`неизвестный флаг ${flag}`)
   }
-  for (const key of ['baseUrl', 'candidateUrl', 'screen', 'baseAskUrl', 'candidateAskUrl']) if (args[key]) args[key] = args[key].replace(/\/+$/, '')
-  if (args.provider !== undefined && args.provider !== 'ask') throw new Error(`--provider: только ask; получено ${args.provider}`)
-  if ((args.baseAskUrl || args.candidateAskUrl) && args.provider !== 'ask') throw new Error('--base-ask-url и --candidate-ask-url нужны только с --provider ask')
+  for (const key of ['baseUrl', 'candidateUrl', 'baseAskUrl', 'candidateAskUrl']) if (args[key]) args[key] = args[key].replace(/\/+$/, '')
+  // `--provider ask` принимается ради старых команд: другого пути нет (#3297).
+  if (args.provider !== 'ask') throw new Error(`--provider: только ask; получено ${args.provider}`)
   const unknown = [...args.skip].filter((name) => !['contour', 'quality', 'slices'].includes(name))
   if (unknown.length) throw new Error(`--skip: contour, quality, slices; получено ${unknown.join(', ')}`)
   return args
 }
 
-/** Прогоны пути службы: в `runs` у них `"provider": "ask"`. */
+/** Прогоны, которые оцениваются полезностью по судье (#3286): в `runs` у них `"provider": "ask"`. Путём службы идут все прогоны. */
 const isAskRun = (run) => run.provider === 'ask'
 
 /**
  * План прогонов одной стороны: команда, папка и сколько результатов в ней должно получиться.
- * Прогоны пути службы (#3286) входят в план только с адресом службы стороны (`askUrl`); наборы
- * вопросов читаются из `casesDir`.
+ * Каждый прогон вопросов идёт в службу своей стороны (`askUrl`); наборы вопросов читаются из `casesDir`.
  */
-export function planRuns(thresholds, side, modelUrl, sideDir, screen, { askUrl = null, casesDir = HERE } = {}) {
+export function planRuns(thresholds, side, modelUrl, sideDir, { askUrl = null, casesDir = HERE } = {}) {
+  if (!askUrl) throw new Error(`${side}: нужен адрес службы metravel-assist этой стороны`)
   const runs = []
   for (const [name, run] of Object.entries(thresholds.runs)) {
-    if (isAskRun(run) && !askUrl) continue
     const casesFile = path.join(casesDir, run.cases)
     if (!fs.existsSync(casesFile)) throw new Error(`runs.${name}: нет набора вопросов ${run.cases}`)
     const cases = readLines(casesFile)
     const selected = cases.filter((item) => (run.only !== 'targets' || thresholds.targets.includes(item.id)) && (!run.group || run.group.includes(item.group)))
     if (run.only === 'targets' && selected.length !== thresholds.targets.length) throw new Error(`runs.${name}: в ${run.cases} нет части целевых вопросов`)
     // Общий код приложения грузят оба пути: служба — клиент экрана (`askProvider.ts`), проверки — страж ответа.
-    const argv = isAskRun(run)
-      ? [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--provider', 'ask', '--ask-url', askUrl, '--model-url', modelUrl]
-      : [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--base', screen, '--model-url', modelUrl]
+    const argv = [...TS_RUNTIME_FLAGS, path.join(HERE, 'run.mjs'), '--provider', 'ask', '--ask-url', askUrl, '--model-url', modelUrl]
     argv.push('--cases', casesFile, '--repeat', String(run.repeat ?? 1), '--out', path.join(sideDir, name))
     if (run.only === 'targets') argv.push('--only', thresholds.targets.join(','))
     if (run.group) argv.push('--group', run.group.join(','))
@@ -265,42 +259,34 @@ async function collect(args, thresholds) {
   const inventory = buildInventory()
   const identity = { base: await identifyModel(args.baseUrl), candidate: await identifyModel(args.candidateUrl) }
   if (identity.base.sha256 && identity.base.sha256 === identity.candidate.sha256) throw new Error('база и кандидат — один и тот же файл модели')
-  // Путь службы: каждая служба отдаёт событие `trace`, смотрит на модель своей стороны, индекс у обеих один.
-  const viaService = args.provider === 'ask'
-  let ask = null
-  if (viaService) {
-    if (!args.baseAskUrl || !args.candidateAskUrl) throw new Error('--provider ask: нужны --base-ask-url и --candidate-ask-url — две службы metravel-assist')
-    if (args.baseAskUrl === args.candidateAskUrl) throw new Error('службы базы и кандидата — один адрес')
-    ask = { base: await inspectAskService(args.baseAskUrl, args.baseUrl, fetchJson), candidate: await inspectAskService(args.candidateAskUrl, args.candidateUrl, fetchJson) }
-    if (ask.base.indexBuiltAt !== ask.candidate.indexBuiltAt || ask.base.indexCount !== ask.candidate.indexCount) throw new Error(`службы базы и кандидата на разных индексах: ${ask.base.indexBuiltAt} (${ask.base.indexCount}) и ${ask.candidate.indexBuiltAt} (${ask.candidate.indexCount})`)
-  } else if (Object.values(thresholds.runs).some(isAskRun)) {
-    console.log('[accept] прогоны пути службы не собираются: нет --provider ask — их строки останутся «не оценено»')
-  }
+  // Каждая служба отдаёт событие `trace`, смотрит на модель своей стороны, индекс у обеих один.
+  if (!args.baseAskUrl || !args.candidateAskUrl) throw new Error('нужны --base-ask-url и --candidate-ask-url — две службы metravel-assist (база и кандидат)')
+  if (args.baseAskUrl === args.candidateAskUrl) throw new Error('службы базы и кандидата — один адрес')
+  const ask = { base: await inspectAskService(args.baseAskUrl, args.baseUrl, fetchJson), candidate: await inspectAskService(args.candidateAskUrl, args.candidateUrl, fetchJson) }
+  if (ask.base.indexBuiltAt !== ask.candidate.indexBuiltAt || ask.base.indexCount !== ask.candidate.indexCount) throw new Error(`службы базы и кандидата на разных индексах: ${ask.base.indexBuiltAt} (${ask.base.indexCount}) и ${ask.candidate.indexBuiltAt} (${ask.candidate.indexCount})`)
   let meta
   if (fs.existsSync(metaFile)) {
     // Продолжение: те же модели и те же входы, иначе в одной таблице окажутся несравнимые прогоны.
     meta = readJson(metaFile)
     for (const side of SIDES) if (meta[side].sha256 !== identity[side].sha256 || meta[side].file !== identity[side].file) throw new Error(`${side}: в папке приёмки другая модель (${meta[side].file}) — начните новую папку`)
     if (meta.inventoryHash !== sha256(JSON.stringify(inventory.files))) throw new Error('оценочные входы изменились с начала приёмки — начните новую папку')
-    if (ask) {
-      if (meta.ask && (meta.ask.base.indexBuiltAt !== ask.base.indexBuiltAt || meta.ask.base.indexCount !== ask.base.indexCount)) throw new Error('индекс служб изменился с начала приёмки — начните новую папку')
-      meta.ask = ask
-      fs.writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`)
-    }
+    if (meta.ask && (meta.ask.base.indexBuiltAt !== ask.base.indexBuiltAt || meta.ask.base.indexCount !== ask.base.indexCount)) throw new Error('индекс служб изменился с начала приёмки — начните новую папку')
+    meta.ask = ask
+    fs.writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`)
   } else {
     // Метки судьи назначаются по хешам моделей: не «A — всегда база», но воспроизводимо.
     const flip = parseInt(sha256(`${identity.base.sha256}:${identity.candidate.sha256}`).slice(0, 2), 16) % 2 === 1
     meta = {
-      startedAt: new Date().toISOString(), ...identity, screen: args.screen, gitSha: git('rev-parse', '--short', 'HEAD'),
+      startedAt: new Date().toISOString(), ...identity, gitSha: git('rev-parse', '--short', 'HEAD'),
       dirty: git('status', '--short', '--', 'api/aiAssist', 'components/screens/assistant', 'scripts/ai-assist', 'scripts/ai-assistant-eval', 'scripts/ai-train').split('\n').filter(Boolean),
       thresholds: path.relative(ROOT, THRESHOLDS), inventoryHash: sha256(JSON.stringify(inventory.files)),
       blind: flip ? { A: 'candidate', B: 'base' } : { A: 'base', B: 'candidate' },
-      ...(ask ? { ask } : {}),
+      ask,
     }
     fs.writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`)
   }
 
-  const runs = SIDES.flatMap((side) => planRuns(thresholds, side, args[`${side}Url`], path.join(outDir, side), args.screen, { askUrl: viaService ? args[`${side}AskUrl`] : null })).filter((run) => !args.skip.has(run.kind))
+  const runs = SIDES.flatMap((side) => planRuns(thresholds, side, args[`${side}Url`], path.join(outDir, side), { askUrl: args[`${side}AskUrl`] })).filter((run) => !args.skip.has(run.kind))
   for (const run of runs) {
     const title = `${run.side}/${run.name}`
     if (isComplete(run)) {
@@ -347,11 +333,9 @@ export async function main(argv) {
   if (errors.length) throw new Error(`acceptance.thresholds.json: ${errors.join('; ')}`)
   if (args.plan) {
     for (const side of SIDES) {
-      for (const run of planRuns(thresholds, side, `<${side}-url>`, path.join('<out>', side), args.screen, { askUrl: args.provider === 'ask' ? `<${side}-ask-url>` : null })) console.log(`${side}/${run.name} (${run.expected}): ${run.command.map((part) => (part === process.execPath ? 'node' : part.startsWith(ROOT) ? path.relative(ROOT, part) : part)).join(' ')}`)
+      for (const run of planRuns(thresholds, side, `<${side}-url>`, path.join('<out>', side), { askUrl: `<${side}-ask-url>` })) console.log(`${side}/${run.name} (${run.expected}): ${run.command.map((part) => (part === process.execPath ? 'node' : part.startsWith(ROOT) ? path.relative(ROOT, part) : part)).join(' ')}`)
     }
     console.log(`slices: ${path.join(args.aiHome, 'venv/bin/python')} -I scripts/ai-train/eval.py --ai-home ${args.aiHome} --base-server <base-url> --server <candidate-url> --out <out>/slices`)
-    const askRuns = Object.entries(thresholds.runs).filter(([, run]) => isAskRun(run)).map(([name]) => name)
-    if (askRuns.length && args.provider !== 'ask') console.log(`путь службы (${askRuns.join(', ')}): в плане только с --provider ask --base-ask-url <адрес> --candidate-ask-url <адрес>`)
     return 0
   }
   if (args.mergeJudge || args.table) {

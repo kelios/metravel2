@@ -15,7 +15,7 @@ import {
   isPageMode,
   sanitizeFragment,
   selectPromptSources,
-} from '@/api/aiAssist/prompt'
+} from '@/scripts/ai-assist/prompt'
 import { AI_PAGE_FRAGMENT_CHARS, AI_PAGE_FRAGMENTS, AI_PROMPT_SOURCES_LIMIT, AI_SOURCES_LIMIT } from '@/api/aiAssist/policy'
 import { aiAssistStaticResources } from '@/i18n/locales/ru/static/ai_assist_static'
 import type { AiHistoryItem, AiSource } from '@/api/aiAssist/types'

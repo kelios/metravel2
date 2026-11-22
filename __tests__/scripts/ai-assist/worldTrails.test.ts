@@ -2,12 +2,12 @@
  * Маршруты мира (#3357): карточка события `sources`, сверка условий вопроса тем же `judgeCard` и подбор
  * второго яруса. Фикстура — четырнадцать маршрутов внешнего индекса, без сети.
  */
-import { guardAnswer } from '@/api/aiAssist/answerGuard'
+import { guardAnswer } from '@/scripts/ai-assist/answerGuard'
 import { parseAskSseEvent } from '@/api/aiAssist/askProvider'
 import { judgeCard, parseConditions, TRAIL_ESTIMATE_SLACK, TRAIL_MIN_DAYS_FROM, TRAIL_MIN_DAYS_SHARE } from '@/api/aiAssist/questionConditions'
 import { type AiWorldTrail, LOAD_STEP_RU, LOAD_STEPS, monthRanges, monthsLabelRu, parseWorldTrail, roundAltitude, roundClimb, trailFactsLine, WORLD_OSM_LAYER_PUBLIC_PATH } from '@/api/aiAssist/trailFacts'
 import type { AiSource } from '@/api/aiAssist/types'
-import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, gazetteerWords, namesTrail, ownPlaceNames, selectWorldTrails, titleKeys, type WorldCandidate } from '@/api/aiAssist/worldTrails'
+import { asksForWorldTrails, borrowedPlaceWords, gazetteerPlace, gazetteerWords, namesTrail, ownPlaceNames, selectWorldTrails, titleKeys, type WorldCandidate } from '@/scripts/ai-assist/worldTrails'
 import { toTrailCard, trailTitle } from '@/scripts/ai-index/world/cards'
 
 import { WORLD_OPEN_LAYER, WORLD_OSM_LAYER, worldFakeVector } from '../../fixtures/worldTrails'

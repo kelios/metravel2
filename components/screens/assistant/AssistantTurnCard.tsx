@@ -7,7 +7,7 @@ import { ASK_FEEDBACK_REASONS, type AskFeedbackReason, type AskFeedbackVote } fr
 import type { AiSource } from '@/api/aiAssist/types'
 import UIButton from '@/components/ui/Button'
 import type { ThemedColors } from '@/hooks/useTheme'
-import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/limits'
+import { AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/policy'
 import { translate as i18nT } from '@/i18n'
 
 import { hasDisplayFields, splitAnswerSources } from './answerSources'
@@ -140,7 +140,7 @@ function AssistantTurnCardComponent({ turn, styles, colors, busy, onRetry, onOpe
   // Группа «Ещё по теме»: в режиме страницы (#3290) — соседние материалы; в общем подборе (#3289) —
   // карточки, не прошедшие отбор по месту и условиям вопроса. Модель их не видела.
   // Названные в ответе карточки — первыми, с обложкой и действиями (#3295); остальное свёрнуто под «Ещё
-  // материалы». Карточкой рисуется источник с полями показа; без них (старая служба, `llamacpp`, справка)
+  // материалы». Карточкой рисуется источник с полями показа; без них (старая служба, справка)
   // и когда в ответе не названо ничего — прежний список строк, развёрнутый.
   const cards = useMemo(
     () => (turn.status === 'done' ? splitAnswerSources(turn.answer, turn.sources).recommended.filter(hasDisplayFields) : []),

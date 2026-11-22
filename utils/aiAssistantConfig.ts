@@ -1,16 +1,14 @@
 /**
- * Фича-флаг ассистента сайта (#2460) и выбор провайдера (#2884).
+ * Фича-флаг ассистента сайта (#2460).
  *
  * Ассистент (`/assistant`, пункт меню, кнопка на `/search`) живёт под
- * `EXPO_PUBLIC_AI_ASSISTANT=1`. Провайдер ответа —
- * `EXPO_PUBLIC_AI_ASSISTANT_PROVIDER`:
- * - `ask` (по умолчанию) — серверный `POST /ai/ask` службы metravel-assist
- *   (#2713) по адресу службы смыслового подбора (`utils/aiPicksConfig.ts`:
- *   same-origin на web, origin API на native, `EXPO_PUBLIC_AI_PICKS_URL`
- *   переопределяет); подбор, лимиты и блок «не по теме» — на сервере;
- * - `llamacpp` — прямой OpenAI-совместимый `llama-server` (`metravel-llm`) по
- *   `EXPO_PUBLIC_AI_ASSISTANT_URL`; подбор по словам и счётчики в хранилище
- *   устройства — локальная отладка модели без службы.
+ * `EXPO_PUBLIC_AI_ASSISTANT=1`. Путь ответа один (#3297): серверный `POST /ai/ask`
+ * службы metravel-assist (#2713) по адресу службы смыслового подбора
+ * (`utils/aiPicksConfig.ts`: same-origin на web, origin API на native,
+ * `EXPO_PUBLIC_AI_PICKS_URL` переопределяет); подбор, лимиты и блок «не по теме» — на
+ * сервере. Прямого похода приложения в `llama-server` нет: значение
+ * `EXPO_PUBLIC_AI_ASSISTANT_PROVIDER=llamacpp` — ошибка конфигурации
+ * (`AI_ASSISTANT_PROVIDER_REMOVED`), `EXPO_PUBLIC_AI_ASSISTANT_URL` не читается.
  * Решение владельца 18.10.2026: локально включено, на проде выключено, пока нет
  * сервера под модель (#2457/#2458). При выключенном флаге ни страница, ни меню,
  * ни запросы к серверу не появляются ни на одной платформе: роут отдаёт
@@ -26,28 +24,17 @@
  * чтобы сборка без флага не содержала ни экрана, ни `api/aiAssist`.
  */
 
-// Имена переменных объявлены один раз — в `utils/runtimeConfigContract.js`
-// (`AI_ASSISTANT_FLAG_NAME`/`AI_ASSISTANT_URL_NAME`/`AI_ASSISTANT_PROVIDER_NAME`);
-// здесь нужны литералы, потому что Expo подставляет только литеральный
-// `process.env.EXPO_PUBLIC_*`.
+// Имя переменной объявлено один раз — в `utils/runtimeConfigContract.js`
+// (`AI_ASSISTANT_FLAG_NAME`); здесь нужен литерал, потому что Expo подставляет
+// только литеральный `process.env.EXPO_PUBLIC_*`.
 const TRUTHY_FLAG_VALUES = new Set(['1', 'true'])
 
 const isFlagOn = (value: string | undefined | null): boolean =>
   TRUTHY_FLAG_VALUES.has(String(value ?? '').trim().toLowerCase())
 
-export type AiAssistantProvider = 'ask' | 'llamacpp'
-
 /** Включён ли ассистент в этой сборке. Читается при вызове, не при загрузке модуля. */
 export const isAiAssistantEnabled = (): boolean =>
   isFlagOn(process.env.EXPO_PUBLIC_AI_ASSISTANT)
-
-/**
- * Провайдер ответа: `llamacpp` только по явному значению, иначе `ask`.
- * Неизвестное значение — ошибка конфигурации (`AI_ASSISTANT_PROVIDER_INVALID`),
- * здесь оно читается как значение по умолчанию.
- */
-export const getAiAssistantProvider = (): AiAssistantProvider =>
-  String(process.env.EXPO_PUBLIC_AI_ASSISTANT_PROVIDER ?? '').trim().toLowerCase() === 'llamacpp' ? 'llamacpp' : 'ask'
 
 /**
  * Контекстный вход (#2897): страница статьи или квеста ведёт в ассистента с
@@ -66,9 +53,3 @@ export const buildAssistantSourceHref = (ref: AiAssistantSourceRef): string =>
  * ему нельзя (#2738).
  */
 export const ASSISTANT_INPUT_TEST_ID = 'assistant-input'
-
-/** Базовый адрес `llama-server` без завершающего слэша; пустая строка — не задан. */
-export const getAiAssistantBaseUrl = (): string =>
-  String(process.env.EXPO_PUBLIC_AI_ASSISTANT_URL ?? '')
-    .trim()
-    .replace(/\/+$/, '')

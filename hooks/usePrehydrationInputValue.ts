@@ -56,3 +56,16 @@ export function usePrehydrationInputValue(testID: string, value: string, onAdopt
     // Только при монтировании: дальше значением владеет state.
   }, [])
 }
+
+/**
+ * Поле, в которое поставили курсор до гидрации, гидрируется на месте вместе с фокусом (#3370), но события
+ * `focus` React не воспроизводит: state «в фокусе» у владельца остался бы ложным, и поле с курсором
+ * выглядело бы как поле без него. Один раз при монтировании сообщает владельцу, что фокус уже в поле.
+ */
+export function usePrehydrationInputFocus(testID: string, onFocused: () => void): void {
+  useWebLayoutEffect(() => {
+    if (!canUseDom()) return
+    if (document.activeElement?.getAttribute('data-testid') === testID) onFocused()
+    // Только при монтировании: дальше фокусом владеют события поля.
+  }, [])
+}

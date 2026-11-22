@@ -30,9 +30,9 @@
  */
 import type http from 'node:http'
 
-import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
+import { type Generator, isAiGeneratorError } from './generator.ts'
 import { planDaysOf, requestedDaysOf } from '../../api/aiAssist/planIntent.ts'
-import { ASSISTANT_SYSTEM_PROMPT, resolveAnswerLanguage, sanitizeFragment } from '../../api/aiAssist/prompt.ts'
+import { ASSISTANT_SYSTEM_PROMPT, resolveAnswerLanguage, sanitizeFragment } from './prompt.ts'
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { classifyQuestion } from '../../api/aiAssist/topicGate.ts'
 import type { AiChatMessage } from '../../api/aiAssist/types.ts'

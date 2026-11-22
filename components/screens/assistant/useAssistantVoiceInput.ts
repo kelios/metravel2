@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 
-import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/prompt'
+import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/policy'
 import { useWebSpeechDictation, type WebSpeechErrorCode } from '@/hooks/useWebSpeechDictation'
 import { getFormatLocale } from '@/i18n'
 

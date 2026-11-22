@@ -11,11 +11,11 @@
  * - поток — SSE с именованными событиями: `sources {sources, degraded, remaining}`,
  *   `text {text}` (накопленный текст после стража, не дельта), `done {status, …}`.
  *
- * Стрим читается общим `consumeSseResponse` из `generator.ts`: `ReadableStream` на
+ * Стрим читается общим `consumeSseResponse` из `sse.ts`: `ReadableStream` на
  * web, целиком из `text()` на native — контракт тот же.
  */
 
-import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
+import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './sse'
 import { AI_MAX_RECOMMENDATIONS, ASK_NO_MATERIAL_REASON } from './policy'
 import type { AiSourceRef } from './sourceRef'
 import { type AiWorldTrail, isWorldUrl, parseWorldTrail } from './trailFacts'

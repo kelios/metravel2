@@ -20,14 +20,6 @@ jest.mock('@/utils/externalLinks', () => ({
 jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: (...args: unknown[]) => mockAnalytics(...args),
 }))
-jest.mock('@/api/aiAssist/limits', () => ({
-  AI_OFFTOPIC_STRIKES_TO_BLOCK: 3,
-  consumeQuestion: jest.fn(async () => ({ allowed: true, remaining: 19 })),
-  readRemainingQuestions: jest.fn(async () => 20),
-  readOffTopicState: jest.fn(async () => ({ strikes: 0, blocked: false })),
-  registerOffTopicStrike: jest.fn(async () => ({ strikes: 1, blocked: false })),
-}))
-jest.mock('@/api/aiAssist/demandLog', () => ({ logDemand: jest.fn(async () => []) }))
 
 import type { AskClient, AskResult } from '@/api/aiAssist/askProvider'
 import type { AiWorldTrail } from '@/api/aiAssist/trailFacts'

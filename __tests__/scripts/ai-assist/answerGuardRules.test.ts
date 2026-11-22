@@ -1,5 +1,5 @@
-import { admitsNoAnswer, guardAnswer } from '@/api/aiAssist/answerGuard'
-import { nameBareSourceLinks } from '@/api/aiAssist/linkGuard'
+import { admitsNoAnswer, guardAnswer } from '@/scripts/ai-assist/answerGuard'
+import { nameBareSourceLinks } from '@/scripts/ai-assist/linkGuard'
 import type { AiSource } from '@/api/aiAssist/types'
 
 // #3345: единый набор правил стража. После #3291 приёмка на живой службе (12.11.2026) нашла пять новых

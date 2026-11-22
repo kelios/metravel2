@@ -2,9 +2,9 @@ import { memo, useCallback, useState } from 'react'
 import { Platform, Text, TextInput, View, type TextInputKeyPressEvent } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/prompt'
+import { MAX_QUESTION_LENGTH } from '@/api/aiAssist/policy'
 import UIButton from '@/components/ui/Button'
-import { usePrehydrationInputValue } from '@/hooks/usePrehydrationInputValue'
+import { usePrehydrationInputFocus, usePrehydrationInputValue } from '@/hooks/usePrehydrationInputValue'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { ASSISTANT_INPUT_TEST_ID } from '@/utils/aiAssistantConfig'
@@ -44,6 +44,8 @@ function AssistantComposerComponent({
   const [focused, setFocused] = useState(false)
   // Web: вопрос, набранный в статической разметке до гидрации, становится черновиком (#3346).
   usePrehydrationInputValue(ASSISTANT_INPUT_TEST_ID, draft, onChangeDraft)
+  // Web: курсор, поставленный в поле до гидрации, остаётся в нём — рамка фокуса тоже (#3370).
+  usePrehydrationInputFocus(ASSISTANT_INPUT_TEST_ID, () => setFocused(true))
   const limitReached = remaining !== null && remaining <= 0
   const canSend = !busy && !limitReached && !offTopicBlocked && draft.trim().length > 0
   // Голосовой ввод (#3351): диктовка дописывает фразу в черновик, отправляет вопрос человек.

@@ -5,8 +5,8 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { guardAnswer } from '@/api/aiAssist/answerGuard'
-import { buildAssistantMessages, buildSystemPrompt, visitorBlockFor } from '@/api/aiAssist/prompt'
+import { guardAnswer } from '@/scripts/ai-assist/answerGuard'
+import { buildAssistantMessages, buildSystemPrompt, visitorBlockFor } from '@/scripts/ai-assist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 import {
   asksWhereToGo,

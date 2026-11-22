@@ -62,12 +62,13 @@ describe('runtime config diagnostics parity (app vs script)', () => {
       },
     },
     {
-      name: 'assistant flag with local llama-server in production (#2460)',
+      name: 'assistant flag with the removed llamacpp provider in production (#3297)',
       env: {
         NODE_ENV: 'production',
         EXPO_PUBLIC_API_URL: 'https://metravel.by',
         EXPO_PUBLIC_ORS_API_KEY: 'key',
         EXPO_PUBLIC_AI_ASSISTANT: '1',
+        EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp',
         EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080',
       },
     },

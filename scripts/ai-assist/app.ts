@@ -21,11 +21,11 @@ import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_PAGE_FRAGME
 import { matchPlaceSources, mentionsAnyPlace } from '../../api/aiAssist/promptPlace.ts'
 import { factsKey, type QuestFacts, questFactsLine, questFactsOf, travelFactsLine } from '../../api/aiAssist/sourceFacts.ts'
 import { judgeCard, parseConditions } from '../../api/aiAssist/questionConditions.ts'
-import { arrangeSources } from '../../api/aiAssist/sourceSelection.ts'
+import { arrangeSources } from './sourceSelection.ts'
 import { namedDestinations } from '../../api/aiAssist/topicGate.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
 import { asksWhereToGo, demoteSeen, detectOwnPlacesQuestion, seenSourceKeys, visitorCandidateIds } from '../../api/aiAssist/visitorContext.ts'
-import { selectWorldTrails } from '../../api/aiAssist/worldTrails.ts'
+import { selectWorldTrails } from './worldTrails.ts'
 import { type AiSourceRef, leavesPage } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult, type RetrieveOptions } from './ask.ts'
 import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHandler } from './authorDraft.ts'
@@ -298,9 +298,9 @@ export function createApp(deps: AppDeps): http.Server {
   const fragmentChars = { ...ASK_FRAGMENT_CHARS, ...deps.askFragmentChars }
 
   /**
-   * Карточки для промпта ассистента: та же форма `AiSource`, что у клиентского подбора. Первой в
-   * карточке идёт строка фактов (#3287) — тем же построителем, что на экране (`questToSource`,
-   * `travelToSource`) и в слепке обучения: у квеста — вид квеста с городом и страной, возраст,
+   * Карточки для промпта ассистента: форма `AiSource` (`api/aiAssist/types.ts`). Первой в
+   * карточке идёт строка фактов (#3287) — тем же построителем, что у карточки страницы-источника на экране (`questToSource`,
+   * `travelToSource` в `api/aiAssist/sourceCard.ts`) и в слепке обучения: у квеста — вид квеста с городом и страной, возраст,
    * «Со взрослым» (#3276), число точек, длительность, сложность, «Можно с собакой»; у статьи —
    * страна, число дней, месяцы (город статьи в индексе — подпись первой точки маршрута, #3347). Затем — фрагмент текста под вопрос, не длиннее
    * `ASK_FRAGMENT_CHARS` своего типа.

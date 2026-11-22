@@ -1,6 +1,6 @@
 """The assistant screen's prompt for the training sets (#2712).
 
-The site assistant (api/aiAssist/prompt.ts) sends metravel-llm a system prompt
+The site assistant (scripts/ai-assist/prompt.ts) sends metravel-llm a system prompt
 built per interface locale and a user message with the retrieved cards. The
 sets that teach that mode (rag_answers, offtopic) must train on exactly the same
 text, so the strings come from scripts/ai-train/assistant_prompt.json — a

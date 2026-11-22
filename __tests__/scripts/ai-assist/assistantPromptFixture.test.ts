@@ -1,14 +1,15 @@
-import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { MAX_ANSWER_CHARS, OFFTOPIC_REPLY_RU, buildSystemPrompt, buildUserMessage, formatSourcesBlock } from '@/api/aiAssist/prompt'
+import { MAX_ANSWER_CHARS, OFFTOPIC_REPLY_RU, buildSystemPrompt, buildUserMessage, formatSourcesBlock } from '@/scripts/ai-assist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 import { aiAssistStaticResources as be } from '@/i18n/locales/be/static/ai_assist_static'
 import { aiAssistStaticResources as en } from '@/i18n/locales/en/static/ai_assist_static'
 import { aiAssistStaticResources as pl } from '@/i18n/locales/pl/static/ai_assist_static'
 import { aiAssistStaticResources as ru } from '@/i18n/locales/ru/static/ai_assist_static'
 import { aiAssistStaticResources as uk } from '@/i18n/locales/uk/static/ai_assist_static'
+
+import { runCli } from '../cli-test-utils'
 
 // #2712: наборы rag_answers/offtopic учат модель ровно на том промпте, что собирает экран.
 // Слепок `scripts/ai-train/assistant_prompt.json` читают сборщики наборов (Python);
@@ -57,7 +58,7 @@ describe('assistant prompt fixture for the training sets (#2712)', () => {
       'sources = json.load(sys.stdin)',
       "print(json.dumps([build_user_message('Что посмотреть?', sources, 'ru'), build_user_message('Исландия', [], 'ru')], ensure_ascii=False))",
     ].join('\n')
-    const run = spawnSync('python3', ['-I', '-c', script], { cwd: process.cwd(), input: JSON.stringify(SAMPLE), encoding: 'utf8' })
+    const run = runCli('python3', ['-I', '-c', script], { input: JSON.stringify(SAMPLE) })
     expect(run.stderr).toBe('')
     expect(JSON.parse(run.stdout)).toEqual([buildUserMessage('Что посмотреть?', SAMPLE), buildUserMessage('Исландия', [])])
   })

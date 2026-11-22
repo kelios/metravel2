@@ -13,7 +13,7 @@ import { Fragment, memo, useCallback, useMemo } from 'react'
 import { Text, type StyleProp, type TextStyle } from 'react-native'
 import { useRouter } from 'expo-router'
 
-import { normalizeLinkKey } from '@/api/aiAssist/linkGuard'
+import { normalizeLinkKey } from '@/api/aiAssist/linkKey'
 import type { AiSource } from '@/api/aiAssist/types'
 
 type InlineToken =

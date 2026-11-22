@@ -15,7 +15,7 @@
  *   503 generator_unavailable — `AI_LLM_URL` не задан или модель не ответила
  */
 import { AI_MAP_INTENT_MAX_QUERY_CHARS, AI_MAP_INTENT_MIN_QUERY_CHARS } from '../../api/aiAssist/policy.ts'
-import { ASSISTANT_SYSTEM_PROMPT } from '../../api/aiAssist/prompt.ts'
+import { ASSISTANT_SYSTEM_PROMPT } from './prompt.ts'
 import type { AiChatMessage } from '../../api/aiAssist/types.ts'
 import { extractJsonObject, type OsmFilterIntent, toOsmFilterIntent, validateOsmFilter } from './osmFilterSchema.ts'
 import { HttpError, parseLocale } from './params.ts'

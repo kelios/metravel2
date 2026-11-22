@@ -1,7 +1,7 @@
 import path from 'path'
 
-import { asksAboutChildren, childrenRank, cityNamedIn, questAudience, questAudienceLead } from '@/api/aiAssist/questAudience'
-import { questToSource } from '@/api/aiAssist/retrieval'
+import { asksAboutChildren, questAudience, questAudienceLead } from '@/api/aiAssist/questAudience'
+import { questToSource } from '@/api/aiAssist/sourceCard'
 import { enabledQuestTags } from '@/utils/questTags'
 
 import { runCli } from '../../scripts/cli-test-utils'
@@ -71,13 +71,13 @@ describe('аудитория квеста в карточке ассистент
   })
 
   it('карточка экрана несёт признак и возраст; обычный квест выглядит как раньше', () => {
-    expect(questToSource(quest(TAG_FIXTURES[0][1]) as never, [], 'quest')?.snippet).toBe(
+    expect(questToSource(quest(TAG_FIXTURES[0][1]) as never)?.snippet).toBe(
       'Детский городской квест по городу Несвиж (Беларусь). Возраст: 8–10 лет. Со взрослым. Точек: 3. Длительность: 90 мин. Сложность: лёгкий',
     )
-    expect(questToSource(quest(['family']) as never, [], 'quest')?.snippet).toBe(
+    expect(questToSource(quest(['family']) as never)?.snippet).toBe(
       'Семейный городской квест по городу Несвиж (Беларусь). Точек: 3. Длительность: 90 мин. Сложность: лёгкий',
     )
-    expect(questToSource(quest({ legend: true }) as never, [], 'quest')?.snippet).toBe(
+    expect(questToSource(quest({ legend: true }) as never)?.snippet).toBe(
       'Городской квест по городу Несвиж (Беларусь). Точек: 3. Длительность: 90 мин. Сложность: лёгкий',
     )
   })
@@ -98,7 +98,7 @@ describe('аудитория квеста в карточке ассистент
     const run = runCli('python3', ['-I', '-c', script], { input: JSON.stringify(quests) })
     expect(run.stderr).toBe('')
     expect(run.status).toBe(0)
-    const fromApp = quests.map((item) => questToSource(item as never, [], 'quest')?.snippet)
+    const fromApp = quests.map((item) => questToSource(item as never)?.snippet)
     expect(JSON.parse(run.stdout)).toEqual(fromApp)
     // Сверка не пустая: в списке есть и детская, и семейная, и обычная карточка.
     expect(fromApp.filter((snippet) => snippet?.startsWith('Детский городской квест'))).toHaveLength(5)
@@ -131,25 +131,5 @@ describe('аудитория квеста в карточке ассистент
     'Childhood memories of Minsk',
   ])('«%s» — не вопрос о детях', (question) => {
     expect(asksAboutChildren(question)).toBe(false)
-  })
-
-  it('город карточки узнаётся в вопросе в падеже и в другом написании, «Городок» на слово «город» не откликается', () => {
-    expect(cityNamedIn('Что посмотреть в Несвиже? А какой из них подойдёт детям?', ['Несвиж'])).toBe(true)
-    expect(cityNamedIn('Квесты в Лиде', ['Лида'])).toBe(true)
-    expect(cityNamedIn('Что есть по Барановичам?', ['Барановичи'])).toBe(true)
-    expect(cityNamedIn('Co zobaczyć w Krakowie z dziećmi?', ['Kraków', 'Краков'])).toBe(true)
-    expect(cityNamedIn('Што ёсць у Мінску?', ['Мінск'])).toBe(true)
-    expect(cityNamedIn('What to do in Warsaw?', ['Warsaw'])).toBe(true)
-    expect(cityNamedIn('В каком городе есть квест для детей?', ['Городок'])).toBe(false)
-    expect(cityNamedIn('Квесты в Минске', ['Брест', null, undefined, ''])).toBe(false)
-    expect(cityNamedIn('', ['Гродно'])).toBe(false)
-  })
-
-  // Порядок найденных карточек при вопросе о детях — общая цепочка `arrangeSources` (#3289): `sourceSelection.test.ts`.
-  it('место квеста при вопросе о детях: детский квест города — 2, семейный — 1, чужой город и обычный квест — 0', () => {
-    expect(childrenRank('С детьми в Несвиже', ['kids'], ['Несвиж'])).toBe(2)
-    expect(childrenRank('С детьми в Несвиже', ['family'], ['Несвиж'])).toBe(1)
-    expect(childrenRank('С детьми в Несвиже', ['kids'], ['Брест'])).toBe(0)
-    expect(childrenRank('С детьми в Несвиже', ['legend'], ['Несвиж'])).toBe(0)
   })
 })

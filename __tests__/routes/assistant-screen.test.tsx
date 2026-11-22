@@ -16,7 +16,6 @@ const mockChatState = {
   remaining: 20 as number | null,
   inputError: null as 'tooLong' | 'limit' | null,
   busy: false,
-  generatorConfigured: true,
   ask: jest.fn(async () => undefined),
   stop: jest.fn(),
   retry: jest.fn(),
