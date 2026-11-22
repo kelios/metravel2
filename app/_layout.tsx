@@ -437,6 +437,11 @@ function ThemedContent({
       deferFavoritesProvider={shouldDeferFavoritesProvider}
       favoritesDeferMode={favoritesDeferMode}
     >
+                          {/* #3467: фоновые рантаймы и skip-ссылки — своя Suspense-граница
+                              (в SSR только маркеры <!--$-->). Иначе их рендер, эффекты и
+                              модули входили в синхронный путь гидратации ЛЮБОГО тапа в окне
+                              гидратации. Ничего не приостанавливают; на native граница пустая. */}
+                          <React.Suspense fallback={null}>
                           {Platform.OS === 'web' ? <SkipLinks /> : null}
                           <NativeAppRuntime />
                           {/* Досылка прогресса квеста, пройденного без сети (#1922) */}
@@ -444,6 +449,7 @@ function ThemedContent({
                           {/* Скрытие контента заблокированных авторов во всех лентах (#2134) */}
                           <BlockedAuthorsRuntime />
                           <ProfileLanguageSyncRuntime />
+                          </React.Suspense>
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar

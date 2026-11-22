@@ -102,3 +102,64 @@ test.describe('@perf hydration: tap does not hydrate the whole page (#3467)', ()
     ).toBeLessThan(stats.hydratedTotal);
   });
 });
+
+/**
+ * #3467, шаг 2: оболочка не входит в путь чужого тапа. Шапка, мобильный док и
+ * desktop-подвал — отдельные Suspense-границы, поэтому касание одной из них в
+ * окне гидратации не дорисовывает остальные синхронно. Без границ подвал
+ * (~430 файберов) входил в путь каждого тапа на любом маршруте.
+ *
+ * Детерминированно: синтетический pointerdown отправляется сразу после коммита
+ * корня (microtask), когда ни одна граница ещё не гидратирована; сразу после
+ * обработчика проверяем, у каких узлов уже есть файбер React.
+ */
+async function tapRightAfterRootCommit(page: import('@playwright/test').Page, targetTestId: string) {
+  await page.addInitScript((target: string) => {
+    const result: Record<string, unknown> = { tapped: false };
+    (window as any).__shellTap = result;
+    const hasFiber = (testId: string) => {
+      const node = document.querySelector(`[data-testid="${testId}"]`);
+      if (!node) return null;
+      return Object.keys(node).some((key) => key.startsWith('__reactFiber$'));
+    };
+    let commits = 0;
+    (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+      isDisabled: false,
+      supportsFiber: true,
+      renderers: new Map(),
+      inject() { return 1; },
+      checkDCE() {},
+      onScheduleFiberRoot() {},
+      onCommitFiberUnmount() {},
+      onPostCommitFiberRoot() {},
+      onCommitFiberRoot() {
+        commits += 1;
+        if (commits !== 1) return;
+        queueMicrotask(() => {
+          const node = document.querySelector(`[data-testid="${target}"]`);
+          if (!node) return;
+          node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, cancelable: true, pointerType: 'touch', isPrimary: true }));
+          result.tapped = true;
+          for (const id of ['main-header', 'web-mobile-dock-shell', 'footer-desktop']) result[id] = hasFiber(id);
+        });
+      },
+    };
+  }, targetTestId);
+}
+
+test.describe('@perf hydration: shell parts are separate boundaries (#3467)', () => {
+  for (const [target, expected] of [
+    ['main-header', { 'main-header': true, 'web-mobile-dock-shell': false, 'footer-desktop': false }],
+    ['web-mobile-dock-shell', { 'main-header': false, 'web-mobile-dock-shell': true, 'footer-desktop': false }],
+  ] as const) {
+    test(`tap on ${target} hydrates only its own shell part`, async ({ page }) => {
+      await preacceptCookies(page);
+      await tapRightAfterRootCommit(page, target);
+      await page.goto('/about', { waitUntil: 'load' });
+      await page.waitForFunction(() => (window as any).__shellTap?.tapped === true, null, { timeout: 30_000 });
+      const result = await page.evaluate(() => (window as any).__shellTap);
+      test.info().annotations.push({ type: 'hydration', description: JSON.stringify(result) });
+      expect(result).toMatchObject(expected);
+    });
+  }
+});

@@ -220,10 +220,15 @@ const Header = React.memo(function Header() {
                 // `screenLayout` — её прячем тем же правилом, что и сам экран.
                 ...inactiveScreenWebAttributes(isNavigationTarget),
             },
-            <CustomHeader
-                onHeightChange={handleHeaderHeight}
-                isNavigationTarget={isNavigationTarget}
-            />,
+            // #3467: шапка — своя Suspense-граница (в SSR только маркеры <!--$-->):
+            // тап по статье в окне гидратации не дорисовывает шапку синхронно, а тап
+            // по шапке — экран. Слот с резервом высоты остаётся снаружи.
+            <React.Suspense fallback={null}>
+                <CustomHeader
+                    onHeightChange={handleHeaderHeight}
+                    isNavigationTarget={isNavigationTarget}
+                />
+            </React.Suspense>,
         );
     }
 
