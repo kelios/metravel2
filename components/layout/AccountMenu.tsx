@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { Link, router, usePathname, type Href } from 'expo-router'
+import { router, usePathname, type Href } from 'expo-router'
 
 import { DialogMenu } from '@/ui/paper'
 import ThemeToggle from '@/components/layout/ThemeToggle'
@@ -15,7 +15,7 @@ import {
   createMenuStyles,
 } from './headerStyles'
 import NavigationIcon from './NavigationIcon'
-import { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
+import LinkPressable, { shouldHandleLinkClick, type LinkPressEvent } from '@/components/ui/LinkPressable'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -181,23 +181,13 @@ function MenuLink({
   const navigate =
     item.onPress ?? (item.path ? () => onNavigate(item.path!, item.external) : undefined)
   const anchored = Platform.OS === 'web' && href !== undefined
-  const onPress = anchored
-    ? (event?: LinkPressEvent) => {
-        if (event && !shouldHandleLinkClick(event)) return
-        event?.preventDefault()
-        navigate?.()
-      }
-    : navigate
-  const link = (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole={item.path ? 'link' : 'button'}
-      accessibilityLabel={item.accessibilityLabel ?? item.title}
-      // Slot ссылки сливает стиль спредом: ему — плоский объект, как в `LinkPressable`.
-      style={anchored
-        ? StyleSheet.flatten([styles.menuItem, wrapperStyles.menuLink])
-        : ({ pressed }) => [styles.menuItem, wrapperStyles.menuLink, pressed && wrapperStyles.menuLinkPressed]}
-    >
+  const onLinkPress = (event: LinkPressEvent) => {
+    if (!shouldHandleLinkClick(event)) return
+    event.preventDefault()
+    navigate?.()
+  }
+  const content = (
+    <>
       {item.leadingNode ?? (
           <NavigationIcon
             name={item.icon}
@@ -208,9 +198,34 @@ function MenuLink({
       <Text style={item.strong ? styles.menuItemTitleStrong : styles.menuItemTitle}>
         {item.title}
       </Text>
+    </>
+  )
+  const accessibilityLabel = item.accessibilityLabel ?? item.title
+  // `onPress` сам отменяет событие обычного клика, поэтому `LinkPressable` не делает
+  // своего `router.push`: переход остаётся за меню (`onNavigate`), а Cmd/Ctrl-клик
+  // браузер открывает по `href` в новой вкладке.
+  if (anchored) {
+    return (
+      <LinkPressable
+        href={href as Href}
+        onPress={onLinkPress}
+        accessibilityLabel={accessibilityLabel}
+        style={[styles.menuItem, wrapperStyles.menuLink]}
+      >
+        {content}
+      </LinkPressable>
+    )
+  }
+  return (
+    <Pressable
+      onPress={navigate}
+      accessibilityRole={item.path ? 'link' : 'button'}
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [styles.menuItem, wrapperStyles.menuLink, pressed && wrapperStyles.menuLinkPressed]}
+    >
+      {content}
     </Pressable>
   )
-  return anchored ? <Link href={href as Href} asChild>{link}</Link> : link
 }
 
 function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {

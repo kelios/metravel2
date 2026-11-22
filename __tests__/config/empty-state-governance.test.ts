@@ -22,7 +22,10 @@ const OWNER = 'components/ui/EmptyState.tsx';
 const OWNER_IMPORT = /from\s+['"]@\/components\/ui\/EmptyState['"]/;
 
 export const EMPTY_CIRCLE_KEY = /\bempty\w*(?:Icon|Circle)\w*\s*:/;
-export const OWN_EMPTY_COMPONENT = /\b(?:function|const|class)\s+((?:[A-Z]\w*)?EmptyState\w*)\b/;
+export const OWN_EMPTY_COMPONENT = /\b(?:function|const|class)\s+((?:[A-Z]\w*)?EmptyState\w*)\b/g;
+// Ленивая привязка чанка (`const X = lazyWithRetry(() => import('./X'))`) — не своя
+// заглушка: модуль-цель лежит в тех же каталогах и судится стражем сам по себе.
+const LAZY_IMPORT_BINDING = /^\s*=\s*(?:React\.)?lazy\w*\(\s*\(\)\s*=>\s*import\(/;
 const OWN_EMPTY_FILE = /^(?:[A-Z]\w*)?EmptyState\w*\.tsx?$/;
 
 /** Файл → причина, почему собственный вид «пусто» допустим. */
@@ -62,8 +65,12 @@ export function findViolations(file: string, source: string): string[] {
     if (EMPTY_CIRCLE_KEY.test(line)) out.push(`${file}:${index + 1} ключ круга пустого состояния: ${line.trim()}`);
   });
   if (!OWNER_IMPORT.test(code)) {
-    const own = code.match(OWN_EMPTY_COMPONENT);
-    if (own) out.push(`${file}: собственный компонент ${own[1]} без ui/EmptyState`);
+    for (const own of code.matchAll(OWN_EMPTY_COMPONENT)) {
+      const rest = code.slice((own.index ?? 0) + own[0].length);
+      if (LAZY_IMPORT_BINDING.test(rest)) continue;
+      out.push(`${file}: собственный компонент ${own[1]} без ui/EmptyState`);
+      break;
+    }
     if (OWN_EMPTY_FILE.test(path.basename(file))) out.push(`${file}: собственный файл заглушки без ui/EmptyState`);
   }
   return out;
@@ -85,6 +92,11 @@ describe('Empty state governance (#2104)', () => {
     ).toHaveLength(0);
     expect(findViolations('x.ts', '// emptyIconCircle был здесь\nconst emptyWrap = {}')).toHaveLength(0);
     expect(findViolations('x.ts', 'function getEmptyStateMessage() {}')).toHaveLength(0);
+    // Ленивая привязка чанка не заглушка, а своя заглушка рядом с ней — нарушение.
+    const lazyBinding = "const CatalogEmptyStates = lazyWithRetry(() => import('./CatalogEmptyStates'));";
+    expect(findViolations('x.tsx', lazyBinding)).toHaveLength(0);
+    expect(findViolations('x.tsx', "const LocalEmptyState = React.lazy(() => import('./L'))")).toHaveLength(0);
+    expect(findViolations('x.tsx', `${lazyBinding}\nfunction PanelEmptyState() { return null }`)).toHaveLength(1);
   });
 
   it('вне ui/EmptyState нет собственных заглушек, кроме поимённых исключений', () => {

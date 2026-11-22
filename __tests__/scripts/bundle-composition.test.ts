@@ -311,11 +311,6 @@ const LAZY_DEFEATED_BY_SYNC_ALLOWLIST: Array<{ file: string; specifier: string; 
   },
   {
     file: 'app/(tabs)/quests/[city]/[questId].tsx',
-    specifier: '@expo/vector-icons/Feather',
-    reason: 'то же: набор иконок уже в стартовом графе через корневой layout',
-  },
-  {
-    file: 'app/(tabs)/quests/[city]/[questId].tsx',
     specifier: '@/components/quests/QuestWizard',
     reason: 'открытый долг: sync-ветка держит визард в стартовом графе маршрута квеста',
   },

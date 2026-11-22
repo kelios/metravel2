@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useLayoutEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import LinkPressable from '@/components/ui/LinkPressable';
@@ -28,11 +28,6 @@ export const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : us
 export const resolveBundleCountModel = (bundle: FrontendQuestBundle) =>
   bundle.countModel ?? buildQuestCountModel(bundle.steps, bundle.intro);
 
-
-const FeatherIconLazy = React.lazy<React.ComponentType<{ name: IconName; size: number; color: string }>>(() =>
-  Promise.resolve(import('@expo/vector-icons/Feather')).then((module: any) => ({ default: module.Feather || module.default })),
-);
-const FeatherIcon = Platform.OS === 'web' ? FeatherIconLazy : Feather;
 
 export const getQuestSeo = (bundle: FrontendQuestBundle | null, questId: string, isLoading: boolean): QuestSeoModel => {
   if (isLoading) {
@@ -149,14 +144,10 @@ export const useQuestHeadSync = (enabled: boolean, seo: QuestSeoModel, canonical
   }, [alternates, canonical, enabled, image, seo]);
 };
 
+// Feather уже в стартовом графе через корневой layout: ленивая обёртка рядом с
+// синхронным импортом ничего не выносила из бандла (#1499, #3469).
 const Icon = ({ name, color, size = 18 }: { name: IconName; color: string; size?: number }) => (
-  Platform.OS === 'web' ? (
-    <Suspense fallback={null}>
-      <FeatherIcon name={name} size={size} color={color} />
-    </Suspense>
-  ) : (
-    <FeatherIcon name={name} size={size} color={color} />
-  )
+  <Feather name={name} size={size} color={color} />
 );
 
 const CenteredPage = ({ children, styles }: { children: React.ReactNode; styles: ReturnType<typeof createStyles> }) => (

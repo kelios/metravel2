@@ -1,5 +1,6 @@
-import { devices, expect, test, type Request } from '@playwright/test'
+import { expect, test, type Request } from '@playwright/test'
 import { seedActionConsents } from './helpers/actionConsent'
+import { mobileProfile } from './helpers/mobileProfile'
 import { beginPostReadyClsCollection, collectMetrics, createNetworkTracker, injectPerfObservers } from './helpers/perfBudget'
 
 type ImageState = { src: string; loading: string; top: number; width: number; height: number; rendered: boolean }
@@ -55,9 +56,12 @@ for (const profile of [
   { name: 'desktop', viewport: { width: 1440, height: 900 }, dpr: 1, limit: 1489, coverWidth: 320 },
 ]) {
   test.describe(`quest detail media ${profile.name}`, () => {
-    test.use({ viewport: profile.viewport, deviceScaleFactor: profile.dpr,
-      isMobile: profile.name === 'mobile', hasTouch: profile.name === 'mobile',
-      ...(profile.name === 'mobile' ? { userAgent: devices['Pixel 7'].userAgent } : {}),
+    // Телефон — через `mobileProfile` (#2928): без `screen` = viewport профиль наследует
+    // десктопный экран, и парсер качает десктопный `<img src>` из `<picture>` (#2923).
+    test.use({
+      ...(profile.name === 'mobile'
+        ? mobileProfile({ viewport: profile.viewport, deviceScaleFactor: profile.dpr })
+        : { viewport: profile.viewport, deviceScaleFactor: profile.dpr }),
       storageState: { cookies: [], origins: [] }, serviceWorkers: 'block' })
 
     test('defers only the below-fold intro map, then reveals it without shifting its slot @perf', async ({ page, baseURL }, testInfo) => {
