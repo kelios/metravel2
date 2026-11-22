@@ -367,10 +367,11 @@ test.describe('Assistant via server /ai/ask (#2884)', () => {
       await mockFakeAuthApis(page);
       await ensureAuthedStorageFallback(page, { userId: '3354', userName: 'E2E Profile User' });
     };
-    const setLocale = (page: Page, locale: string): Promise<void> =>
-      page.addInitScript((value) => {
+    const setLocale = async (page: Page, locale: string): Promise<void> => {
+      await page.addInitScript((value) => {
         window.localStorage.setItem('@metravel/locale-preference:v1', JSON.stringify({ version: 1, mode: 'explicit', locale: value }));
       }, locale);
+    };
     const askOnce = async (page: Page, width: number): Promise<void> => {
       await openAssistant(page, '/assistant', { width, height: width < 600 ? 844 : 720 });
       await send(page, 'Какие квесты есть в Минске?');

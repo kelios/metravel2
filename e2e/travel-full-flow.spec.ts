@@ -1,4 +1,4 @@
-import { test, expect, request, type APIRequestContext, type BrowserContext } from '@playwright/test';
+import { test, expect, request, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
 
 const {
   openOwnedBatch,
@@ -55,7 +55,8 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
       expect(published.slug).toBeTruthy();
       editedName = `${published.name} edited`;
       const nextName = editedName;
-      authorApi = await batch.authorApi();
+      // `authorApi()` из JS-хелпера — `any`; присвоение `any` не сужает тип до определённого.
+      authorApi = (await batch.authorApi()) as APIRequestContext;
       guestApi = await request.newContext({ baseURL: batch.reg.origin, storageState: { cookies: [], origins: [] } });
 
       const publicPath = `/api/travels/by-slug/${encodeURIComponent(published.slug)}/`;
@@ -65,7 +66,8 @@ test.describe('Travel full flow (API seed + UI verify)', () => {
 
       const opened = await openRoleContext(browser, batch, 'author', 1440);
       context = opened.context;
-      const page = opened.page;
+      // Хелпер на JS: тип страницы задаём явно, иначе колбэки ниже — неявный any.
+      const page: Page = opened.page;
       const apiOrigins = new Set([batch.reg.origin, new URL(backendUrl).origin]);
       const detailPaths = [
         `/api/travels/${published.id}/`,

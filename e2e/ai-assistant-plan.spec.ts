@@ -252,13 +252,14 @@ const addDays = (isoDate: string, days: number): string => {
   return date.toISOString().slice(0, 10);
 };
 
-const seedDraft = (page: Page, draft: Record<string, unknown> | string): Promise<void> =>
-  page.addInitScript(({ key, value }) => {
+const seedDraft = async (page: Page, draft: Record<string, unknown> | string): Promise<void> => {
+  await page.addInitScript(({ key, value }) => {
     // Один раз за вкладку: удалённый приложением черновик не должен появиться снова при навигации.
     if (window.sessionStorage.getItem('e2e-draft-seeded')) return;
     window.sessionStorage.setItem('e2e-draft-seeded', '1');
     window.localStorage.setItem(key, value);
   }, { key: DRAFT_KEY, value: typeof draft === 'string' ? draft : JSON.stringify(draft) });
+};
 
 const draftOf = (overrides: Record<string, unknown> = {}) => ({
   id: 'e2edraft01',
