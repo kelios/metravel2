@@ -52,6 +52,7 @@ jest.mock('@/components/travel/details/TravelDetailsHeroStyles', () => ({
   TRAVEL_HERO_LAYERS: jest.requireActual('@/components/travel/details/TravelDetailsHeroStyles').TRAVEL_HERO_LAYERS,
   useTravelDetailsHeroStyles: () => ({}),
 }))
+jest.mock('@/hooks/useTravelView', () => ({ ...jest.requireActual('@/hooks/useTravelView'), useTravelView: () => {} }))
 jest.mock('@/hooks/useTheme', () => ({ useThemedColors: () => ({}) }))
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({ shouldLoad: false, setElementRef: jest.fn() }),
@@ -92,7 +93,8 @@ jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
 }))
 jest.mock('@/components/travel/details/TravelAuthorQuickLink', () => () => null)
 jest.mock('@/components/travel/details/TravelHeroSlots', () => ({
-  TravelHeroExtrasSlot: () => null,
+  TravelHeroExtrasSlot: ({ activeKey }: { activeKey?: string }) =>
+    <div data-testid="travel-details-quick-facts" data-active-chip={activeKey} />,
   TravelHeroFavoriteToggleSlot: () => null,
   TravelHeroInteractiveSliderSlot: () => null,
 }))
@@ -101,16 +103,13 @@ jest.mock('@/components/travel/details/TravelDetailsOptimizedLCPHero', () => ({
   OVERLAY_TRANSITION_MS: 0,
 }))
 jest.mock('@/hooks/useTravelHeroState', () => ({
-  useTravelHeroState: () => ({ firstImg: { id: 1, url: '/image.jpg' }, heroSliderImages: [{ id: 1, url: '/image.jpg' }], heroHeight: 600, extrasReady: true }),
+  useTravelHeroState: () => ({ firstImg: { id: 1, url: '/image.jpg' }, heroSliderImages: [{ id: 1, url: '/image.jpg', caption: 'Фото маршрута' }], heroHeight: 600, extrasReady: true }),
 }))
 jest.mock('@/components/travel/details/useTravelSsgHeroHandoff', () => ({
   useTravelSsgHeroHandoff: () => ({ active: false }),
 }))
 jest.mock('@/components/travel/details/hooks/useTravelDetailsHeroCompositionModel', () => ({
   useTravelDetailsHeroCompositionModel: () => ({}),
-}))
-jest.mock('@/components/travel/details/hooks/useTravelHeroExtrasModel', () => ({
-  useTravelHeroExtrasModel: () => ({ quickJumpLinks: [], showQuickJumps: false }),
 }))
 jest.mock('@/components/travel/details/hooks/useTravelDetailsMapSectionModel', () => ({
   useTravelDetailsMapSectionModel: () => ({}),
@@ -256,4 +255,58 @@ describe('travel section anchors in the real React Native Web DOM (#2024)', () =
     expect(observe).toHaveBeenCalledWith(popular)
     expect(container.querySelector('output')?.textContent).toBe('popular')
   })
+})
+
+it('hydrates only the tapped photo while scrollspy selects the gallery (#3467)', async () => {
+  const { createElement, useLayoutEffect, useState } = require('react') as typeof import('react')
+  const { hydrateRoot } = require('react-dom/client') as typeof import('react-dom/client')
+  const { renderToString } = require('react-dom/server.node') as typeof import('react-dom/server')
+  const Shell = require('@/components/travel/details/TravelDetailsCriticalShell').default
+  const { Animated } = require('react-native')
+  const props = {
+    travel, isMobile: true, screenWidth: 390, wrapperStyle: {}, styles: {},
+    skeletonPhase: 'hidden', skeletonFallback: null, scrollRef: { current: null }, scrollViewStyle: {},
+    scrollEventHandler: jest.fn(), handleContentSizeChange: jest.fn(), handleLayout: jest.fn(),
+    contentHorizontalPadding: 16, anchors: createAnchors(), onFirstImageLoad: jest.fn(),
+    sectionLinks: buildTravelSectionLinks(travel, { platform: 'web' }), onQuickJump: jest.fn(),
+    deferHeroExtras: false, forceOpenKey: null, closeMenu: jest.fn(), onNavigate: jest.fn(),
+    menuWidthNum: 320, animatedX: new Animated.Value(0), sideMenuPlatformStyles: {},
+    deferredContent: null, mainAriaLabel: travel.name,
+  }
+  let selectSection: (key: string) => void
+  function Article() {
+    const [activeSection, setActiveSection] = useState('')
+    // Travel scrollspy picks the gallery as the article mounts.
+    useLayoutEffect(() => {
+      selectSection = setActiveSection
+      setActiveSection('gallery')
+    }, [])
+    return createElement(Shell, { ...props, activeSection })
+  }
+  const tree = createElement(Article)
+  const host = document.createElement('div')
+  host.innerHTML = renderToString(tree)
+  document.body.appendChild(host)
+  const node = (id: string) => host.querySelector<HTMLElement>(`[data-testid="${id}"]`)!
+  const hydrated = (id: string) => Object.keys(node(id)).some(key => key.startsWith('__reactFiber$'))
+  const errors: unknown[] = []
+  let root: Root | undefined
+  try {
+    expect(node('travel-details-quick-facts')).not.toBeNull()
+    expect(node('slider-caption').textContent).toContain('Фото маршрута')
+    act(() => {
+      root = hydrateRoot(host, tree, { onRecoverableError: error => errors.push(error) })
+      node('travel-details-hero-slider-container').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+      expect(hydrated('travel-details-hero-slider-container')).toBe(true)
+      expect(hydrated('slider-caption')).toBe(false)
+      expect(hydrated('travel-details-quick-facts')).toBe(false)
+    })
+    expect(node('travel-details-quick-facts').dataset.activeChip).toBe('map')
+    await act(async () => selectSection('description'))
+    expect(node('travel-details-quick-facts').dataset.activeChip).toBe('description')
+    expect(errors).toEqual([])
+  } finally {
+    await act(async () => root?.unmount())
+    host.remove()
+  }
 })

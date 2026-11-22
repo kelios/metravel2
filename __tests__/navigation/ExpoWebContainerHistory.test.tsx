@@ -6,12 +6,30 @@ import { withLayoutContext } from 'expo-router/build/layouts/withLayoutContext'
 // The package `exports` map resolves `build/*` to `build/*.js`, so directories need `/index`.
 import { useNavigationBuilder, findFocusedRoute } from 'expo-router/build/react-navigation/core/index'
 import type { NavigationState } from 'expo-router/build/react-navigation/routers/index'
-import { StackRouter, TabRouter } from 'expo-router/build/react-navigation/routers/index'
+import { StackRouter } from 'expo-router/build/react-navigation/routers/index'
 import { navigationRef } from 'expo-router/build/global-state/navigationRef'
 import { router } from 'expo-router/build/global-state/router'
 import { getRouteInfoFromState } from 'expo-router/build/global-state/getRouteInfoFromState'
 import { useLocalSearchParams } from 'expo-router/build/hooks/useLocalSearchParams'
+import RouteTabs from '@/components/layout/RouteTabs.web'
 import { goBackOrReplace } from '@/utils/backNavigation'
+
+// The suite-wide app mock replaces these public exports with stubs. Use the
+// actual router in this container test, including our Metro web entry point.
+jest.unmock('expo-router')
+jest.mock('expo-glass-effect', () => ({ isLiquidGlassAvailable: () => false }))
+
+// Render navigation state into jsdom; native screen frames and Animated are
+// presentation details. Expo still builds descriptors, runs real tab history
+// reconciliation and selects actual routes before passing them to this view.
+jest.mock('expo-router/build/react-navigation/bottom-tabs/views/BottomTabView', () => ({
+  BottomTabView: ({ state, descriptors }: {
+    state: { index: number; routes: { key: string }[] }
+    descriptors: Record<string, { render: () => ReactNode }>
+  }) => state.routes.map((route, index) => (
+    <div key={route.key} hidden={index !== state.index}>{descriptors[route.key].render()}</div>
+  )),
+}))
 
 // Jest Expo resolves expo-router's internal `require('./useLinking')` to `.native.js`, while the
 // package `exports` map resolves the bare specifier to `.js`: mock the `.native` module ids so
@@ -69,14 +87,23 @@ function StackView({ children, id }: NavigatorProps) {
   const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, { children, id })
   return <NavigationContent>{descriptors[state.routes[state.index].key].render()}</NavigationContent>
 }
-function TabView({ children, id }: NavigatorProps) {
-  const { state, descriptors, NavigationContent } = useNavigationBuilder(TabRouter, {
-    children, id, backBehavior: 'fullHistory',
-  })
-  return <NavigationContent>{descriptors[state.routes[state.index].key].render()}</NavigationContent>
-}
 const Stack = withLayoutContext(StackView)
-const Tabs = withLayoutContext(TabView)
+const configuredScreens = new Set<string>()
+function TabsLayout() {
+  return (
+    <RouteTabs
+      backBehavior="fullHistory"
+      tabBar={() => null}
+      screenOptions={({ route }) => {
+        configuredScreens.add(route.name)
+        return { headerShown: false }
+      }}
+    >
+      <RouteTabs.Screen name="search" />
+      <RouteTabs.Screen name="travels/[param]" />
+    </RouteTabs>
+  )
+}
 
 function Article() {
   const { param } = useLocalSearchParams<{ param: string }>()
@@ -84,7 +111,7 @@ function Article() {
 }
 const context = getMockContext({
   _layout: () => <Stack />,
-  '(tabs)/_layout': () => <Tabs />,
+  '(tabs)/_layout': TabsLayout,
   '(tabs)/search': () => <h1>search</h1>,
   '(tabs)/travels/[param]': Article,
 })
@@ -137,10 +164,30 @@ async function mount() {
 describe('real Expo 58 web container restores retained browser states (#2703 / #2727)', () => {
   let nativeGo: jest.SpyInstance
   beforeEach(() => {
+    configuredScreens.clear()
     window.history.replaceState(null, '', '/travels/article-a')
     nativeGo = jest.spyOn(window.history, 'go').mockImplementation(() => undefined)
   })
   afterEach(() => { cleanup(); jest.restoreAllMocks() })
+
+  it('configures only visited tabs on cold entry and restores the article on Back from search', async () => {
+    await mount()
+    expect([...configuredScreens]).toEqual(['travels/[param]'])
+    const a = entry()
+    await flush(() => router.push('/travels/article-b'))
+    expectArticle('article-b')
+    const b = entry()
+    await flush(() => router.push('/search'))
+    expect(screen.getByRole('heading').textContent).toBe('search')
+    expect(configuredScreens.has('search')).toBe(true)
+
+    await flush(() => router.back())
+    expect(nativeGo).toHaveBeenLastCalledWith(-1)
+    await visit(b)
+    expectArticle('article-b')
+    await visit(a)
+    expectArticle('article-a')
+  })
 
   it('renders B with matching container params after Back A and Forward B', async () => {
     await mount()

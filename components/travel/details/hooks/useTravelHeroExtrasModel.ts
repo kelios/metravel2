@@ -10,6 +10,13 @@ const HERO_QUICK_JUMP_KEYS = [
   'video',
 ] as const
 
+export function getActiveHeroQuickJumpKey(
+  quickJumpLinks: TravelSectionLink[],
+  activeSection?: string | null,
+): string | undefined {
+  return quickJumpLinks.find((link) => link.key === activeSection)?.key ?? quickJumpLinks[0]?.key
+}
+
 export function useTravelHeroExtrasModel(sectionLinks: TravelSectionLink[]) {
   const showQuickJumps = true
 

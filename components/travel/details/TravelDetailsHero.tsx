@@ -165,6 +165,15 @@ function TravelHeroSectionInner({
   // заголовку или автору — галерею. Элементы стабильны: перерисовка героя с теми же
   // данными (состояние галереи в layout-эффектах тапа) не меняет пропсы негидратированной
   // границы, иначе React обязан догидратировать её тем же синхронным приоритетом.
+  // Number formatting in the caption initializes Intl on the first render. A
+  // tap on the adjacent photo can leave the server-rendered caption in place.
+  const currentCaption = heroSliderImages[currentIndex]?.caption
+  const slideCount = heroSliderImages.length
+  const captionBoundary = useMemo(() => (
+    <Suspense fallback={null}>
+      <SliderCaption caption={currentCaption} currentIndex={currentIndex} total={slideCount} />
+    </Suspense>
+  ), [currentCaption, currentIndex, slideCount])
   const titleBoundary = useMemo(() => <Suspense fallback={null}>{titleSlot}</Suspense>, [titleSlot])
   const authorBoundary = useMemo(() => <Suspense fallback={null}>{authorQuickLink}</Suspense>, [authorQuickLink])
   const extrasBoundary = useMemo(() => (
@@ -347,7 +356,7 @@ function TravelHeroSectionInner({
             </Suspense>
           )}
         </View>
-        <SliderCaption caption={heroSliderImages[currentIndex]?.caption} currentIndex={currentIndex} total={heroSliderImages.length} />
+        {captionBoundary}
       </View>
 
       {titleBoundary}

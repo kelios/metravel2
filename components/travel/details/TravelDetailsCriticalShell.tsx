@@ -31,6 +31,7 @@ import TravelDetailsHeroDeferredColumn, {
   TravelDetailsHeroBlock,
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
+import { getActiveHeroQuickJumpKey, useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel';
 import { TravelHeroFavoriteToggleSlot } from './TravelHeroSlots';
 import { useTravelLoaderPayload } from './travelLoaderData';
 import { TRAVEL_WEB_LAYOUT_STYLES } from './travelRouterSsrStyles';
@@ -325,6 +326,10 @@ export default function TravelDetailsCriticalShell({
   // Completed server boundaries keep the visible HTML while React hydrates the
   // hero and article independently. Stable elements prevent unrelated container
   // layout/chrome updates from pulling the pending article into urgent hydration.
+  // Scrollspy also reports sections such as 'gallery' that have no hero chip.
+  // Only a change to the highlighted chip should invalidate this SSR boundary.
+  const { quickJumpLinks } = useTravelHeroExtrasModel(sectionLinks);
+  const webHeroActiveKey = getActiveHeroQuickJumpKey(quickJumpLinks, activeSection);
   const webHeroBlock = useMemo(() => travel ? (
     <Suspense fallback={null}>
       <TravelDetailsHeroBlock
@@ -335,11 +340,11 @@ export default function TravelDetailsCriticalShell({
         onFirstImageLoad={onFirstImageLoad}
         onQuickJump={onQuickJump}
         sectionLinks={sectionLinks}
-        activeKey={activeSection ?? undefined}
+        activeKey={webHeroActiveKey}
         titleSlot={pageTitle}
       />
     </Suspense>
-  ) : null, [travel, anchors, isMobile, deferHeroExtras, onFirstImageLoad, onQuickJump, sectionLinks, activeSection, pageTitle]);
+  ) : null, [travel, anchors, isMobile, deferHeroExtras, onFirstImageLoad, onQuickJump, sectionLinks, webHeroActiveKey, pageTitle]);
 
   const webContentBlock = useMemo(() => travel ? (
     <Suspense fallback={null}>

@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import EdgeFadeScrollRow from '@/components/ui/EdgeFadeScrollRow'
 import { useThemedColors } from '@/hooks/useTheme'
+import { getActiveHeroQuickJumpKey } from './hooks/useTravelHeroExtrasModel'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
@@ -63,9 +64,7 @@ export function TravelHeroQuickJumps({
 
   // Подсвечиваем активную секцию (scroll-spy); если её нет среди чипов —
   // подсвечиваем первый чип, чтобы навигация всегда имела явный акцент.
-  const activeOrDefault = links.some((l) => l.key === activeKey)
-    ? activeKey
-    : links[0]?.key
+  const activeOrDefault = getActiveHeroQuickJumpKey(links, activeKey)
 
   const chips = links.map((link) => (
     <QuickJumpChip

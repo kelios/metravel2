@@ -1,7 +1,8 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform } from 'react-native';
-import { Tabs, useIsFocused, usePathname } from 'expo-router';
+import { useIsFocused, usePathname } from 'expo-router';
+import Tabs from '@/components/layout/RouteTabs';
 import CustomHeader from '@/components/layout/CustomHeader';
 import LoaderScreenErrorBoundary from '@/components/ui/LoaderScreenErrorBoundary';
 import { isQuestDetailHeaderPath, shouldShowBrandRow, shouldShowHeaderContextBar } from '@/components/layout/customHeaderModel';

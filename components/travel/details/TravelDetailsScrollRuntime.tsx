@@ -3,7 +3,7 @@ import { View } from 'react-native'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import ReadingProgressBar from '@/components/ui/ReadingProgressBar'
-import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet'
+import TravelSectionsSheet from './TravelSectionsSheetSlot'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
@@ -86,12 +86,14 @@ function TravelDetailsScrollRuntime({
 
       {showSectionsSheet && (
         <View style={styles.sectionTabsContainer}>
-          <TravelSectionsSheet
-            links={sectionLinks}
-            activeSection={activeSection ?? ''}
-            onNavigate={onNavigate}
-            testID="travel-sections-sheet-wrapper"
-          />
+          <Suspense fallback={null}>
+            <TravelSectionsSheet
+              links={sectionLinks}
+              activeSection={activeSection ?? ''}
+              onNavigate={onNavigate}
+              testID="travel-sections-sheet-wrapper"
+            />
+          </Suspense>
         </View>
       )}
 
