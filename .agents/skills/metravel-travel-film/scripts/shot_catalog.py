@@ -122,9 +122,11 @@ def cmd_sheets(a):
         if b.startswith("Медиатека - "): return b.split(" ")[2]
         return re.sub(r"^DJI_\d{8}", "", b).replace("_D.MP4", "").replace(".MP4", "")
 
-    items = []
+    items = []; broken = []
     for v in inv:
         if v["day"] not in days or v["kind"] not in ("video", "photo"): continue
+        if v["kind"] == "video" and not v.get("dur"):          # битое видео (ffprobe без длины, "err" в inventory) — без плитки
+            broken.append(os.path.basename(v["path"])); continue
         b = os.path.basename(v["path"])
         if v["kind"] == "photo": t = exif_t(v["path"])
         else:
@@ -173,6 +175,7 @@ def cmd_sheets(a):
         "Отдавать: `метки NN-MM.json` в этой папке, ключ — номер плитки, все плитки своих листов подряд.\n"
         + (f"\n## Словарь меток\n\n{', '.join(sorted(themes))}\n" if themes else ""))
     print(f"{len(tiles)} плиток, {math.ceil(len(tiles) / n)} листов → {out}")
+    if broken: print(f"  пропущены видео без длины (битые): {', '.join(broken)}")
 
 
 # ---------------------------------------------------------------- каталог
