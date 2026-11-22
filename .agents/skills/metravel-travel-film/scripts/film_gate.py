@@ -10,6 +10,9 @@
   film_gate.py verdict <plan.json> --series s3 --draft <черновик.mp4> --tech <audit_tech.md>
                        --scores сюжет=8,монтаж=8,картинка=8,звук=8,музыка=8 --blockers 0 --report <рецензия.md>
       оценки готового черновика ровно по этому плану (sha256 файла плана)
+  film_gate.py plan-verdict <plan.json> --series s3 --scores … --blockers 0 --report <рецензия.md>
+      вердикт по плану без черновика 360p (владелец 22.11: правки проверены по плану) — засчитывается для 1080p;
+      после 1080p рецензент пишет обычный verdict по готовому файлу. Для 4K вердикта «по плану» мало
   film_gate.py request <plan.json> --series s3 --draft <черновик.mp4> --from "<сессия>"
       сборщик просит рецензию: status показывает черновик в очереди, пока по этому плану нет вердикта
   film_gate.py owner-4k <plan.json> --series s3 --quote "<слова владельца из чата>"
@@ -115,6 +118,8 @@ def gate_problems(plan_path, width, height):
         problems.append(f"открытых блокеров: {film.get('blockers')}")
     if not film.get("tech_ok"):
         problems.append("техконтроль черновика не «ГОДЕН» (или отчёт audit_tech не по этому черновику)")
+    if (width > HD_MAX[0] or height > HD_MAX[1]) and film.get("mode") == "plan":
+        problems.append("4K: вердикт «по плану» — нужен вердикт рецензента по готовому 1080p этого плана")
     if width > HD_MAX[0] or height > HD_MAX[1]:
         if not last(ledger["entries"], "owner4k", plan_sha=plan_sha):
             problems.append("4K только по слову владельца: нет записи owner-4k по этому плану")
@@ -171,7 +176,8 @@ def status(plans_dir):
         line = f"{series}: сценарий {script['score'] if script else '—'}"
         if film:
             line += " · " + ", ".join(f"{k} {film['scores'][k]}" for k in FILM_KEYS)
-            line += f" · блокеров {film['blockers']} · техконтроль {'ГОДЕН' if film['tech_ok'] else 'НЕ ГОДЕН'}"
+            line += f" · блокеров {film['blockers']} · " + ("по плану, без 360p" if film.get("mode") == "plan" else
+                                                           f"техконтроль {'ГОДЕН' if film['tech_ok'] else 'НЕ ГОДЕН'}")
             plan = film["plan"]
             if os.path.exists(plan) and sha(plan) == film["plan_sha"]:
                 hd = gate_problems(plan, *HD_MAX)
@@ -198,6 +204,9 @@ def main():
     v.add_argument("--draft", required=True); v.add_argument("--tech", required=True)
     v.add_argument("--scores", required=True); v.add_argument("--blockers", type=int, required=True)
     v.add_argument("--report", required=True)
+    pv = sub.add_parser("plan-verdict"); pv.add_argument("plan"); pv.add_argument("--series", required=True)
+    pv.add_argument("--scores", required=True); pv.add_argument("--blockers", type=int, required=True)
+    pv.add_argument("--report", required=True)
     r = sub.add_parser("request"); r.add_argument("plan"); r.add_argument("--series", required=True)
     r.add_argument("--draft", required=True); r.add_argument("--from", dest="sender", required=True)
     o = sub.add_parser("owner-4k"); o.add_argument("plan"); o.add_argument("--series", required=True)
@@ -227,6 +236,17 @@ def main():
         problems = gate_problems(a.plan, *HD_MAX)
         print("записано:", path)
         print("1080p разрешён" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
+    elif a.cmd == "plan-verdict":
+        check_series(a.plan, a.series)
+        for p in (a.plan, a.report):
+            if not os.path.exists(p):
+                raise SystemExit(f"нет файла: {p}")
+        entry = {"kind": "film", "mode": "plan", "plan": os.path.abspath(a.plan), "plan_sha": sha(a.plan), "draft": None,
+                 "scores": parse_scores(a.scores), "blockers": a.blockers, "tech_ok": True, "report": os.path.abspath(a.report)}
+        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series, entry)
+        problems = gate_problems(a.plan, *HD_MAX)
+        print("записано:", path)
+        print("1080p разрешён (по плану)" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
     elif a.cmd == "request":
         check_series(a.plan, a.series)
         if not a.sender.strip():
