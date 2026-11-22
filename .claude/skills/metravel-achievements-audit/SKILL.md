@@ -34,7 +34,7 @@ end-to-end на web (и совместима с native). Чинит найден
 ### Значки (`BadgeMedal`/`BadgeGrid`/`AchievementsGalleryModal`)
 - Earned — яркая медаль; locked — затемнение + замок + прогресс-полоска
   (`current/threshold`).
-- `imageUrl` есть → картинка через `ImageCardMedia` (fit=contain, blur-подложка);
+- `imageUrl` есть → картинка через `ImageCardMedia` (`contain`, на web — `dominant_color`, на native — blur);
   `null` → процедурная медаль с верной иконкой (`badgeIcon`) и цветом тира.
 - Галерея «Все»: группировка earned+locked по категориям, скролл, прогресс.
 

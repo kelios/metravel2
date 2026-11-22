@@ -38,7 +38,7 @@
 2. `references/research-route.md`, `references/questions.md`,
    `references/data-format.md` (и `references/kids.md` для детского).
 3. `scripts/golshany-quest-data.js` — образец формата и тона.
-4. `assets/quests/osloHallvard/PROMPT.md` — образец промпта обложки.
+4. `references/upload-after.md`, раздел «Обложка» — формат PROMPT.md и параметры кадра.
 
 ## Где файл
 `.codex-temp/quests-plan/<city>/<quest_id>-quest-data.js` — в `scripts/` НЕ

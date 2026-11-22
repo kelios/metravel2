@@ -11,7 +11,7 @@ import { aiAssistStaticResources as uk } from '@/i18n/locales/uk/static/ai_assis
 
 import { runCli } from '../cli-test-utils'
 
-// #2712: наборы rag_answers/offtopic учат модель ровно на том промпте, что собирает экран.
+// #2712: наборы rag_answers/offtopic учат модель на том же промпте, что собирает служба.
 // Слепок `scripts/ai-train/assistant_prompt.json` читают сборщики наборов (Python);
 // после правки prompt.ts или фразы отказа: UPDATE_ASSISTANT_PROMPT=1 npx jest <этот файл>.
 
@@ -42,7 +42,7 @@ describe('assistant prompt fixture for the training sets (#2712)', () => {
     expect(current.offtopic_reply.ru).toBe(OFFTOPIC_REPLY_RU)
   })
 
-  it('срезы eval.py режима ассистента идут с текущим системным промптом экрана (#2731)', () => {
+  it('срезы eval.py режима ассистента идут с текущим системным промптом службы (#2731)', () => {
     for (const name of ['rag_answers', 'offtopic']) {
       const file = path.resolve(process.cwd(), `scripts/ai-train/eval_prompts/${name}.jsonl`)
       const rows = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line))
@@ -58,8 +58,14 @@ describe('assistant prompt fixture for the training sets (#2712)', () => {
       'sources = json.load(sys.stdin)',
       "print(json.dumps([build_user_message('Что посмотреть?', sources, 'ru'), build_user_message('Исландия', [], 'ru')], ensure_ascii=False))",
     ].join('\n')
-    const run = runCli('python3', ['-I', '-c', script], { input: JSON.stringify(SAMPLE) })
+    // Литерал плейсхолдера в материале остаётся текстом. Граница 160/400 может разрезать пару UTF-16.
+    const samples: AiSource[] = [
+      ...SAMPLE,
+      { ...SAMPLE[0], title: 'я'.repeat(159) + '🧭', snippet: 'я'.repeat(399) + '😀' },
+      { ...SAMPLE[0], title: 'Карта {question}', snippet: 'Пешком🧭\u{E0001}по\u0890реке {sources}\uDC00' },
+    ]
+    const run = runCli('python3', ['-I', '-c', script], { input: JSON.stringify(samples) })
     expect(run.stderr).toBe('')
-    expect(JSON.parse(run.stdout)).toEqual([buildUserMessage('Что посмотреть?', SAMPLE), buildUserMessage('Исландия', [])])
+    expect(JSON.parse(run.stdout)).toEqual([buildUserMessage('Что посмотреть?', samples), buildUserMessage('Исландия', [])])
   })
 })

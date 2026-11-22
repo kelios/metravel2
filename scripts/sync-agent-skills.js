@@ -1,6 +1,7 @@
 #!/usr/bin/env node
+const fs = require('fs')
 const path = require('path')
-const { toPosix, topSegment, collectFiles, applyMirrorPlan, parseMirrorArgs } = require('./lib/skillMirror')
+const { toPosix, topSegment, collectFiles, sameMirrorFile, applyMirrorPlan, parseMirrorArgs } = require('./lib/skillMirror')
 
 // #1770: один и тот же скилл лежал в репозитории двумя рукописными копиями —
 // `.claude/skills/<имя>/` для Claude Code и `.agents/skills/<имя>/` для Codex
@@ -95,13 +96,25 @@ ${body.replace(/^\n+/, '').replace(/\s*$/, '')}
 // план правок. Без файловой системы, чтобы гейт и тест считали одно и то же.
 // `commandFiles` не передан — проверка команд выключена (скилл-only план в
 // тестах). Пустой массив — все MIRRORED_COMMANDS пропали, CLI так и считает.
-const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}) => {
+const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [], sourceRootExists = true } = {}) => {
   const expected = new Map()
 
   for (const file of sourceSkillFiles) {
     const relativePath = toPosix(file.path)
     if (isVendorOwned(topSegment(relativePath))) continue
-    expected.set(relativePath, { content: file.content, origin: `${toPosix(SOURCE_SKILLS_DIR)}/${relativePath}` })
+    expected.set(relativePath, { ...file, origin: `${toPosix(SOURCE_SKILLS_DIR)}/${relativePath}` })
+  }
+
+  const sourceNames = new Set([...expected.keys()].filter((file) => file.includes('/')).map(topSegment))
+  const missingSources = [...sourceNames]
+    .filter((name) => !expected.has(`${name}/SKILL.md`))
+    .map((name) => `${toPosix(SOURCE_SKILLS_DIR)}/${name}/SKILL.md`)
+  const hasProjectMirror = targetFiles.some(({ path: file }) => {
+    const name = topSegment(file)
+    return !isTargetOwnedFile(file) && !isVendorOwned(name) && !name.startsWith(COMMAND_SKILL_PREFIX)
+  })
+  if (!sourceRootExists || (!sourceNames.size && hasProjectMirror)) {
+    missingSources.push(toPosix(SOURCE_SKILLS_DIR))
   }
 
   const providedCommandFiles = commandFiles ?? []
@@ -110,6 +123,7 @@ const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}
     if (!commandsByName.has(command)) continue
     const relativePath = `${COMMAND_SKILL_PREFIX}${command}/SKILL.md`
     expected.set(relativePath, {
+      executable: false,
       content: renderCommandSkill(command, commandsByName.get(command)),
       origin: `${toPosix(SOURCE_COMMANDS_DIR)}/${command}.md`,
     })
@@ -119,14 +133,13 @@ const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}
     ? []
     : MIRRORED_COMMANDS.filter((command) => !commandsByName.has(command))
 
-  const targetByPath = new Map(targetFiles.map((file) => [toPosix(file.path), file.content]))
+  const targetByPath = new Map(targetFiles.map((file) => [toPosix(file.path), file]))
   const writes = []
-  for (const [relativePath, { content, origin }] of expected) {
-    if (targetByPath.get(relativePath) === content) continue
+  for (const [relativePath, source] of expected) {
+    if (sameMirrorFile(source, targetByPath.get(relativePath))) continue
     writes.push({
+      ...source,
       path: relativePath,
-      content,
-      origin,
       reason: targetByPath.has(relativePath) ? 'копия разошлась с источником' : 'копии нет на Codex-пути',
     })
   }
@@ -140,10 +153,11 @@ const planSync = ({ sourceSkillFiles = [], commandFiles, targetFiles = [] } = {}
   }
 
   return {
-    ok: writes.length === 0 && deletes.length === 0 && missingCommands.length === 0,
+    ok: writes.length === 0 && deletes.length === 0 && missingCommands.length === 0 && missingSources.length === 0,
     writes: writes.sort((a, b) => a.path.localeCompare(b.path)),
     deletes: deletes.sort((a, b) => a.path.localeCompare(b.path)),
     missingCommands,
+    missingSources,
     mirrored: expected.size,
   }
 }
@@ -155,26 +169,31 @@ const buildJsonResult = (plan) => ({
   writes: plan.writes.map(({ path: filePath, origin, reason }) => ({ path: filePath, origin, reason })),
   deletes: plan.deletes,
   missingCommands: plan.missingCommands,
+  missingSources: plan.missingSources,
 })
 
 const main = () => {
   const args = parseMirrorArgs(process.argv.slice(2))
   const rootDir = process.cwd()
 
+  const projectSkill = (file) => !isVendorOwned(topSegment(file))
+  const sourceRoot = path.join(rootDir, SOURCE_SKILLS_DIR)
   const plan = planSync({
-    sourceSkillFiles: collectFiles(path.join(rootDir, SOURCE_SKILLS_DIR)),
-    commandFiles: collectFiles(path.join(rootDir, SOURCE_COMMANDS_DIR)),
-    targetFiles: collectFiles(path.join(rootDir, TARGET_SKILLS_DIR)),
+    sourceSkillFiles: collectFiles(sourceRoot, projectSkill),
+    sourceRootExists: fs.existsSync(sourceRoot),
+    commandFiles: collectFiles(path.join(rootDir, SOURCE_COMMANDS_DIR), (file) => MIRRORED_COMMANDS.includes(file.replace(/\.md$/, ''))),
+    targetFiles: collectFiles(path.join(rootDir, TARGET_SKILLS_DIR), projectSkill),
   })
 
+  const blocked = plan.missingCommands.length > 0 || plan.missingSources.length > 0
   if (args.output === 'json') {
     process.stdout.write(`${JSON.stringify({ ...buildJsonResult(plan), mode: args.check ? 'check' : 'write' }, null, 2)}\n`)
-    if (args.check && !plan.ok) process.exit(1)
+    if ((args.check && !plan.ok) || blocked) process.exit(1)
     if (!args.check) applyMirrorPlan(path.join(rootDir, TARGET_SKILLS_DIR), plan)
     return
   }
 
-  if (args.check) {
+  if (args.check || blocked) {
     if (plan.ok) {
       console.log(`agent-skill-sync: passed. зеркало .agents/skills совпадает с .claude/skills (${plan.mirrored} файлов)`)
       return
@@ -189,15 +208,8 @@ const main = () => {
     for (const command of plan.missingCommands) {
       console.error(`  ${toPosix(SOURCE_COMMANDS_DIR)}/${command}.md — команда из MIRRORED_COMMANDS исчезла`)
     }
+    for (const missing of plan.missingSources) console.error(`  ${missing} — отсутствует источник скилла`)
     console.error('- правь скилл в .claude/skills (единственный источник правды), затем: npm run sync:agent-skills')
-    process.exit(1)
-  }
-
-  if (plan.missingCommands.length > 0) {
-    console.error('agent-skill-sync: failed.')
-    for (const command of plan.missingCommands) {
-      console.error(`  ${toPosix(SOURCE_COMMANDS_DIR)}/${command}.md — команда из MIRRORED_COMMANDS исчезла`)
-    }
     process.exit(1)
   }
 

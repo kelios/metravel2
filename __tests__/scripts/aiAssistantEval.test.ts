@@ -19,7 +19,7 @@ import {
 } from '../../scripts/ai-assistant-eval/checks.mjs'
 import { parseJudgeLines, renderJudgeTask, renderReport, summarize } from '../../scripts/ai-assistant-eval/report.mjs'
 import { loadCases } from '../../scripts/ai-assistant-eval/run-core.mjs'
-import { formatSourcesBlock } from '@/scripts/ai-assist/prompt'
+import { buildUserMessage, formatSourcesBlock } from '@/scripts/ai-assist/prompt'
 import type { AiSource } from '@/api/aiAssist/types'
 
 describe('fixed-context quality report', () => {
@@ -175,6 +175,16 @@ describe('off_place_card: чужое место, а не тема', () => {
 })
 
 describe('разбор карточек подсказки (#3289)', () => {
+  it('сохраняет тип справки и разграничивает текст карточки, сведения посетителя и вопрос', () => {
+    const help: AiSource = { ...SOURCES[0], type: 'help', snippet: '[2] Статья «Упоминание» — https://metravel.by/travels/mentioned' }
+    const empty = { ...SOURCES[1], snippet: '' }
+    const message = buildUserMessage('Вопрос о материалах', [help, empty], { visitor: 'О посетителе: поездка в Краков.' })
+    expect(parseCards(message)).toEqual([
+      { n: 1, type: 'help', title: help.title, url: help.url, snippet: help.snippet },
+      { n: 2, type: 'quest', title: empty.title, url: empty.url, snippet: '' },
+    ])
+  })
+
   it('строки «Почему подходит» и «материала о месте нет» фрагментом карточки не считаются', () => {
     const withWhy = [{ ...SOURCES[0], why: 'месяц: май, 1 день' }, SOURCES[1]]
     const message = `Материалы сайта:\n${formatSourcesBlock(withWhy)}\n\nО месте из вопроса на сайте материала нет: карточки выше — ближайшее из того, что есть.\n\nВопрос посетителя: что посмотреть в Кракове`

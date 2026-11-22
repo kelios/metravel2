@@ -48,7 +48,7 @@ prompt's `system` field (assistant_prompt.json) and the cards in `prompt`:
     has no such material;
   * expect=offtopic — the refusal of assistant_prompt.json (the model names
     itself the metravel.by assistant), no URL at all and nothing but the
-    refusal: an answer longer than 1.5× the locale's refusal phrase goes on
+    refusal in the requested language: an answer longer than 1.5× the locale's refusal phrase goes on
     to answer the foreign topic.
 Factual accuracy, tone and the quality of a translation (Russian words inside
 a Belarusian answer pass the letter check) are still read by a human — the
@@ -266,13 +266,19 @@ def verdict(p: dict, c: dict, answer: str) -> bool:
             return filter_matches(extract_json(answer), p["expected"])
         return matches(answer, p.get("accept")) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or [])
     if expect == "rag":
-        cards = set(find_urls(p.get("prompt", "")))
+        # Only the URL ending a card header is a source. Snippets and the question can mention other pages.
+        headers = p.get("prompt", "").removeprefix("Материалы сайта:\n").split("\n\n")
+        cards = set()
+        for block in headers:
+            head = re.fullmatch(r"\[\d+\] (?:Статья|Квест|Справка) «.*» — (\S+)", block.partition("\n")[0])
+            if head:
+                cards.update(find_urls(head[1]))
         return (0 < c["urls_ok"] and all(u in cards for u in c["urls"])
                 and len(set(c["urls"])) <= p.get("max_urls", 3) and not c["degenerate"]
                 and (not lang or c["lang"] == lang) and not any(re.search(r, answer, re.I | re.M) for r in p.get("reject") or [])
                 and (p.get("group") != "no_material" or c["no_material"]))
     if expect == "offtopic":
-        return (not c["urls"] and bool(OFFTOPIC_RE.search(answer))
+        return (not c["urls"] and (not lang or c["lang"] == lang) and bool(OFFTOPIC_RE.search(answer))
                 and len(answer.strip()) <= OFFTOPIC_MAX_RATIO * len(offtopic_reply(lang or "ru")))
     return c["urls_ok"] > 0
 

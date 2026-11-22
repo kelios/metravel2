@@ -20,7 +20,7 @@ browser, simulator, or physical device.
 - Components: `components/ui`, `ImageCardMedia`, `UnifiedTravelCard`, shared map/place templates, no duplicate local substitutes.
 - Responsive parity: mobile web, Android, and iPhone preserve identical hierarchy, action
   order, content, geometry, and touch semantics; desktop may add hover-only affordances.
-- Media: neutral placeholders, stable geometry, contain/blur where required, photo dominance, no meaningful image obstruction.
+- Media: neutral placeholders, stable geometry, `contain` with web dominant-color fill or native blur, photo dominance, no meaningful image obstruction.
 - States and accessibility: loading/empty/error/disabled, keyboard/focus, labels, contrast, and touch targets.
 
 ## Workflow

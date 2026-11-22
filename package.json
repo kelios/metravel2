@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "preinstall": "node scripts/ensure-node-version.js",
-    "audit:prompts": "node .codex/skills/metravel-prompt-maintainer/scripts/validate-project-prompts.js && node .grok/scripts/sync-agents.mjs --check && node .codex/skills/metravel-prompt-maintainer/scripts/audit-content-prompts.js",
+    "audit:prompts": "node .codex/skills/metravel-prompt-maintainer/scripts/validate-project-prompts.js && node scripts/sync-agent-skills.js --check && node scripts/sync-copilot-skills.js --check && node .grok/scripts/sync-agents.mjs --check && node .codex/skills/metravel-prompt-maintainer/scripts/audit-content-prompts.js",
     "audit:prompts:local": "node .codex/skills/metravel-prompt-maintainer/scripts/audit-content-prompts.js --local",
     "test:agent-tooling": "node --test .codex/skills/metravel-prompt-maintainer/scripts/*.test.js scripts/launch-task-board-mcp.test.cjs",
     "check-deps": "node scripts/check-dependencies.js",

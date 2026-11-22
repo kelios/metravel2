@@ -219,14 +219,17 @@ known = {SITE + "/travels/krakow", SITE + "/quests/minsk/cmok", SITE + "/travels
 def v(p, answer):
     return verdict(p, check(answer, known), answer)
 off = {"expect": "offtopic", "lang": "ru"}
-cards = "Материалы сайта:\\n[1] Статья «Краков» — " + SITE + "/travels/krakow\\n[2] Квест «Цмок» — " + SITE + "/quests/minsk/cmok\\nВопрос посетителя: Что посмотреть?"
+cards = "Материалы сайта:\\n[1] Статья «Краков» — " + SITE + "/travels/krakow\\n\\n[2] Квест «Цмок» — " + SITE + "/quests/minsk/cmok\\nВопрос посетителя: Что посмотреть?"
 rag = {"expect": "rag", "lang": "ru", "group": "pick", "prompt": cards}
 absent = {**rag, "group": "no_material", "max_urls": 2}
 link = "[Краков](" + SITE + "/travels/krakow)"
 print(json.dumps({
   "refusal": v(off, offtopic_reply("ru")),
-  "refusal_en": v({"expect": "offtopic", "lang": "en"}, offtopic_reply("en")),
+  "refusal_locales": [v({"expect": "offtopic", "lang": loc}, offtopic_reply(loc)) for loc in ("ru", "be", "uk", "pl", "en")],
+  "wrong_refusal_language": v({"expect": "offtopic", "lang": "en"}, offtopic_reply("ru")),
   "refusal_then_recipe": v(off, offtopic_reply("ru") + " Но вот рецепт: гречку варят 20 минут под крышкой, на стакан крупы два стакана воды, посолить в начале."),
+  "question_is_not_a_card": v({**rag, "prompt": cards + " " + SITE + "/travels/other"}, "Советую " + SITE + "/travels/other"),
+  "title_is_not_a_card": v({**rag, "prompt": cards.replace("Краков»", "Краков " + SITE + "/travels/other»")}, "Советую " + SITE + "/travels/other"),
   "rag_card": v(rag, "Посмотрите " + link + " — путеводитель по городу."),
   "rag_site_url_not_in_cards": v(rag, "Посмотрите [другое](" + SITE + "/travels/other) — тоже статья сайта."),
   "no_material_admitted": v(absent, "Материалов об Австралии в карточках нет. Ближайшее из найденного:\\n- " + link),
@@ -249,8 +252,11 @@ print(json.dumps({
 `);
     expect(out).toEqual({
       refusal: true,
-      refusal_en: true,
+      refusal_locales: [true, true, true, true, true],
+      wrong_refusal_language: false,
       refusal_then_recipe: false,
+      question_is_not_a_card: false,
+      title_is_not_a_card: false,
       rag_card: true,
       rag_site_url_not_in_cards: false,
       no_material_admitted: true,

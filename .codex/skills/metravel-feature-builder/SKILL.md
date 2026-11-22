@@ -101,9 +101,10 @@ each finished logical block and before code review:
 
 After code-level self-checks, use `$metravel-code-reviewer` on the complete
 task-owned diff. Pass the original task, changed paths, and static/unit/guard
-evidence to a dedicated `review-auditor` agent when available. Let the reviewer
-patch confirmed findings, re-read the complete resulting diff, and rerun only
-code-level checks. After pass/push/status=`testing`, route observable browser,
+evidence to the independent review route in `AGENTS.md` §4.6. A small diff goes
+through `code-review-gate`; the implementer fixes findings and reruns the gate. For other
+changes, `review-auditor` fixes confirmed findings and reruns code-level checks before
+`code-review-gate`. After pass/push/status=`testing`, route observable browser,
 API, simulator, and device scenarios to QA. Do not include or rewrite unrelated
 dirty worktree changes.
 Under an accepted delivery-owner handoff these remaining duties belong to the

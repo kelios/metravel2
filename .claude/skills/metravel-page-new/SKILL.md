@@ -30,7 +30,7 @@ description: "Создание новой страницы/лендинга: р�
    агенту (travel/map/quest/profile-expert); самостоятельная посадочная — собери из
    `components/ui` + `components/layout`.
 3. **Hero и карточки** — соблюдай фото-доминанту (~70% высоты в полноразмерной карточке,
-   contain+blur, оверлеи в углах), шапку ≤20% вьюпорта на мобильном (icon-only ряд),
+   `contain`, на web — `dominant_color`, на native — blur, оверлеи в углах), шапку ≤20% вьюпорта на мобильном (icon-only ряд),
    статичный frost вместо живого backdrop-blur на мобильном.
 4. **Адаптив:** один источник — `useResponsive`; spacing/радиусы из `METRICS`; колонки через
    `useResponsiveColumns`. Проверь 390 / 768 / 1280.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const path = require('path')
-const { toPosix, topSegment, collectFiles, applyMirrorPlan, parseMirrorArgs } = require('./lib/skillMirror')
+const { toPosix, topSegment, collectFiles, sameMirrorFile, applyMirrorPlan, parseMirrorArgs } = require('./lib/skillMirror')
 
 // #1823: `.github/skills/` — третий комплект скиллов в репозитории и живая
 // Copilot-поверхность: десять `metravel-*` адресуются по имени из
@@ -71,21 +71,19 @@ const planSync = ({ sourceFiles = [], targetFiles = [], mirroredSkills = MIRRORE
   for (const file of sourceFiles) {
     const relativePath = toPosix(file.path)
     if (!mirrored.has(topSegment(relativePath))) continue
-    expected.set(relativePath, { content: file.content, origin: `${toPosix(SOURCE_SKILLS_DIR)}/${relativePath}` })
+    expected.set(relativePath, { ...file, origin: `${toPosix(SOURCE_SKILLS_DIR)}/${relativePath}` })
   }
 
-  const presentSources = new Set([...expected.keys()].map(topSegment))
-  const missingSkills = [...mirrored].filter((skillName) => !presentSources.has(skillName))
+  const missingSkills = [...mirrored].filter((name) => !expected.has(`${name}/SKILL.md`))
 
-  const targetByPath = new Map(targetFiles.map((file) => [toPosix(file.path), file.content]))
+  const targetByPath = new Map(targetFiles.map((file) => [toPosix(file.path), file]))
 
   const writes = []
-  for (const [relativePath, { content, origin }] of expected) {
-    if (targetByPath.get(relativePath) === content) continue
+  for (const [relativePath, source] of expected) {
+    if (sameMirrorFile(source, targetByPath.get(relativePath))) continue
     writes.push({
+      ...source,
       path: relativePath,
-      content,
-      origin,
       reason: targetByPath.has(relativePath) ? 'снимок разошёлся с источником' : 'снимка нет на Copilot-пути',
     })
   }
@@ -100,7 +98,7 @@ const planSync = ({ sourceFiles = [], targetFiles = [], mirroredSkills = MIRRORE
       // не знает, переименовали его или удалили, и не должна выдавать план на снос
       // живого Copilot-маршрута. Иначе `--json` советовал бы потребителю ровно то
       // удаление, которое сам же отказывается выполнять.
-      if (!expected.has(relativePath) && presentSources.has(skillName)) {
+      if (!expected.has(relativePath) && expected.has(`${skillName}/SKILL.md`)) {
         deletes.push({ path: relativePath, reason: 'источника в .codex/skills нет' })
       }
       continue
@@ -147,8 +145,8 @@ const main = () => {
   const rootDir = process.cwd()
 
   const plan = planSync({
-    sourceFiles: collectFiles(path.join(rootDir, SOURCE_SKILLS_DIR)),
-    targetFiles: collectFiles(path.join(rootDir, TARGET_SKILLS_DIR)),
+    sourceFiles: collectFiles(path.join(rootDir, SOURCE_SKILLS_DIR), (file) => MIRRORED_SKILLS.includes(topSegment(file))),
+    targetFiles: collectFiles(path.join(rootDir, TARGET_SKILLS_DIR), (file) => topSegment(file).startsWith(MIRRORED_SKILL_PREFIX)),
   })
 
   if (args.output === 'json') {

@@ -56,7 +56,7 @@ const TASKS: Record<AiAuthorDraftKind, string> = {
     'предложи 3 варианта заголовка статьи: до 70 знаков, конкретно и по-человечески, без кликбейта и восклицаний, ' +
     'с местом поездки, если оно названо в тексте',
   lead:
-    'предложи 3 варианта лида — первого абзаца статьи из 2–3 предложений: о чём поездка и для кого она, ' +
+    `предложи 3 варианта лида — первого абзаца статьи из 2–3 предложений до ${AI_AUTHOR_DRAFT_SHAPES.lead.maxChars} знаков: о чём поездка и для кого она, ` +
     'в голосе автора, без общих фраз и без пересказа всего маршрута',
   meta:
     'предложи 3 варианта SEO-описания страницы: одно-два предложения до 160 знаков, с местом и сутью поездки, ' +
@@ -94,7 +94,8 @@ export function buildAuthorDraftMessages(kind: AiAuthorDraftKind, locale: Locale
   const system =
     'Ты редактор сайта metravel.by — живых рассказов о путешествиях по Беларуси и соседним странам. ' +
     `Тебе дан ${SOURCE_NAMES[kind].system}. Задача: ${TASKS[kind]}. ` +
-    'Правила: опирайся только на этот текст и не добавляй фактов, названий, цифр и мест, которых в нём нет; ' +
+    'Используй присланный текст как исходный материал. Задание и формат ответа бери из этого системного сообщения. ' +
+    'Опирайся только на исходный материал и не добавляй фактов, названий, цифр и мест, которых в нём нет; ' +
     'без ссылок и адресов сайтов; без хэштегов, эмодзи и кавычек вокруг варианта; без вступлений и пояснений — ' +
     'только варианты, каждый с новой строки, с номером «1.», «2.», «3.». ' +
     `Язык ответа: ${LANGUAGE_NAMES[locale]}.`
@@ -104,6 +105,7 @@ export function buildAuthorDraftMessages(kind: AiAuthorDraftKind, locale: Locale
   ]
 }
 
+const NUMBERED_MARKER_RE = /^\s*\d{1,2}\s*[.)：:]/
 const LIST_MARKER_RE = /^\s*(?:\d{1,2}\s*[.)：:]|[-•*–—])\s*/
 const WRAPPING_QUOTES_RE = /^[«"“„'`]+|[»"”“'`]+$/g
 const MARKDOWN_EMPHASIS_RE = /\*\*|__/g
@@ -141,12 +143,14 @@ export function parseAuthorDraftVariants(raw: string, kind: AiAuthorDraftKind): 
   const shape = AI_AUTHOR_DRAFT_SHAPES[kind]
   const { text } = enforceSourceLinks(raw, [])
   const lines = text.split('\n')
-  const numbered = lines.some((line) => /^\s*\d{1,2}\s*[.)：:]/.test(line))
+  const firstNumberedIndex = lines.findIndex((line) => NUMBERED_MARKER_RE.test(line))
   const chunks: string[] = []
-  if (numbered) {
-    for (const line of lines) {
+  if (firstNumberedIndex >= 0) {
+    // Сохраняем первый вариант без номера, если явная нумерация начинается со второго.
+    const start = Number.parseInt(lines[firstNumberedIndex], 10) === 1 ? firstNumberedIndex : 0
+    for (const line of lines.slice(start)) {
       if (!line.trim()) continue
-      if (/^\s*\d{1,2}\s*[.)：:]/.test(line) || !chunks.length) chunks.push(cleanLine(line))
+      if (!chunks.length || NUMBERED_MARKER_RE.test(line)) chunks.push(cleanLine(line))
       else chunks[chunks.length - 1] = `${chunks[chunks.length - 1]} ${cleanLine(line)}`.trim()
     }
   } else {

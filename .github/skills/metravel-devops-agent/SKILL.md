@@ -1,13 +1,13 @@
 ---
 name: metravel-devops-agent
-description: "Deploy or verify metravel web builds on an explicitly named environment through project-owned scripts. Use for dev/preprod/prod deploy, rollback planning, recovery, or post-deploy checks."
+description: "Deploy or verify metravel web builds on an explicitly named environment through project-owned scripts. Use for a dev or production rollout, build-only preprod check, rollback planning, recovery, or post-deploy verification."
 ---
 
 # Metravel DevOps Agent
 
 Use this skill for deploy preparation, deployment execution, and post-deploy verification. Treat production deploys as high-risk operations: require an explicit target environment and do not infer `prod` from vague wording.
 
-Follow the project-owned deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, swap static assets atomically, verify production, and keep a rollback path visible.
+Follow the project-owned deploy contract: use existing scripts, do not write ad-hoc `rsync`/`scp`/SSH deploy commands, take a health baseline, let build guards fail closed, use the release mechanism for the assigned environment and verify its observable result.
 
 `AGENTS.md` is inherited. For the named environment and operation, load only
 the matching deploy/server-safety section from `docs/RELEASE.md` and
@@ -69,11 +69,11 @@ Rules:
 
 Choose the smallest safe preflight for the target:
 
-- Dev deploy smoke: `npm run check:fast`, then `bash build-dev.sh` for the LAN dev server (`192.168.50.36`) unless current project docs explicitly define a different dev target.
-- Production deploy: prefer `npm run release:check` before deploy.
+- Dev diagnosis: make read-only probes of the requested LAN route. For a requested dev rollout, follow `.claude/skills/dev-deploy/SKILL.md`; the build script includes publication.
+- For a reviewed production rollout, the canonical deploy script owns the build, lock and publication checks. A standalone release validation uses `$metravel-release-checks`.
 - Production build-only verification: `DEPLOY=0 ./build-prod.sh prod`.
 - External-link/governance-sensitive changes: include `npm run governance:verify`.
-- UI-visible changes: require browser verification before deploy when feasible.
+- For a visible change on a board card, record the browser scenario for acceptance on the published revision in `testing`.
 
 Before a mutating deploy, also take a read-only baseline for the target, for example `/`, a representative API GET, and any changed route. Fix real failures in scope before deploy. If a failure is outside scope or needs unavailable access, stop and report the blocker.
 
@@ -128,9 +128,9 @@ npm run lighthouse:produrl:travel:desktop
 npm run lighthouse:produrl:summary
 ```
 
-For dev/preprod:
+For a dev rollout, verify the published LAN route. For a build-only preprod check, inspect the local output.
 
-- verify the deployed URL or server endpoint relevant to the task when accessible
+- report the revision and result relevant to the requested stage
 - report any access blocker instead of guessing success
 
 ## Handoff

@@ -37,8 +37,7 @@ modern matte travel iconography for MeTravel, warm and friendly, soft diffused l
 clean tasteful design, cohesive icon-set look, crisp edges, high detail but not busy
 ```
 
-Технически: один `seed`-диапазон и одни настройки на весь прогон серии, чтобы свет, толщина
-линии и ракурс не «прыгали» между иконками одного набора.
+Для серии сохраняй пресет, настройки света, толщину линии и ракурс. Записывай `seed`, если выбранный генератор его поддерживает.
 
 ---
 
@@ -161,14 +160,13 @@ no busy background scenery, no multiple disconnected objects
 | Контент-арт | `assets/travel/` · `assets/quests/<id>/` · `assets/images/<кампания>/` | по соседям |
 | Web-статик | `public/assets/` | по соседям |
 
-`assetBundlePatterns` в `app.json` уже покрывает `assets/images/*`, `assets/icons/*`,
-`assets/travel/*` — новые подпапки внутри них бандлятся автоматически.
+Новый ассет подключай явным статическим импортом или `require` в компоненте его фичи. В `app.json` шаблоны `assets/images/*`, `assets/icons/*` и `assets/travel/*` перечисляют файлы на одном уровне. Для вложенной папки проверь, что конкретный файл попадает в целевой native export.
 
 ---
 
 ## 10. Консистентность
 
-- Один STYLE_PRESET + один `seed`-прогон на серию → ассеты выглядят семьёй.
+- Сверяй ассеты серии с одним STYLE_PRESET и первым утверждённым изображением.
 - Доминанта `brand #f5842c`, поддержка из палитры; без цветов вне `modernMattePalette.ts`.
 - Стандартные UI-иконки бери из существующих primitives и `@expo/vector-icons/Feather`.
   Растровый арт подключай через существующий media-компонент конкретной фичи; не создавай
@@ -185,5 +183,3 @@ no busy background scenery, no multiple disconnected objects
   текста, сторонних логотипов, фото или заимствованных персонажей.
 - Постобработка: resize до 1024×1024, непрозрачный тёплый белый фон, PNG без
   alpha; иконка не содержит встроенного rounded-corner mask.
-</content>
-</invoke>

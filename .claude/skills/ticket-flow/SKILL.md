@@ -63,7 +63,7 @@ description: "Ведёт frontend и backend задачи MeTravel от todo д�
 | content / SEO | `travel-writer`, `metravel-seo-expert`, `index-doctor` |
 | tester | `test-author` (Jest unit + Playwright e2e); устройство — `android-expert` (adb) и `ios-tester` (simulator/physical/TestFlight) |
 | reviewer (гейт `review → testing`) | агент `code-review-gate` — ОБЯЗАТЕЛЕН, без его вердикта борд не пустит задачу в `testing` |
-| reviewer (доп. фокус) | `/code-review`, `review-auditor` (углублённый аудит), `browser-reviewer` (видимые web-изменения) |
+| reviewer (до формального гейта) | Для diff за пределами малого — `review-auditor` по AGENTS §4.6. Приёмку видимых web-изменений ведёт `browser-reviewer` в `testing`. |
 | reviewer (iOS-диффы) | `ios-reviewer` — независимый review-and-fix перед iPhone-тестированием |
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
 | releaser | `frontend-deployer` на прод — штатный шаг после push, одна команда `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` (изолированный worktree и общий лок внутри, ≤5 минут); сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
@@ -93,18 +93,18 @@ handoff до evidence, не создавай deploy-only дубль.
 
 1. **Подключение к борду.** Делегируй `ticket-board`: показать доску (`metravel_task_board`)
    и проверить активный спринт. Если борд недоступен — стоп, укажи на `docs/TASK_BOARD_MCP.md`
-   (нужен `uv`, подтянутый бэк-репо и staff-токен). Не продолжай вслепую.
+   (проверка launcher — `sh scripts/launch-task-board-mcp.sh --check`). Не продолжай вслепую.
 2. **Выбор/заведение тикета.** Карточка уже в `in_progress`/`review`/`testing` — сначала
    проверка занятости из «ЖЕЛЕЗНОГО ПРАВИЛА» выше (`ListAgents` → `SendMessage` →
    `git status`), и только потом работа. Без этого не начинай даже чтение кода под правку.
    - id → `metravel_task_get`.
    - `next` → верхний доступный `status=todo` в запрошенном срезе.
-   - свободное описание → дедуп, затем `metravel_task_create` (`area=front`, `reporter=frontend`,
-     заголовок `[FE-…] …`, `description` с Goal/Context/AC и обязательным `Task Contract`
-     из `docs/TASK_BOARD_MCP.md`). При нехватке проверяемых AC или контракта — ОДИН
+   - свободное описание → дедуп, затем `metravel_task_create`. Выбери `area` по владельцу
+     изменения и префикс по источнику; в `description` запиши Goal/Context/AC и обязательный `Task Contract`
+     из `docs/TASK_BOARD_MCP.md`. При нехватке проверяемых AC или контракта — ОДИН
      компактный уточняющий вопрос пользователю, не выдумывай критерии.
 3. **In progress.** `ticket-board`: `status=in_progress`, `assignee=<агент-исполнитель>`.
-   Делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты
+   Для `area=back` продолжи по разделу «Маршрут `area=back`». Для `area=front` делегируй реализацию профильному FE-агенту из таблицы. Соблюдай контракты
    `docs/RULES.md` (ImageCardMedia, UnifiedTravelCard, external link policy,
    React Query/Zustand, TS strict) — в `CLAUDE.md` их нет.
 4. **Review — обязательный гейт, запускается сам.** Как только реализация готова и тикет
@@ -122,8 +122,9 @@ handoff до evidence, не создавай deploy-only дубль.
 
    Гейт принудительный и в обратную сторону: PreToolUse-ветка того же хука блокирует
    `metravel_task_update(status="testing")`, пока для тикета нет свежего вердикта `pass`; вердикт
-   протухает, если код доправили после ревью. Углублённый аудит (`review-auditor`,
-   `browser-reviewer`, `/review-security`) подключай дополнительно по фокусу задачи, он гейт не заменяет.
+   протухает, если код доправили после ревью. Для diff за пределами малого
+   сначала заверши `review-auditor` по AGENTS §4.6. Видимый сценарий передай
+   `browser-reviewer` на стадии `testing`.
 5. **Test / QA — тоже запускается сам.** Переход в `status=testing` (его делает гейт-агент)
    тем же хуком требует продолжить приёмку тем же проходом:
    - сначала выкати запушенный код на прод: `frontend-deployer` с коротким промптом — одна

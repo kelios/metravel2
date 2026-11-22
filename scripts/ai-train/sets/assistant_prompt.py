@@ -1,10 +1,10 @@
-"""The assistant screen's prompt for the training sets (#2712).
+"""The assistant service's prompt for the training sets (#2712).
 
 The site assistant (scripts/ai-assist/prompt.ts) sends metravel-llm a system prompt
 built per interface locale and a user message with the retrieved cards. The
 sets that teach that mode (rag_answers, offtopic) must train on exactly the same
 text, so the strings come from scripts/ai-train/assistant_prompt.json — a
-snapshot of prompt.ts that __tests__/api/aiAssist/assistantPromptFixture.test.ts
+snapshot of prompt.ts that __tests__/scripts/ai-assist/assistantPromptFixture.test.ts
 compares with the TypeScript and with build_user_message() below.
 
 Not a set: sets/__init__.load() refuses this name only by not finding NAME/build.
@@ -32,8 +32,13 @@ SOURCE_TYPE_RU = {"travel": "Статья", "quest": "Квест"}
 TITLE_MAX = 160
 SNIPPET_MAX = 400
 QUESTION_MAX = 500
-# prompt.ts sanitizeFragment: control (\p{Cc}) and format (\p{Cf}) characters become spaces.
-_HIDDEN_RE = re.compile(r"[\u0000-\u001f\u007f-\u009f­؀-؅؜۝܏࣢᠎​-‏‪-‮⁠-⁤⁦-⁯﻿￹-￻]")
+# Unicode 17 Cc/Cf from the JS formatter. Python on macOS can have older Unicode data.
+_HIDDEN_RE = re.compile(
+    r"[\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0605\u061c\u06dd\u070f\u0890-\u0891\u08e2\u180e"
+    r"\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb"
+    r"\U000110bd\U000110cd\U00013430-\U0001343f\U0001bca0-\U0001bca3"
+    r"\U0001d173-\U0001d17a\U000e0001\U000e0020-\U000e007f]"
+)
 
 _fixture: dict | None = None
 _contour: set[str] | None = None
@@ -213,9 +218,9 @@ def max_answer_chars() -> int:
 
 
 def sanitize_fragment(value, max_length: int = SNIPPET_MAX) -> str:
-    text = _HIDDEN_RE.sub(" ", str(value if value is not None else ""))
-    # JS String.prototype.slice counts UTF-16 code units; the site text is BMP-only, so code points match.
-    return re.sub(r"\s+", " ", text).strip()[:max_length]
+    text = " ".join(_HIDDEN_RE.sub(" ", str(value if value is not None else "")).split())
+    # The API budgets are UTF-16 units. Both formatters omit a character cut in half at the limit.
+    return text.encode("utf-16-le", errors="surrogatepass")[:max_length * 2].decode("utf-16-le", errors="ignore")
 
 
 def format_sources_block(sources: list[dict]) -> str:
@@ -231,7 +236,7 @@ def build_user_message(question: str, sources: list[dict], locale: str = "ru") -
     clean = sanitize_fragment(question, QUESTION_MAX)
     if not sources:
         return fixture()["user_no_sources"].replace("{question}", clean)
-    return fixture()["user_with_sources"].replace("{sources}", format_sources_block(sources)).replace("{question}", clean)
+    return fixture()["user_with_sources"].format(sources=format_sources_block(sources), question=clean)
 
 
 # Training budget (#2712): lora-qwen3.5-4b-v3.yaml trains at max_seq_length 1024 — 1280 and 1536 run

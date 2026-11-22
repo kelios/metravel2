@@ -46,6 +46,10 @@ test('flags unquoted mapping separators in a catalog description', () => {
   }
 })
 
+test('rejects a skill trigger placeholder that the skill loader cannot register', () => {
+  assert.match(skillMetadataErrors(skill('badge', 'Значок за <действие>'), 'badge')[0], /angle brackets/)
+})
+
 test('counts folded Unicode descriptions and enforces the project budget', () => {
   assert.deepEqual(skillMetadataErrors(skill('example', `>\n  ${'я'.repeat(379)}`), 'example'), [])
   assert.equal(skillMetadataErrors(skill('example', '🧭'.repeat(381)), 'example').length, 1)

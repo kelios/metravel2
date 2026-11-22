@@ -9,8 +9,7 @@ Default mode is review-and-fix; read-only only when explicitly requested.
 `AGENTS.md` is inherited. Load the relevant feature doc and only the canonical
 `docs/RULES.md` headings implicated by the diff; do not reread all project docs.
 
-Prefer an independent `review-auditor` agent. A reviewer that patches findings
-re-reviews its own result and does not spawn another reviewer.
+Select the independent review route by risk under `AGENTS.md` §4.6. For a small diff, use `code-review-gate`; the implementer fixes findings and re-runs the gate. For other changes, `review-auditor` reviews and fixes the complete diff before `code-review-gate`. A reviewer that patches findings checks its own result without spawning another reviewer.
 
 ## Inputs
 

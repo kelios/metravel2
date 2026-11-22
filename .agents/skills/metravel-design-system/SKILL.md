@@ -32,7 +32,7 @@ ResponsiveStack, CustomHeader, BottomDock, Footer, ConsentBanner, …).
    радиусы, типографика (уровни Heading, размеры), elevation/тени.
 2. Каталог UI-компонентов `components/ui/`: имя → назначение → ключевые пропсы → когда
    использовать. Отметь «канонические» (ImageCardMedia, UnifiedTravelCard) и их инварианты
-   (фото contain+blur, фото-доминанта).
+   (`contain`, заполнение полей по платформе, фото-доминанта — `docs/RULES.md`, «Images and placeholders»).
 3. Сохрани/обнови `docs/DESIGN_SYSTEM.md` (каталог + гайд по использованию). Не переписывай
    его в issue-журнал: здесь только справочник токенов, компонентов и контрактов.
 

@@ -27,10 +27,10 @@ the canonical security/link/auth headings implicated by it.
 
 1. Define the requested scope; default to changed files when the user asks for a diff review.
 2. Trace untrusted input from source through sanitizer/validator to sink.
-3. Build the smallest safe PoC that proves or disproves exploitability without touching production data.
-4. In review mode, report findings only. If the user explicitly asked for fixes, patch confirmed frontend issues and add a regression test for the exploit input.
+3. Record the reachable source, validation boundary, sink and impact. Where a regression test helps, use inert fixtures and assert the sanitizer, allowlist or access control result.
+4. In review mode, report findings only. If the user explicitly asked for fixes, patch confirmed frontend issues and verify the corrected boundary with the focused regression test.
 5. Run the narrow security/governance checks already owned by the repository; use `npm audit --omit=dev` only when dependency review is in scope.
 
 ## Output
 
-Lead with findings ordered by severity and include file/line, impact, PoC or data flow, remediation, validation, and residual risk. Say explicitly when no confirmed findings remain.
+Lead with findings ordered by severity and include file/line, impact, traced data flow or test evidence, remediation, validation, and residual risk. Say explicitly when no confirmed findings remain.

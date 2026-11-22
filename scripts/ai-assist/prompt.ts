@@ -106,6 +106,8 @@ export const sanitizeFragment = (value: unknown, maxLength = MAX_FRAGMENT_LENGTH
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLength)
+    // Отбрасываем только одиночные половины пары UTF-16, в том числе появившиеся при обрезке.
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
 
 export const resolveAnswerLanguage = (locale: string): string =>
   ANSWER_LANGUAGE_RU[String(locale || '').toLowerCase().split('-')[0]] ?? ANSWER_LANGUAGE_RU.ru

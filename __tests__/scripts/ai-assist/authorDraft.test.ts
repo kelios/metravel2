@@ -106,6 +106,15 @@ describe('metravel-assist: разбор вариантов /ai/author-draft', ()
     ])
   })
 
+  it('оставляет все три пронумерованных варианта, когда модель начинает со вступления', () => {
+    const titles = ['На выходные в Гродно', 'К замкам над Неманом', 'Два дня в старом городе']
+    const answer = ['Предлагаю три заголовка для вашей статьи.', ...titles.map((title, index) => `${index + 1}. ${title}`)].join('\n')
+    expect(parseAuthorDraftVariants(answer, 'title')).toEqual(titles)
+    for (const first of [titles[0], `Вариант 1: ${titles[0]}`]) {
+      expect(parseAuthorDraftVariants(`${first}\n2. ${titles[1]}\n3. ${titles[2]}`, 'title')).toEqual(titles)
+    }
+  })
+
   it('не больше вариантов, чем просит форма; мета режется до 160 знаков по предложению, заголовок — по слову', () => {
     const many = Array.from({ length: 6 }, (_, i) => `${i + 1}. Вариант номер ${i + 1} про Гродно`).join('\n')
     expect(parseAuthorDraftVariants(many, 'title')).toHaveLength(AI_AUTHOR_DRAFT_SHAPES.title.variants)

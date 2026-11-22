@@ -66,8 +66,7 @@ Handle images and placeholders the metravel way:
 
 - Placeholder blocks must stay neutral: no emoji, no text, no decorative icons.
 - Preserve the same geometry as the final media to avoid layout jumps.
-- Keep images in `contain` mode with blurred fill around unused space when the pattern already exists for that surface.
-- For critical web hero/slider media, keep visible image and blur backdrop on the same effective source whenever possible.
+- Preserve aspect ratio with `contain`. Use the shared `dominant_color` letterbox fill on web, including hero and slider media, and the Expo Image blur layer on native (`docs/RULES.md` → “Images and placeholders”).
 - Do not defer hero/background/slider appearance with click gates, scroll gates, or reveal timers.
 - On web travel hero and gallery surfaces, preserve the canonical `70vh` height contract.
 

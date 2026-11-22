@@ -45,6 +45,17 @@ describe('sync-copilot-skills', () => {
     expect(plan.writes[0].reason).toContain('нет на Copilot-пути')
   })
 
+  it('требует входной SKILL.md у источника, даже если сохранились спутники', () => {
+    const plan = planSync({
+      mirroredSkills: only,
+      sourceFiles: [{ path: 'metravel-qa-agent/agents/openai.yaml', content: 'metadata' }],
+      targetFiles: [{ path: 'metravel-qa-agent/SKILL.md', content: 'working copy' }],
+    })
+    expect(plan.ok).toBe(false)
+    expect(plan.missingSkills).toEqual(only)
+    expect(plan.deletes).toEqual([])
+  })
+
   it('молчит, когда зеркало совпадает побайтово (позитивная проба)', () => {
     const plan = planSync({
       mirroredSkills: only,

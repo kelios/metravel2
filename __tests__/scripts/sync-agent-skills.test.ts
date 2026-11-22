@@ -1,7 +1,8 @@
+const fs = require('fs')
 const path = require('path')
 const { planSync, renderCommandSkill, MIRRORED_COMMANDS } = require('@/scripts/sync-agent-skills')
-const { collectFiles } = require('@/scripts/lib/skillMirror')
-const { makeTempDir, removeDir, writeTextFile } = require('./cli-test-utils')
+const { collectFiles, applyMirrorPlan } = require('@/scripts/lib/skillMirror')
+const { makeTempDir, removeDir, runCli, writeTextFile } = require('./cli-test-utils')
 
 // #1770: `.claude/skills/**` — единственный источник правды, `.agents/skills/**`
 // (Codex, `.openspec-target` = codex; Grok читает оба каталога) — производное
@@ -58,7 +59,7 @@ describe('sync-agent-skills', () => {
       writeTextFile(path.join(sourceRoot, scriptPath), 'print("changed")\n')
       const changedPlan = planSync(scan())
       expect(changedPlan.ok).toBe(false)
-      expect(changedPlan.writes).toEqual([expect.objectContaining({ path: scriptPath, content: 'print("changed")\n' })])
+      expect(changedPlan.writes).toEqual([expect.objectContaining({ path: scriptPath, content: Buffer.from('print("changed")\n') })])
       expect(changedPlan.deletes).toEqual([])
     } finally {
       removeDir(root)
@@ -129,8 +130,8 @@ describe('sync-agent-skills', () => {
 
   it('удаляет копию скилла, у которого источник в .claude/skills исчез', () => {
     const plan = planSync({
-      sourceSkillFiles: [],
-      targetFiles: [{ path: 'retired-skill/SKILL.md', content: 'старый скилл' }],
+      sourceSkillFiles: [{ path: 'active/SKILL.md', content: 'active' }],
+      targetFiles: [{ path: 'active/SKILL.md', content: 'active' }, { path: 'retired-skill/SKILL.md', content: 'старый скилл' }],
     })
 
     expect(plan.ok).toBe(false)
@@ -159,4 +160,89 @@ describe('sync-agent-skills', () => {
     expect(plan.missingCommands).toEqual(MIRRORED_COMMANDS.filter((command: string) => command !== 'preflight'))
     expect(plan.writes).toHaveLength(0)
   })
+})
+
+it('round-trips binary assets and executable helpers from the source skill', () => {
+  const root = makeTempDir('skill-resources-')
+  try {
+    const source = path.join(root, 'source')
+    const target = path.join(root, 'mirror')
+    const file = 'helper/scripts/example'
+    writeTextFile(path.join(source, 'helper/SKILL.md'), 'example')
+    writeTextFile(path.join(source, file), '')
+    const bytes = Buffer.from([0xff, 0x00, 0x82])
+    fs.writeFileSync(path.join(source, file), bytes)
+    fs.chmodSync(path.join(source, file), 0o755)
+    const scan = () => planSync({ sourceSkillFiles: collectFiles(source), targetFiles: collectFiles(target) })
+    applyMirrorPlan(target, scan())
+    expect(fs.readFileSync(path.join(target, file))).toEqual(bytes)
+    expect(scan().ok).toBe(true)
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(path.join(target, file)).mode & 0o100).toBe(0o100)
+      fs.chmodSync(path.join(source, file), 0o644)
+      expect(scan().writes).toHaveLength(1)
+      applyMirrorPlan(target, scan())
+      expect(fs.statSync(path.join(target, file)).mode & 0o111).toBe(0)
+      expect(scan().ok).toBe(true)
+    }
+  } finally {
+    removeDir(root)
+  }
+})
+
+it('preserves existing wrappers in JSON write mode when a source command is missing', () => {
+  const root = makeTempDir('skill-missing-command-')
+  try {
+    const wrapper = path.join(root, '.agents/skills/source-command-preflight/SKILL.md')
+    writeTextFile(wrapper, 'existing wrapper\n')
+    const script = path.resolve('scripts/sync-agent-skills.js')
+    const result = runCli(process.execPath, [script, '--json'], { cwd: root })
+    expect(result.status).toBe(1)
+    expect(JSON.parse(result.stdout).missingCommands).toContain('preflight')
+    expect(fs.readFileSync(wrapper, 'utf8')).toBe('existing wrapper\n')
+  } finally {
+    removeDir(root)
+  }
+})
+
+it('keeps the last working mirror when the canonical directory or entrypoint is missing', () => {
+  const root = makeTempDir('skill-missing-source-')
+  try {
+    const skill = path.join(root, '.agents/skills/example/SKILL.md')
+    writeTextFile(skill, 'keep me')
+    for (const command of MIRRORED_COMMANDS) writeTextFile(path.join(root, '.claude/commands', command + '.md'), commandFile)
+    const script = path.resolve('scripts/sync-agent-skills.js')
+    const verifyBlocked = (missing: string) => {
+      const result = runCli(process.execPath, [script, '--json'], { cwd: root })
+      expect(result.status).toBe(1)
+      expect(JSON.parse(result.stdout).missingSources).toContain(missing)
+      expect(fs.readFileSync(skill, 'utf8')).toBe('keep me')
+    }
+    verifyBlocked('.claude/skills')
+    writeTextFile(path.join(root, '.claude/skills/openspec-explore/SKILL.md'), 'vendor')
+    verifyBlocked('.claude/skills')
+    writeTextFile(path.join(root, '.claude/skills/example/references/details.md'), 'notes')
+    verifyBlocked('.claude/skills/example/SKILL.md')
+  } finally {
+    removeDir(root)
+  }
+})
+
+it('refuses a managed symlink before sync can overwrite its external target', () => {
+  const root = makeTempDir('skill-linked-resource-')
+  try {
+    const target = path.join(root, '.agents/skills/example/SKILL.md')
+    const external = path.join(root, 'external.md')
+    writeTextFile(external, 'keep me')
+    writeTextFile(path.join(root, '.claude/skills/example/SKILL.md'), 'new instructions')
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.symlinkSync(external, target)
+    for (const command of MIRRORED_COMMANDS) writeTextFile(path.join(root, '.claude/commands', command + '.md'), commandFile)
+    const result = runCli(process.execPath, [path.resolve('scripts/sync-agent-skills.js')], { cwd: root })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('symbolic link')
+    expect(fs.readFileSync(external, 'utf8')).toBe('keep me')
+  } finally {
+    removeDir(root)
+  }
 })

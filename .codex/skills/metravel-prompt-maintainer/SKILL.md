@@ -1,6 +1,6 @@
 ---
 name: metravel-prompt-maintainer
-description: "Audit or update metravel prompt specs, asset PROMPT.md files, skill descriptions, and agents/openai.yaml. Use for prompt drift, duplication, reproducibility, stale wording, or token-heavy metadata."
+description: "Audit MeTravel assistant prompts, agent and command instructions, skill metadata, and reproducible asset briefs when their wording, routing or outputs drift."
 ---
 
 # Metravel Prompt Maintainer
@@ -26,6 +26,17 @@ when routing or project-wide documentation also changes.
   role; keep its metadata concise, without copying role policy. Audit checks
   command descriptions, role names and matching adapters in both directions. Regenerate
   `.grok/agents` with `node .grok/scripts/sync-agents.mjs` after a role change.
+
+## Assistant messages and evaluation
+
+For an AI feature, trace the endpoint in `scripts/ai-assist/` to the messages it
+actually sends, its response parser, and the corresponding unit test. Check the
+requested output shape and language against a realistic input. For the Q&A
+assistant, compare `scripts/ai-assist/prompt.ts` with
+`scripts/ai-train/sets/assistant_prompt.py` and the shared fixture in
+`scripts/ai-train/assistant_prompt.json`. Run `assistantPromptFixture.test.ts` and
+the relevant evaluator tests. Preserve the frozen evaluation samples when fixing
+the scorer. For a model-quality benchmark, use `metravel-llm-evaluation`.
 
 ## Prompt contract
 
@@ -77,22 +88,18 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py .codex/s
 
 Validate each changed skill (including compatibility copies). If the system
 Python lacks PyYAML, use `uv run --with pyyaml python` for the same validator.
-After agent changes, run `node .grok/scripts/sync-agents.mjs`. After changing the
-audit scripts, also run their regression suite — project Jest does not collect it
-(`jest.config.js` `testMatch` is `**/__tests__/**/*.test.ts(x)`), so run it directly:
-
-```bash
-node --test .codex/skills/metravel-prompt-maintainer/scripts/skill-catalog-validation.test.js
-node --test .codex/skills/metravel-prompt-maintainer/scripts/validation-selection-policy.test.js
-```
+After agent changes run `node .grok/scripts/sync-agents.mjs`. Run the complete
+audit regression suite with `npm run test:agent-tooling`. For changes to the
+mirror generators also run the matching `__tests__/scripts/sync-*-skills.test.ts`
+suites. Check workstation-only `assets/**/PROMPT.md` with `npm run audit:prompts:local`
+in the checkout that contains those files.
 
 The validation-selection regression checks live canonical references and known
 blanket native requirements. It does not evaluate arbitrary model behavior;
 review target selection against the current diff and explicit user scope.
 
-`audit:prompts` failing on a `.claude/skills` mirror is usually another session's
-uncommitted edit, not your change: compare the two families at `HEAD` before
-touching files you do not own.
+`audit:prompts` reports the source and target for mirror drift. Compare the working
+tree and `HEAD` for those paths before regenerating in a shared checkout.
 
 Report inspected families, canonical sources changed, size/count delta when
 optimization was requested, validation, and deliberately retained legacy text.

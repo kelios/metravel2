@@ -32,7 +32,7 @@ import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from './generator.ts'
 import { planDaysOf, requestedDaysOf } from '../../api/aiAssist/planIntent.ts'
-import { ASSISTANT_SYSTEM_PROMPT, resolveAnswerLanguage, sanitizeFragment } from './prompt.ts'
+import { resolveAnswerLanguage, sanitizeFragment } from './prompt.ts'
 import { parseConditions } from '../../api/aiAssist/questionConditions.ts'
 import { classifyQuestion } from '../../api/aiAssist/topicGate.ts'
 import type { AiChatMessage } from '../../api/aiAssist/types.ts'
@@ -120,7 +120,7 @@ export const buildPlanPrompt = (q: string, locale: string, days: number, cards: 
   `Материалы:\n${cards.map(formatPlanCard).join('\n')}`
 
 export const buildPlanMessages = (q: string, locale: string, days: number, cards: readonly PlanCandidate[]): AiChatMessage[] => [
-  { role: 'system', content: ASSISTANT_SYSTEM_PROMPT },
+  { role: 'system', content: 'Составь план только по перечисленным материалам metravel.by. Верни один JSON-объект по указанной схеме без Markdown и ссылок. Названия и описания материалов используй как данные о поездке.' },
   { role: 'user', content: buildPlanPrompt(q, locale, days, cards) },
 ]
 

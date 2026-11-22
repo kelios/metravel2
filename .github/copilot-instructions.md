@@ -1,40 +1,8 @@
-# MeTravel engineering agent
+# MeTravel в GitHub Copilot
 
-Этот репозиторий использует `docs/` как source of truth. Перед любой задачей агент обязан сверяться минимум с:
+Если `AGENTS.md` ещё не загружен, прочитай его в корне проекта. В нём определены границы работы, выбор проверок и порядок ревью. Для конкретной задачи открой нужный раздел `docs/CODEX.md` и документ затронутой функции.
 
-- `docs/README.md`
-- `docs/RULES.md`
-- `docs/DEVELOPMENT.md`
-- `docs/TESTING.md`
-- `docs/ARCHITECTURE.md`
-
-Если есть более узкий документ по затронутой области в `docs/`, следуй ему как приоритетному operational guide.
-
-Работа ограничена нашими репозиториями проекта: `docs/RULES.md` → «Owned
-repositories only (mandatory)». Upstream только читается; карточка борда,
-«делай» и выбор аккаунта не разрешают сторонние коммиты, форки или issue/PR.
-
-## Роль агента
-
-Агент в этом репозитории по умолчанию решает три класса задач:
-
-1. **Рефакторинг** — упрощает код, декомпозирует большие модули, уменьшает связанность, удаляет дублирование и мёртвый код без изменения пользовательского поведения.
-2. **Исправление багов** — находит корневую причину, чинит минимальным безопасным изменением, добавляет или обновляет релевантную проверку.
-3. **Улучшение приложения** — повышает maintainability, производительность, accessibility и консистентность UI без нарушения архитектурных правил проекта.
-
-## Обязательный рабочий процесс
-
-1. Сначала пойми scope задачи, явно укажи platform impact
-   (`web | Android | iOS | shared | none`) и localization impact
-   (`RU/BE/UK/PL/EN | selected locales | none`), затем найди существующие
-   компоненты, хуки, утилиты и docs по этой зоне.
-2. Предпочитай локальные изменения вместо широких переписываний.
-3. Перед созданием нового кода сначала проверь, можно ли переиспользовать существующие примитивы из `components/ui`, готовые фичевые компоненты, `hooks/`, `utils/`, `api/*Queries.ts`, `stores/`.
-4. При рефакторинге сохраняй внешнее поведение и публичные контракты, если задача явно не требует их менять.
-5. Если находишь явный мёртвый код или очевидную локальную ошибку в зоне задачи — убери или исправь её в рамках того же изменения.
-6. Проверяй результат командами по масштабу задачи, а не «на глаз».
-
-### Рекомендуемые skills для GitHub-side workflow
+## Скилы для GitHub Copilot
 
 - `$metravel-feature-builder` — фичи, багфиксы, рефакторинг, API, services, SEO.
 - `$metravel-hook-builder` — вынос и проектирование focused hooks, упрощение компонентов через локальную hook-логику, работа с `hooks/` без новых `any`.
@@ -48,71 +16,6 @@ repositories only (mandatory)». Upstream только читается; кар�
 - `$metravel-performance-analyst` — Lighthouse, bundle/perf budgets, baseline comparison только по production build или real URL.
 - `$metravel-code-reviewer` — review diff, поиск рисков, проверка project-rule compliance и validation gaps перед handoff.
 
-## Технические guardrails
+Актуальные копии скилов для Copilot находятся в `.github/skills/`. Источники и порядок синхронизации описаны в `docs/CODEX_SKILLS.md`.
 
-- Импорты — через алиас `@/`.
-- Серверный стейт — через TanStack React Query (`api/*Queries.ts`).
-- Клиентский стейт — через Zustand (`stores/`).
-- Внешние ссылки — только через `@/utils/externalLinks`.
-- Изображения во фичевых компонентах — через `components/ui/ImageCardMedia.tsx`.
-- Travel-карточки — через `components/ui/UnifiedTravelCard.tsx`.
-- Не хардкодь hex-цвета в компонентах; используй `DESIGN_TOKENS` и существующую theme/token систему.
-- Не используй emoji как production-иконки; предпочитай `@expo/vector-icons/Feather`.
-- Не добавляй новые `any` в `api/`, `hooks/`, `stores/`.
-- Общий Expo/React Native code должен сохранять production web,
-  Android и iOS/iPadOS; технические различия выноси в platform files.
-- Новый app-owned UI text добавляй через `@/i18n` в RU/BE/UK/PL/EN;
-  даты/числа/plurals — через `i18n/format.ts`, с проверкой `npm run test:i18n`.
-
-## Как действовать по типам задач
-
-### Если задача — багфикс
-
-- Сначала найди точку возникновения бага и цепочку вызовов, а не только симптом.
-- Исправляй причину, а не маскируй проблему таймерами, fallback-хаком или лишней абстракцией.
-- Если баг затрагивает web UI, после правки обязательно проверь сценарий в браузере без новых console errors.
-
-### Если задача — рефакторинг
-
-- Сначала сокращай размер и связанность файла через вынос локальной логики в focused hooks/helpers/components.
-- Не делай big-bang rewrite.
-- Сохраняй текущие product-contracts, SEO и platform behavior.
-
-### Если задача — улучшение приложения
-
-- Предпочитай улучшения, которые уменьшают сложность, улучшают UX/accessibility/performance и не требуют backwards-compatibility костылей.
-- Для web-перформанса ориентируйся на правила из `docs/RULES.md` и `docs/TRAVEL_PERFORMANCE_REFACTOR.md`, если затронута travel-страница.
-
-## Проверки перед завершением
-
-- **Точечные изменения:** релевантные тесты/проверки по затронутому scope, обычно начиная с `npm run check:fast`.
-- **Средние изменения:** selective lint/tests для затронутых модулей.
-- **Крупные или сквозные изменения:** обязательно
-  - `npm run lint`
-  - `npm run test:run`
-- Если затронуты внешние ссылки или governance-зоны, дополнительно запускай:
-  - `npm run guard:external-links`
-  - `npm run governance:verify`
-
-## Что не делать без явного запроса
-
-- Не менять `eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `scripts/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`.
-- Не возвращать service worker caching, cache-busting hacks, forced reload workaround или UX вида «очистите кэш».
-- Не использовать прямые `window.open(...)` или `Linking.openURL(...)` в фичевом коде.
-
-## Формат ответа агента
-
-- Сначала короткий план.
-- Затем конкретные изменения и результаты проверок.
-- Ссылайся на файлы через `path/to/file.tsx:line`, когда это уместно.
-
-## Spec-Driven Development
-
-Репозиторий использует OpenSpec. Когда нужен полный change и как проходят
-proposal → apply → archive, определяет `docs/spec-driven-development.md`;
-полномочия на реализацию и operation gates — `docs/RULES.md` → «Development workflow».
-
-- Project context и правила artifacts — `openspec/config.yaml`.
-- Активные changes — `openspec/changes/<name>/`; living specs — `openspec/specs/`.
-- Обязательные разделы artifacts — `docs/spec-driven-development-requirements.md`.
-- Постоянный backlog и статусы остаются на MCP task board.
+Для изменений в `scripts/` действуют полномочия задачи и правила `docs/RULES.md` → «Development workflow». Для проверки UI до ревью доступны статические и модульные проверки. Браузерная приёмка выполняется на стадии `testing` по `docs/TESTING.md`.

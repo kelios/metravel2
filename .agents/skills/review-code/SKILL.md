@@ -11,8 +11,9 @@ description: "Ревью кода на корректность: баги, ре�
 
 ## Шаги
 
-1. **Собери scope**: `git diff HEAD` (+ `git log origin/main..HEAD`). Пустой diff →
-   спроси scope или возьми последний коммит.
+1. **Собери scope**: `git status --short --untracked-files=all`, `git diff HEAD` и
+   `git diff origin/main...HEAD`. Прочитай новые файлы задачи отдельно. При пустом
+   scope сообщи, что изменений для ревью нет; указанную пользователем ревизию проверь явно.
 2. **Найди кандидатов** — делегируй агенту `review-auditor` (или нескольким параллельно
    при большом scope) с углами:
    - line-by-line: инвертированные условия, off-by-one, null/undefined, пропущенный

@@ -53,14 +53,17 @@ const descriptionErrors = (frontmatter, enforceBudget = true) => {
   return []
 }
 
-const skillMetadataErrors = (skill, skillName, enforceBudget = true) => {
+const skillMetadataErrors = (skill, skillName, projectOwned = true) => {
   const frontmatter = skill.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!frontmatter) return ['missing YAML frontmatter']
   const errors = []
   if (yamlScalar(frontmatter[1], 'name') !== skillName) {
     errors.push(`frontmatter name must match folder (${skillName})`)
   }
-  return errors.concat(descriptionErrors(frontmatter[1], enforceBudget))
+  if (projectOwned && /[<>]/.test(yamlScalar(frontmatter[1], 'description'))) {
+    errors.push('project skill descriptions cannot contain angle brackets')
+  }
+  return errors.concat(descriptionErrors(frontmatter[1], projectOwned))
 }
 
 // `canonicalLabel` — как назвать источник в тексте ошибки. #1823 добавил второе

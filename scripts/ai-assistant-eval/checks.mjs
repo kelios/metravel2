@@ -53,7 +53,7 @@ const UNFINISHED_STATUSES = ['searching', 'streaming', 'aborted']
 const URL_RE = /\bhttps?:\/\/[^\s<>()[\]"'«»]+/gi
 const BARE_SITE_RE = /(?<![\w/.])(?:www\.)?metravel\.by\/[^\s<>()[\]"'«»]*/gi
 const TRAILING_PUNCTUATION_RE = /[.,;:!?…»"')\]]+$/
-const CARD_HEAD_RE = /^\[(\d+)\]\s+(Статья|Квест)\s+«(.*)»\s+—\s+(\S+)\s*$/
+const CARD_HEAD_RE = /^\[(\d+)\]\s+(Статья|Квест|Справка)\s+«(.*)»\s+—\s+(\S+)\s*$/
 const BULLET_RE = /^\s*(?:[*\-•]|\d+[.)])\s+/
 /**
  * Шаблон карточки статьи из обучающего набора `site` (#2709, `sets/site.py`): «Страна: … / Когда: … /
@@ -102,20 +102,18 @@ export const findUrls = (text) => {
 /** Карточки из сообщения посетителя (`formatSourcesBlock` в `prompt.ts`): `[n] Статья «title» — url` + строка фрагмента. */
 export const parseCards = (userMessage) => {
   const cards = []
-  for (const line of String(userMessage ?? '').split('\n')) {
-    const head = CARD_HEAD_RE.exec(line.trim())
-    if (head) {
-      cards.push({ n: Number(head[1]), type: head[2] === 'Квест' ? 'quest' : 'travel', title: head[3], url: head[4], snippet: '' })
-      continue
+  const content = String(userMessage ?? '').replace(/^Материалы сайта:\n/, '')
+  const types = { Статья: 'travel', Квест: 'quest', Справка: 'help' }
+  for (const block of content.split('\n\n')) {
+    const [header, ...details] = block.split('\n')
+    const head = CARD_HEAD_RE.exec(header)
+    if (!head) continue
+    const card = { n: Number(head[1]), type: types[head[2]], title: head[3], url: head[4], snippet: '' }
+    for (const line of details) {
+      if (line.startsWith('Почему подходит:')) card.why = line.slice('Почему подходит:'.length).trim()
+      else if (!card.snippet) card.snippet = line
     }
-    const last = cards[cards.length - 1]
-    // Строки #3289 — «Почему подходит: …» в карточке и «О месте из вопроса…» перед вопросом — фрагментом не считаются.
-    const text = line.trim()
-    if (text.startsWith('Почему подходит:')) {
-      if (last) last.why = text.slice('Почему подходит:'.length).trim()
-      continue
-    }
-    if (last && !last.snippet && text && !text.startsWith('Вопрос посетителя:') && !text.startsWith('О месте из вопроса')) last.snippet = text
+    cards.push(card)
   }
   return cards
 }

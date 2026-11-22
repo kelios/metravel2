@@ -82,7 +82,7 @@ Pure-Node, без внешних деп (образец — `scripts/generate-mo
 `assetBundlePatterns` уже покрывает эти корни — новые подпапки бандлятся сами.
 
 ### 6. Подключение в код
-- Контент/маркетинг-картинка в карточке/hero → через `ImageCardMedia` (fit=contain + blur,
+- Контент/маркетинг-картинка в карточке/hero → через `ImageCardMedia` (`contain`, платформенное заполнение полей,
   фото-доминанта по `docs/RULES.md` → «Images and placeholders»). Не `cover`, не прямой `expo-image`.
 - UI-глиф → `require('@/assets/icons/...')` в Image-обёртке проекта; для одноцветного —
   предпочтительно SVG-компонент.

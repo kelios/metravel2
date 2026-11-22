@@ -89,7 +89,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 - `.claude/skills` — источник общих процедур; `.agents/skills` генерируется
   `npm run sync:agent-skills` (включая adapters `.claude/commands` →
   `source-command-*`). Правь источник, затем синхронизируй зеркало.
-  `audit:prompts` проверяет metadata и совпадение текста. OpenSpec сохраняет
+  `audit:prompts` проверяет метаданные и запускает оба генератора зеркал в режиме `--check`: сверяются состав, содержимое файлов и признак исполняемости. OpenSpec сохраняет
   vendor-различия адаптеров; это не дубли для механического удаления.
 - `.github/skills/metravel-*` — зеркало для Copilot, маршрутизируемое по имени из
   `.github/copilot-instructions.md`. Источник правды — `.codex/skills/<имя>`,
@@ -103,7 +103,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   `audit:prompts` проверяет delegation, metadata и существование источника.
   `.grok/agents` генерируется через `node .grok/scripts/sync-agents.mjs` и
   сверяется без записи в `npm run audit:prompts`.
-  Команды служат короткими входами в skills.
+  Аудит также читает описания всех слэш-команд из `.claude/commands/`.
 - Metadata-аудит не доказывает согласованность полномочий, окружений и стадий:
   эти контракты проверяются по каноническим документам при ревью промптов.
   В `audit:prompts` также входит ограниченный guard ссылок на
