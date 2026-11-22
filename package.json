@@ -98,6 +98,7 @@
     "seo:postprocess-route-shells": "node scripts/postprocess-route-shells.js --dist dist/prod",
     "stats:login": "node scripts/google-oauth-login.js",
     "stats:gsc": "node scripts/fetch-gsc-stats.js",
+    "stats:seo:weekly": "node scripts/seo-weekly-report.js",
     "stats:gsc:json": "node scripts/fetch-gsc-stats.js --json",
     "stats:ga4": "node scripts/fetch-ga4-stats.js",
     "stats:ga4:json": "node scripts/fetch-ga4-stats.js --json",
