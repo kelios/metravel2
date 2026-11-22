@@ -340,6 +340,11 @@ const QUESTS = [
     { questId: 'trondheim-olav-nidaros', dir: 'trondheimOlavNidaros', finaleId: 353 },
     { questId: 'valencia-grail-bat', dir: 'valenciaGrailBat', finaleId: 354 },
     { questId: 'pskov-olga-dovmont', dir: 'pskovOlgaDovmont', finaleId: 355 },
+    // Пакет D7 (квесты 359–362) — finaleId сверен по точному уникальному тексту финала 2026-11-22 (#3477)
+    { questId: 'ljubljana-dragon-preseren', dir: 'ljubljanaDragonPreseren', finaleId: 356 },
+    { questId: 'helsinki-havis-amanda', dir: 'helsinkiHavisAmanda', finaleId: 357 },
+    { questId: 'bangkok-rattanakosin-pillar', dir: 'bangkokRattanakosinPillar', finaleId: 358 },
+    { questId: 'seoul-haechi-bukchon', dir: 'seoulHaechiBukchon', finaleId: 359 },
     // Легенды, рождественская волна и Выборг (237–284, 289–290) — finaleId сверен по тексту финала 2026-11-08 (#3184)
     { questId: 'vitebsk-dark-chronicle', dir: 'vitebskDarkChronicle', finaleId: 237 },
     { questId: 'grodno-royal-shadows', dir: 'grodnoRoyalShadows', finaleId: 238 },
