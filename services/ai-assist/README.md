@@ -178,6 +178,7 @@ answer_chars, guard}` — на каждый ход, дошедший до отв
 | `AI_LLM_URL` | — | `llama-server` metravel-llm для `/ai/ask`; без него вопросы по теме → `503 generator_unavailable` |
 | `AI_ASSIST_LLM_TIMEOUT_MS` / `AI_ASSIST_ASK_QUEUE_TIMEOUT_MS` | `60000` / `2000` | таймаут ответа модели / ожидание очереди к модели до `429 busy` |
 | `AI_ASK_DAILY_LIMIT` | `20` (`api/aiAssist/policy.ts`) | вопросов в сутки на IP |
+| `AI_ASK_OFFTOPIC_STRIKES` | `3` (`AI_OFFTOPIC_STRIKES_TO_BLOCK`, `api/aiAssist/policy.ts`) | вопросов не по теме за день до блока `/ai/ask` для IP (#2711); поднимается только на локальном стеке — образ и прод его не задают, текст карточки хода считает по продуктовому порогу |
 | `AI_AUTHOR_DRAFT_DAILY_LIMIT` | `5` (`api/aiAssist/policy.ts`) | запросов `/ai/author-draft` в сутки на IP (#2885) |
 | `AI_MAP_INTENT_DAILY_LIMIT` | `30` (`api/aiAssist/policy.ts`) | запросов `/ai/intent` в сутки на IP (#2887) |
 | `AI_PLAN_DAILY_LIMIT` | `10` (`api/aiAssist/policy.ts`) | планов по дням `/ai/plan` в сутки на IP (#3298); отказ запрос возвращает |

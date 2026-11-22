@@ -24,6 +24,7 @@ const path = require('path')
 const { createReportContext, roundedByteLimit } = require('./lib/bundleBudgetReport')
 const { registryFromSources, stripCompactChunkMetadata } = require('./lib/webChunkMetadataArtifact')
 const { compressedSizesSync } = require('./lib/compressedSizes')
+const { resolveEagerRoutePolicy } = require('./lib/eagerRouteVariants')
 
 const repoRoot = path.join(__dirname, '..')
 const DEFAULT_TOLERANCE_PCT = 5
@@ -605,6 +606,37 @@ if (!fs.existsSync(budgetPath)) {
 }
 
 const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf-8'))
+// #3370: a route that delivers a lazy screen is held by the rows of the build it is in. The chunk
+// planner makes the same choice from its plan (scripts/lib/eagerRouteVariants.js); here the fact is
+// the chunk Expo names after the screen's source file, and the screen in the route's HTML: a chunk next
+// to the not-found route (broken compile gate, #2738) keeps the rows of the build without the screen.
+let activeRouteVariants = []
+const shippedWithoutScreen = []
+const routeHtmlHas = (route, marker) =>
+  [route, toRouteKey(route)].some((relative) => {
+    const file = path.join(htmlDir, relative)
+    return fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes(marker)
+  })
+if (budget.eager) {
+  try {
+    const resolved = resolveEagerRoutePolicy(budget.eager, (variant) => {
+      if (!files.some((file) => logicalName(file) === variant.chunk)) return false
+      if (routeHtmlHas(variant.route, variant.whenHtml)) return true
+      shippedWithoutScreen.push(variant)
+      return false
+    })
+    budget.eager = resolved.policy
+    activeRouteVariants = resolved.active
+  } catch (error) {
+    die(error.message)
+  }
+}
+for (const variant of shippedWithoutScreen) {
+  console.warn(
+    `⚠️  ${variant.chunk} chunk is in the build, but ${variant.route} does not render the screen ` +
+      `(no ${JSON.stringify(variant.whenHtml)} in its HTML): the route keeps the rows of the build without it.`,
+  )
+}
 const tol = 1 + (Number(budget.tolerancePct) || 0) / 100
 const forbiddenChunkNames = Array.isArray(budget.forbiddenChunks) ? budget.forbiddenChunks : []
 const deferredSet = new Set(Array.isArray(budget.deferredChunks) ? budget.deferredChunks : [])
@@ -1043,6 +1075,7 @@ if (JSON_OUT) {
         eagerPayloadRoutes: Object.fromEntries(
           [...payloadRouteCounts].map(([payloadName, value]) => [payloadName, value.routes]),
         ),
+        eagerRouteVariants: activeRouteVariants.map((variant) => ({ route: toRouteKey(variant.route), chunk: variant.chunk })),
         forbiddenChunks: forbiddenChunkNames,
         forbiddenPayloads: Object.fromEntries(forbiddenPayloadFiles),
         ownerChunks: Object.fromEntries(
@@ -1077,6 +1110,12 @@ if (JSON_OUT) {
     } else {
       console.log(`  eager (${routeKey}): ${toKB(bytes)} KB brotli (budget ${eagerBrotliLimits.get(routeKey)} KB)`)
     }
+  }
+  for (const variant of activeRouteVariants) {
+    console.log(
+      `  eager route variant (${toRouteKey(variant.route)}): build has the ${variant.chunk} chunk — ` +
+        `${variant.maxRequests} requests / ${variant.maxBrotliKB} KB brotli`,
+    )
   }
   for (const [name, bytes] of exactChunkBrotli) {
     console.log(`  ${name} delivered: ${bytes} B brotli (budget ${exactBrotliBudget.chunks.get(name)} B)`)

@@ -2,6 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const { ensure } = require('./policy-test-utils')
 const { makeTempDir, runNodeCli } = require('./cli-test-utils')
+const { readRouteVariants, variantChunkName } = require('../../scripts/lib/eagerRouteVariants')
+const { ROUTE_EAGER_LAZY_SCREENS } = require('../../scripts/lib/granularChunkMerge')
 
 const ROOT = path.resolve(process.cwd())
 const packageJsonPath = path.join(ROOT, 'package.json')
@@ -25,8 +27,22 @@ const MAX_EAGER_BROTLI_KB = 690
 const MAX_EAGER_ROUTE_BROTLI_KB: Record<string, number> = {
   'index.html': 469.3,
   '(tabs)/travels/[param].html': 558,
-  // #3370: the production build (assistant flag off) — the not-found shell; see the budget description.
+  // #3370: the build WITHOUT the assistant screen (production while the flag is off) — the not-found shell.
   '(tabs)/assistant.html': 394.3,
+}
+// #3370: /assistant delivers its lazy screen in its own <script> set, so the route has two builds. The rows
+// of maxRequestsByRoute / maxBrotliKBByRoute hold the build without the screen; this variant holds the build
+// that has it (prod-like build with the flag: 19 requests, 592698 B Brotli; no spare). The planner and the
+// guard pick the rows from the build itself (scripts/lib/eagerRouteVariants.js). Exact match: a raise, another
+// entry or a new variant has to change this literal.
+const EAGER_ROUTE_VARIANTS: Record<string, { whenEntry: string; whenHtml: string; maxRequests: number; maxBrotliKB: number }> = {
+  '(tabs)/assistant.html': {
+    whenEntry: 'components/screens/assistant/AssistantScreen.tsx',
+    // The guard applies the variant only when the route's HTML renders the screen (broken gate #2738).
+    whenHtml: 'data-testid="assistant-screen"',
+    maxRequests: 19,
+    maxBrotliKB: 578.9,
+  },
 }
 // #3362: full delivered bytes of eligible retained canonical source 39c7ab584e,
 // including loader metadata. Its failed report is measurement, not publication.
@@ -148,6 +164,8 @@ const validateEagerRequestBudget = (value: unknown, label: string): EagerRequest
   return { maxRequests, maxRequestsByRoute }
 }
 
+const sortedRecord = <T,>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)))
+
 const normalizedRequestBudget = (budget: EagerRequestBudget) => ({
   maxRequests: budget.maxRequests,
   maxRequestsByRoute: Object.fromEntries(Object.entries(budget.maxRequestsByRoute).sort(([a], [b]) => a.localeCompare(b))),
@@ -214,6 +232,11 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
     if (limit > ceiling || limit > eagerBrotliKB) {
       throw new Error(`bundle budget.eager.maxBrotliKBByRoute.${route} must stay at or below ${Math.min(ceiling, eagerBrotliKB)} KiB.`)
     }
+  }
+  const variants = readRouteVariants(eager) as { route: string; whenEntry: string; whenHtml: string; maxRequests: number; maxBrotliKB: number }[]
+  const committedVariants = Object.fromEntries(variants.map(({ route, whenEntry, whenHtml, maxRequests, maxBrotliKB }) => [route, { whenEntry, whenHtml, maxRequests, maxBrotliKB }]))
+  if (JSON.stringify(sortedRecord(committedVariants)) !== JSON.stringify(sortedRecord(EAGER_ROUTE_VARIANTS))) {
+    throw new Error('bundle budget.eager.routeVariants must match the committed test pin exactly.')
   }
   const eagerTolerancePct = requireBudgetNumber(
     eager.tolerancePct,
@@ -284,6 +307,103 @@ describe('bundle budget release contract', () => {
       fs.writeFileSync(changed, JSON.stringify(budget))
       expect(() => validateCommittedBudget(changed)).toThrow('exact Brotli bytes must match the committed measured pin')
     } finally { fs.rmSync(tmpDir, { recursive: true, force: true }) }
+  })
+
+  describe('route that delivers its lazy screen: one pin per build (#3370)', () => {
+    const ASSISTANT = '(tabs)/assistant.html'
+    const validationError = (change: (eager: Record<string, Record<string, unknown>>) => void): string => {
+      const tmpDir = makeTempDir('bundle-route-variant-pin-')
+      try {
+        const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
+        change(budget.eager)
+        const changed = path.join(tmpDir, 'budget.json')
+        fs.writeFileSync(changed, JSON.stringify(budget))
+        validateCommittedBudget(changed)
+        return ''
+      } catch (error) {
+        return (error as Error).message
+      } finally { fs.rmSync(tmpDir, { recursive: true, force: true }) }
+    }
+
+    it('pins both builds of /assistant: 8 requests / 394.3 KiB without the screen, 19 / 578.9 with it', () => {
+      const eager = requireRecord(validateCommittedBudget(budgetPath).eager, 'bundle budget.eager')
+      expect(requireRecord(eager.maxRequestsByRoute, 'requests')[ASSISTANT]).toBe(8)
+      expect(requireRecord(eager.maxBrotliKBByRoute, 'bytes')[ASSISTANT]).toBe(394.3)
+      expect(requireRecord(eager.routeVariants, 'variants')[ASSISTANT]).toEqual(
+        { whenEntry: 'components/screens/assistant/AssistantScreen.tsx', whenHtml: 'data-testid="assistant-screen"', maxRequests: 19, maxBrotliKB: 578.9 },
+      )
+    })
+
+    it.each<[string, (eager: Record<string, Record<string, unknown>>) => void, string]>([
+      ['one more request with the screen', (eager) => { (eager.routeVariants[ASSISTANT] as { maxRequests: number }).maxRequests += 1 }, 'routeVariants must match the committed test pin exactly'],
+      ['0.1 KiB more with the screen', (eager) => { (eager.routeVariants[ASSISTANT] as { maxBrotliKB: number }).maxBrotliKB = 579 }, 'routeVariants must match the committed test pin exactly'],
+      ['another entry choosing the variant', (eager) => { (eager.routeVariants[ASSISTANT] as { whenEntry: string }).whenEntry = 'components/screens/NotFoundContent.tsx' }, 'routeVariants must match the committed test pin exactly'],
+      ['a variant for another route', (eager) => { eager.routeVariants['(tabs)/travels/[param].html'] = { whenEntry: 'components/screens/assistant/AssistantScreen.tsx', whenHtml: 'data-testid="assistant-screen"', maxRequests: 27, maxBrotliKB: 690 } }, 'routeVariants must match the committed test pin exactly'],
+      ['another screen marker', (eager) => { (eager.routeVariants[ASSISTANT] as { whenHtml: string }).whenHtml = '<html' }, 'routeVariants must match the committed test pin exactly'],
+      ['the variant removed', (eager) => { delete (eager as Record<string, unknown>).routeVariants }, 'routeVariants must match the committed test pin exactly'],
+      ['one more request without the screen', (eager) => { eager.maxRequestsByRoute[ASSISTANT] = 9 }, 'eager request limits must match the committed test pin exactly'],
+      ['0.1 KiB more without the screen', (eager) => { eager.maxBrotliKBByRoute[ASSISTANT] = 394.4 }, `maxBrotliKBByRoute.${ASSISTANT} must stay at or below 394.3 KiB`],
+      ['the base request row removed', (eager) => { delete eager.maxRequestsByRoute[ASSISTANT] }, `${ASSISTANT} needs its maxRequestsByRoute row`],
+    ])('rejects %s', (_label, change, message) => {
+      expect(validationError(() => {})).toBe('')
+      expect(validationError(change)).toContain(message)
+    })
+
+    it('declares a variant for every route that delivers a lazy screen, and no other', () => {
+      const declared = (readRouteVariants(JSON.parse(fs.readFileSync(budgetPath, 'utf8')).eager) as { route: string; whenEntry: string }[])
+        .map(({ route, whenEntry }) => [route, whenEntry])
+      const delivered = (ROUTE_EAGER_LAZY_SCREENS as [string, string][])
+        .map(([route, screen]) => [path.posix.relative('app', route).replace(/\.[jt]sx?$/, '.html'), screen])
+      expect(declared).toEqual(delivered)
+    })
+
+    // The guard and the planner choose the rows from the build itself; here the facts are the screen chunk and
+    // the screen in the route's HTML. A chunk next to the not-found route (broken compile gate, #2738, or
+    // EXPO_PUBLIC_AI_ASSISTANT=0, which Metro compiles in) keeps the rows of the build without the screen.
+    it.each([
+      { screen: false, rendered: false, scripts: 8, breach: false },
+      { screen: false, rendered: false, scripts: 9, breach: true },
+      { screen: true, rendered: true, scripts: 19, breach: false },
+      { screen: true, rendered: true, scripts: 20, breach: true },
+      { screen: true, rendered: false, scripts: 19, breach: true },
+    ])('guard: screen chunk = $screen, screen in HTML = $rendered, $scripts scripts on /assistant -> request breach = $breach', ({ screen, rendered, scripts, breach }) => {
+      const tmpDir = makeTempDir('bundle-route-variant-guard-')
+      try {
+        const committed = requireRecord(JSON.parse(fs.readFileSync(budgetPath, 'utf8')).eager, 'bundle budget.eager')
+        const variant = EAGER_ROUTE_VARIANTS[ASSISTANT]
+        const jsDir = path.join(tmpDir, 'js')
+        const htmlDir = path.join(tmpDir, 'html')
+        fs.mkdirSync(jsDir)
+        fs.mkdirSync(htmlDir)
+        // The screen chunk is one of the route's scripts when the build has it.
+        const names = Array.from({ length: scripts }, (_, index) =>
+          screen && index === 0 ? `${variantChunkName(variant.whenEntry)}-0123abcd.js` : `part${index}-0123abcd.js`)
+        for (const name of names) fs.writeFileSync(path.join(jsDir, name), `globalThis.${name.replace(/\W/g, '_')}=1;`)
+        const body = rendered ? `<div ${variant.whenHtml}></div>` : '<div data-testid="not-found"></div>'
+        fs.writeFileSync(path.join(htmlDir, 'assistant.html'), body + names.map((name) => `<script src="/_expo/static/js/web/${name}" defer></script>`).join(''))
+        const testBudgetPath = path.join(tmpDir, 'budget.json')
+        fs.writeFileSync(testBudgetPath, JSON.stringify({
+          tolerancePct: 0,
+          chunks: {},
+          eager: {
+            htmlRoutes: true, chunks: [], tolerancePct: 0, maxRequests: committed.maxRequests, maxBrotliKB: committed.maxBrotliKB,
+            maxRequestsByRoute: { [ASSISTANT]: requireRecord(committed.maxRequestsByRoute, 'requests')[ASSISTANT] },
+            maxBrotliKBByRoute: { [ASSISTANT]: requireRecord(committed.maxBrotliKBByRoute, 'bytes')[ASSISTANT] },
+            routeVariants: committed.routeVariants,
+          },
+        }))
+        const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+          BUNDLE_BUDGET_JS_DIR: jsDir, BUNDLE_BUDGET_HTML_DIR: htmlDir, BUNDLE_BUDGET_CONFIG: testBudgetPath,
+        })
+        const output = JSON.parse(result.stdout)
+        const labels = (output.breaches as { label: string; actual?: number; max?: number }[])
+        expect(output.eagerRouteVariants).toEqual(screen && rendered ? [{ route: 'assistant.html', chunk: 'AssistantScreen' }] : [])
+        expect(labels).toEqual(breach
+          ? [{ label: 'EAGER (requests, assistant.html)', actual: scripts, max: screen && rendered ? variant.maxRequests : 8 }]
+          : [])
+        expect(result.status).toBe(breach ? 1 : 0)
+      } finally { fs.rmSync(tmpDir, { recursive: true, force: true }) }
+    })
   })
 
   it('keeps the committed bundle budget spare at or below five percent', () => {

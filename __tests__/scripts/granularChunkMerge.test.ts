@@ -649,6 +649,42 @@ function serializedModule(file: string, body = '', edges: [string, string | null
   }
 }
 
+type SerializedModule = ReturnType<typeof serializedModule>
+
+/** The raw plan with its test modules replaced by serializable ones. */
+function serializedPlan(raw: ReturnType<typeof makePlan>, modules: Map<string, SerializedModule>) {
+  return {
+    ...raw,
+    entryPoints: raw.entryPoints.map((entry) => ({ ...entry, module: modules.get(path.relative(ROOT, entry.module.path))! })),
+    rawAtoms: raw.rawAtoms.map((atom) => ({ ...atom, modules: new Set([...atom.modules].map((module) => modules.get(path.relative(ROOT, module.path))!)) })),
+    dependentEntriesByModule: new Map([...raw.dependentEntriesByModule].map(([module, owners]) => [modules.get(path.relative(ROOT, module.path))!, owners])),
+    workerEntries: [] as SerializedModule[],
+  }
+}
+
+/** Serializer context of a production web export over `modules`, with a recording ID allocator. */
+function serializationContext(modules: Map<string, SerializedModule>) {
+  const runtime = fs.readFileSync(require.resolve('metro-runtime/src/polyfills/require'), 'utf8')
+  const script = (file: string, code: string) => ({ ...serializedModule(file), output: [{ type: 'js/script', data: { code, lineCount: code.split('\n').length, map: [] } }] })
+  const preModules = [script('prelude.js', getPreludeCode({ isDev: false, globalPrefix: '' })), script('runtime.js', runtime)]
+  const ids = new Map<string, number>()
+  const calls: string[] = []
+  const priorities = jest.fn(getGranularModuleIdPriorities)
+  const context = {
+    entryFile: at('entry.js'), preModules,
+    graph: { dependencies: new Map([...modules.values()].map((module) => [module.path, module])), entryPoints: new Set([at('entry.js')]), transformOptions: { platform: 'web', customTransformOptions: { environment: 'client' } } },
+    options: {
+      projectRoot: ROOT, serverRoot: ROOT, dev: false, runModule: true, modulesOnly: false, globalPrefix: '', includeAsyncPaths: false,
+      createModuleId(file: string) { calls.push(file); if (!ids.has(file)) ids.set(file, ids.size); return ids.get(file)! },
+      getRunModuleStatement: (id: number) => `__r(${id});`,
+      serializerOptions: { exporting: true, splitChunks: true, includeSourceMaps: false },
+    },
+    serializerConfig: { unstable_prepareWebChunkMetadata: prepareWebChunkMetadata, unstable_getGranularModuleIdPriorities: priorities, getModulesRunBeforeMainModule: () => [] as string[] },
+    serializeChunkOptions: { chunkingStrategy: 'granular', includeSourceMaps: false },
+  }
+  return { context, ids, calls, priorities }
+}
+
 function serializationFixture(unrelated = false, worker = false) {
   const entries: [string, 'initial' | 'dynamic'][] = [
     ['entry.js', 'initial'], [fixtureHome, 'dynamic'], [fixtureDetail, 'dynamic'], [fixtureProfile, 'dynamic'],
@@ -679,38 +715,14 @@ function serializationFixture(unrelated = false, worker = false) {
     if (file === 'unrelated-y.ts') body = `e.value="y";/*${entropy(50000, 5)}*/`
     return [file, serializedModule(file, body, edges)] as const
   }))
-  const plan = {
-    ...raw,
-    entryPoints: raw.entryPoints.map((entry) => ({ ...entry, module: modules.get(path.relative(ROOT, entry.module.path))! })),
-    rawAtoms: raw.rawAtoms.map((atom) => ({ ...atom, modules: new Set([...atom.modules].map((module) => modules.get(path.relative(ROOT, module.path))!)) })),
-    dependentEntriesByModule: new Map([...raw.dependentEntriesByModule].map(([module, owners]) => [modules.get(path.relative(ROOT, module.path))!, owners])),
-    workerEntries: [] as ReturnType<typeof serializedModule>[],
-  }
+  const plan = serializedPlan(raw, modules)
   if (worker) {
     const target = serializedModule('worker.js', 'e.value="worker";', [['core.ts', null]])
     modules.set('worker.js', target)
     plan.workerEntries.push(target)
     modules.get('entry.js')!.dependencies.set('worker', { absolutePath: target.path, data: { key: 'worker', name: 'worker.js', data: { asyncType: 'worker' } } })
   }
-  const runtime = fs.readFileSync(require.resolve('metro-runtime/src/polyfills/require'), 'utf8')
-  const script = (file: string, code: string) => ({ ...serializedModule(file), output: [{ type: 'js/script', data: { code, lineCount: code.split('\n').length, map: [] } }] })
-  const preModules = [script('prelude.js', getPreludeCode({ isDev: false, globalPrefix: '' })), script('runtime.js', runtime)]
-  const ids = new Map<string, number>()
-  const calls: string[] = []
-  const priorities = jest.fn(getGranularModuleIdPriorities)
-  const ctx = {
-    entryFile: at('entry.js'), preModules,
-    graph: { dependencies: new Map([...modules.values()].map((module) => [module.path, module])), entryPoints: new Set([at('entry.js')]), transformOptions: { platform: 'web', customTransformOptions: { environment: 'client' } } },
-    options: {
-      projectRoot: ROOT, serverRoot: ROOT, dev: false, runModule: true, modulesOnly: false, globalPrefix: '', includeAsyncPaths: false,
-      createModuleId(file: string) { calls.push(file); if (!ids.has(file)) ids.set(file, ids.size); return ids.get(file)! },
-      getRunModuleStatement: (id: number) => `__r(${id});`,
-      serializerOptions: { exporting: true, splitChunks: true, includeSourceMaps: false },
-    },
-    serializerConfig: { unstable_prepareWebChunkMetadata: prepareWebChunkMetadata, unstable_getGranularModuleIdPriorities: priorities, getModulesRunBeforeMainModule: () => [] as string[] },
-    serializeChunkOptions: { chunkingStrategy: 'granular', includeSourceMaps: false },
-  }
-  return { plan: mergeGranularChunkPlan(plan, { options: { projectRoot: ROOT } }), context: ctx, modules, ids, calls, priorities }
+  return { plan: mergeGranularChunkPlan(plan, { options: { projectRoot: ROOT } }), ...serializationContext(modules), modules }
 }
 
 type Fixture = ReturnType<typeof serializationFixture>
@@ -745,6 +757,7 @@ async function policyFor(unrelated = false): Promise<Policy> {
 type Policy = {
   htmlRoutes: boolean; maxRequests: number; maxBrotliKB: number; tolerancePct: number
   maxRequestsByRoute: Record<string, number>; maxBrotliBytesByRoute: Record<string, number>; maxBrotliKBByRoute?: Record<string, number>
+  routeVariants?: Record<string, { whenEntry: string; whenHtml: string; maxRequests: number; maxBrotliKB: number }>
 }
 async function withPolicy<T>(policy: Policy, action: () => Promise<T>) {
   const exists = fs.existsSync
@@ -848,6 +861,22 @@ describe('measured single-split serialization', () => {
     const result = await refined(limited)
     expect(result.emissions).toHaveLength(1)
     expect(result.assets).toBe(result.emissions[0].assets)
+  })
+
+  // The pins describe the production configuration; a local or e2e export compiles in what its .env turns on
+  // and may start above one. #3440 threw here and no such build could be exported at all.
+  it('leaves a plan that is already above a request pin as planned instead of aborting the export', async () => {
+    const over = { ...policy, maxRequestsByRoute: { ...policy.maxRequestsByRoute, 'detail.html': policy.maxRequestsByRoute['detail.html'] - 1 } }
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const result = await refined(over)
+      // The byte pin of the home route is violated too, yet no cut is tried: one emission, its assets returned.
+      expect(result.emissions).toHaveLength(1)
+      expect(result.assets).toBe(result.emissions[0].assets)
+      expect(warn.mock.calls.map(([message]) => String(message))).toEqual([
+        expect.stringMatching(new RegExp(`refinement skipped: .*detail\\.tsx \\((\\d+) > ${over.maxRequestsByRoute['detail.html']}\\)$`)),
+      ])
+    } finally { warn.mockRestore() }
   })
 
   it('supports the legacy rounded KiB constraint with the same actual-byte basis', async () => {
@@ -1059,5 +1088,90 @@ describe('measured single-split serialization', () => {
     expect(() => recorded.context.options.createModuleId('late', 'web')).toThrow('sealed')
     expect(receiver.calls).toBe(3)
     expect(receiver.createModuleId).toBe(ctx.options.createModuleId)
+  })
+})
+
+describe('request pin of a route that delivers its lazy screen (#3370)', () => {
+  const ROUTE = 'app/(tabs)/assistant.tsx'
+  const SCREEN = 'components/screens/assistant/AssistantScreen.tsx'
+  const PIN = '(tabs)/assistant.html'
+
+  // The route chunk imports the screen lazily; the screen shares `cards.ts` with /search.
+  function assistantFixture(withScreen: boolean) {
+    // The home route is required by the module ID priorities of the real serializer.
+    const routes = ['app/_layout.tsx', fixtureHome, ROUTE, 'app/(tabs)/search.tsx']
+    const entries: [string, 'initial' | 'dynamic'][] = [
+      ['entry.js', 'initial'], ...routes.map((route): [string, 'dynamic'] => [route, 'dynamic']),
+      ...(withScreen ? [[SCREEN, 'dynamic'] as [string, 'dynamic']] : []),
+    ]
+    const search = entries.findIndex(([entry]) => entry === 'app/(tabs)/search.tsx')
+    const atoms: [number[], string[]][] = entries.map(([entry], index): [number[], string[]] => [[index], [entry]])
+    if (withScreen) {
+      atoms[entries.length - 1][1].push('screen-only.ts')
+      atoms.push([[search, entries.length - 1], ['cards.ts']])
+    } else {
+      atoms[search][1].push('cards.ts')
+    }
+    const raw = makePlan(entries, atoms)
+    const modules = new Map(raw.rawAtoms.flatMap((atom) => [...atom.modules]).map((module) => {
+      const file = path.relative(ROOT, module.path)
+      let edges: [string, string | null][] = []
+      if (file === 'entry.js') edges = entries.slice(1).map(([entry]) => [entry, 'async'])
+      if (file === ROUTE && withScreen) edges = [[SCREEN, 'async']]
+      if (file === SCREEN) edges = [['screen-only.ts', null], ['cards.ts', null]]
+      if (file === 'app/(tabs)/search.tsx') edges = [['cards.ts', null]]
+      return [file, serializedModule(file, 'e.value="module";', edges)] as const
+    }))
+    return { plan: mergeGranularChunkPlan(serializedPlan(raw, modules), { options: { projectRoot: ROOT } }), ...serializationContext(modules) }
+  }
+  const requests = async (withScreen: boolean) => {
+    const fixture = assistantFixture(withScreen)
+    return routeAssets((await emit(fixture.plan, fixture.context)).assets, ROUTE).length
+  }
+  const refine = (withScreen: boolean, policy: Policy) => {
+    const fixture = assistantFixture(withScreen)
+    return withPolicy(policy, () => refineGranularChunkPlan(fixture.plan, fixture.context, emit)) as Promise<ScriptAsset[]>
+  }
+  const policyOf = (without: number, variant?: number): Policy => ({
+    htmlRoutes: true, maxRequests: 27, maxBrotliKB: 1000, tolerancePct: 0, maxBrotliBytesByRoute: {},
+    maxRequestsByRoute: { [PIN]: without }, maxBrotliKBByRoute: { [PIN]: 900 },
+    ...(variant == null ? {} : { routeVariants: { [PIN]: { whenEntry: SCREEN, whenHtml: 'data-testid="assistant-screen"', maxRequests: variant, maxBrotliKB: 950 } } }),
+  })
+  // What the planner reports when the planned chunks of the route are above the pin it priced them against.
+  const overPin = async (withScreenInBuild: boolean, policy: Policy) => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const assets = await refine(withScreenInBuild, policy)
+      expect(assets).toEqual(expect.any(Array))
+      const messages = warn.mock.calls.map(([message]) => String(message))
+      expect(messages.every((message) => message.includes('eager request pins exceeded'))).toBe(true)
+      return messages.map((message) => /assistant\.tsx \((\d+ > \d+)\)/.exec(message)?.[1] ?? message)
+    } finally { warn.mockRestore() }
+  }
+  let without: number
+  let withScreen: number
+  beforeAll(async () => { without = await requests(false); withScreen = await requests(true) })
+
+  it('the screen adds requests to its route: one pin cannot hold both builds', () => {
+    expect(withScreen).toBeGreaterThan(without)
+  })
+
+  it('a build with the screen is priced by the variant pin: within it at the pinned count, over it one request above', async () => {
+    expect(await overPin(true, policyOf(without, withScreen))).toEqual([])
+    expect(await overPin(true, policyOf(without, withScreen - 1))).toEqual([`${withScreen} > ${withScreen - 1}`])
+  })
+
+  it('without a variant the build with the screen is priced by the pin of the build without it (config of b1e5eee1f)', async () => {
+    expect(await overPin(true, policyOf(without))).toEqual([`${withScreen} > ${without}`])
+  })
+
+  it('a build without the screen keeps its own pin: the variant gives it no spare', async () => {
+    expect(await overPin(false, policyOf(without, 27))).toEqual([])
+    expect(await overPin(false, policyOf(without - 1, 27))).toEqual([`${without} > ${without - 1}`])
+  })
+
+  it('a malformed variant fails the export instead of leaving the route unpinned', async () => {
+    const broken = { ...policyOf(without, withScreen), maxRequestsByRoute: {} }
+    await expect(refine(true, broken)).rejects.toThrow('eager.routeVariants')
   })
 })

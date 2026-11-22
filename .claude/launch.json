@@ -1141,7 +1141,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "mkdir -p \"$PWD/.codex-temp/assistant-local\" && export PATH=/opt/homebrew/opt/node@22/bin:$PATH; if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then llama-server -m \"$HOME/metravel-ai/gguf/metravel-llm-v7-Q4_K_M.gguf\" --host 127.0.0.1 --port 8080 -c 8192 --parallel 2 -ngl 99 --jinja --no-warmup >\"$PWD/.codex-temp/assistant-local/llama-server.log\" 2>&1 & LLAMA=$!; trap 'kill $LLAMA 2>/dev/null' EXIT INT TERM; fi; AI_INDEX_DIR=.codex-temp/ai-index/dist BACKEND_URL=https://metravel.by AI_LLM_URL=http://127.0.0.1:8080 AI_DEMAND_LOG=.codex-temp/assistant-local/demand.jsonl PORT=8787 npm run -s ai:assist:dev"
+        "mkdir -p \"$PWD/.codex-temp/assistant-local\" && export PATH=/opt/homebrew/opt/node@22/bin:$PATH; if ! curl -sf http://127.0.0.1:8080/health >/dev/null 2>&1; then llama-server -m \"$HOME/metravel-ai/gguf/metravel-llm-v7-Q4_K_M.gguf\" --host 127.0.0.1 --port 8080 -c 8192 --parallel 2 -ngl 99 --jinja --no-warmup >\"$PWD/.codex-temp/assistant-local/llama-server.log\" 2>&1 & LLAMA=$!; trap 'kill $LLAMA 2>/dev/null' EXIT INT TERM; fi; WORLD=.codex-temp/3357/dist-v1; if [ -f \"$WORLD/manifest.json\" ]; then export AI_WORLD_INDEX_DIR=\"$WORLD\"; else echo \"[assistant-local] внешний индекс $WORLD не найден: блок «Ещё в мире» выключен (npm run ai:index:world, docs/features/ai-assistant.md → «Локальный стек для проверки»)\" >&2; fi; AI_INDEX_DIR=.codex-temp/ai-index/dist BACKEND_URL=https://metravel.by AI_LLM_URL=http://127.0.0.1:8080 AI_DEMAND_LOG=.codex-temp/assistant-local/demand.jsonl AI_ASK_DAILY_LIMIT=100000 AI_ASK_OFFTOPIC_STRIKES=100000 PORT=8787 npm run -s ai:assist:dev"
       ],
       "port": 8787,
       "autoPort": false

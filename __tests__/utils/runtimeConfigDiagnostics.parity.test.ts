@@ -125,4 +125,19 @@ describe('runtime config diagnostics parity (app vs script)', () => {
       expect.objectContaining({ code: 'DEV_MOCK_FLAG_ENABLED', severity: 'error' }),
     );
   });
+
+  // Коды в `.d.ts` пишутся руками: удалённый код остаётся в типе, а новый в него не попадает,
+  // и `switch` по `code` в приложении молча теряет ветку (#3297: PROVIDER_REMOVED не был объявлен).
+  it('declares in the types exactly the diagnostic codes the JS contract emits', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const read = (file: string) => fs.readFileSync(path.join(process.cwd(), 'utils', file), 'utf8');
+    const emitted = [...read('runtimeConfigContract.js').matchAll(/\bcode:\s*'([A-Z0-9_]+)'/g)].map((match) => match[1]);
+    const declaration = /export type RuntimeConfigDiagnostic = \{\s*code:([^;]+);/.exec(read('runtimeConfigContract.d.ts'));
+    const declared = [...(declaration?.[1] ?? '').matchAll(/'([A-Z0-9_]+)'/g)].map((match) => match[1]);
+
+    expect(emitted.length).toBeGreaterThan(10);
+    expect([...new Set(declared)].sort()).toEqual([...new Set(emitted)].sort());
+    expect(declared).toHaveLength(new Set(declared).size);
+  });
 });

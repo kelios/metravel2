@@ -966,6 +966,14 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
     expect(readFileSync(join(process.cwd(), 'services/ai-assist/Dockerfile'), 'utf8')).not.toContain('AI_ASSIST_EVAL_TRACE')
   })
 
+  it('порог блока «не по теме» — продуктовый по умолчанию; AI_ASK_OFFTOPIC_STRIKES поднимает его для локального стека, образ прода его не задаёт', () => {
+    expect(loadConfig({}).askOffTopicStrikes).toBe(AI_OFFTOPIC_STRIKES_TO_BLOCK)
+    expect(loadConfig({ AI_ASK_OFFTOPIC_STRIKES: '100000' }).askOffTopicStrikes).toBe(100000)
+    expect(loadConfig({ AI_ASK_OFFTOPIC_STRIKES: '0' }).askOffTopicStrikes).toBe(1)
+    expect(() => loadConfig({ AI_ASK_OFFTOPIC_STRIKES: 'много' })).toThrow('AI_ASK_OFFTOPIC_STRIKES')
+    expect(readFileSync(join(process.cwd(), 'services/ai-assist/Dockerfile'), 'utf8')).not.toContain('AI_ASK_OFFTOPIC_STRIKES')
+  })
+
   it('отказ самой модели — done off_topic/model_refusal без страйка; лимит списан', async () => {
     const { server, limits } = makeServer({ generator: fakeGenerator(() => OFFTOPIC_REPLY_RU) })
     await listen(server)

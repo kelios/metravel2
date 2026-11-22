@@ -231,6 +231,23 @@ bytes (owner decision 2026-11-12); the pins sit at the measurement plus 2,
 because the plan is greedy and a count moves by one or two with unrelated
 import changes.
 
+A route that delivers a lazy screen in its own script set (#3370,
+`ROUTE_EAGER_LAZY_SCREENS`) has two script sets: without the screen (its
+feature is compiled out) and with it. The per-route rows above hold the build
+without the screen; `eager.routeVariants` holds the build whose plan has the
+screen's entry point (`whenEntry`). The chunk planner and the guard resolve the
+rows with one function, `scripts/lib/eagerRouteVariants.js`, from the build
+itself: the entry point in the plan, the chunk Expo names after it in the
+export. The guard also requires the screen in the route's HTML (`whenHtml`):
+a screen chunk next to a not-found route (broken compile gate, #2738) keeps
+the rows of the build without the screen. Both pins are held by the contract test.
+
+The verdict on request pins belongs to the guard on the release build. The
+planner does not abort an export whose planned chunks stand above a request
+pin: it leaves that plan unrefined and logs `[granular-chunks] eager request
+pins exceeded …`. Local and e2e exports compile in what `.env` turns on and may
+stand above the production pins.
+
 To change the budget, measure before and after on a production export
 (`node scripts/guard-bundle-budget.js --fail` with `BUNDLE_BUDGET_JS_DIR` and
 `BUNDLE_BUDGET_HTML_DIR` pointing at it) and record the numbers in the

@@ -23,6 +23,7 @@
 const fs = require('node:fs')
 const { createHash } = require('node:crypto')
 const path = require('path')
+const { resolveEagerRoutePolicy } = require('./eagerRouteVariants')
 
 // #3316: the ceiling of foreign factory bytes one HTML route may receive from
 // merged shared files. Until then groups merged on route-set similarity alone
@@ -809,13 +810,15 @@ function measureEagerAssets(assets, state, compressionCache) {
     const previous = result.get(key)
     result.set(key, { bytes: Math.max(previous?.bytes ?? 0, bytes), requests: Math.max(previous?.requests ?? 0, delivered.length) })
   })
-  // Normalized aliases share a pin; use their worst source-derived closure.
-  for (const [index, route] of state.routes.entries()) {
-    if (result.get(sourceRouteKey(route, state.applicationDir)).requests > state.limits[index]) {
-      throw invalidCandidate(`Eager request cap exceeded: ${route}`)
-    }
-  }
   return result
+}
+
+/** Routes whose measured script set exceeds its request pin; normalized aliases share a pin and their worst closure. */
+function requestPinExcess(measured, state) {
+  return state.routes.flatMap((route, index) => {
+    const { requests } = measured.get(sourceRouteKey(route, state.applicationDir))
+    return requests > state.limits[index] ? [`${route} (${requests} > ${state.limits[index]})`] : []
+  })
 }
 
 function eagerConstraints(measured, policy, defaultTolerance) {
@@ -891,11 +894,25 @@ async function refineGranularChunkPlan(plan, context, serializePlan) {
   if (!replaySupported || !recorder.supported() || serializationInputSignature(plan, recorder.context) !== before) return baseline.assets
   const root = context.options.serverRoot ?? context.options.projectRoot
   const budget = readBundleBudget(root)
-  const policy = budget?.eager
+  // #3370: a route that delivers a lazy screen is priced by the rows of the build it is in -
+  // the same rule and the same rows as scripts/guard-bundle-budget.js (./eagerRouteVariants.js).
+  const planEntries = new Set(plan.entryPoints.map((entry) => entry.module.path))
+  const policy = budget?.eager &&
+    resolveEagerRoutePolicy(budget.eager, (variant) => planEntries.has(path.join(root, variant.whenEntry))).policy
   const state = refinementState(plan, context, policy)
   if (!state.limits) return baseline.assets
   const cache = new Map()
   const measuredBaseline = measureEagerAssets(baseline.assets, state, cache)
+  // The pins describe the production configuration. A build with another feature set (local and
+  // e2e exports compile in what .env turns on) may start above a pin: #3440 aborted such an export
+  // here, so no e2e build existed on a machine whose .env differs from production. Refinement has
+  // nothing to offer a plan that is already over a request pin - it is left as planned, and the
+  // verdict stays with scripts/guard-bundle-budget.js, which fails a release build on the same rows.
+  const overPinned = requestPinExcess(measuredBaseline, state)
+  if (overPinned.length) {
+    console.warn(`[granular-chunks] eager request pins exceeded by the planned chunks, refinement skipped: ${overPinned.join(', ')}`)
+    return baseline.assets
+  }
   const constraints = eagerConstraints(measuredBaseline, policy, budget.tolerancePct)
   if ([...constraints.values()].every((row) => row.bytes <= row.limit)) return baseline.assets
   let best = null
@@ -914,6 +931,9 @@ async function refineGranularChunkPlan(plan, context, serializePlan) {
       result = await serializePlan(trial.plan, trialContext, frozenPriorities)
       throwIfCancelled(context)
       const measured = measureEagerAssets(result.assets, state, cache)
+      // A cut may not buy bytes with a request the route's pin does not have.
+      const excess = requestPinExcess(measured, state)
+      if (excess.length) throw invalidCandidate(`Eager request cap exceeded: ${excess.join(', ')}`)
       score = improvement(constraints, eagerConstraints(measured, policy, budget.tolerancePct))
     } catch (error) {
       throwIfCancelled(context)

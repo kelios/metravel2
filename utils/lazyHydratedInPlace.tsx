@@ -12,6 +12,13 @@
  * expo-router синхронно поднимает модули роутов. Здесь готовый модуль рисуется сразу, без `React.lazy`:
  * гидрация границы проходит с первой попытки. Чанк не готов (переход внутри приложения, сборка без
  * доставки чанка в HTML) — прежний `React.lazy`, выбор делается один раз и не меняется.
+ *
+ * Серверный рендер всегда идёт через `React.lazy`, хотя модуль там готов всегда (бандл один). Fizz
+ * рисует дерево рекурсией в одном стеке; `lazy` на первом рендере бросает промис, и сервер продолжает
+ * экран отдельной задачей — с чистого стека. Готовый модуль, нарисованный сразу, ставил первый рендер
+ * экрана вместе с первой инициализацией его модулей поверх всего дерева роутера: первый запрос
+ * `/assistant` к dev-серверу Metro падал с «Maximum call stack size exceeded» (HTTP 500). Разметка у
+ * обоих путей одна, гидрация на месте — дело клиента.
  */
 
 import React, { type ComponentType, type LazyExoticComponent } from 'react'
@@ -29,6 +36,9 @@ const isReadyModule = <P,>(value: unknown): value is ScreenModule<P> =>
   typeof (value as PromiseLike<unknown>).then !== 'function' &&
   (value as ScreenModule<P>).default != null
 
+/** Серверный рендер (SSR dev-сервера и экспорта): в Node нет `window`; на native и в браузере он есть. */
+const isServerRender = (): boolean => typeof window === 'undefined'
+
 /**
  * @param load вызов `import()` экрана — в том же выражении, что и флаг фичи (#2738)
  * @param onFirstRender один раз перед первым рендером экрана, в render-фазе: при гидрации серверная
@@ -44,7 +54,7 @@ export function lazyHydratedInPlace<P extends object>(load: () => MaybeReadyImpo
     onFirstRender?.()
     const pending = load()
     const result = pending._result
-    if (isReadyModule<P>(result)) {
+    if (!isServerRender() && isReadyModule<P>(result)) {
       Ready = result.default
       return Ready
     }

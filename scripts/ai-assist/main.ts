@@ -71,7 +71,7 @@ async function main(): Promise<void> {
     store: counterStore,
     clock: dayClock,
     dailyLimit: config.askDailyLimit,
-    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+    strikesToBlock: config.askOffTopicStrikes,
   })
   // #2885: помощник автора считает запросы отдельно от вопросов ассистента (из `AskLimits` нужна только квота).
   const authorDraftLimits = new AskLimits({
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   const generator = config.llmUrl ? createGenerator(config.llmUrl, { timeoutMs: config.llmTimeoutMs }) : null
   log(
     `/ai/ask: модель ${config.llmUrl ?? 'не задана (AI_LLM_URL)'}, лимит ${config.askDailyLimit}/сутки на IP, ` +
-      `блок после ${AI_OFFTOPIC_STRIKES_TO_BLOCK} вопросов не по теме, /ai/author-draft ${config.authorDraftDailyLimit}/сутки на IP, ` +
+      `блок после ${config.askOffTopicStrikes} вопросов не по теме, /ai/author-draft ${config.authorDraftDailyLimit}/сутки на IP, ` +
       `/ai/intent ${config.mapIntentDailyLimit}/сутки на IP, день по ${config.dayTimeZone}, ` +
       `счётчики ${redis ? 'redis' : 'в памяти'}, журнал ${config.demandLogPath}`,
   )
