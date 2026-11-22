@@ -19,13 +19,30 @@ VO_GAP = 2.0         # голос за кадром: паузы между фр�
 MAX_CUT, MAX_LIFT = 40.0, 12.0
 
 
-def rms_windows(path, win=WIN, half_sum=False):
-    """RMS (дБ) по окнам win секунд, моно 8 кГц. Нет файла — [].
-    half_sum: стерео в моно как 0,5·(L+R) — так сведена дорожка `_музыка.wav`, которую слушает audit_mix.py;
-    без этого музыка меряется иначе, чем её потом проверяют (некоррелированное стерео — до 3 дБ разницы)."""
+def rms_windows(path, win=WIN, half_sum=False, power=False):
+    """RMS (дБ) по окнам win секунд, 8 кГц. Нет файла — [].
+    power: как слышно в стерео-миксе — сумма мощностей каналов (моно-файл встаёт в микс на оба канала: +3 дБ).
+      Так меряет громкость и ebur128 (без K-фильтра). Автоуровни меряют всё так: s6 v2 (рецензент 22.11) — музыка
+      по моно-сумме ½(L+R) у широкого стерео тише на 3 дБ, чем звучит, и на видах выходила громче разговора.
+    half_sum: стерео в моно как 0,5·(L+R) — так сведена дорожка `_музыка.wav` для audit_mix.py."""
     if not path or not os.path.exists(path):
         return []
     n = int(round(8000 * win))
+    if power:
+        r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", path, "-vn", "-af",
+                            f"aresample=8000,asetnsamples=n={n}:p=0,astats=metadata=1:reset=1:measure_overall=none,"
+                            "ametadata=print:key=lavfi.astats.1.RMS_level,ametadata=print:key=lavfi.astats.2.RMS_level",
+                            "-f", "null", "-"], capture_output=True, text=True)
+        out, cur = [], None
+        for ch, v in re.findall(r"lavfi\.astats\.([12])\.RMS_level=(-?inf|-?[\d.]+)", r.stdout + r.stderr):
+            p_ = 10 ** (max(float(v), -120.0) / 10)
+            if ch == "1":
+                if cur is not None: out.append(cur * 2)            # моно: на оба канала
+                cur = p_
+            else:
+                out.append(cur + p_); cur = None
+        if cur is not None: out.append(cur * 2)
+        return [max(10 * math.log10(x + 1e-14), -120.0) for x in out]
     down = "pan=mono|c0=0.5*c0+0.5*c1" if half_sum else "aformat=channel_layouts=mono"
     r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", path, "-vn", "-af",
                         f"{down},aresample=8000,asetnsamples=n={n}:p=0,astats=metadata=1:reset=1,"
@@ -104,11 +121,26 @@ def merge(iv, gap=GAP):
     return [(s, e) for s, e in out]
 
 
+VIEW_BED = 7.0       # живой звук вида (прибой, ветер) уже у цели — музыка фоном на столько дБ ниже
+VIEW_FLOOR = -27.0   # и не тише этого (мощность стерео; ½(L+R) широкого трека на 3–6 дБ тише): ПРОВАЛ audit_mix — тише −35 дБ
+SPEECH_MIN = -42.0   # окно речи громче этого (−45 у audit_mix по моно-сумме + 3 дБ мощности стерео)
+
+
+def view_music(target, live_db):
+    """Уровень музыки на виде: в цель target метится сумма «музыка + живой звук» (энергетически), а не одна музыка —
+    s6 v2 (рецензент 22.11): прибой и ветер плюс музыка к уровню речи дали виды −12.4 LUFS при разговоре −13.0
+    и фильм −12.5. Музыке остаётся target минус живой звук; когда живой звук сам у цели — фоном
+    min(живой, цель) − VIEW_BED; не тише VIEW_FLOOR."""
+    room = 10 ** (target / 10) - 10 ** (live_db / 10)
+    need = 10 * math.log10(room) if room > 1e-12 else -120.0
+    return max(need, min(live_db, target) - VIEW_BED, VIEW_FLOOR)
+
+
 def speech_windows(w, rng):
-    """Окна речи: громче −45 дБ и не тише максимума отрезка на 20 дБ — как speech_mask в audit_mix.py."""
+    """Окна речи: громче SPEECH_MIN и не тише максимума отрезка на 20 дБ — как speech_mask в audit_mix.py."""
     rng = [i for i in rng if 0 <= i < len(w)]
     top = max((w[i] for i in rng), default=-120.0)
-    on = [i for i in rng if w[i] > -45 and w[i] >= top - 20]
+    on = [i for i in rng if w[i] > SPEECH_MIN and w[i] >= top - 20]
     return on or rng
 
 
@@ -119,16 +151,18 @@ def envelope(n, music, live, voice, speech_iv, adj):
     at = lambda w, i: w[i] if i < len(w) else -120.0
     win = lambda s, e: range(max(0, int(s / WIN)), min(n, int(math.ceil(e / WIN))))
     spans = [(win(s, e), live) for s, e in speech_iv]
-    spans += [(win(s, e), voice) for s, e in merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > -45], VO_GAP)]
+    spans += [(win(s, e), voice) for s, e in merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > SPEECH_MIN], VO_GAP)]
     h = int(1.5 / WIN)
     loc = lambda i, lo, hi: energy(music, range(max(lo, i - h), min(hi, i + h)))
     talk, levels = [None] * n, []
     for rng, w in spans:
         if not rng:
             continue
-        on = set(speech_windows(w, rng))
+        e_ = int(0.5 / WIN)                                                    # края (растворение 0,3–0,5 с) звучат соседом: немой
+        inner = range(rng.start + e_, rng.stop - e_) if len(rng) > 4 * e_ else rng   # «Сергей под мостом» (s6) мерил речь по соседу
+        on = set(speech_windows(w, inner))
         lv = energy(w, on)
-        if lv < -45:                                 # речь в расшифровке, а в звуке тихо (заглушено планом) — не приглушать
+        if lv < SPEECH_MIN:                          # речь в расшифровке, а в звуке тихо (заглушено планом) — не приглушать
             continue
         levels.append(lv)
         for i in rng:                                # речь рядом (±1,5 с): тихая фраза в громком блоке — своя музыка;
@@ -147,7 +181,8 @@ def envelope(n, music, live, voice, speech_iv, adj):
             j += 1
         for q in range(i, j):
             lm = loc(q, i, j)
-            tgt[q] = 0.0 if lm < -70 else max(-MAX_CUT, min(MAX_LIFT, (ref - VIEW_BELOW) - lm))
+            lb = energy(live, range(max(i, q - h), min(j, q + h)))
+            tgt[q] = 0.0 if lm < -70 else max(-MAX_CUT, min(MAX_LIFT, view_music(ref - VIEW_BELOW, lb) - lm))
         i = j
     a_, r_ = int(ATTACK / WIN), int(RELEASE / WIN)    # приглушение заранее и отпуск после фразы: минимум по окну
     g1 = [min(tgt[max(0, i - r_):min(n, i + a_ + 1)]) for i in range(n)]

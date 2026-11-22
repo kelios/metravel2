@@ -157,6 +157,19 @@ for i, s in enumerate(SEG):
     dL, dR = max(0.0, hL - hLa), max(0.0, hR - hRa)              # нехватка исходника слева/справа
     NF = nfL + nf + nfR                           # ровно NF кадров и NF*1600 сэмплов — звук и картинка куска одной длины
     src_in = ["-ss", f"{s['in'] - hLa:.3f}", "-t", f"{full - dL - dR + 0.1:.3f}", "-i", src]
+    # плашки и картинки по тому же пути, но с новым содержимым (текст справки поправили, имя то же — s6 v2, 22.11):
+    # отпечаток содержимого лежит рядом с куском; не совпал — кусок перерисовывается. Ключ кеша не меняется,
+    # поэтому старые куски не сбрасываются разом; кусок без отпечатка получает текущий.
+    imgs = sorted({o["file"] for o in s.get("broll", []) + s.get("cards", []) if o["file"].lower().endswith((".png", ".jpg", ".jpeg"))})
+    isig = KEY([hashlib.md5(open(f_, "rb").read()).hexdigest() if os.path.exists(f_) else "" for f_ in imgs]) if imgs else ""
+    sigf = vf[:-4] + ".img"
+    if isig: USED.add(sigf)
+    if isig and os.path.exists(vf) and not force:
+        try: old_sig = open(sigf).read().strip()
+        except OSError: old_sig = None
+        if old_sig is None: open(sigf, "w").write(isig)
+        elif old_sig != isig:
+            print(f"плашка изменилась — кусок {i} заново: {s.get('note', '')[:50]}", flush=True); force = True
     if force or not os.path.exists(vf):
         inputs = list(src_in)
         fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{TP(dL, dR)}[base0]"]
@@ -206,6 +219,7 @@ for i, s in enumerate(SEG):
         if r.returncode != 0:
             print("ОШИБКА картинки", i, s.get("note"), r.stderr[-500:]); sys.exit(1)
         os.replace(vf + ".part.mov", vf); n_v += 1; FRESH_V.add(i)
+        if isig: open(sigf, "w").write(isig)
         print(i, s.get("note", "")[:50], flush=True)
     if force or not os.path.exists(af):
         # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
@@ -298,7 +312,7 @@ subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i
 import re as _re
 for p_ in USED: os.utime(p_)
 _now = _time.time()
-_CACHE = _re.compile(r"^(?:(?:v|vb)_[0-9a-f]{12}\.mov|(?:a|ab)_[0-9a-f]{12}\.wav|\d{3}_[0-9a-f]{8}\.mov|block_\d+\.mov)(?:\.part\.(?:mov|wav))?$|^list\.txt$")
+_CACHE = _re.compile(r"^(?:v_[0-9a-f]{12}\.img|(?:v|vb)_[0-9a-f]{12}\.mov|(?:a|ab)_[0-9a-f]{12}\.wav|\d{3}_[0-9a-f]{8}\.mov|block_\d+\.mov)(?:\.part\.(?:mov|wav))?$|^list\.txt$")
 for p_ in _glob.glob(os.path.join(wd, "*")):
     if p_ in USED or not _CACHE.match(os.path.basename(p_)) or not os.path.isfile(p_): continue
     if "--prune" in a or _now - os.path.getmtime(p_) > 14 * 86400:
@@ -368,14 +382,14 @@ if cues:
         subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(rfc), "-map", "[r]", "-t", f"{t:.3f}",
                         "-c:a", "pcm_f32le", rawp], check=True, stdin=subprocess.DEVNULL)   # float: поднятые пики не режутся до огибающей
         n_w = int(math.ceil(t / AL.WIN))
-        R_m, R_b, R_v = AL.rms_windows(rawp, half_sum=True), AL.rms_windows(base), AL.rms_windows(voicep)
+        R_m, R_b, R_v = (AL.rms_windows(x, power=True) for x in (rawp, base, voicep))   # как слышно в стерео-миксе (s6 v2)
         segi = [(plan["sources"][s_["src"]], s_["in"], s_["out"], p_[3], p_[4], (s_.get("gain_db", 0) or 0) <= -40) for s_, p_ in zip(SEG, pos)]
         if WR:
             speech = AL.live_speech(segi, WR, ALIAS)
             if not speech: print("автоуровни: в расшифровках --words-root не нашлось слов отрезков — живая речь не приглушает музыку", flush=True)
         else:                                # без расшифровок — по энергии живого звука в незаглушённых отрезках (грубее)
             print("автоуровни: нет --words-root — речь по энергии, виды с громким ветром приглушат музыку", flush=True)
-            loud = [(i * AL.WIN, (i + 1) * AL.WIN) for i in range(n_w) if i < len(R_b) and R_b[i] > -32
+            loud = [(i * AL.WIN, (i + 1) * AL.WIN) for i in range(n_w) if i < len(R_b) and R_b[i] > -29
                     and not any(m_ and t0_ <= i * AL.WIN < t0_ + (b_ - a_) * k_ for _, a_, b_, t0_, k_, m_ in segi)]
             speech = AL.merge(loud)
         adj = [(c["_a"], c["_b"], float(c["auto_adj_db"])) for c in seq if c.get("auto_adj_db")]

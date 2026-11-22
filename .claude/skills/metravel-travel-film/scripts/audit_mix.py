@@ -98,17 +98,17 @@ def speech_mask(w, i0, i1):
 for s in segs:                              # ЗАПАС: энергия речи против энергии музыки в моменты речи
     i0, i1 = int(round(s["start"] / WIN)), int(round(s["end"] / WIN))
     if i1 - i0 < 2 or not R_mus: continue
+    sw = src_words(s) if root else None
+    nw = len([w for w in sw if len(w) > 1]) if sw else 0
+    live_talk = is_talk(nw, s["end"] - s["start"]) and bool(R_base)
+    if live_talk: TALK_SEGS.append((s["start"], s["end"]))   # и при голосе за кадром на том же отрезке (s3 «три часа дня»)
     vo_on = speech_mask(R_voi, i0, i1)
     if R_voi and sum(1 for i in range(i0, i1) if vo_on(i)) >= 2:       # голос за кадром: тизер, «ранее», связки
         ev, emv = energy_db(R_voi, i0, i1, vo_on), energy_db(R_mus, i0, i1, vo_on)
         if emv > -60 and ev - emv < 10:
             F.append((s["start"], "ЗАПАС", s["note"], f"голос за кадром {ev:.1f}, музыка {emv:.1f} дБ — запас {ev - emv:.1f} (нужно ≥ 10, цель 12–15)", round(ev - emv, 1)))
         continue
-    sw = src_words(s) if root else None
-    nw = len([w for w in sw if len(w) > 1]) if sw else 0
-    # речь, а не вид: whisper находит в ветре 3–4 «слова» (s3 v12: «город сверху», «поля», «мол и маяк»)
-    if is_talk(nw, s["end"] - s["start"]) and R_base:
-        TALK_SEGS.append((s["start"], s["end"]))
+    if live_talk:                               # речь, а не вид: галлюцинации whisper отсеяны в src_words
         on = speech_mask(R_base, i0, i1)
         if sum(1 for i in range(i0, i1) if on(i)) < 2: continue
         eb, em = energy_db(R_base, i0, i1, on), energy_db(R_mus, i0, i1, on)
