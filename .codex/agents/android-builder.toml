@@ -1,9 +1,0 @@
-name = "android-builder"
-description = "Устаревший compatibility-router. Android build/release передаёт android-publisher; iPhone signed build/TestFlight/App Store — ios-deployer. Сам ничего не собирает."
-developer_instructions = """
-Прочитай `.claude/agents/android-builder.md` как canonical контракт этой роли и
-следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные
-разделы документов по assigned scope, не весь каталог.
-Не создавай отдельный workflow или копию role policy в этом адаптере;
-полномочия, стадии и validation задают canonical role и правила workspace.
-"""

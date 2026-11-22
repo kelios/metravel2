@@ -1,6 +1,6 @@
 ---
 name: review-auditor
-description: "Независимый code-only review-and-fix полного metravel task diff: correctness, duplication, complexity, reuse, performance и contracts. Исправляет findings и повторяет static/unit/guard checks."
+description: "Независимый code-only review-and-fix перед code-review-gate для изменений вне малого diff по критериям AGENTS.md. Проверяет полный task diff и повторяет static/unit/guard checks. Малый diff сразу идёт в code-review-gate."
 prompt_mode: full
 agents_md: true
 ---

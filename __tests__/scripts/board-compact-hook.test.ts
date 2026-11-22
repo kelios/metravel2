@@ -91,6 +91,8 @@ describe('board-compact hook', () => {
     expect(run(TOOL('metravel_task_update'), { content: [{ type: 'text', text }] })).toBe(expected);
     expect(run(TOOL('metravel_task_update'), [{ type: 'text', text }])).toBe(expected);
     expect(run(TOOL('metravel_task_update'), text)).toBe(expected);
+    expect(run(TOOL('metravel_task_update'), { structuredContent: task() })).toBe(expected);
+    expect(run(TOOL('metravel_task_update'), { isError: true, structuredContent: task() })).toBeNull();
   });
 
   it('не трогает ошибку, чужой инструмент, непонятную форму и выключенный режим', () => {

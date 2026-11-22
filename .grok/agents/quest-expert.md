@@ -1,6 +1,6 @@
 ---
 name: quest-expert
-description: "Код и тулинг quests: список, детали, прохождение, ответы, offline, печать, SSG, сканы и миграции. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент *-quest-data.js и гео — отдельные агенты."
+description: "Код и инструменты квестов: интерфейс, движок проверки ответа, прогресс, offline, печать, SSG, сканы и миграции. Отказы конкретного ответа по попыткам игрока разбирает quest-friction-analyst, координаты проверяет quest-geo-verifier."
 prompt_mode: full
 agents_md: true
 ---

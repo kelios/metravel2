@@ -19,45 +19,15 @@
  * Fail-open: любой сбой разбора, ответ-ошибка или `BOARD_COMPACT=0` — исходный
  * ответ остаётся как есть. Хук ничего не блокирует и на борд не ходит.
  */
+import { boardToolName, decodeBoardResponse, isBoardError } from './board-tool.mjs';
+import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 
-const TOOL_PREFIX = 'mcp__metravel-task-board__';
 const TITLE_MAX = 110;
 
 export function parseResponse(response) {
-  if (response == null) return null;
-  if (typeof response === 'string') {
-    try {
-      return parseResponse(JSON.parse(response));
-    } catch {
-      return null;
-    }
-  }
-  if (Array.isArray(response)) {
-    if (response.length > 0 && response.every(isContentBlock)) return parseBlocks(response);
-    return response;
-  }
-  if (typeof response === 'object') {
-    if (response.isError === true || response.is_error === true) return null;
-    if (Array.isArray(response.content) && response.content.every(isContentBlock)) {
-      return parseBlocks(response.content);
-    }
-    return response;
-  }
-  return null;
-}
-
-function isContentBlock(block) {
-  return block && typeof block === 'object' && typeof block.type === 'string' && 'text' in block;
-}
-
-function parseBlocks(blocks) {
-  const text = blocks.map((block) => (typeof block.text === 'string' ? block.text : '')).join('');
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
+  const data = decodeBoardResponse(response);
+  return isBoardError(data) ? null : data;
 }
 
 function isTask(value) {
@@ -147,11 +117,10 @@ export function compactList(data) {
 }
 
 export function compactOutput(toolName, response) {
-  if (typeof toolName !== 'string' || !toolName.startsWith(TOOL_PREFIX)) return null;
+  const tool = boardToolName(toolName);
+  if (!tool) return null;
   const data = parseResponse(response);
   if (data == null) return null;
-  if (!Array.isArray(data) && data.status === 'error') return null;
-  const tool = toolName.slice(TOOL_PREFIX.length);
   if (tool === 'metravel_task_update' || tool === 'metravel_task_create') {
     return isTask(data) ? compactReceipt(data) : null;
   }
@@ -160,7 +129,7 @@ export function compactOutput(toolName, response) {
   return null;
 }
 
-function main() {
+export function main() {
   if (process.env.BOARD_COMPACT === '0') return;
   let input;
   try {
@@ -180,4 +149,4 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

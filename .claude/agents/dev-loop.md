@@ -99,7 +99,7 @@ tester собирает его только после review в `testing`.
 
 ## Правила кода
 
-- Изображения в фичах → `components/ui/ImageCardMedia` (fit=contain, blur из DOM с первого кадра; никаких content-visibility / offscreen-lazy на web).
+- Изображения в фичах → `components/ui/ImageCardMedia` (`contain`, на web — `dominant_color`, на native — blur; правила загрузки и исключения — `docs/RULES.md`, «Images and placeholders»).
 - Travel-карточки → `components/ui/UnifiedTravelCard`.
 - Внешние ссылки → `@/utils/externalLinks.openExternalUrl` (не `Linking.openURL`/`window.open`).
 - Серверный стейт → React Query (`api/*/Queries.ts`); клиентский → Zustand (`stores/`).

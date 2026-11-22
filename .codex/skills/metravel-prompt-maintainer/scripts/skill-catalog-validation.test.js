@@ -39,6 +39,13 @@ test('rejects absent or empty descriptions, including folded and YAML null value
   assert.deepEqual(skillMetadataErrors('name: example\n', 'example'), ['missing YAML frontmatter'])
 })
 
+test('flags unquoted mapping separators in a catalog description', () => {
+  assert.match(skillMetadataErrors(skill('example', 'Review: changed code'), 'example')[0], /quote a description/)
+  for (const valid of ['"Review: changed code"', 'https://example.test', 'Review # note: limited', '>\n  Review: changed code']) {
+    assert.deepEqual(skillMetadataErrors(skill('example', valid), 'example'), [])
+  }
+})
+
 test('counts folded Unicode descriptions and enforces the project budget', () => {
   assert.deepEqual(skillMetadataErrors(skill('example', `>\n  ${'я'.repeat(379)}`), 'example'), [])
   assert.equal(skillMetadataErrors(skill('example', '🧭'.repeat(381)), 'example').length, 1)
@@ -109,6 +116,13 @@ test('Codex adapters require matching name, bounded description and instructions
   assert.match(codexAgentMetadataErrors(adapter('example', '🧭'.repeat(381)), 'example')[0], /<=380.*found 381/)
   assert.deepEqual(codexAgentMetadataErrors(adapter('example', ' '), 'example'), ['missing quoted adapter description'])
   assert.ok(codexAgentMetadataErrors('name = "example"\n', 'example').includes('missing multiline developer_instructions'))
+  for (const suffix of ['.bak', 'x', '/other']) {
+    assert.equal(codexAgentMetadataErrors(adapter('example', 'Run QA.', `Read .claude/agents/example.md${suffix}`), 'example').length, 1)
+  }
+  for (const prefix of ['stale-copy/', 'unrelated']) {
+    assert.equal(codexAgentMetadataErrors(adapter('example', 'Run QA.', `Read ${prefix}.claude/agents/example.md`), 'example').length, 1)
+  }
+  assert.deepEqual(codexAgentMetadataErrors(adapter('example', 'Run QA.', 'Read [role](./.claude/agents/example.md).'), 'example'), [])
   // A role-body example must not hide a missing/invalid metadata field.
   assert.ok(codexAgentMetadataErrors('developer_instructions = """\nname = "example"\ndescription = "Example"\n"""', 'example').includes('missing quoted adapter description'))
   assert.deepEqual(codexAgentMetadataErrors(adapter('example', 'Run QA.', 'Read .codex/skills/metravel-ios-tester/SKILL.md.'), 'example'), [
@@ -126,11 +140,19 @@ test('Codex family checks every adapter and canonical targets without requiring 
   const roles = path.join(root, '.claude/agents')
   fs.mkdirSync(family, { recursive: true })
   fs.mkdirSync(roles, { recursive: true })
-  fs.writeFileSync(path.join(roles, 'example.md'), 'Canonical role.')
+  fs.writeFileSync(path.join(roles, 'example.md'), skill('example'))
   fs.writeFileSync(path.join(family, 'example.toml'), adapter('example', 'Run QA.', 'Read `.claude/agents/example.md`.'))
   assert.deepEqual(auditCodexAgentFamily(family, root), { count: 1, errors: [] })
   fs.writeFileSync(path.join(family, 'example.toml'), adapter('example', 'Run QA.', 'Read `.claude/agents/example.md` and `.codex/skills/missing/SKILL.md`.'))
   assert.match(auditCodexAgentFamily(family, root).errors[0].message, /missing canonical instruction/)
+  fs.writeFileSync(path.join(roles, 'extra.md'), skill('mismatched'))
+  const missing = auditCodexAgentFamily(family, root).errors
+  assert.ok(missing.some(({ message }) => /role name must match filename \(extra\)/.test(message)))
+  assert.ok(missing.some(({ message }) => message === 'missing Codex adapter for extra.md'))
+  fs.mkdirSync(path.join(roles, 'sub'))
+  fs.writeFileSync(path.join(roles, 'sub/hidden.md'), skill('hidden'))
+  fs.writeFileSync(path.join(roles, 'wrong.MD'), skill('wrong'))
+  assert.equal(auditCodexAgentFamily(family, root).errors.filter(({ message }) => /regular top-level/.test(message)).length, 2)
   fs.writeFileSync(path.join(family, 'orphan.toml'), adapter('orphan'))
   assert.equal(auditCodexAgentFamily(family, root).count, 2)
   assert.ok(auditCodexAgentFamily(family, root).errors.some(({ message }) => /missing canonical role.*orphan/.test(message)))

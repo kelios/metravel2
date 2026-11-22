@@ -38,6 +38,12 @@ const yamlScalar = (frontmatter, key) => {
 }
 
 const descriptionErrors = (frontmatter, enforceBudget = true) => {
+  // CI Smoke runs without installed npm packages. Flag a YAML mapping separator
+  // inside a plain scalar (quoted strings, block scalars and comments are valid).
+  const raw = frontmatter.match(/^description:[ \t]*(.*)$/m)?.[1]?.trim() || ''
+  if (!/^["'|>]/.test(raw) && /:(?:\s|$)/.test(raw.split(/(?:^|\s)#/u, 1)[0])) {
+    return ['quote a description containing a YAML mapping separator (colon followed by space)']
+  }
   const description = yamlScalar(frontmatter, 'description')
   if (!description) return ['missing description']
   const length = Array.from(description).length
@@ -104,6 +110,24 @@ const tomlHeaderScalar = (header, key) => {
   } catch { return '' }
 }
 
+const claudeAgentMetadata = (source, expectedName) => {
+  const fm = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1]
+  if (!fm) return { errors: ['missing YAML frontmatter'] }
+  const name = yamlScalar(fm, 'name')
+  const description = yamlScalar(fm, 'description')
+  const errors = descriptionErrors(fm)
+  if (name !== expectedName || !/^[a-z0-9-]+$/.test(name)) {
+    errors.push(`role name must match filename (${expectedName}) and use lowercase letters, digits or hyphens`)
+  }
+  return { name, description, errors }
+}
+
+// Paths in the role instructions can be bare, inline code, or a Markdown link.
+const canonicalRolePaths = (instructions) => Array.from(
+  instructions.matchAll(/(?:^|[\s(`"'])(?:\.\/)?(\.claude\/agents\/[\w-]+\.md)(?=$|[\s)`"',;:]|\.(?:\s|$))/g),
+  match => match[1],
+)
+
 const codexAgentMetadataErrors = (source, expectedName) => {
   const header = tomlAgentHeader(source)
   const errors = []
@@ -118,10 +142,25 @@ const codexAgentMetadataErrors = (source, expectedName) => {
   const instructions = source.match(/^developer_instructions\s*=\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')/m)
   if (!instructions) {
     errors.push('missing multiline developer_instructions')
-  } else if (!(instructions[1] || instructions[2] || '').includes(`.claude/agents/${expectedName}.md`)) {
+  } else if (!canonicalRolePaths(instructions[1] || instructions[2] || '').includes(`.claude/agents/${expectedName}.md`)) {
     errors.push(`developer_instructions must delegate canonical .claude/agents/${expectedName}.md`)
   }
   return errors
+}
+
+const catalogFiles = (root, extension) => {
+  const files = []
+  const errors = []
+  for (const rel of fs.readdirSync(root, { recursive: true })) {
+    if (path.extname(rel).toLowerCase() !== extension) continue
+    const file = path.join(root, rel)
+    if (path.dirname(rel) !== '.' || !rel.endsWith(extension) || !fs.lstatSync(file).isFile()) {
+      errors.push({ file, message: `expected a regular top-level ${extension} role file` })
+    } else {
+      files.push(rel)
+    }
+  }
+  return { files, errors }
 }
 
 const auditCodexAgentFamily = (root, repoRoot) => {
@@ -130,11 +169,12 @@ const auditCodexAgentFamily = (root, repoRoot) => {
     result.errors.push({ file: root, message: 'missing Codex agent directory' })
     return result
   }
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.toml')) continue
+  const adapters = catalogFiles(root, '.toml')
+  result.errors.push(...adapters.errors)
+  for (const filename of adapters.files) {
     result.count += 1
-    const name = entry.name.slice(0, -5)
-    const file = path.join(root, entry.name)
+    const name = path.basename(filename, '.toml')
+    const file = path.join(root, filename)
     const source = fs.readFileSync(file, 'utf8')
     for (const message of codexAgentMetadataErrors(source, name)) result.errors.push({ file, message })
     const canonicalRole = `.claude/agents/${name}.md`
@@ -150,7 +190,25 @@ const auditCodexAgentFamily = (root, repoRoot) => {
       }
     }
   }
+  const canonicalRoot = path.join(repoRoot, '.claude', 'agents')
+  if (!fs.existsSync(canonicalRoot)) {
+    result.errors.push({ file: canonicalRoot, message: 'missing Claude agent directory' })
+    return result
+  }
+  const canonical = catalogFiles(canonicalRoot, '.md')
+  result.errors.push(...canonical.errors)
+  for (const filename of canonical.files) {
+    const name = path.basename(filename, '.md')
+    const file = path.join(canonicalRoot, filename)
+    for (const message of claudeAgentMetadata(fs.readFileSync(file, 'utf8'), name).errors) {
+      result.errors.push({ file, message })
+    }
+    const adapter = path.join(root, `${name}.toml`)
+    if (!fs.lstatSync(adapter, { throwIfNoEntry: false })?.isFile()) {
+      result.errors.push({ file: adapter, message: `missing Codex adapter for ${filename}` })
+    }
+  }
   return result
 }
 
-module.exports = { auditSkillFamily, descriptionErrors, skillMetadataErrors, codexAgentMetadataErrors, auditCodexAgentFamily }
+module.exports = { catalogFiles, claudeAgentMetadata, auditSkillFamily, descriptionErrors, skillMetadataErrors, codexAgentMetadataErrors, auditCodexAgentFamily }

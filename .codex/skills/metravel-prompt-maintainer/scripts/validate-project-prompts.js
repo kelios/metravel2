@@ -14,7 +14,6 @@ const claudeSkillsRoot = path.join(repoRoot, '.claude', 'skills')
 const copilotSkillsRoot = path.join(repoRoot, '.github', 'skills')
 const errors = []
 let skillCount = 0
-let claudeAgentCount = 0
 
 const read = (file) => fs.readFileSync(file, 'utf8')
 const relative = (file) => path.relative(repoRoot, file)
@@ -98,10 +97,13 @@ for (const result of [sharedSkills, claudeSkills, copilotSkills]) {
   for (const { file, message } of result.errors) fail(file, message)
 }
 
-for (const file of walk(claudeAgentsRoot, (target) => /\.md$/i.test(target))) {
-  claudeAgentCount += 1
-  const agent = read(file)
-  const frontmatter = agent.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+const commandsRoot = path.join(repoRoot, '.claude', 'commands')
+const claudeAgents = walk(claudeAgentsRoot, (target) => /\.md$/i.test(target))
+const claudeCommands = walk(commandsRoot, (target) => /\.md$/i.test(target))
+if (!claudeCommands.length) fail(commandsRoot, 'missing Claude commands')
+if (!claudeAgents.length) fail(claudeAgentsRoot, 'missing Claude roles')
+for (const file of claudeCommands) {
+  const frontmatter = read(file).match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!frontmatter) {
     fail(file, 'missing YAML frontmatter')
     continue
@@ -120,5 +122,5 @@ if (errors.length > 0) {
   for (const error of errors) console.error(`- ${error}`)
   process.exitCode = 1
 } else {
-  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${codexAgents.count} Codex adapters; ${validationSelection.count} validation-selection sources)`)
+  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeCommands.length} Claude commands; ${claudeAgents.length} Claude agents; ${codexAgents.count} Codex adapters; ${validationSelection.count} validation-selection sources)`)
 }

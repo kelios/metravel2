@@ -38,7 +38,7 @@ OpenSpec по `docs/spec-driven-development.md`), решение оформля�
   куски выносятся отдельными пунктами с владельцем и linked `area=back`, внутрь
   agent-задачи их прятать нельзя;
 - задевает ли план protected paths `app.json`, `eas.json`, `plugins/**`,
-  `ios/**`, `scripts/**` и настройки Xcode-проекта — тогда в слайсе явно
+  `ios/**` и настройки Xcode-проекта — тогда в слайсе явно
   указывается исполнитель (`ios-expert`/`ios-deployer`) и подтверждающий гейт;
 - какие локали RU/BE/UK/PL/EN затрагиваются и появляется ли locale-sensitive
   форматирование (`i18n/format.ts`) — это отдельная строка матрицы валидации,

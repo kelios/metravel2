@@ -148,6 +148,29 @@ describe('task-claim: кто взял карточку', () => {
     expect(claimExists()).toBe(false);
   });
 
+  it('меняет claim только после подтверждения id и статуса сервером', () => {
+    const post = (status: string, receipt: unknown) => runHook({
+      hook_event_name: 'PostToolUse', tool_name: UPDATE_TOOL, session_id: 'sessA',
+      transcript_path: path.join(transcripts, 'sessA.jsonl'),
+      tool_input: { task_id: TASK_ID, status }, tool_response: receipt,
+    });
+    post('in_progress', { content: [{ type: 'text', text: '{"status":"error"}' }] });
+    expect(claimExists()).toBe(false);
+    post('in_progress', { structuredContent: { id: TASK_ID, status: 'in_progress' } });
+    expect(claimOwner()).toBe('sessA');
+    post('done', { id: TASK_ID + 1, status: 'done' });
+    post('done', { id: TASK_ID, status: 'review' });
+    post('done', { isError: true, structuredContent: { id: TASK_ID, status: 'done' } });
+    expect(claimOwner()).toBe('sessA');
+    const read = runHook({
+      hook_event_name: 'PostToolUse', tool_name: GET_TOOL, session_id: 'sessB',
+      tool_input: { task_id: TASK_ID }, tool_response: { structuredContent: { id: TASK_ID, status: 'in_progress' } },
+    });
+    expect(context(read)).toContain('держит другая живая сессия');
+    post('done', [{ type: 'text', text: JSON.stringify({ id: TASK_ID, status: 'done' }) }]);
+    expect(claimExists()).toBe(false);
+  });
+
   it('обход виден: TASK_CLAIM_BYPASS=1 пропускает и объявляет себя', () => {
     update('sessA', 'in_progress', 'PostToolUse');
     const out = update('sessB', 'in_progress', 'PreToolUse', { TASK_CLAIM_BYPASS: '1' });

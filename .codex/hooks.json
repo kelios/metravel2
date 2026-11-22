@@ -2,33 +2,33 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_create|mcp__metravel-task-board__metravel_task_update",
+        "matcher": "mcp__metravel-task-board__metravel_task_create|mcp__metravel-task-board__metravel_task_update|mcp__metravel_task_board__metravel_task_create|mcp__metravel_task_board__metravel_task_update",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/task-quality-gate.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/task-quality-gate.mjs",
             "timeout": 30,
             "statusMessage": "Гейт качества карточки борда"
           }
         ]
       },
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_update",
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel_task_board__metravel_task_update",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/review-gate.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/review-gate.mjs",
             "timeout": 30,
             "statusMessage": "Код-ревью гейт перед testing"
           }
         ]
       },
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_update",
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel_task_board__metravel_task_update",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/task-claim.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/task-claim.mjs",
             "timeout": 15,
             "statusMessage": "Гейт занятости карточки"
           }
@@ -37,33 +37,33 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_update",
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel_task_board__metravel_task_update",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/review-gate.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/review-gate.mjs",
             "timeout": 30,
             "statusMessage": "Автозапуск ревью/приёмки по статусу борда"
           }
         ]
       },
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_get",
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_get|mcp__metravel_task_board__metravel_task_update|mcp__metravel_task_board__metravel_task_get",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/task-claim.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/task-claim.mjs",
             "timeout": 15,
             "statusMessage": "Claim карточки и проверка чужих сессий"
           }
         ]
       },
       {
-        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_create|mcp__metravel-task-board__metravel_task_get|mcp__metravel-task-board__metravel_tasks_list|mcp__metravel-task-board__metravel_task_board",
+        "matcher": "mcp__metravel-task-board__metravel_task_update|mcp__metravel-task-board__metravel_task_create|mcp__metravel-task-board__metravel_task_get|mcp__metravel-task-board__metravel_tasks_list|mcp__metravel-task-board__metravel_task_board|mcp__metravel_task_board__metravel_task_update|mcp__metravel_task_board__metravel_task_create|mcp__metravel_task_board__metravel_task_get|mcp__metravel_task_board__metravel_tasks_list|mcp__metravel_task_board__metravel_task_board",
         "hooks": [
           {
             "type": "command",
-            "command": "node '/Users/juliasavran/Sites/metravel2/metravel2/.codex/hooks/board-compact.mjs'",
+            "command": "root=$(git rev-parse --show-toplevel) && cd \"$root\" && CLAUDE_PROJECT_DIR=\"$root\" exec node .claude/hooks/board-compact.mjs",
             "timeout": 10,
             "statusMessage": "Сжатие ответа борда"
           }

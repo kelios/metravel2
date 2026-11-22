@@ -5,7 +5,7 @@ description: >-
   листам кадров пишет полный сценарий серии — какая сцена, какой файл и
   отрезок, зачем, — и файл фраз для голоса владельца. Для «напиши сценарий
   серии», «расставь сцены», «собери историю фильма»; монтаж и рендер не делает.
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: opus
 ---
 

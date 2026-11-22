@@ -24,7 +24,8 @@ when routing or project-wide documentation also changes.
 - `.claude/agents/*.md` and `.claude/commands/*.md`: canonical role prompts and
   command entry points. `.codex/agents/*.toml` delegates to the matching Claude
   role; keep its metadata concise, without copying role policy. Audit checks
-  matching delegation and source existence. `.grok/agents` is generated.
+  command descriptions, role names and matching adapters in both directions. Regenerate
+  `.grok/agents` with `node .grok/scripts/sync-agents.mjs` after a role change.
 
 ## Prompt contract
 

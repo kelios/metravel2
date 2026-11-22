@@ -1,6 +1,6 @@
 ---
 name: code-review-gate
-description: "Read-only code-review gate между review и testing: проверяет correctness, duplication, efficiency и project contracts; hook запускает его автоматически перед testing."
+description: "Проверяет полный frontend diff перед QA. Без тикета возвращает вердикт в чат; в цикле карточки фиксирует вердикт и выполняет переход review → testing после commit/push."
 tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_board
 model: opus
 ---
@@ -9,7 +9,7 @@ model: opus
 вердикт `pass` сам коммитишь и пушишь отревьюенный diff в `main` и двигаешь статус.
 `AGENTS.md` уже унаследован; не перечитывай все project docs. Для board ticket
 прочитай его Task Contract и только канонические headings, которые затронуты
-diff. Без ticket работай по diff, но не записывай verdict и не двигай statuses.
+diff. Без тикета выдай результат чтения diff в чат. Запись verdict, изменение статуса, commit и push относятся к карточке борда.
 
 До вердикта проверь принадлежность всех Git/GitHub targets по
 `docs/RULES.md` → «Owned repositories only (mandatory)». Не коммить, не пушь
@@ -24,7 +24,7 @@ diff. Без ticket работай по diff, но не записывай verdi
 не нужно оставаться открытой ради очереди. Передача сама по себе не PASS и не
 разрешает `testing` до обычных review/commit/push gates.
 
-1. Получи ticket, Done gate, assignee, platform/localization impact и состояние
+1. Для запуска с ID получи ticket, Done gate, assignee, platform/localization impact и состояние
    gate: `node .claude/hooks/review-gate.mjs show --task <id>`.
 2. Проверь task-owned scope и untracked files:
 
@@ -103,6 +103,7 @@ DEPLOY=0 DEPLOY_QUIET=1 scripts/deploy-prod.sh <снимок>
 ## Verdict и board
 
 - Любой P1/P2 → `changes_requested`; только P3/пусто → `pass`.
+- Без тикета верни результат в чат (`task_id`, `board_status`, `commit` равны `null`). Следующие шаги относятся к карточке борда.
 - Сначала record verdict, затем меняй board status — иначе fingerprint hook
   заблокирует переход.
 
@@ -120,7 +121,7 @@ node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список
 
 ```bash
 git add --pathspec-from-file=<список>   # тот же список; `git add -A` и commit без путей запрещены
-git commit -m "<type>(<scope>): <что сделано> (#<id>)"
+git commit --only --pathspec-from-file=<список> -m "<type>(<scope>): <что сделано> (#<id>)"
 git fetch origin   # origin/main ушёл вперёд → слей до push и проверь `show --task <id>`
 PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается только в testing; чужой набор → SKIP_PREFLIGHT=1 + пометка
 ```
@@ -133,7 +134,7 @@ PREFLIGHT_SKIP_E2E=1 git push origin main  # Playwright запускается �
   валидным — отпечаток гейта считается по содержимому файлов, а не по индексу или ветке.
   Своего diff'а нет (всё уже в `origin/main`) — так и запиши, коммит не выдумывай.
 - После push → `testing`; допиши sha коммита, date, checked axes/guards и точный QA
-  `next_step`: приёмка на проде после штатного выката (`frontend-deployer`).
+  `next_step`: среда и платформа из Task Contract. Для web приёмщик сверяет ревизию на проде после выката, для native — сборку на указанном устройстве.
 - `changes_requested` → `in_progress` прежнему assignee; добавь
   `severity | path:line | mechanism | fix`. Не используй `blocked_by`.
 - Не ставь `done`, не создавай tickets, не меняй код через Bash, не трогай

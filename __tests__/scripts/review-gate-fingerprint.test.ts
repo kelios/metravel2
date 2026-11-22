@@ -405,9 +405,23 @@ describe('review-gate fingerprint by task paths (#3371)', () => {
     expect(show().detail).toContain('--paths-file');
   });
 
-  it('keeps the Codex adapter mirror byte-identical to the hook', () => {
-    const mirror = path.join(process.cwd(), '.codex/hooks/review-gate.mjs');
-    expect(fs.readFileSync(mirror, 'utf8')).toBe(fs.readFileSync(HOOK, 'utf8'));
+  it('the Codex CLI records the same path-scoped verdict that the canonical hook verifies', () => {
+    makeTaskChanges();
+    makeForeignChanges();
+    const alias = path.join(process.cwd(), '.codex/hooks/review-gate.mjs');
+    const env = { CLAUDE_PROJECT_DIR: work };
+    const result = runNodeCli([alias, 'record', '--task', String(TASK_ID), '--verdict', 'pass', '--paths', TASK_PATHS.join(',')], env);
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      scope_mode: 'paths', outside_scope: expect.arrayContaining(['docs/other.md']),
+    });
+    fs.appendFileSync(path.join(work, 'docs/other.md'), 'foreign edit after review\n');
+    expectOpen();
+    fs.appendFileSync(path.join(work, TASK_PATHS[0]), 'changed after review\n');
+    expectStale(TASK_PATHS[0]);
+    const check = runNodeCli([alias, 'show', '--task', String(TASK_ID)], env);
+    expect(check.status).toBe(1);
+    expect(JSON.parse(check.stdout).code).toBe('stale');
   });
 });
 

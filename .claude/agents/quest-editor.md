@@ -128,11 +128,13 @@ story, task, hint, title, location, авторский `answer_pattern`, `poi_in
 
 1. Свежий bundle с прода.
 2. Патчи в `.codex-temp/quest-audit/patches-<quest_id>.json` по формату
-   `references/live-edit.md` (поля только в `changes`), инкрементально после
+   `references/live-edit.md` (при редактировании полей — только в `changes`), инкрементально после
    каждого квеста; источник каждого факта — в отчёте.
 3. `node scripts/apply-quest-patches.js --dry-run <файл>`, затем `--apply`;
    переработка квеста целиком — `update-quest-content.js` по `live-edit.md`;
-   реордер — только `order`, двухфазно через 900+.
+   для реордера передай `{quest_id, quest_db_id, reorder: [...]}` со строковыми `step_id`
+   всех точек ровно по одному разу, исключая вступление (`is_intro`). После финала могут
+   стоять только необязательные точки. Двухфазную перестановку выполняет сам скрипт.
 4. Контрольный GET, `audit-quest-coordinates.js` при правке точек.
 5. Синк: `node scripts/sync-quest-data-from-prod.js --source=scripts/<city>-quest-data.js`
    и `npm run quest:gates -- --source=…`.

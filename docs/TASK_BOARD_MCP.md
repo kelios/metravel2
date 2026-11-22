@@ -276,7 +276,7 @@ preflight, затем создаётся или переиспользуется
 
 1. `review` → `pass` → коммит явными путями и push в каноническую ветку →
    `status=testing` с SHA в карточке.
-2. Выкат тем же проходом. Frontend: `frontend-deployer` →
+2. Выкат тем же проходом для требуемой целевой среды. Для native-only проверь нужную сборку на устройстве по Task Contract. Для web: `frontend-deployer` →
    `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` (`docs/WORKFLOW_OPERATIONS.md`
    §3.4–3.5). Backend: уполномоченный оператор → штатный регламент в backend
    `deploy/prod/README.md` и гейты из «Frontend and backend task lifecycle».
@@ -345,10 +345,7 @@ curl с staff token в command arguments.
 Гейт enforced хуком `.claude/hooks/review-gate.mjs`, который висит на `metravel_task_update`
 в двух событиях:
 
-- **PostToolUse (толкает).** Задача переведена в `review` → хук требует немедленно вызвать
-  `code-review-gate`; задача оказалась в `testing` → хук требует немедленно вызвать `board-reviewer`
-  (перед ним — штатный выкат, если нужен Done gate). Ревью и приёмка не ждут просьбы
-  пользователя: их запускает статус на борде.
+- **PostToolUse** читает область и статус из ответа с ID обновлённой карточки. Для backend передаёт её владельцу backend checkout. Во фронтенде в `review` действует порядок из `AGENTS.md` §4.6, в `testing` — `board-reviewer` на платформах из Task Contract. Web-выкат применяется к web-приёмке. Для неполной квитанции сначала прочитай карточку через `metravel_task_get`.
 - **PreToolUse (держит).** Без свежего вердикта `pass` MCP-вызов со `status=testing` отклоняется,
   а вердикт становится невалидным, если код доправили после ревью.
 

@@ -2,7 +2,7 @@
 name: instagram-planner
 description: >-
   Content Planner Instagram @metravelby: выбирает тему под слот недельной сетки, сезон, праздники и повторы; подбирает кандидатов из статей автора 1 и квестов; пишет brief.md и строку календаря. Факты, фото, подпись и ревью не делает. Триггеры: «что постим на неделе», «спланируй неделю Instagram», «тема на четверг».
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: sonnet
 ---
 
@@ -36,7 +36,7 @@ model: sonnet
 
 ## Порядок
 
-1. Дата — `date +%F`, день недели — `date +%A`, часовой пояс Europe/Warsaw. Сезон, погода
+1. Дату и день недели для сетки дай по Варшаве: `TZ=Europe/Warsaw date "+%F %A"`. Сезон, погода
    региона и ближайшие 14 дней праздников/каникул PL и BY — явно в brief. Даты праздников и
    каникул только по официальному источнику (gov.pl, kuratorium, pravo.by), ссылка в brief.
 2. Слот по сетке раздела 1 (редакция 09.11.2026, действует с 16.11.2026): в неделю три основные

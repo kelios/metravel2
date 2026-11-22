@@ -42,13 +42,14 @@
  * Аварийный обход: TASK_CLAIM_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  */
 
+import { boardToolName, decodeBoardResponse, isBoardError } from './board-tool.mjs';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 const CLAIM_DIR_REL = '.codex-temp/task-claim';
-const UPDATE_TOOL = 'mcp__metravel-task-board__metravel_task_update';
-const GET_TOOL = 'mcp__metravel-task-board__metravel_task_get';
+const UPDATE_TOOL = 'metravel_task_update';
+const GET_TOOL = 'metravel_task_get';
 
 /** Статусы, в которых карточку кто-то ведёт: claim держится. */
 const WORKING_STATUSES = new Set(['in_progress', 'review', 'testing']);
@@ -248,16 +249,11 @@ function runPreUpdate(input, toolInput, taskId) {
   process.exit(0);
 }
 
-function toolFailed(response) {
-  if (!response || typeof response !== 'object') return false;
-  return response.isError === true || response.is_error === true || response.status === 'error' || Boolean(response.error);
-}
-
 /** PostToolUse: ставим и снимаем claim по фактически применённому статусу. */
 function runPostUpdate(input, toolInput, taskId) {
-  if (toolFailed(input.tool_response)) allow();
-  const status = toolInput.status;
-  if (!status) allow();
+  const card = decodeBoardResponse(input.tool_response);
+  if (isBoardError(card) || card?.id !== taskId || card.status !== toolInput.status) allow();
+  const status = card.status;
 
   const root = repoRoot();
 
@@ -280,35 +276,13 @@ function runPostUpdate(input, toolInput, taskId) {
   allow();
 }
 
-/**
- * Статус из ответа MCP: сервер отдаёт то объект задачи, то текстовый JSON в `content`.
- * Гейт не должен зависеть от формы конкретной сборки сервера.
- */
-function statusFromResponse(response) {
-  if (!response || typeof response !== 'object') return null;
-  if (typeof response.status === 'string' && response.status !== 'error') return response.status;
-  const blocks = Array.isArray(response.content) ? response.content : [];
-  for (const block of blocks) {
-    if (typeof block?.text !== 'string') continue;
-    try {
-      const parsed = JSON.parse(block.text);
-      if (typeof parsed?.status === 'string') return parsed.status;
-    } catch {
-      /* не JSON — следующий блок */
-    }
-  }
-  return null;
-}
-
 /** PostToolUse на чтение карточки: предупреждаем ДО начала работы, а не после коллизии. */
 function runPostGet(input, toolInput) {
-  if (toolFailed(input.tool_response)) allow();
-
   const taskId = toolInput.task_id;
-  if (!taskId) allow();
-
-  const status = statusFromResponse(input.tool_response);
-  if (!status || !WORKING_STATUSES.has(status)) allow();
+  const card = decodeBoardResponse(input.tool_response);
+  if (!Number.isSafeInteger(taskId) || taskId <= 0 || isBoardError(card) || card?.id !== taskId) allow();
+  const status = card.status;
+  if (!WORKING_STATUSES.has(status)) allow();
 
   const root = repoRoot();
   const claim = readClaim(root, taskId);
@@ -358,15 +332,16 @@ function runHook() {
 
   const toolInput = input.tool_input || {};
 
-  if (input.tool_name === GET_TOOL) {
+  const tool = boardToolName(input.tool_name);
+  if (tool === GET_TOOL) {
     if (input.hook_event_name !== 'PostToolUse') allow();
     runPostGet(input, toolInput);
   }
 
-  if (input.tool_name !== UPDATE_TOOL) allow();
+  if (tool !== UPDATE_TOOL) allow();
 
   const taskId = toolInput.task_id;
-  if (!taskId) allow();
+  if (!Number.isSafeInteger(taskId) || taskId <= 0) allow();
 
   if (input.hook_event_name === 'PostToolUse') runPostUpdate(input, toolInput, taskId);
   runPreUpdate(input, toolInput, taskId);
@@ -392,6 +367,10 @@ function describe(claim) {
 function runCli(argv) {
   const [command] = argv;
   const args = parseArgs(argv.slice(1));
+  if (args.task !== undefined && !/^[1-9]\d*$/.test(args.task)) {
+    console.error('Нужен положительный номер карточки.');
+    process.exit(2);
+  }
   const root = repoRoot();
 
   if (command === 'show') {

@@ -1,5 +1,5 @@
 name = "map-expert"
-description = "Эксперт по карте (MapPage, PlacePopupCard, Leaflet web + RN Maps native). Используй для задач по `components/MapPage/**`, `components/map/**`, `app/map*`, `hooks/useMap*`."
+description = "Карта и places: MapPage, Leaflet/WebView, markers, clusters, routes и PlacePopupCard. Для серой карты, маркеров, попапов и route UI; travel/quest/backend остаются у владельцев."
 developer_instructions = """
 Прочитай `.claude/agents/map-expert.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

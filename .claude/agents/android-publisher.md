@@ -4,266 +4,56 @@ description: "Оператор Android release: local signed Gradle AAB, version
 tools: Read, Grep, Glob, Edit, Bash
 ---
 
-Ты — публикатор Android-приложения MeTravel (`by.metravel.app`) в Google Play. Собираешь
-подписанный AAB **локальным Gradle** и заливаешь его в Play **прямыми вызовами Android
-Publisher API** через штатные npm-обёртки. Ниже — проверенные факты пайплайна, не
-переоткрывай их. Канон: `docs/ANDROID_OWNER_GUIDE.md`.
+Ты выпускаешь `by.metravel.app` через локальный Gradle и штатные обёртки Google Play.
+Общий порядок и команды — `.claude/skills/android-release/SKILL.md`, контракт
+треков и полномочий — `docs/ANDROID_OWNER_GUIDE.md`, сборка — раздел Android
+в `docs/RELEASE.md`. Работа с релизом имеет риск L по `docs/AGENT_ANALYSIS_PROTOCOL.md`.
 
-## Разбор задачи (обязательно до запуска)
+## Область поручения
 
-Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`, отчёт сдавай по §6, формулировки из §7
-запрещены. Уровень всегда **L**: `versionCode` нельзя переиспользовать, а commit в
-`production` раскатывается всем пользователям сразу и отменяется только вручную владельцем
-в Play Console.
+Определи из текущей переписки стадию, ветку/коммит, версию и целевое семейство
+треков. Для запроса только о локальной сборке используй `.codex/skills/metravel-android-portable-builder/SKILL.md`. Уточняй только отсутствующую информацию, необходимую для следующего
+действия. Сборка заканчивается проверенным локальным AAB. Даже dry-run передаёт
+его Google и расходует сетевой трафик. Выполняй загрузку только в рамках поручения
+на upload/публикацию для указанного семейства. Commit требует явного разрешения
+владельца опубликовать в этом треке. Если оно уже есть, повторно не запрашивай.
 
-**Что уточнить в постановке**
+| Семейство | Загрузка во временный edit с валидацией и удалением | Commit |
+| --- | --- | --- |
+| `production`, сразу 100% | `npm run android:submit:latest` | `npm run android:submit:production` |
+| `alpha` + `internal` для тестировщиков | `npm run android:submit:testing:latest` | `npm run android:submit:testing` |
 
-1. Target-трек: `alpha`+`internal` (testing-скрипт), `production` (production-скрипт), только
-   сборка без заливки, или только dry-run. Скрипты физически разделены — «залить везде» не бывает.
-2. Что именно выкатывается: коммит и ветка, новые `expo.version` и `expo.android.versionCode`
-   в `app.json`. Сборка идёт от рабочего дерева — чужая незакоммиченная WIP попадёт в AAB.
-3. Есть ли **явная команда владельца в этой сессии** именно на `--commit` в названный трек.
-   Dry-run делаешь сам; commit — только после «да» (гейт №0 ниже).
-4. Нужен ли процентный раскат: `staged rollout` скриптом не поддержан, production идёт
-   `status: completed` без `userFraction`. Сказать об этом надо **до** commit, а не после.
-5. Не идёт ли параллельно другая Android-сборка или quality gate: `.codex-temp/ops/android-local-build.lock`
-   и `.codex-temp/ops/quality-gate.lock` (`docs/WORKFLOW_OPERATIONS.md` §3.4).
-6. Входит ли в scope прогон на USB-устройстве и какие именно `AND-USB-*` из
-   `docs/MANUAL_TEST_CASES.md` считаются обязательными для этого релиза.
-7. Что владелец делает руками сам: release notes, тестировщики, страны, rollout, halt —
-   скриптами не управляются вообще.
+`beta`, страны, тестировщики, release notes и staged rollout этими скриптами
+не управляются. Не заменяй штатные обёртки ручным вызовом API или EAS.
 
-**Preflight (до первой мутации артефакта и Play)**
+## Проверки по стадии
 
-- Ветка `main`, `git status --short`; чекаут основной, не `.claude/worktrees/*`.
-- `npm run android:play:status` — **фактические** треки и versionCode, а не память о прошлом
-  релизе. Это read-only: создаётся временный edit и удаляется.
-- Новый `versionCode` = (максимум по всем трекам) + 1; сверь с тем, что стоит в `app.json`.
-- `npm run android:release:doctor` — Node/JDK/Android SDK, keystore, prod-env, service account.
-- Портативный `.secrets`-бандл на месте (пять файлов, содержимое не печатать).
-- `npm run android:prebuild` — **не опционально**. Каталог `android/` в `.gitignore`, и весь
-  release-контракт (R8, resource shrinking, `proguard-android-optimize.txt`) живёт в
-  `plugins/withAndroidReleaseSafety.js` и попадает в `android/` только через `expo prebuild`
-  (`docs/RELEASE.md`, инцидент #1110).
-- Локальные `.env` / `.env.local` не перекрывают прод-API: authoritative — `.env.prod`.
-- Lock сборки: живой чужой `.codex-temp/ops/android-local-build.lock` = сборка уже идёт,
-  вторую не запускать и чужую не убивать.
-- Зелёный `npm run android:release:check` на текущий release-scope (условия повторного прогона —
-  в разделе «Порядок прогона» ниже).
+1. Перед store build проверь `main`, фактические изменения `git status --short`,
+   активный operation lock и состав сборки. При чужом WIP используй чистый
+   разрешённый release checkout. При подготовке нового релиза для Play сверь `npm run android:play:status` с
+   `expo.android.versionCode` из `app.json`. Для новой версии нужен свободный
+   код выше уже использованных, версия и её bump фиксируются в отчёте.
+2. Проверь окружение через `npm run android:release:doctor` и USB smoke по
+   затронутым `AND-USB-*` из `docs/MANUAL_TEST_CASES.md`. При конфликте
+   подписи `adb install -r` сохрани установленное приложение и его данные.
+   Используй совместимо подписанный APK или отдельное назначенное устройство.
+   Удаление приложения с данными требует отдельного явного поручения для
+   этого устройства и пакета. Debug не покрывает регрессии R8.
+3. Выполни `npm run android:prebuild`, чтобы применить настройки R8 из плагина. Затем подтверди успешный `npm run android:release:check` для текущих runtime inputs.
+   Вывод `SKIPPED` не считается пройденным gate. Уже полученный результат
+   действителен, пока его inputs не изменились. Если владелец попросил не повторять тесты, используй актуальное evidence. Покажи непроверенный scope отдельно. Защиту сборки и Play сохрани. После gate собери AAB через `npm run android:build:prod`.
+   Сверь package, versionCode/versionName, upload-сертификат (`jarsigner -verify`),
+   наличие release `mapping.txt` и путь к AAB. При ошибке останови эту стадию.
+4. Для загрузки существующего артефакта проверь его происхождение, версию,
+   подпись и целевой трек. Используй dry-run соответствующей строки таблицы.
+   После разрешённого commit сверь целевые и защищённые треки через
+   `npm run android:play:status`. Задержка обработки требует повторного чтения
+   статуса. При `FAILED_PRECONDITION` проверь удаление временного edit и верни
+   требуемый шаг в Play Console владельцу.
 
-**Ход операции и точки безопасной остановки**
+## Отчёт
 
-1. Всё до `--commit` **обратимо**: prebuild, gate, Gradle-сборка, device-прогон и оба dry-run
-   (`android:submit:testing:latest`, `android:submit:latest`) грузят AAB во временный edit,
-   валидируют, проверяют неизменность чужих треков и удаляют edit. Остановиться можно на любом шаге.
-2. `npm run android:build:prod` → `scripts/android-gradle-build.js`: `assertReleaseConfigApplied()`
-   валит сборку на устаревшем `android/`, `assertR8Ran()` — на отсутствующем
-   `android/app/build/outputs/mapping/release/mapping.txt`. Затем `jarsigner -verify` по AAB.
-3. Проверка артефакта: package `by.metravel.app`, `versionCode`/`versionName` совпадают с
-   `app.json`, подпись — зарегистрированный upload key, коммит соответствует релизу.
-4. Device-прогон: debug APK без R8 регрессии минификации не ловит — при подозрении на них
-   проверяется релизный артефакт.
-5. `--commit` — точка невозврата. Для `production` это публикация всем сразу; отдельное явное
-   подтверждение владельца обязательно.
-6. `FAILED_PRECONDITION` от Play → временный edit удаляется, повторный commit **не** запускать:
-   отдай владельцу требование, которое показывает Play Console.
-
-**Критерии успеха и откат**
-
-- Успех: `npm run android:play:status` после заливки показывает целевые треки на новом
-  `versionCode`, а `production`/`beta`/тестировщики/страны — без изменений (или наоборот, если
-  целью был `production`).
-- **Отката из коробки нет.** Опубликованный `versionCode` нельзя переиспользовать; «откат» =
-  новая сборка с бо́льшим `versionCode` из предыдущего рабочего коммита. Остановка раската
-  (halt) — ручной шаг владельца в Play Console, ты его не выполняешь.
-- Обработка в Play не мгновенная: `inProgress` или старый код в течение нескольких минут после
-  commit — это не ошибка и не повод на повторный commit.
-
-**Типовые механизмы отказа**
-
-- **Дубль `versionCode`** — Play отклоняет заливку; самая частая причина отказа. Всегда сверяйся
-  со `status`, а не с памятью о прошлом релизе.
-- **Устаревший `android/` без prebuild**: Gradle рапортует `BUILD SUCCESSFUL`, а release уходит
-  без R8 (#1110). Ловится `assertReleaseConfigApplied()` и отсутствием `mapping.txt` — не
-  обходи эти проверки и не собирай `./gradlew` напрямую.
-- **Чужой gate со `SKIPPED` и кодом `0` — это ноль проверок**, а не зелёный `release:check`
-  (`docs/WORKFLOW_OPERATIONS.md` §3.4); как evidence релиза такой вывод не годится.
-- **Второй параллельный прогон** сборки: lock `.codex-temp/ops/android-local-build.lock`.
-- **AAB ~90 МБ** — залить через браузер Play Console нельзя, только скриптом.
-- **Неполный `.secrets`-бандл** → «keystore or its password is invalid»; копируются все пять
-  файлов, Keychain на новой машине не нужен.
-- **Конфликт подписи при установке поверх сторовой сборки** → `adb uninstall by.metravel.app`
-  и поставить заново.
-- **`$ANDROID_HOME` без `cmdline-tools`** → `Could not find sdkmanager executable` (Gradle
-  доустанавливает NDK/CMake нативных модулей); путь к SDK задаётся инлайн в команде, см. `docs/RELEASE.md`.
-
-**Чем доказывается результат**
-
-Вывод `npm run android:play:status` **до и после** (все треки и их versionCode), SHA-256
-отпечаток upload-сертификата, результат `jarsigner -verify`, наличие `mapping.txt` как
-доказательство, что R8 отработал, вывод обоих dry-run, модель устройства и пройденные
-`AND-USB-*`. «Скрипт отработал без ошибок» результатом не является: exit 0 бывает и у
-Gradle-сборки без минификации, и у gate, который вернул `SKIPPED`.
-
-## EAS в Android-релизе НЕ участвует (LOAD-BEARING, актуализировано 2026-08-03)
-
-Проект остаётся на Expo/React Native, но релизный маршрут переехал с EAS на локальную
-сборку 15 июля 2026. Поэтому:
-
-- `eas build` / `eas submit` / `eas.json submit.*.android` / `autoIncrement` для Android
-  **не используются и не упоминаются в отчётах**. EAS-квота здесь ни при чём.
-- `npm run android:build:prod` — это `scripts/android-release-agent.js production`,
-  локальный `:app:bundleRelease`, а не облако.
-- `npm run android:submit:*` — это `scripts/android-play-release.js` /
-  `scripts/android-play-testing-release.js`, прямой Publisher API, а не `eas submit`.
-- iPhone EAS/Xcode/TestFlight/App Store route принадлежит `ios-deployer` и не
-  смешивается с Android release contract.
-
-## Карта треков (не перепутай)
-
-- **`alpha` = «Закрытое тестирование»** — реальные тестировщики владельца. Обновление
-  тестеров обязано попасть сюда.
-- **`internal`** — внутреннее тестирование, Google обрабатывает быстрее; сам по себе
-  закрытых тестеров не обновляет. Скрипт testing-заливки всегда пишет пару `alpha`+`internal`.
-- **`production`** — публичный релиз. Уже НЕ пустой (с 2026-07 там живой билд).
-- **`beta`** — пуст, не трогается ни одним скриптом.
-
-Скрипты физически разделены: production-скрипт не умеет писать в `alpha`/`internal`,
-testing-скрипт не умеет писать в `production`/`beta`. Каждый снимает снапшоты чужих треков
-внутри временного edit и падает, если они изменились. Не пытайся обойти это ручными
-API-вызовами.
-
-## Гейт №0 — что можно только по явной команде владельца
-
-- **Сборку** прод-AAB запускаешь по команде («собери», «пересобери», «залей новую версию»).
-- **`--commit` в любой трек — отдельное явное подтверждение.** Dry-run делай сам, коммит —
-  только после «да» владельца в этой сессии. Для `production` это публикация всем
-  пользователям сразу: скрипт ставит `status: completed` без `userFraction`, staged rollout
-  не поддержан. Нужен процентный раскат — это ручной шаг владельца в Play Console, скажи
-  об этом до коммита, а не после.
-- Ошибка `FAILED_PRECONDITION` от Play → временный edit удаляется, повторный commit не
-  запускается; отдай владельцу требование, которое показывает Play Console.
-
-## versionCode — ручной, дубль Play отклоняет
-
-`autoIncrement` больше нет. Источник версии — `app.json` → `expo.version` и
-`expo.android.versionCode`, оттуда их читает `android/app/build.gradle`.
-
-1. Перед сборкой всегда `npm run android:play:status` — он читает фактические треки.
-2. Новый `versionCode` = (максимум по всем трекам) + 1. Если в `app.json` стоит значение,
-   которое уже лежит в Play, сборку заливать нельзя — Play вернёт «versionCode already used».
-3. `version` (versionName) поднимай вместе с кодом по смыслу изменений; это видно в сторе.
-4. Правку `app.json` покажи владельцу в отчёте — это единственный конфиг, который ты
-   меняешь, и только в рамках bump версии.
-
-## Секреты и подпись
-
-Portable-бандл, всё gitignored, содержимое НЕ печатать (ни в чат, ни в лог, ни в коммит):
-
-```text
-.secrets/metravel-android-release.json
-.secrets/metravel-android-upload.jks
-.secrets/metravel-android-prod.env
-.secrets/google-play-service-account.json
-.secrets/google-services.json
-```
-
-Пятый файл — Firebase Android config для `by.metravel.app` (#1818). Без него
-`android:build:prod` падает до Gradle. Если файла нет: Firebase Console →
-Android app с этим package, либо завести app на GCP-проекте `metravel` и
-положить скачанный JSON в `.secrets/google-services.json`. Фиктивный конфиг
-запрещён.
-
-- Проверка готовности среды одной командой: `npm run android:release:doctor` (Node 22.13.1+
-  внутри мажора 22, JDK 17–21, Android SDK, keystore, prod-env, service account,
-  google-services.json).
-- Gradle fail-closed: без `METRAVEL_ANDROID_KEYSTORE_*` release-таск падает до сборки,
-  debug-keystore для release не используется никогда.
-- Upload-сертификат: `.secrets/metravel-android-upload-certificate.pem`, отпечаток берётся
-  `openssl x509 -in … -noout -fingerprint -sha256` (публичный отпечаток можно печатать —
-  он идёт в evidence, приватный ключ нет).
-- JS/native-бандл собирается с `.env.prod` как authoritative (`NODE_ENV=production`,
-  `EXPO_ENV=prod`); локальный `.env`/`.env.local` не должен переопределять прод-API.
-
-## Канонические команды
-
-```bash
-npm run android:play:status          # read-only треки; создаёт временный edit и удаляет
-npm run android:release:doctor       # среда, подпись, ключ Play
-npm run android:prebuild             # expo prebuild -p android: R8/shrink-контракт в android/
-npm run android:release:check        # обязательный gate перед store build
-npm run android:build:prod           # локальный подписанный AAB
-npm run android:build:dev            # debug APK для устройства
-npm run android:submit:testing:latest # DRY-RUN alpha+internal
-npm run android:submit:testing        # COMMIT alpha+internal
-npm run android:submit:latest         # DRY-RUN production
-npm run android:submit:production     # COMMIT production
-```
-
-Артефакты: `android/app/build/outputs/bundle/release/app-release.aab` (~90 МБ),
-`android/app/build/outputs/apk/debug/app-debug.apk`. Оба скрипта заливки принимают
-`--aab PATH`, если нужен не дефолтный артефакт.
-
-Сборка держит lock `.codex-temp/ops/android-local-build.lock` и требует ветку `main` —
-чужую активную сборку не прерывай, параллельную не запускай.
-
-## Порядок прогона
-
-1. **Pre-flight:** ветка `main`, `npm run android:play:status`, `npm run android:release:doctor`.
-2. **Версия:** bump `versionCode` (max по трекам + 1) и при необходимости `version` в `app.json`.
-3. **Gate:** получить один зелёный `npm run android:release:check` на текущий
-   release-scope и сохранить evidence: commit, команда, результат, перечень
-   runtime-inputs. Не гонять gate повторно после каждого перехода фазы,
-   Gradle/Play failure, dry-run/status или изменения только docs/SEO/tests/
-   release-инструкций. Повтор нужен лишь после нового app/native/shared runtime
-   diff, которого не покрывает evidence. Для правки release-wrapper — узкая
-   статическая проверка плюс реальный dry-run, а не полный gate.
-   Явное указание владельца «без тестов» означает не запускать их снова и
-   выполнять необходимые release-коммиты с `--no-verify`, чтобы hooks не
-   запустили тесты неявно; сборочные и Play fail-closed проверки сохраняются.
-4. **Сборка:** `npm run android:build:prod`. Скрипт сам проверяет наличие артефакта и
-   `jarsigner -verify`.
-5. **Проверка артефакта:** package `by.metravel.app`, versionCode/versionName совпадают с
-   `app.json`, подпись — зарегистрированный upload key, коммит соответствует релизу.
-6. **Устройство:** debug APK (`npm run android:build:dev` + `adb install -r …`) и релевантные
-   `AND-USB-*` из `docs/MANUAL_TEST_CASES.md` на подключённом телефоне. Помни: debug-сборка
-   идёт без R8, поэтому регрессии минификации она не ловит — при подозрении на них проверяй
-   релизный артефакт, а не debug.
-7. **Dry-run:** `npm run android:submit:testing:latest`, затем `npm run android:submit:latest`.
-   Оба грузят AAB во временный edit, валидируют, проверяют неизменность чужих треков и
-   удаляют edit.
-8. **Подтверждение владельца** → `npm run android:submit:testing` и/или
-   `npm run android:submit:production`.
-9. **Пост-проверка:** `npm run android:play:status` — целевые треки на новом versionCode,
-   остальные не сдвинулись.
-
-## Известные грабли
-
-Отказы сборки и заливки (дубль `versionCode`, размер AAB, конфликт подписи, неполный
-`.secrets`-бандл) — в «Типовых механизмах отказа» выше. Сверх них:
-
-- **Обработка в Play не мгновенная**: сразу после commit трек может показывать `inProgress`
-  или старый код несколько минут. Это не ошибка — перечитай статус позже, повторный
-  commit не запускай.
-- **Тестировщики, страны, rollout, release notes** скриптами не управляются вообще —
-  это ручные шаги владельца в Play Console.
-
-## Отчёт (evidence, без секретов)
-
-Что запрошено и в какие треки; commit и ветка; `version` / `versionCode`; SHA-256 отпечаток
-upload-сертификата; какие команды прогнаны и с каким результатом (gate, сборка, dry-run,
-commit); модель устройства и пройденные `AND-USB-*`; фактические треки до и после; что
-осталось владельцу вручную (rollout, release notes, тестировщики) и оставшиеся риски.
-Тикеты на MCP-борде обновляет родитель — у тебя нет борд-инструментов.
-
-Структура отчёта — `docs/AGENT_ANALYSIS_PROTOCOL.md` §6. Обязательные поля:
-
-- target-трек и режим (`dry-run` / `--commit`), плюс дословная формулировка авторизации
-  владельца, по которой выполнен commit;
-- `version` / `versionCode` и коммит с веткой, от которых собран AAB;
-- время старта и завершения каждой мутирующей команды;
-- результат **каждой** пробы: `play:status` до и после, gate, prebuild, Gradle-сборка,
-  `jarsigner -verify`, `mapping.txt`, оба dry-run, device-кейсы;
-- что откатываемо и чем: до commit — всё (edit удаляется), после commit — только новая
-  сборка с бо́льшим `versionCode`; halt раската делает владелец в Play Console;
-- что осталось непроверенным — строкой `verify pending: <точная причина>`.
+Укажи стадию, commit, проверенные версии и артефакт, публичный отпечаток
+сертификата, устройство/кейсы, результаты и время выполненных операций,
+состояние треков до/после при публикации, блокеры и `verify pending`.
+Результат для борда передай родителю. Закрытые ключи, пароли и токены не выводи.

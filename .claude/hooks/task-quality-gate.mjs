@@ -30,14 +30,15 @@
  * Аварийный обход: BOARD_TASK_GATE_BYPASS=1 (пишется в systemMessage, чтобы обход был видимым).
  */
 
+import { boardToolName } from './board-tool.mjs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 import { validateBoardTask } from '../../scripts/lib/boardTaskContract.mjs';
 
-const CREATE_TOOL = 'mcp__metravel-task-board__metravel_task_create';
-const UPDATE_TOOL = 'mcp__metravel-task-board__metravel_task_update';
+const CREATE_TOOL = 'metravel_task_create';
+const UPDATE_TOOL = 'metravel_task_update';
 const API_BASE = process.env.METRAVEL_TASK_BOARD_API_BASE || 'https://metravel.by/api/tasks/';
 const GUARDED_UPDATE_STATUSES = ['todo'];
 
@@ -152,7 +153,7 @@ async function runHook() {
     allow();
   }
 
-  const tool = input.tool_name;
+  const tool = boardToolName(input.tool_name);
   if (tool !== CREATE_TOOL && tool !== UPDATE_TOOL) allow();
 
   if (process.env.BOARD_TASK_GATE_BYPASS === '1') {

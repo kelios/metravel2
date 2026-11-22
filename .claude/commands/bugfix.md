@@ -4,6 +4,6 @@ description: Минимальный фикс одного подтверждён
 
 Прочитай `.codex/skills/metravel-feature-builder/SKILL.md` и используй его как канонический workflow.
 
-Почини один баг из `$ARGUMENTS`: установи механизм, внеси минимальный diff и запусти узкие code-level checks. Добавляй regression-тест для существенного поведения, если он действительно ловит дефект. Затем вызови `review-auditor` по полному task diff. Runtime QA видимого изменения выполняется в `testing` после review pass, по точному сценарию.
+Почини один баг из `$ARGUMENTS`: установи механизм, внеси минимальный diff и запусти узкие code-level checks. Добавляй regression-тест для существенного поведения, если он действительно ловит дефект. Передай полный diff на независимое ревью по AGENTS §4.6. Малый diff проходит `code-review-gate`, остальные — `review-auditor`, затем `code-review-gate`. Runtime QA видимого изменения выполняется в `testing` после review pass, по точному сценарию.
 
 Аргументы: `$ARGUMENTS`

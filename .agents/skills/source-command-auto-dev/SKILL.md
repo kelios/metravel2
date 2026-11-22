@@ -42,12 +42,12 @@ Use this skill when the user asks to run the migrated source command `auto-dev`.
 ## Цикл
 
 1. Зафиксируй минимальный diff, решающий ровно одну проблему. Без побочных рефакторингов.
-2. Соблюдай правила: изображения через `components/ui/ImageCardMedia` (fit=contain + blur из DOM с первого кадра), внешние ссылки через `@/utils/externalLinks.openExternalUrl`, серверный стейт — React Query, клиентский — Zustand.
+2. Соблюдай правила: изображения через `components/ui/ImageCardMedia` (`contain`, заполнение по «Images and placeholders» в `docs/RULES.md`), внешние ссылки через `@/utils/externalLinks.openExternalUrl`, серверный стейт — React Query, клиентский — Zustand.
 3. `npm run check:fast` — прогон по изменённому scope.
 4. Упало → прочитай вывод, найди виновные файлы, почини root cause (не глуши warning'и, не добавляй eslint-disable). Повтори до зелёного.
-5. Передай полный task diff независимому `review-auditor` для обязательного
-   code-only review-and-fix по `$metravel-code-reviewer`; повтори затронутые
-   static/unit/guard checks после исправлений.
+5. Передай полный diff на независимое ревью по AGENTS §4.6. Для малого diff достаточно
+   `code-review-gate`; для остального — `review-auditor`, затем `code-review-gate`. После
+   исправлений повтори затронутые static/unit/guard checks и гейт.
 6. Затронул web UI → после review и перехода в `testing` передай профильному
    tester минимальный сценарий по `docs/TESTING.md` → «Risk-based validation and
    evidence reuse»: responsive — mobile first + desktop; shared-логика — один

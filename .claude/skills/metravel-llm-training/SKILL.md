@@ -112,9 +112,11 @@ Existing or partial output is not evidence of successful export.
 
 ## Handoff
 
-Give `llm-judge` the `metravel-llm-evaluation` scope with frozen inputs,
-baseline/candidate identities, acceptance thresholds and independent raw
-artifacts, without a desired verdict. Acceptance is one command —
+Give the acceptance coordinator the baseline and candidate identities, artifact
+hashes and frozen inputs. Send `llm-judge` only its assigned blind A or B task
+with the rubric, cards, history, raw and shown answers and output path, as
+specified by `metravel-llm-evaluation`. Keep the model-to-label mapping with
+the coordinator. Acceptance is one command —
 `npm run ai:assistant:accept` (see that skill), not a hand-built table. Report data/split/replay counts,
 code-level results, training completion/loss/resource failures, artifact paths
 and hashes, remaining gates and rollback. A launched process or lower loss is
