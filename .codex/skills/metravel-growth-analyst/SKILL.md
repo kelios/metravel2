@@ -6,8 +6,7 @@ description: Analyze metravel growth, traffic, SEO, GA4/GSC/Yandex stats, regist
 # Metravel Growth Analyst
 
 Use this skill for read-only growth and behavior analysis before product, analytics,
-SEO, or funnel implementation work. Do not edit code or docs while acting as this
-role unless the user explicitly asks to implement the follow-up.
+SEO, or funnel implementation work. A requested monthly review may record its decision in the growth plan and applicable append-only logs. Weekly digest storage follows the private journal rules below. Product, analytics and board changes use the appropriate follow-up owner.
 
 `AGENTS.md` is inherited. Read `docs/GROWTH_PLAN.md`, the exact funnel's
 route/component/API path, and only the analytics/testing or production-probe
@@ -20,8 +19,7 @@ heading required by the requested metric.
 - Growth baseline and monthly review: `docs/GROWTH_PLAN.md`.
 - Quest funnel: when assigned the weekly quest review, pair `npm run quest:funnel` with `npm run quest:translations:status -- --json` for all content locales. Follow `docs/features/quests.md` → «Перевод квеста» for stale-step/finale evidence and the board handoff; analytics does not authorize content writes or a new schedule.
 - Public production API read-only checks may use `https://metravel.by/api/...`.
-- Yandex Metrika and affiliate dashboards do not have automatic local access unless
-  the user provides manual numbers. Never print OAuth tokens, `.secrets`, `.env`,
+- `npm run stats:summary -- --end-month YYYY-MM` reads completed months and can include Yandex Metrika when existing authorization is configured. Use supplied affiliate statements for orders and revenue, and label any missing source. Never print OAuth tokens, `.secrets`, `.env`,
   `.env.e2e`, cookies, or auth headers.
 
 ## Weekly Growth Digest

@@ -1,6 +1,6 @@
 ---
 name: quest-friction-analyst
-description: "Анализ quest friction по реальным ответам и pattern audit. Для «почему игрок бросил» или «разбери прохождение»; сам меняет только answer_pattern, content/runtime маршрутизирует владельцам."
+description: "Разбирает трение квестов по попыткам и данным шагов. Проверяет, почему верный ответ отклонён или игрок остановился. При поручении исправить ведёт answer_pattern, рискованный шаг и варианты перевода по регламенту квеста."
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update
 model: opus
 ---
@@ -14,7 +14,8 @@ model: opus
 (`.claude/skills/metravel-quest/SKILL.md`), здесь не повторяются. Для тебя это
 значит: недостающую форму верного ответа и перевод рискованного шага в
 свободный ответ применяешь сам; переписывание авторского текста по своей
-инициативе — через `quest-editor` и подтверждение владельца.
+инициативе — через `quest-editor` и подтверждение владельца. Если поручена
+только диагностика, верни выводы и предлагаемый патч без применения.
 
 ## Разбор задачи (обязательно до правок)
 
@@ -337,10 +338,14 @@ scope, осознанные исключения — с обоснованием
 Правило: `docs/TASK_BOARD_MCP.md` → «Правило: описание задачи — по-русски и человеческим
 языком».
 
-Правки на прод — только через существующий тулинг, батчем:
+Для разрешённой правки задай `patch_file` равным точному пути созданного для этой задачи
+файла в `.codex-temp/quest-audit/`. При нескольких файлах передай
+те же явно перечисленные пути обоим вызовам. Убедись по предварительному выводу, что
+`quest_id`, DB-id и поля принадлежат этому заданию.
 
 ```bash
-node scripts/apply-quest-patches.js --apply .codex-temp/quest-audit/patches-*.json
+node scripts/apply-quest-patches.js --dry-run "$patch_file"
+node scripts/apply-quest-patches.js --apply "$patch_file"
 ```
 
 Токен берёт общий resolver скрипта (`docs/DEVELOPMENT.md` → «Operator token

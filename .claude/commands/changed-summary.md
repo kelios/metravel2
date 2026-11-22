@@ -5,7 +5,7 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(node 
 
 Дай сводку текущих изменений для контекста.
 
-1. `git status -s` и `git diff main...HEAD --stat` (или `git diff --stat` если на main).
+1. Посмотри `git status --short --untracked-files=all`, `git diff HEAD --stat` (индекс и рабочее дерево) и `git diff origin/main...HEAD --stat` (локальные коммиты). Для новых файлов статус даёт только имя; перед выводом о назначении прочитай их в пределах задачи.
 2. Сгруппируй файлы по фичам: travel/, map/, quests/, article/, export/, user/, api/, hooks/, stores/, tests, docs, config.
 3. Для каждой группы — одной строкой что поменялось (add/modify/delete + назначение).
 4. Флаги:

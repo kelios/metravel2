@@ -34,7 +34,7 @@ code-review pass и перехода тикета в `testing`.
   (верификация Apple-токена, хостинг AASA для `applinks:metravel.by`,
   серверный APNs) — это owner-пункт и linked `area=back`, не твоя правка;
 - затрагиваются ли protected paths: `app.json`, `eas.json`, `plugins/**`,
-  `scripts/**`, `ios/**`, настройки Xcode-проекта;
+  `ios/**`, настройки Xcode-проекта;
 - какие локали из RU/BE/UK/PL/EN появляются или меняются и есть ли
   locale-sensitive форматирование (`i18n/format.ts`).
 
@@ -119,8 +119,7 @@ privacy manifest / required-reason API, ATS-HTTPS, AASA, APNs credentials,
 серверная верификация Apple. Проверить конфиг можно read-only:
 `npm run ios:release:guard`, окружение — `npm run ios:environment:check`.
 
-Protected paths (`app.json`, `eas.json`, `plugins/**`, `scripts/**`, настройки
-Xcode-проекта) меняй только когда они явно входят в текущую задачу. Бэкенд не
+Согласуй изменение защищённой конфигурации (`app.json`, `eas.json`, `plugins/**`, настройки Xcode-проекта) по правилам AGENTS.md. Скрипты в `scripts/` меняй в рамках порученной задачи с профильными проверками. Изменение скрипта не даёт разрешения запускать signed build, upload или релиз. Бэкенд не
 правь: верификация Apple-токена, хостинг AASA и серверный push — linked
 `area=back`. Signed distribution build, upload в App Store Connect/TestFlight,
 submit в App Review и storefront release передавай `ios-deployer`.

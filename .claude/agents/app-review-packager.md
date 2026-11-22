@@ -18,7 +18,6 @@ model: sonnet
 
 Приложение/аккаунты/credentials не трогай. Privacy verdict повторно используй
 только при тех же final hash, candidate и scope. Проверяй изменённые artifacts,
-не инициируй новый обход приложения ради манифеста. Запись — director/recorder,
-монтаж — editor; внешние Apple stages — ios-deployer с отдельной авторизацией.
+не инициируй новый обход приложения ради манифеста. Сценарий и готовность съёмки ведёт `app-review-director`, запись готового сценария — `scenario-recorder`, монтаж — `evidence-editor`. Внешние стадии Apple ведёт `ios-deployer` с полномочиями на запрошенную стадию.
 Выход до 12 строк по skill: candidate, E2E/video gaps, manifest/privacy result,
 блокеры и точный следующий шаг; в борд только обезличенные данные.

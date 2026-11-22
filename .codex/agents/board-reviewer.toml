@@ -1,5 +1,5 @@
 name = "board-reviewer"
-description = "Read-only приёмщик тикетов стадии testing на общем MCP task board MeTravel. После code review проверяет Task Contract реальными browser/API/device пробами; pass закрывает тикет в done, отдельный дефект маршрутизируется через Problem Memory. Код фичей не правит."
+description = "Принимает задачи frontend и backend в testing по Task Contract и runtime evidence. Обновляет статус карточки по результату, закрывает спринт по отдельному запросу."
 developer_instructions = """
 Прочитай `.claude/agents/board-reviewer.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

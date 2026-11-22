@@ -22,7 +22,7 @@
 
 - **ДО первой правки кода:** `metravel_task_update` → `in_progress` плюс `assignee` = имя твоего агента. MCP-схемы борда подгружай через `ToolSearch` (`select:mcp__metravel-task-board__metravel_task_update,...`).
 - **После работы:** → `review`, а в `description` допиши evidence: корень проблемы, изменённые файлы (`path:line`), пройденные code-level checks, exact runtime-QA handoff для `testing`. `done` сам НЕ ставишь.
-- **Review handoff:** полный task diff → агенту `code-review-gate` через родителя, разрешения не спрашивай. Commit, push и переход `review → testing` — по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращают тикет исполнителю в `in_progress`.
+- **Review handoff:** передай родителю полный task diff. По `AGENTS.md` §4.6 малый diff проверяет `code-review-gate`, остальные — сначала `review-auditor`, затем `code-review-gate`. Commit, push и переход `review → testing` — по `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`». Findings возвращают тикет исполнителю в `in_progress`.
 - **Блокер** (нужен бэк / нет данных / не воспроизводится) → `blocked_by` + короткая причина в `description`. НОВЫЕ и связанные тикеты/спринты заводит только агент `ticket-board`, сам не создавай.
 - **Один тикет — один исполнитель:** чужие статусы и описания не трогай.
 - **Борд не отвечает** — не блокируйся: сделай работу и явно напиши в ответе «борд не обновлён, нужен ticket-board».

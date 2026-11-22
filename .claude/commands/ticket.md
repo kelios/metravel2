@@ -1,5 +1,5 @@
 ---
-description: Прогнать frontend/backend тикет через общий MCP task board (discovery→implement→review→push→выкат на прод→testing на проде→done). Аргумент — id задачи, `next`, или описание новой.
+description: Прогнать frontend/backend тикет через общий MCP task board (от выбора до приёмки по правилам своей области). Аргумент — id задачи, `next`, или описание новой.
 ---
 
 Запусти скилл **ticket-flow** для обработки frontend или backend тикета через общий таск-борд MeTravel.
@@ -10,11 +10,11 @@ description: Прогнать frontend/backend тикет через общий 
 
 `$ARGUMENTS`:
 - число / `[FE-…]` / `[TASK-…]` — id или ключ существующего тикета на борде;
-- `next` — взять верхний `area=front`, `status=todo`;
+- `next` — взять верхний доступный `status=todo` в запрошенной области; без фильтра учитывай и `area=front`, и `area=back`;
 - свободный текст — завести новый тикет и прогнать по пайплайну.
 
 Следуй раннбуку скилла `ticket-flow`: операции с бордом — только через агента `ticket-board`
-(MCP `metravel-task-board`), реализация/code-level checks/ревью/QA — профильными FE-агентами. Если
+(MCP `metravel-task-board`), реализация, проверки и ревью идут в репозитории владельца области. Для `area=back` используй раздел «Маршрут `area=back`» того же скила. Если
 борд недоступен — укажи на `docs/TASK_BOARD_MCP.md` и не продолжай вслепую.
 
 **Карточка уже в `in_progress`/`review`/`testing` → сначала выясни, кто её ведёт.** Этот статус

@@ -1,7 +1,7 @@
 ---
 name: quest-geo-verifier
 description: "Read-only гео-сверка quest points и геометрии маршрута через OSM/Nominatim: объект, distance, порядок, крюк. Для «проверь точки квеста»; контент/прод не мутирует, отдаёт evidence и патч."
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
+tools: Read, Grep, Glob, Write, Bash, WebSearch, WebFetch
 model: sonnet
 ---
 
@@ -59,10 +59,12 @@ model: sonnet
    "changes": { "lat": 53.902345, "lng": 27.561234, "maps_url": "https://maps.google.com/?q=53.902345,27.561234" } }]
 ```
 
-Правки только внутри `changes` (плоский патч скрипт отбивает «пустые
-changes»); `source`/`note` в патч не пишутся — поле вне allowlist роняет
-применение, источник идёт в отчёт. Реордер — `changes: { "order": N }` по
-двухфазной схеме из `references/live-edit.md` скилла `metravel-quest`.
+Координаты и ссылку передавай в `changes`. Источник и пояснения запиши в отчёте.
+Для перестановки подготовь отдельный объект `{quest_id, quest_db_id, reorder: [...]}`.
+Из свежего bundle возьми строковые `step_id` всех точек, исключая вступление
+(`is_intro`). Укажи каждую ровно один раз в целевом порядке. После финала могут
+стоять только необязательные точки. Передай редактору также исходный порядок.
+Двухфазную запись выполняет скрипт по `references/live-edit.md` скилла `metravel-quest`.
 
 ## Формат ответа
 

@@ -1,5 +1,5 @@
 name = "review-auditor"
-description = "Обязательный code-only ревьюер-фиксер MeTravel: проверяет весь task diff на баги, избыточность, дублирование, плохой reuse и нарушения правил, исправляет findings и повторяет static/unit/guard checks. Browser/device QA остаётся testing."
+description = "Независимое code-only ревью с исправлениями перед code-review-gate для изменений вне малого diff по AGENTS.md (включая high/highest и несколько карточек). Проверяет полный task diff, исправляет findings и повторяет static/unit/guard checks. Малый diff сразу идёт в code-review-gate."
 developer_instructions = """
 Прочитай `.claude/agents/review-auditor.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

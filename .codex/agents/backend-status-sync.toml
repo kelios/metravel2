@@ -1,5 +1,5 @@
 name = "backend-status-sync"
-description = "Read-only сверка backend задач с origin/master, production GET и MCP board; определяет verified fixes и разблокированный фронт, обновляет GROWTH_PLAN. Статусы борда меняет ticket-board по плану."
+description = "Сверяет backend-карточки с origin/master и результатами приёмки, определяет разблокированную frontend-работу. Готовит план обновлений для ticket-board."
 developer_instructions = """
 Прочитай `.claude/agents/backend-status-sync.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

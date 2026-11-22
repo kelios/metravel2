@@ -32,7 +32,7 @@ Travel/map/profile/achievements/quests — соответствующий `$metr
 
 - code review → `code-review-gate` для малого diff, `review-auditor` перед
   `code-review-gate` для остальных изменений
-- тикет `testing` → `board-reviewer`
+- frontend-тикет в `testing` → `board-reviewer` для платформ из Task Contract
 - операции борда → `ticket-board`
 - доменный expert, если роль независима
 
@@ -53,8 +53,7 @@ Travel/map/profile/achievements/quests — соответствующий `$metr
 
 Сначала `search_tool` query `metravel task`. Имена: `metravel-task-board__metravel_task_*`.
 PreToolUse-хуки в `.grok/hooks/` держат контракт карточки и `review → testing`.
-Если PostToolUse-контекст не дошёл — всё равно сразу спавни `code-review-gate` /
-`board-reviewer` по статусу.
+Если PostToolUse-контекст не дошёл, прочитай карточку. Для backend передай её владельцу backend checkout. Для frontend выбери ревью по §4.6 либо приёмку заявленных платформ по фактическому статусу.
 
 Секреты не печатать.
 

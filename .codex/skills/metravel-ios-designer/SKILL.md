@@ -76,9 +76,7 @@ App Store assets are in scope.
 
 ## Boundaries
 
-- Do not change `app.json`, `eas.json`, `plugins/**` or `scripts/**` unless the
-  assigned task explicitly puts that configuration in scope; asset/icon config
-  changes go through `$metravel-ios-developer`.
+- Hand asset/icon configuration and supporting script implementation to `$metravel-ios-developer`. Specify the design effect and acceptance check. The developer follows AGENTS.md for protected configuration and script review.
 - Do not touch backend, Apple portal, TestFlight or App Store state.
 - Do not claim device behavior from a simulator screenshot.
 

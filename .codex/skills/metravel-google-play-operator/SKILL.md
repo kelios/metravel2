@@ -5,7 +5,7 @@ description: Prepare, locally build, submit, and verify metravel Android Google 
 
 # Metravel Google Play Operator
 
-This is the Codex equivalent of the legacy Claude `android-builder`, `android-publisher`, and `android-release` workflows.
+Use the `android-publisher` role for release operations, `$metravel-android-portable-builder` for a local artifact only and `android-expert` for Android application changes. The Claude release procedure is `.claude/skills/android-release/SKILL.md`.
 
 `AGENTS.md` is inherited. For the authorized stage, load only the Android
 build/signing/Play sections of `docs/RELEASE.md`,
@@ -43,14 +43,14 @@ build/signing/Play sections of `docs/RELEASE.md`,
 
 ## Workflow
 
-1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, run `npm run android:release:doctor`, verify local signing/service-account presence without exposing values, and record target `production`.
-2. Before a release build, require `npm run android:release:check` and successful local USB Android smoke for the changed native scope.
-3. For an authorized build, run `npm run android:prebuild` before `npm run android:build:prod` as required by `docs/RELEASE.md` → `Android`; verify the local AAB metadata/upload certificate.
+1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, run `npm run android:release:doctor`, verify local signing/service-account presence without exposing values, and record the requested stage and track family.
+2. For an authorized store build, run `npm run android:prebuild` before the source gate as required by `docs/RELEASE.md`. Require `npm run android:release:check` and successful local USB Android smoke for the changed native scope. If installation fails on a signature mismatch, use a compatible APK or a designated test device. Uninstalling the existing package erases its data and requires separate authorization.
+3. After the gate, run `npm run android:build:prod` and verify the local AAB metadata and upload certificate.
 4. If upload is authorized, dry-run the authorized family: `npm run android:submit:latest` for production, `npm run android:submit:testing:latest` for alpha+internal. Each loads the AAB into a temporary edit, validates, and deletes it. A build-only request stops with the verified local artifact.
 5. If publication is explicitly authorized and the matching dry-run is green, commit with `npm run android:submit:production` and/or `npm run android:submit:testing`. Production is `completed` at 100% with no staged rollout.
 6. Verify with `npm run android:play:status` that authorized tracks moved to the new versionCode and the other family did not. Do not trust submit output alone.
 7. On `FAILED_PRECONDITION`, stop retries, confirm the temporary edit was deleted, and report the exact Play Console eligibility action.
-8. Update only the relevant board ticket; do not mark release work done without production track evidence.
+8. Update only the relevant board ticket; report the observed artifact or track that satisfies that ticket’s requested stage.
 
 ## Handoff
 

@@ -1,5 +1,5 @@
 name = "dev-deployer"
-description = "Деплой web-фронтенда на дев-сервер 192.168.50.36 строго через `build-dev.sh` (сборка dev-env → rsync → swap static/dist → docker compose restart). Дев — docker-стек Сергея; инфру не трогает, только выкладывает фронт. Прод не деплоит."
+description = "Проверяет 404/502 на dev-стенде MeTravel. Собирает web-фронтенд или выкладывает его через build-dev.sh по запросу соответствующей операции."
 developer_instructions = '''
 Прочитай `.claude/agents/dev-deployer.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

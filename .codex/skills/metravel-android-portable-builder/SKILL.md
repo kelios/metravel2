@@ -22,10 +22,10 @@ Expect these gitignored files at the repository root:
 .secrets/metravel-android-upload.jks
 .secrets/metravel-android-prod.env
 .secrets/google-play-service-account.json
+.secrets/google-services.json
 ```
 
-The first three are required for a production AAB. The service account is
-required only for Play API operations. Never print, inspect, screenshot, commit,
+A production build needs the signing configuration, upload keystore, production environment and the Firebase Android config for `by.metravel.app`. The release doctor also accepts a valid Firebase config at the repo root. The Play service account is required only for Play API operations. Never print, inspect, screenshot, commit,
 or paste their contents into chat.
 
 If the portable bundle does not exist on the known working Mac and the user has
@@ -55,9 +55,11 @@ entries or manually entered passwords.
    the keystore without exposing its password, and reports exactly which secret
    file or tool is missing.
 
-4. For a signed production artifact, run:
+4. For a signed production artifact, materialize the current Android release configuration, run the native source gate and build in that order. Require a passing gate for the current inputs. `SKIPPED` indicates contention.
 
    ```bash
+   npm run android:prebuild
+   npm run android:release:check
    npm run android:build:prod
    ```
 

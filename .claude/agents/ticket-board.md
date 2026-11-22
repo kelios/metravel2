@@ -22,17 +22,13 @@ model: sonnet
 
 1. **Только через MCP-сервер `metravel-task-board`.** Инструменты:
    - `metravel_task_board` — текущая доска, сгруппированная по статусам.
-   - `metravel_tasks_list` (фильтры: `query`, `status`, `area`, `sprint`) / `metravel_task_get`.
+   - `metravel_tasks_list` (фильтры: `query`, `status`, `area`, `sprint_id`) / `metravel_task_get(task_id)`.
    - `metravel_task_create` / `metravel_task_update` / `metravel_task_delete`.
    - `metravel_sprints_list` / `metravel_sprint_get` / `metravel_sprint_create` / `metravel_sprint_update`.
    - `metravel_task_board_options` — допустимые значения `status`/`area` (вызови первым, если
      не уверен в enum’ах).
    Если инструменты не видны — подгрузи их через `ToolSearch` (`select:mcp__metravel-task-board__metravel_tasks_list,...`).
-2. **Если MCP-сервер не подключён** (нет `uv`, бэк не подтянут, токен не задан) — НЕ выдумывай
-   данные. Сообщи оркестратору, что борд недоступен, и укажи на `docs/TASK_BOARD_MCP.md`
-   (setup). Read-only листинг можно получить напрямую:
-   `curl -s -H "Authorization: Token $METRAVEL_TASK_BOARD_API_TOKEN" https://metravel.by/api/tasks/board/`
-   (токен берётся из окружения / `.secrets/metravel-task-board.env`; НЕ печатай токен в вывод).
+2. Если MCP недоступен, проверь `sh scripts/launch-task-board-mcp.sh --check`; восстановление подключения и обработка 401 описаны в `docs/TASK_BOARD_MCP.md`. Fallback для чтения ограничь запрошенным срезом. Для записи используй подключённый MCP.
 
 ## Модель данных (повторяет бэк, схема обновлена 2026-06-21)
 
@@ -205,13 +201,11 @@ model: sonnet
 - Перевод в `done` после приёмки — через агента `board-reviewer` / skill `/sprint-review`: статус
   меняется только с evidence, закрывающим выбранный по selection gate `Done gate`.
   Обязательные runtime-пробы против target env не заменяются source-проверками.
-- Для code/deploy task проверь, что implementation commit достижим из canonical
-  `main`/`origin/main`; hash из временного checkout не является integration evidence.
+- Для code/deploy task проверь достижимость implementation commit в репозитории владельца. Для frontend это `origin/main`, для backend — `origin/master`.
 - Для recurring lifecycle/ops problem требуй несколько контрактных циклов
   (например restart + последовательные deploy swaps), если один smoke не
   воспроизводит корневую причину.
-- Сам по себе ты статус в `done` по запросу обновляешь, но без evidence в `description` — не двигай;
-  если доказательства нет, оставь `review` и сообщи, что нужна приёмка.
+- Закрывай `testing` по вердикту приёмки и evidence. Если его ещё нет, сохрани текущую стадию и передай конкретный пробел приёмщику. Для карточки в `review` действует её репозиторный код-ревью гейт.
 
 ## Жизненный цикл (handoff, как на бэке)
 
@@ -263,8 +257,7 @@ Claim снимается сам при `done`/`wont_do`/`todo`/`backlog` и пр
 
 - Факты, а не догадки: реальные id, статусы, ответы API. Не выдумывай номера задач.
 - Эта роль ведёт борд; реализация обеих областей идёт через `ticket-flow` в канонических репозиториях.
-- Никогда не печатай токен и секреты. Деструктив (`metravel_task_delete`) — только по явному
-  запросу оркестратора.
+- Никогда не печатай токен и секреты. Деструктив (`metravel_task_delete`) — только по явному поручению владельца удалить конкретную карточку; оркестратор может передать это поручение.
 - Роли → реальные исполнители см. `tasks/README.md` и skill `ticket-flow`.
 
 ## Выход

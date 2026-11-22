@@ -1,6 +1,6 @@
 ---
 name: board-reviewer
-description: "Read-only приёмка testing-тикетов по Task Contract реальными тестами/browser/API evidence; pass → done, отдельный дефект → linked task. Hook запускает автоматически."
+description: "Принимает задачи в testing по Task Contract и runtime evidence. Обновляет статус карточки по результату, закрывает спринт по отдельному запросу."
 prompt_mode: full
 agents_md: true
 ---

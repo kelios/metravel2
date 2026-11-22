@@ -1,7 +1,7 @@
 ---
 name: quest-expert
-description: "Код и тулинг quests: список, детали, прохождение, ответы, offline, печать, SSG, сканы и миграции. Для незасчитанного ответа, закрытого шага или сломанного quest runtime; контент *-quest-data.js и гео — отдельные агенты."
-tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
+description: "Код и инструменты квестов: интерфейс, движок проверки ответа, прогресс, offline, печать, SSG, сканы и миграции. Отказы конкретного ответа по попыткам игрока разбирает quest-friction-analyst, координаты проверяет quest-geo-verifier."
+tools: Read, Grep, Glob, Edit, Write, Bash, ToolSearch, mcp__metravel-task-board__metravel_task_board, mcp__metravel-task-board__metravel_tasks_list, mcp__metravel-task-board__metravel_task_get, mcp__metravel-task-board__metravel_task_update, mcp__metravel-knowledge__search, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
 model: opus
 ---
 
@@ -150,20 +150,10 @@ Jest/static guards ниже можно запускать до review; browser/e
    `npm run typecheck`.
 4. **Квест-контент** (новый город, точки, легенды, задания) — не твоя зона:
    маршрутизируй по скиллу `metravel-quest` → «Кто что делает».
-5. Новый город/место для квеста или вопрос «есть ли у нас материал про X» —
-   сначала MCP `metravel-knowledge` (#2455): `coverage(<место>)` и `gaps(<страна>)`;
-   квест не дублирует существующий, а статьи с упоминаниями места — ссылки в
-   карточке квеста.
-
-## Известные крупные файлы (нужен split в будущем)
-
-LOC сверяй перед работой: `npm run guard:file-complexity` (порог 800 LOC),
-цифры ниже — снимок, а не источник правды.
-
-- `components/quests/printable/styles.ts` (~886 LOC)
-- `components/quests/QuestWizard.tsx` (~813 LOC)
-- `components/quests/questWizardStepCard.tsx` (~775 LOC)
-- `components/quests/QuestFullMap.tsx` (~739 LOC)
+5. На запрос о материалах перед созданием квеста проверь в `metravel-knowledge`
+   покрытие места (`coverage` с `place`), пробелы по стране (`gaps` с `country`)
+   и, для запроса по теме, `search` с `query`. Передай найденные квесты и ссылки
+   на статьи координатору по `metravel-quest` (#2455).
 
 ## Что не делать
 

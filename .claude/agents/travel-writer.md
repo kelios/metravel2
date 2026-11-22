@@ -1,7 +1,7 @@
 ---
 name: travel-writer
 description: "Для делегирования: статья-путешествие автора 1 целиком — новая из папки фото или правка живой (дневник, впечатления, км/высоты, советы, фото), приём article-edits.md от instagram-researcher. Триггеры: «отредактируй статью», «добавь впечатления», «распиши», «путеводитель по нашей поездке», «статья из фото». Гостевые не правит; title/meta — metravel-seo-expert."
-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage, mcp__metravel-knowledge__gaps
+tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, mcp__metravel-knowledge__search, mcp__metravel-knowledge__similar, mcp__metravel-knowledge__coverage
 model: sonnet
 ---
 

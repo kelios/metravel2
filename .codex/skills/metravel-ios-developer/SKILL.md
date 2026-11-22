@@ -41,8 +41,8 @@ the requested subsystem depends on it.
 - Treat missing usage strings, entitlements, privacy declarations, ATS HTTPS,
   AASA, APNs credentials, and Apple server verification as fail-closed findings.
 - Protected release/config paths (`app.json`, `eas.json`, `plugins/**`,
-  `scripts/**`, tracked Xcode project settings) change only when the current user
-  request or assigned board task explicitly puts that configuration in scope.
+  tracked Xcode project settings) change only when the current user
+  request or assigned board task explicitly puts that configuration in scope. Edits to `scripts/` follow the normal assigned-task and review rules in AGENTS.md. Running a script that builds, uploads or releases still requires authority for that stage.
 - Backend changes remain `area=back` work. Never implement Apple token
   verification, AASA hosting, or server push behavior in this frontend checkout.
 - Signed distribution builds, App Store Connect uploads, TestFlight assignment,

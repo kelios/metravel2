@@ -26,8 +26,7 @@ description: "Регламент релиза Android: bump → гейт → л�
 ## Гейт №0 — что требует явной команды владельца
 
 - **Сборку** прод-AAB запускаешь по команде владельца.
-- **`--commit` в любой трек — отдельное подтверждение.** Dry-run делается сам,
-  публикация — только после «да». Для `production` это выкатка сразу на 100%:
+- **Для загрузки AAB в Google Play требуется поручение на загрузку или публикацию в выбранное семейство треков.** Dry-run загружает AAB во временный edit. Для `--commit` нужно явное поручение на публикацию в конкретный трек. Уже полученное разрешение действует. Для `production` это выкатка сразу на 100%:
   скрипт ставит `status: completed` без `userFraction`, staged rollout не
   поддержан (процентный раскат — ручной шаг владельца в Play Console).
 - Тестовые прогоны на устройстве идут локальной debug-сборкой и квоту ни на что
@@ -48,7 +47,7 @@ description: "Регламент релиза Android: bump → гейт → л�
    импорты в native-бандл) до сборки.
 2. Локальная сборка и установка на подключённый по USB телефон:
    `npm run android:build:dev` → `adb install -r
-   android/app/build/outputs/apk/debug/app-debug.apk`.
+   android/app/build/outputs/apk/debug/app-debug.apk`. Если ключи несовместимы, используй отдельное тестовое устройство или APK с совместимой подписью. Удаление установленного пакета стирает данные и требует отдельного явного поручения.
 3. Smoke-прогон **по документированному списку**, а не по памяти: P1-минимум
    `AND-USB-01..06`, `08`, `10`, `13..18`, `21..31` из `docs/MANUAL_TEST_CASES.md`
    плюс предметные кейсы затронутых поверхностей (`TR-DET-02` галерея,
@@ -73,7 +72,7 @@ description: "Регламент релиза Android: bump → гейт → л�
 
 ## Фаза 2 — версия
 
-5. `npm run android:play:status` — прочитать фактические треки.
+5. Для нового релиза, предназначенного для Play, `npm run android:play:status` читает фактические треки. Для воспроизведения локального AAB существующей версии следуй `.codex/skills/metravel-android-portable-builder/SKILL.md`.
 6. В `app.json` поднять `versionCode` до (максимум по трекам + 1) и `version` по
    смыслу изменений. Дубль `versionCode` Play отклоняет.
 
@@ -81,7 +80,7 @@ description: "Регламент релиза Android: bump → гейт → л�
 
 7. `npm run android:release:doctor` — Node 22.13.1+, JDK 17–21, Android SDK,
    keystore, `.env.prod`, ключ Play.
-8. `npm run android:release:check` — Android doctor, общие проверки типов и
+8. Сначала `npm run android:prebuild` применяет release-плагин к каталогу Android. Затем `npm run android:release:check` — Android doctor, общие проверки типов и
    безопасности, Jest-контракты Android и native. Список тестов доступен через
    `npm run android:release:check -- --list`. USB и проверка AAB остаются отдельными гейтами.
 9. `npm run android:build:prod` → подписанный
@@ -90,8 +89,7 @@ description: "Регламент релиза Android: bump → гейт → л�
 
 ## Фаза 4 — публикация
 
-10. Dry-run: `npm run android:submit:testing:latest` (alpha+internal) и
-    `npm run android:submit:latest` (production). Оба валидируют edit и удаляют его.
+10. На запрос только о сборке закончи после проверки AAB. Для загрузки запусти dry-run разрешённого семейства треков: `npm run android:submit:testing:latest` (alpha+internal) или `npm run android:submit:latest` (production). Каждый валидирует edit и удаляет его.
 11. **По явному подтверждению владельца** — `npm run android:submit:testing`
     и/или `npm run android:submit:production`.
 12. `npm run android:play:status` — целевые треки на новом `versionCode`, остальные
@@ -108,7 +106,7 @@ rollout скриптами не управляются — это ручные �
 
 ## Правила
 
-- Защищённые файлы (`app.json`, `eas.json`, `plugins/**`; `scripts/` — в рамках задачи, AGENTS §3) — правки
+- Защищённые файлы (`app.json`, `eas.json`, `plugins/**`) — правки
   только по явному запросу владельца; в рамках релиза допускается ровно bump версии
   в `app.json`, и он показывается в отчёте.
 - Секреты (`.secrets/**`) — никогда в чат, логи или коммит; публичный SHA-256

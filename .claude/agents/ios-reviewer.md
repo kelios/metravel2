@@ -38,7 +38,7 @@ build, запиши testing handoff, но не запускай этот сло�
 - нужен ли Apple-портал (App ID, capability, сертификат) или бэкенд
   (верификация Apple-токена, хостинг AASA для `applinks:metravel.by`, серверный
   APNs) — это блокер с владельцем и linked `area=back`, а не finding к автору;
-- задеты ли protected paths `app.json`, `eas.json`, `plugins/**`, `scripts/**`,
+- задеты ли protected paths `app.json`, `eas.json`, `plugins/**`,
   `ios/**` и настройки Xcode-проекта: там расхождение подтверждается выводом
   `npm run ios:release:guard`, а не чтением значений глазами;
 - какие локали RU/BE/UK/PL/EN добавлены или изменены и появилось ли

@@ -1,6 +1,6 @@
 ---
 name: code-review-gate
-description: "Read-only code-review gate между review и testing: проверяет correctness, duplication, efficiency и project contracts; hook запускает его автоматически перед testing."
+description: "Проверяет полный frontend diff перед QA. Без тикета возвращает вердикт в чат; в цикле карточки фиксирует вердикт и выполняет переход review → testing после commit/push."
 prompt_mode: full
 agents_md: true
 ---

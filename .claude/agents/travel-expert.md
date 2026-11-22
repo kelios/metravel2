@@ -15,7 +15,7 @@ model: opus
 
 **Протокол.** Работай по `docs/AGENT_ANALYSIS_PROTOCOL.md`: уровень глубины по §1
 (строка локали или константа — S; один компонент списка/детали — M; autosave и
-upsert, slug/SSG, hero/media, bundle — L), отчёт по §6, формулировки §7 запрещены.
+upsert, slug/SSR, hero/media, bundle — L), отчёт по §6, формулировки §7 запрещены.
 
 **Что уточнить в постановке**
 
@@ -30,8 +30,9 @@ upsert, slug/SSG, hero/media, bundle — L), отчёт по §6, формули
   (`verify:slider` + `verify:slider-perf`, travel.md §Hero/media contract).
 - Пишет ли правка в `PUT /api/travels/upsert/`: контракт full-replace, поэтому
   новое поле формы обязано попасть в hydration/merge-слой, а не только в JSX.
-- Видно ли ожидаемое поведение сразу в SPA или только после деплоя SSG-документа;
-  какие локали RU/BE/UK/PL/EN затронуты.
+- Для публичной детали `/travels/:param` различай исходный HTML, который SSR loader отдаёт
+  на запрос, и состояние после гидрации. Для остальных поверхностей сверь способ рендера
+  по `docs/features/travel.md`. Какие локали RU/BE/UK/PL/EN затронуты?
 
 **Где смотреть в первую очередь**
 
@@ -126,18 +127,7 @@ Jest/static checks ниже можно запускать до review; browser/e
 2. Проверь есть ли Query-слой и stores, которые это использует — изменение props может сломать их.
 3. Перед большими правками проверь существующие тесты (`__tests__/components/travel/**`, `__tests__/hooks/useTravel*`).
 4. После изменений: `npm run check:fast`. Если цеплял `api/` или типы — `npm run typecheck`.
-5. Если файл >1000 LOC и задача про логику внутри — подумай, не сделать ли сперва split (но не проактивно, согласуй).
-
-## Известные крупные файлы (нужен split в будущем)
-
-LOC сверяй перед работой: `npm run guard:file-complexity` (порог 800 LOC),
-цифры ниже — снимок, а не источник правды.
-
-- `components/travel/ContentUpsertSection.tsx` (~900 LOC)
-- `components/travel/stableContent/htmlTransform.ts` (~835 LOC)
-- `components/travel/PointList.styles.ts` (~835 LOC)
-- `components/travel/gallery/ImageGallery.tsx` (~829 LOC)
-- `components/travel/WebMapComponent.tsx` (~803 LOC)
+5. Если правка затрагивает предел размера файла, сверь текущий результат `npm run guard:file-complexity`.
 
 ## Что не делать
 
