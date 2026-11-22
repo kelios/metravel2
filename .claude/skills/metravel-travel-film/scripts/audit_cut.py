@@ -19,6 +19,8 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   МУЗЫКА    участок фильма дольше 1 с без музыки и без голоса
   МЕЛЬК     главный план виден меньше 2 с между перебивками (кроме тизера)
   ВЫХОД     возврат из воспоминания к событиям без плашки места/времени
+  ТЕМП      сводка (планов в минуту, медиана ≤ 3,5 с, 8+ с ≤ 15 %, фото ≤ 5 %) и находки: план ≥ 8 с не с дрона и не вид;
+            говорящая голова > 8 с без перебивки (правила монтажа GR21, рецензент 22.11)
 """
 import json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -143,9 +145,42 @@ for a_, b_ in cov:
     end = max(end, b_)
 if t > end + 1.0: add("МУЗЫКА", end, "", f"{t - end:.1f} с без музыки в конце")
 
+# ТЕМП (рецензент 22.11, правила монтажа GR21): планы по плану — главный план между перебивками и каждая перебивка
+SH = []                                                 # (начало в фильме, длина, файл, заметка, отрезок)
+for i, s in enumerate(SEG):
+    if "тизер" in s["note"]: continue
+    br = sorted([o for o in s.get("broll", []) if not o.get("flash")], key=lambda o: o["at"])
+    cur = s["in"]
+    for o in br + [None]:
+        b0 = s["out"] if o is None else max(s["in"], o["at"])
+        if b0 - cur > 0.3: SH.append((T[i] + cur - s["in"], b0 - cur, S[s["src"]], s["note"], i))
+        if o is None: break
+        d_ = min(o["dur"], s["out"] - o["at"])
+        if d_ > 0.3: SH.append((T[i] + o["at"] - s["in"], d_, o.get("orig", {}).get("file", o["file"]), s["note"] + " / перебивка", i))
+        cur = max(cur, o["at"] + o["dur"])
+TEMPO = []
+if SH:
+    import statistics
+    dl = [d for _, d, _, _, _ in SH]; tot_ = sum(dl)
+    drone = lambda f: bool(re.fullmatch(r"DJI_\d{4}\.MP4", os.path.basename((alias.get(f) or [f])[0]), re.I))
+    photo_t = sum(d for _, d, f, _, _ in SH if "/фото/" in f)
+    med = statistics.median(dl); long8 = sum(1 for d in dl if d >= 8) / len(dl)
+    TEMPO = [f"планов {len(SH)}, в минуту {len(SH) / (tot_ / 60):.1f}; медиана {med:.1f} с (цель ≤ 3,5){' ✗' if med > 3.5 else ''}; "
+             f"8+ с — {long8:.0%} (цель ≤ 15 %){' ✗' if long8 > 0.15 else ''}; фото — {photo_t / tot_:.0%} времени (цель ≤ 5 %){' ✗' if photo_t / tot_ > 0.05 else ''}"]
+    for t0, d, f, n_, i in SH:                         # одна находка на план: голова без перебивки или просто длинный план
+        if d < 8 or "/фото/" in f: continue
+        head = False
+        if "перебивка" not in n_ and (SEG[i].get("gain_db", 0) or 0) > -40:
+            w, _, _ = words_for(S[SEG[i]["src"]])
+            head = bool(w) and sum(1 for x in w if SEG[i]["in"] <= x[1] < SEG[i]["out"]) >= 8
+        if head:
+            add("ТЕМП", t0, n_, f"говорящая голова {d:.1f} с без перебивки (цель ≤ 8 с, дальше — то, о чём речь)")
+        elif not drone(f) and not re.search(r"дрон|вид|панорам|сверху|карта", n_, re.I):
+            add("ТЕМП", t0, n_, f"план {d:.1f} с ({os.path.basename(f)[:28]}) — длиннее 6 с только дрон, вид под музыку или реплика без перебивки")
+
 F.sort()
-lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""]
-for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "МЕЛЬК", "ВЫХОД"]:
+lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + ([f"Темп: {x}" for x in TEMPO] + [""] if TEMPO else [])
+for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "МЕЛЬК", "ВЫХОД", "ТЕМП"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
