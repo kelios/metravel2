@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Проверка «на слух» без слуха: слышна ли речь под музыкой и нет ли провалов.
 
-audit_mix.py <фильм.mp4> --segments <segments.json> --base <без_музыки.mov> [--music <музыка.wav>] [--voice <голос.wav>]
+audit_mix.py <фильм.mp4> --segments <segments.json> --base <без_музыки.mov> [--music <музыка.wav>] [--voice <голос.wav>] [--plan <plan.json>]
              [--words-root DIR] [--alias alias.json] [--out audit_mix.md]
 
 segments.json — таблица отрезков рендера (start, end, note, src, in, out): её пишет render_plan.py рядом с фильмом.
@@ -21,6 +21,10 @@ segments.json — таблица отрезков рендера (start, end, no
   НАЛОЖЕНИЕ голос за кадром (> −35 дБ) одновременно со звуком кадра (> −30 дБ) ≥ 0,5 с: две речи сразу (s7 v2, В5 на роликах);
            с --words-root — только если в исходнике на этом месте есть слова (нет расшифровки = нет речи), иначе это
            поезд, ветер и шаги; без --words-root — по одной энергии
+  ГОЛОС    в голосе за кадром одна фраза (≥ 3 слов) дважды в пределах 20 с или ≥ 1 с голос звучит без слов — сорванная попытка,
+           оговорка или повтор дубля (whisper по дорожке голоса)
+  МУЗЫКА×СЦЕНА (--plan) трек epic / energy high, а больше половины под ним — спокойные сцены не с дрона (город, дорога,
+           еда, разговор); или sad/suspense на весёлых сценах. В конце отчёта — справка «музыка по сценам» по каждому cue
   ХВОСТ    фильм собран до правила стыка edge1: на стыке с растворением слышны слова из запаса 0,5 с за in/out
   ЧУЖОЙ ЗВУК отрезок из чужого смонтированного ролика (/Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias)
            звучит громче −40 дБ: там чужая озвучка и музыка (s7 v2, «Тропа ведьм»); render_plan глушит их сам,
@@ -212,6 +216,90 @@ for j, sg in enumerate(segs):
         w = src_words(dict(sg, **{"in": sg["out"], "out": sg["out"] + HND_}))
         if w and at(R_base, int(sg["end"] / WIN)) > -45: F.append((sg["end"], "ХВОСТ", sg["note"], f"после out исходника слышно «{' '.join(w)[:40]}» — пересобрать звук (render_plan с edge1)", None))
 
+# ГОЛОС: в нарезанном голосе за кадром одна и та же фраза дважды подряд — сорванная попытка и повтор или дубль вставлен
+# дважды (владелец 22.11, s3 v18: «ранее 2» из сорванных попыток, 7-1 «мимо Монпорта» дважды). whisper по дорожке голоса,
+# кеш по хешу файла рядом с ней; --no-voice-asr — пропустить
+if voice and os.path.exists(voice) and "--no-voice-asr" not in a:
+    import hashlib
+    hv = hashlib.md5(open(voice, "rb").read()).hexdigest()[:12]
+    cp = os.path.splitext(voice)[0] + f".слова_{hv}.json"
+    if not os.path.exists(cp):
+        T = tempfile.mkdtemp()
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", voice, "-ac", "1", "-ar", "16000", T + "/v.wav"], check=True)
+        subprocess.run(["mlx_whisper", T + "/v.wav", "--model", "mlx-community/whisper-large-v3-turbo", "--language", "ru", "--output-format", "json",
+                        "--output-dir", T, "--condition-on-previous-text", "False", "--word-timestamps", "True", "--verbose", "False"], capture_output=True)
+        if os.path.exists(T + "/v.json"): json.dump(json.load(open(T + "/v.json")), open(cp, "w"), ensure_ascii=False)
+    if os.path.exists(cp):
+        from auto_level import HALLU
+        vw = [(N(x["word"]), x["start"]) for y in json.load(open(cp))["segments"] if not HALLU.search(y.get("text", "")) for x in y.get("words", [])]
+        vw = [(w, t) for w, t in vw if w and at(R_voi, int(t / WIN)) > -45]     # слова там, где голос и правда звучит
+        seen = set(); K = 3
+        for i in range(len(vw) - K + 1):
+            g = tuple(w for w, _ in vw[i:i + K])
+            if any(len(w) < 2 for w in g): continue
+            for j in range(i + K, len(vw) - K + 1):
+                if vw[j][1] - vw[i][1] > 20: break
+                if tuple(w for w, _ in vw[j:j + K]) == g and (vw[i][1] // 5) not in seen:
+                    seen.add(vw[i][1] // 5)
+                    F.append((vw[i][1], "ГОЛОС", next((x["note"] for x in segs if x["start"] <= vw[i][1] < x["end"]), ""),
+                              f"«{' '.join(g)}» дважды: {vw[i][1]:.1f} и {vw[j][1]:.1f} с фильма — сорванная попытка или повтор дубля", None))
+                    break
+        # голос звучит, а слов нет: whisper склеивает повтор («мимо Монпорта» s7 — одно вхождение) и пропускает оговорку
+        # («самые вкусные … устрицы» — 4,5 с без слов): дорожка голоса громче −40 дБ ≥ 1 с между словами
+        ws_ = sorted(t for _, t in vw)
+        allw = sorted(x["start"] for y in json.load(open(cp))["segments"] for x in y.get("words", []))
+        for t0, t1 in zip(allw, allw[1:]):
+            if t1 - t0 < 1.5: continue
+            win_ = [k for k in range(int((t0 + 0.4) / WIN), int((t1 - 0.2) / WIN))]
+            loud = [k for k in win_ if at(R_voi, k) > -40]
+            if win_ and len(loud) * WIN >= 1.0 and len(loud) >= 0.6 * len(win_):
+                F.append((t0, "ГОЛОС", next((x["note"] for x in segs if x["start"] <= t0 < x["end"]), ""),
+                          f"{len(loud) * WIN:.1f} с голос звучит без слов между {t0:.1f} и {t1:.1f} с — оговорка, сорванная попытка или склеенный дубль", None))
+
+# МУЗЫКА×СЦЕНА (--plan): характер трека по тегам Epidemic (genre, mood, energy в mp3) против сцен под ним — «героическая
+# музыка под дорогой в посёлке» (владелец 22.11, s3 Journey Begins: epic/high на «дорога, поля, маки, деревни»)
+MUSIC_REF = []
+CALM = re.compile(r"город|посёл|посел|деревн|улиц|дорог|обед|завтрак|ужин|кафе|еда|мидии|устриц|сидр|магазин|отел|вокзал|поезд|метро|такси|"
+                  r"рассказ|Сергей\s*[:—–-]|Юля\s*[:—–-]|разговор|кухн|номер|альберг|автобус", re.I)
+EPIC_OK = re.compile(r"дрон|сверху|вершин|полёт|полет|обрыв|утёс|утес|игла|арка|панорам|интро|тизер|финал|закат|рассвет", re.I)
+HAPPY = re.compile(r"\b(зайк|заек|зайч|кролик|смех|смеш|весел|ура\b|праздник|танц|радост|сидр|морожен|пляж)", re.I)
+DARK_M = re.compile(r"sad|suspense|dark|tense|melanchol|mysterious|eerie|somber|sombre", re.I)
+if opt("--plan"):
+    PL = json.load(open(opt("--plan"))); SRC = PL["sources"]
+    def film_t(si, tt):
+        p_ = SRC[si]
+        r_ = next((x for x in segs if x["src"] == p_ and x["in"] - 0.01 <= tt <= x["out"] + 0.01), None)
+        return None if r_ is None else r_["start"] + (tt - r_["in"]) * (r_["end"] - r_["start"]) / max(r_["out"] - r_["in"], 1e-6)
+    tagc = {}
+    def tags(f_):
+        if f_ not in tagc:
+            r_ = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format_tags", "-of", "json", f_], capture_output=True, text=True)
+            tg = {k.lower(): v for k, v in (json.loads(r_.stdout or "{}").get("format", {}).get("tags", {}) or {}).items()}
+            tagc[f_] = {k: tg.get(k, "") for k in ("title", "genre", "mood", "energy", "tbpm")}
+        return tagc[f_]
+    drone = lambda x: bool(re.fullmatch(r"DJI_\d{4}\.MP4", os.path.basename((alias.get(x["src"]) or [x["src"]])[0]), re.I))
+    for c in (PL.get("music") or {}).get("cues", []):
+        f_ = c.get("file", "")
+        if f_.lower().endswith(".wav") or not os.path.exists(f_): continue          # голос за кадром и звуки — не музыка
+        t0, t1 = film_t(*c["a"]), film_t(*c["b"])
+        if t0 is None or t1 is None or t1 <= t0: continue
+        tg = tags(f_); under = [(max(t0, x["start"]), min(t1, x["end"]), x) for x in segs if x["end"] > t0 and x["start"] < t1]
+        tot = sum(b_ - a_ for a_, b_, _ in under) or 1
+        calm = sum(b_ - a_ for a_, b_, x in under if CALM.search(x["note"]) and not EPIC_OK.search(x["note"]) and not drone(x))
+        happy = sum(b_ - a_ for a_, b_, x in under if HAPPY.search(x["note"]))
+        notes = []
+        for _, _, x in under:
+            n_ = re.sub(r"^\S+\s", "", x["note"])[:28]
+            if n_ not in notes: notes.append(n_)
+        MUSIC_REF.append((t0, t1, tg, notes))
+        moods = [m.strip().lower() for m in re.split(r"[,;]", tg["mood"]) if m.strip()]
+        hot = "epic" in moods or tg["energy"].lower() == "high"
+        dark = bool(moods) and bool(DARK_M.search(moods[0]))        # у Epidemic первое настроение — главное
+        if hot and calm / tot >= 0.5:
+            F.append((t0, "МУЗЫКА×СЦЕНА", "", f"«{tg['title'] or os.path.basename(f_)}» ({tg['mood']}, energy {tg['energy']}) — {calm / tot:.0%} под ним спокойные сцены: {', '.join(notes[:5])}", None))
+        if dark and happy / tot >= 0.3:
+            F.append((t0, "МУЗЫКА×СЦЕНА", "", f"«{tg['title'] or os.path.basename(f_)}» ({tg['mood']}) на весёлых сценах ({happy / tot:.0%}): {', '.join(notes[:5])}", None))
+
 # ЧУЖОЙ ЗВУК: отрезок чужого ролика слышен в «без музыки»
 FOREIGN = re.compile(r"/Собраны/|/НАШИ ФОТКИ/|metravel-film-work", re.I)
 if R_base:
@@ -226,9 +314,12 @@ if R_base:
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
 lines = [f"# Проверка на слух: {os.path.basename(film)}, находок {len(F)}", ""]
-for k in ["ЧУЖОЙ ЗВУК", "ХВОСТ", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
+for k in ["ЧУЖОЙ ЗВУК", "ХВОСТ", "ГОЛОС", "МУЗЫКА×СЦЕНА", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
+if MUSIC_REF:                                  # справка: какая музыка под какими сценами (для рецензента)
+    lines += ["## Музыка по сценам (справка)"] + [f"- {tc(a_)}–{tc(b_)} «{tg['title']}» — {tg['genre']}; {tg['mood']}; energy {tg['energy']}; "
+                                                  f"{tg['tbpm']} bpm: {', '.join(n_[:6])}" for a_, b_, tg, n_ in sorted(MUSIC_REF, key=lambda z: z[0])] + [""]
 txt = "\n".join(lines)
 if out:
     open(out, "w").write(txt)
