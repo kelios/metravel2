@@ -22,15 +22,19 @@ describe('install-git-hooks', () => {
 
 it('pre-push runs checks in the linked checkout without leaking its Git directory into fixtures', () => {
   const fs = require('node:fs')
-  const os = require('node:os')
-  const { execFileSync } = require('node:child_process')
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'pre-push fixture '))
+  const { runCli, makeTempDir, removeDir } = require('./cli-test-utils')
+  const scratch = makeTempDir('pre-push fixture ')
   const repo = path.join(scratch, 'repo')
   const linked = path.join(scratch, 'linked')
   const remote = path.join(scratch, 'origin.git')
   const bin = path.join(scratch, 'bin')
-  const env = { HOME: scratch, PATH: bin + path.delimiter + process.env.PATH, GIT_CONFIG_NOSYSTEM: '1' }
-  const git = (...args: string[]) => execFileSync('git', args, { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  // Start each fixture Git process with only the paths this POSIX hook needs.
+  const fixtureEnv = ['-i', `HOME=${scratch}`, `PATH=${bin}${path.delimiter}${process.env.PATH}`, 'GIT_CONFIG_NOSYSTEM=1']
+  const git = (...args: string[]) => {
+    const result = runCli('env', [...fixtureEnv, 'git', ...args], { cwd: scratch })
+    if (result.status !== 0) throw new Error(result.stderr)
+    return result.stdout.trim()
+  }
   try {
     fs.mkdirSync(bin)
     fs.writeFileSync(path.join(bin, 'npm'), [
@@ -53,6 +57,6 @@ it('pre-push runs checks in the linked checkout without leaking its Git director
     expect(git('-C', linked, 'rev-parse', '--is-inside-work-tree')).toBe('true')
     expect(git('-C', path.join(scratch, 'test-origin.git'), 'rev-parse', '--is-bare-repository')).toBe('true')
   } finally {
-    fs.rmSync(scratch, { recursive: true, force: true })
+    removeDir(scratch)
   }
 })
