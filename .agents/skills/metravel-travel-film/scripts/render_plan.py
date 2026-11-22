@@ -402,9 +402,9 @@ if cues:
 mixp = os.path.splitext(out)[0] + "_микс.wav"
 if cues:
     subprocess.run(["ffmpeg", "-v", "error", "-y"] + ins + ["-filter_complex", ";".join(fc), "-map", "[a]", "-t", f"{t:.3f}",
-                    "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
+                    "-c:a", "pcm_f32le", mixp], check=True, stdin=subprocess.DEVNULL)   # float: сумма выше 0 dBFS не срезается до ограничителя
 else:
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-map", "0:a", "-c:a", "pcm_s24le", mixp], check=True, stdin=subprocess.DEVNULL)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", base, "-map", "0:a", "-c:a", "pcm_f32le", mixp], check=True, stdin=subprocess.DEVNULL)
 for p_ in _tmp_auto:                          # сырая музыка (float) и огибающая — временные (≈0,9 ГБ на 40 мин)
     if os.path.exists(p_): os.remove(p_)
 def true_peak(pth):
@@ -420,14 +420,20 @@ def encode_master(ceil_db):
                     "-c:a", "aac", "-b:a", "160k" if W <= 640 else "320k", "-map_chapters", "-1", "-movflags", "+faststart", out],
                    check=True, stdin=subprocess.DEVNULL)
     return true_peak(out)
-TP_TARGET = -1.0
-ceil = -2.0
-for attempt in range(4):
-    tp = encode_master(ceil)
+TP_TARGET, TP_SLACK = -1.0, 0.8              # пик готового файла −1.8…−1.0 dBTP: ниже — зря тише (s3 v16: −3.8 после шага −2.7 дБ)
+ceil, ok, bad = -2.0, None, None              # ok — потолок, давший пик в пределах; bad — давший выше цели
+for attempt in range(6):
+    tp = encode_master(ceil); enc = ceil
     print(f"звук: потолок {ceil:.1f} dBFS → истинный пик готового файла {tp} dBTP", flush=True)
     if tp is not None and tp <= TP_TARGET:
-        break
-    ceil -= (tp - TP_TARGET if tp is not None else 1.0) + 0.3
+        ok = (ceil, tp)
+        if tp >= TP_TARGET - TP_SLACK or bad is None or bad - ceil < 0.3: break
+        ceil = round((ceil + bad) / 2, 2)      # перестраховались: вверх, к последнему промаху
+    else:
+        bad = ceil
+        ceil = round((ceil + ok[0]) / 2, 2) if ok else ceil - ((tp - TP_TARGET if tp is not None else 1.0) + 0.3)
+if ok and ok[0] != enc:                        # последняя попытка — промах: вернуть лучшую годную
+    tp = encode_master(ok[0]); print(f"звук: потолок {ok[0]:.1f} dBFS → истинный пик {tp} dBTP (лучший годный)", flush=True)
 TP_FAIL = tp is None or tp > TP_TARGET
 os.remove(mixp)
 # таблица таймкодов отрезков — по фактическим (до кадра) длинам кусков, как собран фильм: аудиты берут кадры по ней
