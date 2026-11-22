@@ -67,6 +67,28 @@ async function send(page: Page, question: string): Promise<void> {
   await page.getByTestId('assistant-send').click();
 }
 
+/**
+ * Адрес формы поездки при переходе из плана ассистента: ровно `source=plan`, `draft=<id>` и — с #3449 —
+ * `planner_source=assistant` (`usePlanTripFromSource('assistant')` → `beginTripPlannerEntry`). Порядок
+ * параметров контрактом не закреплён (docs/features/analytics-events.md), поэтому сверяется разобранный
+ * адрес, а не строка: лишний, повторный или пропавший параметр — красный.
+ */
+const plannerDraftAddress = (href: string) => {
+  const url = new URL(href, 'http://e2e.invalid');
+  return { path: url.pathname, hash: url.hash, params: [...url.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)) };
+};
+
+const plannerDraftAddressOf = (draftId?: string) => ({
+  path: '/trips/plan/create',
+  hash: '',
+  params: [['draft', draftId ?? expect.stringMatching(/^[a-z0-9]+$/)], ['planner_source', 'assistant'], ['source', 'plan']],
+});
+
+/** Ждёт перехода в форму поездки по адресу из плана ассистента. */
+async function expectPlannerDraftUrl(page: Page): Promise<void> {
+  await expect.poll(() => plannerDraftAddress(page.url()), { timeout: SCREEN_TIMEOUT_MS }).toEqual(plannerDraftAddressOf());
+}
+
 test.describe('Assistant trip plan via /ai/plan (#3298)', () => {
   test('plan → planner: days with material cards, then the trip form with the plan points', async ({ page }) => {
     await mockFakeAuthApis(page);
@@ -103,7 +125,7 @@ test.describe('Assistant trip plan via /ai/plan (#3298)', () => {
     expect((await open.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
     await open.click();
-    await expect(page).toHaveURL(/\/trips\/plan\/create\?source=plan&draft=[a-z0-9]+$/, { timeout: SCREEN_TIMEOUT_MS });
+    await expectPlannerDraftUrl(page);
     // В адресе нет ни вопроса, ни точек плана.
     expect(decodeURIComponent(page.url())).not.toMatch(/Краков|50\.0/);
     await expect(page.getByTestId('trip-create-form')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
@@ -235,7 +257,7 @@ async function askAndWaitPlan(page: Page, question = QUESTION): Promise<void> {
 
 async function openPlanner(page: Page): Promise<void> {
   await page.getByTestId('assistant-plan-open').click();
-  await expect(page).toHaveURL(/\/trips\/plan\/create\?source=plan&draft=[a-z0-9]+$/, { timeout: SCREEN_TIMEOUT_MS });
+  await expectPlannerDraftUrl(page);
   await expect(page.getByTestId('trip-create-form')).toBeVisible({ timeout: SCREEN_TIMEOUT_MS });
 }
 
@@ -425,7 +447,7 @@ test.describe('Assistant plan: days, planner hand-off, failures (#3298)', () => 
       expect(saved.owner).toBeNull();
       expect(saved.points).toHaveLength(3);
       const redirect = new URL(page.url()).searchParams.get('redirect');
-      expect(redirect).toBe(`/trips/plan/create?source=plan&draft=${saved.id}`);
+      expect(plannerDraftAddress(redirect!)).toEqual(plannerDraftAddressOf(saved.id));
       // В адресе входа нет ни вопроса, ни точек.
       expect(decodeURIComponent(page.url())).not.toMatch(/Краков|50\.0/);
 
