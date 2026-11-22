@@ -8,6 +8,15 @@ if [ "${SKIP_PREFLIGHT:-0}" = "1" ]; then
   exit 0
 fi
 
+# Git exports repository-local variables to hooks. In a linked checkout GIT_DIR
+# otherwise redirects temporary repositories created by preflight into the live one.
+worktree=$(git rev-parse --show-toplevel)
+local_vars=$(git rev-parse --local-env-vars)
+cd "$worktree"
+for name in $local_vars; do
+  unset "$name"
+done
+
 # Headless detection: no controlling TTY, CI flag, or no X display (Linux).
 # In that case the Playwright e2e step hangs (no browser/ports), so skip just
 # e2e and keep the rest of preflight. Interactive local pushes run the full set.
