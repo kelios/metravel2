@@ -10,7 +10,8 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
 
 Проверки (каждая находка — строка с таймкодом фильма):
   ФРАЗА     край куска режет слово или фразу (сосед — не продолжение того же плана)
-  ПОКАЗ     перебивка поверх живой речи со словами-указателями («вот этот», «тут написано», «смотрите») — прячет показанное
+  ПОКАЗ     перебивка поверх живой речи с сильным указателем («смотрите», «видите», «вон», «написано», «покажу», «вот этот/эта»)
+            — прячет показанное
   НЕМОЙ     в кадре говорят (≥3 слов), а звук плана заглушён и голоса за кадром нет
   ВРЕМЯ     живые сцены идут не в порядке съёмки (откат больше 15 минут)
   ПОВТОР    один и тот же кусок исходника в фильме дважды
@@ -25,6 +26,7 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
 import json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import overlay_geom as OG   # где плашка и окошко — та же геометрия, что у раскладки плана
+from auto_level import real_words   # слова расшифровки без «Субтитры сделал DimaTorzok» и «мах мах мах»
 from datetime import datetime, timedelta
 
 a = sys.argv[1:]
@@ -33,7 +35,10 @@ root = a[a.index("--words-root") + 1]
 alias = json.load(open(a[a.index("--alias") + 1])) if "--alias" in a else {}
 out = a[a.index("--out") + 1] if "--out" in a else None
 S, SEG = plan["sources"], plan["segments"]
-DEM = re.compile(r"^(вот|этот|эта|это|этой|эту|этом|тут|здесь|смотрите|смотри|видите|видишь|покажу|показываю|написано|вон|такой|такая|такое)$")
+# сильные указатели (рецензент 22.11, s3 v19: «вот», «это», «тут» звучат в разговоре каждые 2 с — 57 ложных ПОКАЗ):
+# одно слово — «смотрите / видите / вон / написано / покажу», или пара «вот этот / вот эта / вот это …»
+DEM = re.compile(r"^(смотрите|смотри|видите|видишь|покажу|показываю|написано|вон)$")
+DEM2 = re.compile(r"^(этот|эта|это|эту|этой|этом|эти|этих)$")
 
 _idx = None
 def words_for(path):
@@ -47,7 +52,7 @@ def words_for(path):
                 if f.endswith(".words.json") and not f.startswith("._"): _idx[f[:-11]] = os.path.join(dp, f)
     p = _idx.get(os.path.splitext(os.path.basename(path))[0])
     if not p: return None, path, off
-    w = [(x["word"].strip().lower().strip(".,!?«»…"), x["start"] - off, x["end"] - off) for s in json.load(open(p))["segments"] for x in s.get("words", [])]
+    w = [(x["word"].strip().lower().strip(".,!?«»…"), x["start"] - off, x.get("end", x["start"] + 0.3) - off) for x in real_words(p)]   # без галлюцинаций whisper
     return w, path, off
 
 def shot_time(path):
@@ -97,7 +102,7 @@ for i, s in enumerate(SEG):
             for o in s.get("broll", []):
                 if o.get("flash"): continue
                 ws = [x[0] for x in w if o["at"] <= x[1] < o["at"] + o["dur"]]
-                dem = [x for x in ws if DEM.match(x)]
+                dem = [x for x in ws if DEM.match(x)] + [f"вот {b_}" for a_, b_ in zip(ws, ws[1:]) if a_ == "вот" and DEM2.match(b_)]
                 if len(ws) >= 3 and dem:
                     add("ПОКАЗ", T[i] + o["at"] - s["in"], note, f"{os.path.basename(o['file'])[:28]} {o['dur']:.1f} с поверх: «{' '.join(ws)[:120]}»")
         if muted and len(inside) >= 3:
