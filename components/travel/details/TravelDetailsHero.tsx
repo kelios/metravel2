@@ -155,11 +155,34 @@ function TravelHeroSectionInner({
     ],
     [styles.sliderContainer, heroHeight, isWeb],
   )
-  const authorQuickLink = isWeb ? (
+  const authorQuickLink = useMemo(() => (isWeb ? (
     <div data-travel-mobile-author="true">
       {shouldRenderMobileAuthor ? <TravelAuthorQuickLink travel={travel} /> : null}
     </div>
-  ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null
+  ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null), [isWeb, shouldRenderMobileAuthor, travel, isMobile])
+  // #3467: заголовок, автор и быстрые факты — свои Suspense-границы (в SSR только маркеры
+  // <!--$-->): тап по галерее в окне гидратации не дорисовывает их синхронно, тап по
+  // заголовку или автору — галерею. Элементы стабильны: перерисовка героя с теми же
+  // данными (состояние галереи в layout-эффектах тапа) не меняет пропсы негидратированной
+  // границы, иначе React обязан догидратировать её тем же синхронным приоритетом.
+  const titleBoundary = useMemo(() => <Suspense fallback={null}>{titleSlot}</Suspense>, [titleSlot])
+  const authorBoundary = useMemo(() => <Suspense fallback={null}>{authorQuickLink}</Suspense>, [authorQuickLink])
+  const extrasBoundary = useMemo(() => (
+    <Suspense fallback={null}>
+      <ExtrasSlot
+        styles={styles}
+        extrasReady={extrasReady}
+        willRenderQuickJumps={willRenderQuickJumps}
+        quickJumpChipCount={quickJumpLinks.length}
+        travel={travel}
+        isMobile={isMobile}
+        sectionLinks={sectionLinks}
+        onQuickJump={onQuickJump}
+        activeKey={activeKey}
+        suppressQuickJumps={suppressQuickJumps}
+      />
+    </Suspense>
+  ), [styles, extrasReady, willRenderQuickJumps, quickJumpLinks.length, travel, isMobile, sectionLinks, onQuickJump, activeKey, suppressQuickJumps])
 
   const sliderUnderOverlayStyle = useMemo(
     () => [
@@ -327,22 +350,11 @@ function TravelHeroSectionInner({
         <SliderCaption caption={heroSliderImages[currentIndex]?.caption} currentIndex={currentIndex} total={heroSliderImages.length} />
       </View>
 
-      {titleSlot}
+      {titleBoundary}
 
-      {authorQuickLink}
+      {authorBoundary}
 
-      <ExtrasSlot
-        styles={styles}
-        extrasReady={extrasReady}
-        willRenderQuickJumps={willRenderQuickJumps}
-        quickJumpChipCount={quickJumpLinks.length}
-        travel={travel}
-        isMobile={isMobile}
-        sectionLinks={sectionLinks}
-        onQuickJump={onQuickJump}
-        activeKey={activeKey}
-        suppressQuickJumps={suppressQuickJumps}
-      />
+      {extrasBoundary}
     </>
   )
 }
