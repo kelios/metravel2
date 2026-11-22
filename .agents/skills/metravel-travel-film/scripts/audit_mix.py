@@ -21,6 +21,7 @@ segments.json — таблица отрезков рендера (start, end, no
   НАЛОЖЕНИЕ голос за кадром (> −35 дБ) одновременно со звуком кадра (> −30 дБ) ≥ 0,5 с: две речи сразу (s7 v2, В5 на роликах);
            с --words-root — только если в исходнике на этом месте есть слова (нет расшифровки = нет речи), иначе это
            поезд, ветер и шаги; без --words-root — по одной энергии
+  ХВОСТ    фильм собран до правила стыка edge1: на стыке с растворением слышны слова из запаса 0,5 с за in/out
   ЧУЖОЙ ЗВУК отрезок из чужого смонтированного ролика (/Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias)
            звучит громче −40 дБ: там чужая озвучка и музыка (s7 v2, «Тропа ведьм»); render_plan глушит их сам,
            кроме отрезков с "own_audio": true — такой звук должен быть нашим и нужным
@@ -199,6 +200,18 @@ if R_voi and R_base:
         else:
             i += 1
 
+# ХВОСТ: фильм собран до правила стыка edge1 (render_plan ASIG; в segments.json нет "asig") — звук кусков на стыке с
+# растворением брал запас 0,5 с за in/out, и слова исходника оттуда слышны («…смысл» s5, «…тракали» s6, «…менького» s7)
+HND_ = 0.5
+for j, sg in enumerate(segs):
+    if sg.get("asig") or not root: continue
+    if j > 0 and segs[j - 1].get("xfade", 0) > 0:
+        w = src_words(dict(sg, out=sg["in"], **{"in": max(0.0, sg["in"] - HND_)}))
+        if w and at(R_base, int((sg["start"] - 0.5) / WIN)) > -45: F.append((sg["start"], "ХВОСТ", sg["note"], f"до in исходника слышно «{' '.join(w)[:40]}» — пересобрать звук (render_plan с edge1)", None))
+    if sg.get("xfade", 0) > 0 and j + 1 < len(segs):
+        w = src_words(dict(sg, **{"in": sg["out"], "out": sg["out"] + HND_}))
+        if w and at(R_base, int(sg["end"] / WIN)) > -45: F.append((sg["end"], "ХВОСТ", sg["note"], f"после out исходника слышно «{' '.join(w)[:40]}» — пересобрать звук (render_plan с edge1)", None))
+
 # ЧУЖОЙ ЗВУК: отрезок чужого ролика слышен в «без музыки»
 FOREIGN = re.compile(r"/Собраны/|/НАШИ ФОТКИ/|metravel-film-work", re.I)
 if R_base:
@@ -213,7 +226,7 @@ if R_base:
 F.sort()
 tc = lambda x: f"{int(x // 60)}:{x % 60:04.1f}"
 lines = [f"# Проверка на слух: {os.path.basename(film)}, находок {len(F)}", ""]
-for k in ["ЧУЖОЙ ЗВУК", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
+for k in ["ЧУЖОЙ ЗВУК", "ХВОСТ", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
 txt = "\n".join(lines)

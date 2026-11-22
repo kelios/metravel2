@@ -74,6 +74,8 @@ def fit(label_in, label_out, mode):
 # переходы как в проекте Filmora: на стыке с xd_out > 0 — растворение картинки и логарифмическое затухание звука 1 с,
 # по 0,5 с запаса исходника с каждой стороны (длина фильма не меняется: центр перехода = склейка)
 HND = 0.5
+EDGE = 0.04          # звук на стыке с растворением: переход ±40 мс на самой склейке, запас звука за in/out не звучит
+ASIG = "edge1"       # версия сборки звука кусков: смена правила стыка — звук кусков и блоков пересобирается (картинка — нет)
 _sd = {}
 def src_dur(p):
     if p not in _sd:
@@ -145,7 +147,7 @@ for i, s in enumerate(SEG):
     graded = s.get("grade") or any(o.get("grade") for o in s.get("broll", []))
     vk = KEY([{k: v for k, v in s.items() if k not in AUDIO_KEYS}, src, edges, LOOKSUM if graded else "", VSIG])
     ak = KEY([{k: v for k, v in s.items() if k in AUDIO_KEYS - {"note", "audio_in_hard"} or k in ("src", "in", "out")}, src,
-              edges, round(hLa, 3), round(hRa, 3), FPS])
+              edges, round(hLa, 3), round(hRa, 3), FPS, ASIG])
     vf, af = os.path.join(wd, f"v_{vk}.mov"), os.path.join(wd, f"a_{ak}.wav")
     vkeys.append(vk); akeys.append(ak); parts.append(vf); aparts.append(af); USED.update({vf, af})
     force = only is not None and i in only
@@ -233,6 +235,11 @@ for i, s in enumerate(SEG):
             if s.get("fade_out") and not hR: fades += f",afade=t=out:st={max(0.0, full - float(s['fade_out'])):.3f}:d={float(s['fade_out']):.3f}"
             if s.get("audio_cut_out"):   # речь продолжается за склейкой: звук гаснет на склейке (не уезжает в запас растворения)
                 _d = float(s["audio_cut_out"]); fades += f",afade=t=out:st={max(0.0, (nfL + nf) / FPS - _d):.3f}:d={_d:.3f}"
+            # стык с растворением: звук куска — строго внутри [in, out], переход ±EDGE на самой склейке. Картинка растворяется
+            # на 1 с, а звук из запаса за in/out приносил хвост чужого слова («…смысл» s5, «…тракали» s6, «…менького» s7, 22.11)
+            if hL: fades += f",afade=t=in:st={max(0.0, nfL / FPS - EDGE):.4f}:d={2 * EDGE:.4f}"
+            if hR and not s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS - EDGE:.4f}:d={2 * EDGE:.4f}"
+            if hR and s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS:.4f}:d=0.001"
             dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
             cmd = ["ffmpeg", "-v", "error", "-y"] + src_in + ["-map", "0:a:0", "-af",
                    f"volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}"]
@@ -275,8 +282,8 @@ def achain(idx, outp):
     cur = "a0"
     for j in range(1, len(idx)):
         i = idx[j]; d = _joint(i)
-        if d:   # audio_in_hard: речь входящего отрезка с первого слова на полной громкости
-            fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2={'nofade' if SEG[i].get('audio_in_hard') else 'log'}[y{j}]")
+        if d:   # переход картинки; звук кусков уже сведён на склейке (EDGE), здесь только сумма
+            fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=nofade:c2=nofade[y{j}]")   # звук кусков уже сведён на склейке (EDGE)
         else:
             fc.append(f"[{cur}][a{j}]concat=n=2:v=0:a=1[y{j}]")
         cur = f"y{j}"
@@ -295,7 +302,7 @@ vb, ab, n_vb = [], [], 0
 for n_, idx in enumerate(blocks):
     joints = [_joint(i) for i in idx[1:]]
     vbf = os.path.join(wd, f"vb_{KEY([[vkeys[i] for i in idx], joints, VSIG])}.mov")
-    abf = os.path.join(wd, f"ab_{KEY([[akeys[i] for i in idx], joints, [bool(SEG[i].get('audio_in_hard')) for i in idx]])}.wav")
+    abf = os.path.join(wd, f"ab_{KEY([[akeys[i] for i in idx], joints, ASIG])}.wav")
     # кусок переписан этой сборкой (--only, удалённый вручную, из прежнего кеша) — блок с тем же ключом устарел
     if not os.path.exists(vbf) or FRESH_V.intersection(idx): vchain(idx, vbf); n_vb += 1; print("блок", n_, len(idx), flush=True)
     if not os.path.exists(abf) or FRESH_A.intersection(idx): achain(idx, abf)
@@ -454,7 +461,7 @@ os.remove(mixp)
 t = 0.0; rows = []
 for i, s in enumerate(plan["segments"]):
     d = cores[i]; k_ = d / max(s["out"] - s["in"], 1e-6)
-    rows.append({"i": i, "start": round(t, 3), "end": round(t + d, 3), "note": s.get("note", ""), "xfade": round(hand[i][1] + (hand[i + 1][0] if i + 1 < len(hand) else 0), 3), "src": plan["sources"][s["src"]],
+    rows.append({"i": i, "start": round(t, 3), "end": round(t + d, 3), "note": s.get("note", ""), "asig": ASIG, "xfade": round(hand[i][1] + (hand[i + 1][0] if i + 1 < len(hand) else 0), 3), "src": plan["sources"][s["src"]],
                  "in": s["in"], "out": s["out"], "broll": [{"at_film": round(t + (o["at"] - s["in"]) * k_, 3), "dur": o["dur"], "file": o["file"], "in": o.get("in", 0)} for o in s.get("broll", [])]})
     t += d
 json.dump(rows, open(os.path.splitext(out)[0] + ".segments.json", "w"), ensure_ascii=False, indent=1)
