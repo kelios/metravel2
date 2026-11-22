@@ -74,8 +74,8 @@ def fit(label_in, label_out, mode):
 # переходы как в проекте Filmora: на стыке с xd_out > 0 — растворение картинки и логарифмическое затухание звука 1 с,
 # по 0,5 с запаса исходника с каждой стороны (длина фильма не меняется: центр перехода = склейка)
 HND = 0.5
-EDGE = 0.04          # звук на стыке с растворением: переход ±40 мс на самой склейке, запас звука за in/out не звучит
-ASIG = "edge1"       # версия сборки звука кусков: смена правила стыка — звук кусков и блоков пересобирается (картинка — нет)
+EDGE = 0.04          # жёсткий стык (слова в запасе): переход ±40 мс на самой склейке, запас звука за in/out не звучит
+ASIG = "edge2"       # версия сборки звука кусков: смена правила стыка — звук кусков и блоков пересобирается (картинка — нет)
 _sd = {}
 def src_dur(p):
     if p not in _sd:
@@ -102,6 +102,35 @@ def foreign(p):
 for s_ in SEG:
     if foreign(plan["sources"][s_["src"]]) and not s_.get("own_audio") and (s_.get("gain_db", 0) or 0) > -40:
         s_["gain_db"] = -60; print("чужой звук заглушён:", s_.get("note", "")[:60])
+# стыки с растворением (edge2, рецензент 22.11): звук из запаса за in/out приносил хвост чужого слова, а короткий переход
+# на каждом стыке (edge1) давал скачок фона (прибой → ветер). Поэтому по расшифровкам: в запасе [in−0,5, in] входящего
+# или [out, out+0,5] уходящего есть слова — оба куска звучат строго внутри [in, out], переход ±EDGE на склейке («жёсткий»);
+# слов нет или расшифровки нет (клип без речи) — прежний log-acrossfade на всё растворение. Без --words-root — жёстко везде.
+HARD = {}
+_WR = a[a.index("--words-root") + 1] if "--words-root" in a else None
+if _WR:
+    import unicodedata as _ud, auto_level as _AL
+    _widx, _wc = {}, {}
+    for _dp, _, _fs in os.walk(_WR):
+        for _f in _fs:
+            if _f.endswith(".words.json") and not _f.startswith("._"): _widx[_ud.normalize("NFC", _f[:-11])] = os.path.join(_dp, _f)
+    def _words_in(p, t0, t1):
+        off = 0.0
+        if p in _fal: p, off = _fal[p][0], float(_fal[p][1])
+        wf = _widx.get(_ud.normalize("NFC", os.path.splitext(os.path.basename(p))[0]))
+        if not wf: return False
+        if wf not in _wc: _wc[wf] = [x["start"] for x in _AL.real_words(wf)]
+        return any(t0 + off <= ws < t1 + off for ws in _wc[wf])
+    _live = lambda s_: (s_.get("gain_db", 0) or 0) > -40
+    for i_ in range(1, len(SEG)):
+        if not joined(i_ - 1): continue
+        A_, B_ = SEG[i_ - 1], SEG[i_]
+        HARD[i_] = bool((_live(B_) and _words_in(plan["sources"][B_["src"]], B_["in"] - HND, B_["in"]))
+                        or (_live(A_) and _words_in(plan["sources"][A_["src"]], A_["out"], A_["out"] + HND)))
+    print(f"стыки с растворением: жёстких (слова в запасе) {sum(HARD.values())} из {len(HARD)}", flush=True)
+else:
+    HARD = {i_: True for i_ in range(1, len(SEG)) if joined(i_ - 1)}
+    if HARD: print("стыки: нет --words-root — звук на всех стыках с растворением жёстко (±40 мс), фон может скакнуть", flush=True)
 # Кеш кусков: картинка и звук отрезка — отдельные файлы с отдельными ключами. Правка громкости, затуханий
 # или музыки не перекодирует картинку; блоки склейки тоже кешируются по ключам своих кусков и стыков.
 import hashlib, glob as _glob, time as _time
@@ -147,7 +176,7 @@ for i, s in enumerate(SEG):
     graded = s.get("grade") or any(o.get("grade") for o in s.get("broll", []))
     vk = KEY([{k: v for k, v in s.items() if k not in AUDIO_KEYS}, src, edges, LOOKSUM if graded else "", VSIG])
     ak = KEY([{k: v for k, v in s.items() if k in AUDIO_KEYS - {"note", "audio_in_hard"} or k in ("src", "in", "out")}, src,
-              edges, round(hLa, 3), round(hRa, 3), FPS, ASIG])
+              edges, round(hLa, 3), round(hRa, 3), FPS, ASIG, HARD.get(i, False), HARD.get(i + 1, False)])
     vf, af = os.path.join(wd, f"v_{vk}.mov"), os.path.join(wd, f"a_{ak}.wav")
     vkeys.append(vk); akeys.append(ak); parts.append(vf); aparts.append(af); USED.update({vf, af})
     force = only is not None and i in only
@@ -237,9 +266,9 @@ for i, s in enumerate(SEG):
                 _d = float(s["audio_cut_out"]); fades += f",afade=t=out:st={max(0.0, (nfL + nf) / FPS - _d):.3f}:d={_d:.3f}"
             # стык с растворением: звук куска — строго внутри [in, out], переход ±EDGE на самой склейке. Картинка растворяется
             # на 1 с, а звук из запаса за in/out приносил хвост чужого слова («…смысл» s5, «…тракали» s6, «…менького» s7, 22.11)
-            if hL: fades += f",afade=t=in:st={max(0.0, nfL / FPS - EDGE):.4f}:d={2 * EDGE:.4f}"
-            if hR and not s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS - EDGE:.4f}:d={2 * EDGE:.4f}"
-            if hR and s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS:.4f}:d=0.001"
+            if hL and HARD.get(i): fades += f",afade=t=in:st={max(0.0, nfL / FPS - EDGE):.4f}:d={2 * EDGE:.4f}"
+            if hR and HARD.get(i + 1) and not s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS - EDGE:.4f}:d={2 * EDGE:.4f}"
+            if hR and HARD.get(i + 1) and s.get("audio_cut_out"): fades += f",afade=t=out:st={(nfL + nf) / FPS:.4f}:d=0.001"
             dly = f",adelay={int(round(dL * 1000))}:all=1" if dL > 0.001 else ""
             cmd = ["ffmpeg", "-v", "error", "-y"] + src_in + ["-map", "0:a:0", "-af",
                    f"volume={float(s.get('loud_gain', 1.0)):.3f},alimiter=limit=0.89,aresample=48000,aformat=channel_layouts=stereo{dly}{fades},apad,atrim=end_sample={NF * 1600}"]
@@ -282,8 +311,9 @@ def achain(idx, outp):
     cur = "a0"
     for j in range(1, len(idx)):
         i = idx[j]; d = _joint(i)
-        if d:   # переход картинки; звук кусков уже сведён на склейке (EDGE), здесь только сумма
-            fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=nofade:c2=nofade[y{j}]")   # звук кусков уже сведён на склейке (EDGE)
+        if d:   # жёсткий стык — сумма кусков, сведённых на склейке; мягкий — acrossfade (audio_in_hard: входящий без нарастания)
+            if HARD.get(i): fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=nofade:c2=nofade[y{j}]")   # жёсткий: куски сведены на склейке (EDGE)
+            else: fc.append(f"[{cur}][a{j}]acrossfade=d={d:.4f}:c1=log:c2={'nofade' if SEG[i].get('audio_in_hard') else 'log'}[y{j}]")   # фон перетекает
         else:
             fc.append(f"[{cur}][a{j}]concat=n=2:v=0:a=1[y{j}]")
         cur = f"y{j}"
@@ -302,7 +332,7 @@ vb, ab, n_vb = [], [], 0
 for n_, idx in enumerate(blocks):
     joints = [_joint(i) for i in idx[1:]]
     vbf = os.path.join(wd, f"vb_{KEY([[vkeys[i] for i in idx], joints, VSIG])}.mov")
-    abf = os.path.join(wd, f"ab_{KEY([[akeys[i] for i in idx], joints, ASIG])}.wav")
+    abf = os.path.join(wd, f"ab_{KEY([[akeys[i] for i in idx], joints, ASIG, [HARD.get(i, False) for i in idx], [bool(SEG[i].get('audio_in_hard')) for i in idx]])}.wav")
     # кусок переписан этой сборкой (--only, удалённый вручную, из прежнего кеша) — блок с тем же ключом устарел
     if not os.path.exists(vbf) or FRESH_V.intersection(idx): vchain(idx, vbf); n_vb += 1; print("блок", n_, len(idx), flush=True)
     if not os.path.exists(abf) or FRESH_A.intersection(idx): achain(idx, abf)
