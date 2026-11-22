@@ -32,6 +32,7 @@ beforeEach(() => {
   mockPoints.mockClear()
   jest.mocked(useTravelDetails).mockReturnValue({
     travel: savedTravel,
+    isHydratingServerArticle: false,
     slug: 'saved', isLoading: false, isError: false, error: null,
     refetch: jest.fn(), hasInitialPreloadedTravel: false, isId: false, isMissingParam: false, staleContentMeta: null,
   })

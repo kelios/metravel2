@@ -25,6 +25,7 @@ import { useTravelLoaderPayload } from '@/components/travel/details/travelLoader
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
   hasInitialPreloadedTravel: boolean;
+  isHydratingServerArticle: boolean;
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
@@ -450,9 +451,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const error = isError ? queryError : null;
   const staleContentMeta = useMemo(() => getPublicStalePayloadMeta(travel), [travel]);
 
+  const isHydratingServerArticle = isWebServerSnapshot && Boolean(loaderTravel);
   return useMemo(() => ({
     travel,
     hasInitialPreloadedTravel,
+    isHydratingServerArticle,
     isLoading,
     isError,
     error: error as Error | null,
@@ -464,6 +467,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   }), [
     travel,
     hasInitialPreloadedTravel,
+    isHydratingServerArticle,
     isLoading,
     isError,
     error,

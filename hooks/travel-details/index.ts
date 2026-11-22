@@ -21,6 +21,7 @@ export function useTravelDetails(args: {
   const navigation = useTravelDetailsNavigation({
     headerOffset: layout.headerOffset,
     slug: data.slug,
+    isHydratingServerArticle: data.isHydratingServerArticle,
     startTransition: args.startTransition,
   })
 

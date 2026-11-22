@@ -30,8 +30,8 @@ describe('travel startup reset yields to the current reader', () => {
   let originalWindowScrollTo: typeof window.scrollTo
   let originalScrollingElement: PropertyDescriptor | undefined
 
-  function Probe({ slug }: { slug: string }) {
-    latest = useTravelDetailsNavigation({ headerOffset: 72, slug, startTransition: callback => callback() })
+  function Probe({ slug, isHydratingServerArticle }: { slug: string, isHydratingServerArticle?: boolean }) {
+    latest = useTravelDetailsNavigation({ headerOffset: 72, slug, isHydratingServerArticle, startTransition: callback => callback() })
     return null
   }
 
@@ -190,6 +190,24 @@ describe('travel startup reset yields to the current reader', () => {
     tick(80)
     expect(sectionScrollTo).toHaveBeenCalledWith('map')
     expect(owner.scrollTop).toBe(600)
+  })
+
+  it('preserves the pre-hydration reader position until navigating to another article', () => {
+    revealOwner()
+    owner.scrollTop = 760
+    root = createRoot(host)
+    const render = (slug: string, isHydratingServerArticle = false) =>
+      act(() => { root!.render(createElement(Probe, { slug, isHydratingServerArticle })) })
+    render('minsk', true)
+    render('minsk')
+    tick(320)
+    expect(owner.scrollTop).toBe(760)
+
+    render('krakow')
+    expect(owner.scrollTop).toBe(0)
+    owner.scrollTop = 440
+    render('minsk')
+    expect(owner.scrollTop).toBe(0)
   })
 
   it('still resets a late owner before any reader interaction', () => {

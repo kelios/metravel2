@@ -8,6 +8,7 @@ import type { AnchorsMap } from '@/components/travel/details/TravelDetailsTypes'
 
 export interface UseTravelDetailsNavigationArgs {
   headerOffset: number
+  isHydratingServerArticle?: boolean
   slug: string
   startTransition: TransitionStartFunction
 }
@@ -48,6 +49,7 @@ export function normalizeMalformedTravelHashUrl(rawHref: string): string | null 
 
 export function useTravelDetailsNavigation({
   headerOffset,
+  isHydratingServerArticle,
   slug,
   startTransition: _startTransition,
 }: UseTravelDetailsNavigationArgs): UseTravelDetailsNavigationReturn {
@@ -57,6 +59,7 @@ export function useTravelDetailsNavigation({
   const [scrollRootEl, setScrollRootEl] = useState<HTMLElement | null>(null)
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl)
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null)
+  const hydratedSlugRef = useRef(isHydratingServerArticle ? slug : null)
   const cancelStartupResetRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -349,6 +352,10 @@ export function useTravelDetailsNavigation({
       return undefined
     }
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined
+    // A reader can scroll the server-rendered article before the first tap hydrates it.
+    // Moving the article between pointerdown and click changes which control receives the tap.
+    if (hydratedSlugRef.current === slug) return undefined
+    hydratedSlugRef.current = null
 
     let cancelled = false
     const timers: Array<ReturnType<typeof setTimeout>> = []

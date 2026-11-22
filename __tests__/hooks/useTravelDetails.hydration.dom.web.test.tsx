@@ -101,6 +101,7 @@ afterAll(() => {
 type Commit = {
   hasTravel: boolean
   hasInitialPreloadedTravel: boolean
+  isHydratingServerArticle: boolean
   isLoading: boolean
   isError: boolean
   name: string | null
@@ -113,6 +114,7 @@ function DataShell({ commits }: { commits: Commit[] }) {
     commits.push({
       hasTravel: Boolean(data.travel),
       hasInitialPreloadedTravel: data.hasInitialPreloadedTravel,
+      isHydratingServerArticle: data.isHydratingServerArticle,
       isLoading: data.isLoading,
       isError: data.isError,
       name: data.travel?.name ?? null,
@@ -180,7 +182,7 @@ it('hydrates a generic loading document when direct-api preload wins before the 
   roots.push({ root: root!, host, client })
   expect(errors.map(error => error instanceof Error ? error.message : String(error))).toEqual([])
   expect(commits[0]).toMatchObject({
-    hasTravel: false, hasInitialPreloadedTravel: false, isLoading: true, isError: false, width: 0,
+    hasTravel: false, hasInitialPreloadedTravel: false, isHydratingServerArticle: false, isLoading: true, isError: false, width: 0,
   })
   expect(commits.at(-1)).toMatchObject({
     hasTravel: true, hasInitialPreloadedTravel: true, name: rawTravel.name, isLoading: false,
@@ -202,7 +204,8 @@ it('hydrates the same loaded shell when the data was actually serialized through
     root = hydrateRoot(host, tree(client, commits, true), { onRecoverableError: error => errors.push(error) })
   })
   roots.push({ root: root!, host, client })
-  expect(commits[0]).toMatchObject({ hasTravel: true, width: 0 })
+  expect(commits[0]).toMatchObject({ hasTravel: true, isHydratingServerArticle: true, width: 0 })
+  expect(commits.at(-1)?.isHydratingServerArticle).toBe(false)
   expect(errors).toEqual([])
 })
 
@@ -215,7 +218,7 @@ it('keeps synchronous preload available for a client-only mount with no server d
   roots.push({ root, host, client })
   const commits: Commit[] = []
   await react.act(async () => root.render(tree(client, commits)))
-  expect(commits[0]).toMatchObject({ hasTravel: true, hasInitialPreloadedTravel: true })
+  expect(commits[0]).toMatchObject({ hasTravel: true, hasInitialPreloadedTravel: true, isHydratingServerArticle: false })
   expect(globalThis.fetch).not.toHaveBeenCalled()
 })
 
