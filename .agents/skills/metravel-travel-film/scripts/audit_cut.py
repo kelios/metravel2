@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Автопроверка монтажа по плану до рецензии: то, что рецензент по листам кадров и уровню звука пропускает.
 
-audit_cut.py <plan.json> --words-root DIR [--alias alias.json] [--out audit.md]
+audit_cut.py <plan.json> --words-root DIR [--alias alias.json] [--catalog кадры_sN.json] [--out audit.md]
 
 plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,gain_db,broll,cards}], music{cues,sfx}).
 --words-root — папка с расшифровками по словам (*.words.json от mlx_whisper --word-timestamps), ищутся по имени исходника.
 --alias — {производный файл: [исходник, сдвиг]} для вертикальных, размытых и подобных копий (речь берётся из исходника).
+--catalog — каталог меток кадров серии (по умолчанию <папка плана>/../данные/кадры_sN.json, N — из имени plan_sN…):
+            {"темы": {"кухня": ["кухн", "плит", "готов"], …},          метка → начала слов, которыми о ней говорят
+             "кадры": [{"file": "<исходник>", "in": 12.0, "out": 18.0, "метки": ["кухня", "кофе"]}, …]}
+            метки — только то, что видно в кадре; «мы идём» — с уточнением «вдвоём», «в одну сторону».
 Соглашение заметок: «рассказ:» — воспоминание (рассказ на другой день), «тизер» — намеренно короткие планы.
 
 Проверки (каждая находка — строка с таймкодом фильма):
@@ -18,10 +22,13 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   ПЛАШКА    титр короче 3 с; две плашки одновременно
   ОКНО      плашка заходит на окошко «картинка в картинке» (рассказчик) того же отрезка — текст под ним (overlay_geom.py)
   МУЗЫКА    участок фильма дольше 1 с без музыки и без голоса
-  МЕЛЬК     главный план виден меньше 2 с между перебивками (кроме тизера)
+  КОРОЧЕ 4 С любой план — главный, перебивка, фото — на экране меньше 4 с (владелец 22.11, s3 v19: «сплошное мелькание,
+            минимум кадр 4 секунды»); подряд идущие куски одного исходника (дрон, проход) — один план. Тизер — тоже.
+  ТЕМА      перебивка поверх речи (≥3 слов) не показывает того, о чём говорят: ни одна её метка из каталога кадров
+            не звучит в словах под ней (±2 с); перебивки нет в каталоге — тоже находка. Нет каталога — пропуск.
   ВЫХОД     возврат из воспоминания к событиям без плашки места/времени
-  ТЕМП      сводка (планов в минуту, медиана ≤ 3,5 с, 8+ с ≤ 15 %, фото ≤ 5 %) и находки: план ≥ 8 с не с дрона и не вид;
-            говорящая голова > 8 с без перебивки (правила монтажа GR21, рецензент 22.11)
+  ТЕМП      справка, не находки: планов в минуту, медиана, доля 8+ с, фото ≤ 5 % времени; говорящая голова > 8 с без
+            перебивки. Цели «медиана ≤ 3,5 с» и «8+ с ≤ 15 %» сняты 22.11 — по ним вышел калейдоскоп s3 v19.
 """
 import json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -134,12 +141,6 @@ for i, s in enumerate(SEG):
         if c.get("span", c["dur"]) < 3.0 and not teaser: add("ПЛАШКА", T[i] + c["at"] - s["in"], note, f"{os.path.basename(c['file'])} на экране {c.get('span', c['dur']):.1f} с")
     for c, p in OG.clashes(s):
         add("ОКНО", T[i] + max(c["at"], p["at"]) - s["in"], note, f"{os.path.basename(c['file'])} заходит на окошко рассказчика — текст под ним")
-    if not teaser and not recap:
-        br = sorted([o for o in s.get("broll", []) if not o.get("flash")], key=lambda o: o["at"])
-        edges = [s["in"]] + [x for o in br for x in (o["at"], o["at"] + o["dur"])] + [s["out"]]
-        for g0, g1 in zip(edges[::2], edges[1::2]):
-            if 0.05 < g1 - g0 < 2.0 and not (g0 == s["in"] and cont_p) and not (g1 == s["out"] and cont_n):
-                add("МЕЛЬК", T[i] + g0 - s["in"], note, f"главный план {g1 - g0:.1f} с между перебивками")
     if prv and "рассказ:" in prv["note"] and not recap:
         if not any(("выход" in c["file"] or "место " in c["file"]) for c in s.get("cards", [])):
             add("ВЫХОД", T[i], note, "возврат из воспоминания без плашки «где и когда»")
@@ -150,42 +151,103 @@ for a_, b_ in cov:
     end = max(end, b_)
 if t > end + 1.0: add("МУЗЫКА", end, "", f"{t - end:.1f} с без музыки в конце")
 
-# ТЕМП (рецензент 22.11, правила монтажа GR21): планы по плану — главный план между перебивками и каждая перебивка
-SH = []                                                 # (начало в фильме, длина, файл, заметка, отрезок)
+def orig_of(f, t0=0.0):                                  # производная копия → (исходник, время в нём)
+    if f in alias: return alias[f][0], t0 + float(alias[f][1])
+    return f, t0
+
+# планы по плану: главный план между перебивками и каждая перебивка (без вспышек)
+SH = []                                                 # (начало в фильме, длина, исходник, заметка, отрезок, тизер)
 for i, s in enumerate(SEG):
-    if "тизер" in s["note"]: continue
     br = sorted([o for o in s.get("broll", []) if not o.get("flash")], key=lambda o: o["at"])
-    cur = s["in"]
+    cur = s["in"]; tz = "тизер" in s["note"]
     for o in br + [None]:
         b0 = s["out"] if o is None else max(s["in"], o["at"])
-        if b0 - cur > 0.3: SH.append((T[i] + cur - s["in"], b0 - cur, S[s["src"]], s["note"], i))
+        if b0 - cur > 0.05: SH.append((T[i] + cur - s["in"], b0 - cur, orig_of(S[s["src"]])[0], s["note"], i, tz))
         if o is None: break
         d_ = min(o["dur"], s["out"] - o["at"])
-        if d_ > 0.3: SH.append((T[i] + o["at"] - s["in"], d_, o.get("orig", {}).get("file", o["file"]), s["note"] + " / перебивка", i))
+        if d_ > 0.05: SH.append((T[i] + o["at"] - s["in"], d_, orig_of(o.get("orig", {}).get("file", o["file"]))[0], s["note"] + " / перебивка", i, tz))
         cur = max(cur, o["at"] + o["dur"])
+SH.sort()
+
+# КОРОЧЕ 4 С: подряд идущие куски одного исходника (дрон, проход, перебивка через стык отрезков) — один план
+MIN_SHOT = 4.0
+run = []
+for x in SH + [None]:
+    if run and x and x[2] == run[-1][2] and abs(x[0] - (run[-1][0] + run[-1][1])) < 0.15:
+        run.append(x); continue
+    if run:
+        d = run[-1][0] + run[-1][1] - run[0][0]
+        if d < MIN_SHOT - 0.05:
+            add("КОРОЧЕ 4 С", run[0][0], run[0][3], f"план {d:.1f} с ({os.path.basename(run[0][2])[:28]}{', ' + str(len(run)) + ' куска' if len(run) > 1 else ''})"
+                + (" — тизер" if run[0][5] else ""))
+    run = [x] if x else []
+
+# ТЕМА: перебивка показывает то, о чём говорят сейчас (каталог меток кадров + стенограмма)
+m_ = re.search(r"plan_s(\d+)", os.path.basename(a[0]))
+cat_p = a[a.index("--catalog") + 1] if "--catalog" in a else (
+    os.path.join(os.path.dirname(os.path.abspath(a[0])), "..", "данные", f"кадры_s{m_.group(1)}.json") if m_ else None)
+THEME_NOTE = []
+if cat_p and os.path.exists(cat_p):
+    CAT = json.load(open(cat_p))
+    LEX = {k: [x.lower() for x in v] for k, v in (CAT.get("темы") or {}).items()}
+    def stems(tag):                                     # метка без словаря — её же слова (начало, 5 букв)
+        return LEX.get(tag) or [w[:5] for w in re.findall(r"\w+", tag.lower()) if len(w) >= 4]
+    def tags_of(f, a0, b0):
+        dur = b0 - a0; f, a0 = orig_of(f, a0); b0 = a0 + dur
+        out_ = set(); hit = False
+        for e in CAT.get("кадры", []):
+            if e["file"] != f and os.path.basename(e["file"]) != os.path.basename(f): continue
+            ov = min(b0, e.get("out", 1e9)) - max(a0, e.get("in", 0))
+            if ov >= 0.5 * (b0 - a0) or ("in" not in e): hit = True; out_ |= set(e.get("метки", []))
+        return out_ if hit else None
+    voice_w = []                                        # слова голоса за кадром во времени фильма
+    for c in (plan.get("music") or {}).get("cues", []):
+        if c.get("level_db", 0) < 20: continue
+        a0 = film(*c["a"]); b0 = film(*c["b"])
+        w, _, _ = words_for(c["file"])
+        if a0 is None or b0 is None or not w: continue
+        voice_w += [(x[0], a0 + x[1] - c.get("src_in", 0)) for x in w if a0 <= a0 + x[1] - c.get("src_in", 0) <= b0]
+    n_chk = n_cat = 0
+    for i, s in enumerate(SEG):
+        muted = (s.get("gain_db", 0) or 0) <= -40
+        w, _, _ = words_for(S[s["src"]])
+        for o in s.get("broll", []):
+            if o.get("flash"): continue
+            at_f = T[i] + o["at"] - s["in"]
+            ws = [x[0] for x in (w or []) if not muted and o["at"] - 2 <= x[1] < o["at"] + o["dur"] + 1]
+            ws += [x[0] for x in voice_w if at_f - 2 <= x[1] < at_f + o["dur"] + 1]
+            if len(ws) < 3: continue                     # под видом без речи тема не проверяется
+            n_chk += 1
+            f0 = o.get("orig", {}).get("file", o["file"]); i0 = o.get("orig", {}).get("in", o.get("in", 0))
+            tg = tags_of(f0, i0, i0 + o["dur"])
+            name = os.path.basename(f0)[:28]
+            if tg is None:
+                n_cat += 1; add("ТЕМА", at_f, s["note"], f"{name} {o['dur']:.1f} с — нет в каталоге кадров; под ним: «{' '.join(ws)[:100]}»"); continue
+            if not any(x.startswith(st) for t_ in tg for st in stems(t_) for x in ws):
+                add("ТЕМА", at_f, s["note"], f"{name} [{', '.join(sorted(tg))}] {o['dur']:.1f} с, а говорят: «{' '.join(ws)[:100]}»")
+    THEME_NOTE = [f"ТЕМА: каталог {os.path.basename(cat_p)}, перебивок под речью {n_chk}, из них нет в каталоге {n_cat}"]
+else:
+    THEME_NOTE = [f"ТЕМА — ПРОПУСК: нет каталога меток кадров ({cat_p or 'имя плана без sN, укажите --catalog'})"]
+
+# ТЕМП — справка (рецензент 22.11: цели медианы и доли длинных планов сняты)
 TEMPO = []
-if SH:
+SHt = [x for x in SH if not x[5]]
+if SHt:
     import statistics
-    dl = [d for _, d, _, _, _ in SH]; tot_ = sum(dl)
-    drone = lambda f: bool(re.fullmatch(r"DJI_\d{4}\.MP4", os.path.basename((alias.get(f) or [f])[0]), re.I))
-    photo_t = sum(d for _, d, f, _, _ in SH if "/фото/" in f)
-    med = statistics.median(dl); long8 = sum(1 for d in dl if d >= 8) / len(dl)
-    TEMPO = [f"планов {len(SH)}, в минуту {len(SH) / (tot_ / 60):.1f}; медиана {med:.1f} с (цель ≤ 3,5){' ✗' if med > 3.5 else ''}; "
-             f"8+ с — {long8:.0%} (цель ≤ 15 %){' ✗' if long8 > 0.15 else ''}; фото — {photo_t / tot_:.0%} времени (цель ≤ 5 %){' ✗' if photo_t / tot_ > 0.05 else ''}"]
-    for t0, d, f, n_, i in SH:                         # одна находка на план: голова без перебивки или просто длинный план
-        if d < 8 or "/фото/" in f: continue
-        head = False
-        if "перебивка" not in n_ and (SEG[i].get("gain_db", 0) or 0) > -40:
-            w, _, _ = words_for(S[SEG[i]["src"]])
-            head = bool(w) and sum(1 for x in w if SEG[i]["in"] <= x[1] < SEG[i]["out"]) >= 8
-        if head:
-            add("ТЕМП", t0, n_, f"говорящая голова {d:.1f} с без перебивки (цель ≤ 8 с, дальше — то, о чём речь)")
-        elif not drone(f) and not re.search(r"дрон|вид|панорам|сверху|карта", n_, re.I):
-            add("ТЕМП", t0, n_, f"план {d:.1f} с ({os.path.basename(f)[:28]}) — длиннее 6 с только дрон, вид под музыку или реплика без перебивки")
+    dl = [x[1] for x in SHt]; tot_ = sum(dl)
+    photo_t = sum(x[1] for x in SHt if "/фото/" in x[2])
+    TEMPO = [f"планов {len(SHt)}, в минуту {len(SHt) / (tot_ / 60):.1f}; медиана {statistics.median(dl):.1f} с; короче 4 с — "
+             f"{sum(1 for d in dl if d < MIN_SHOT - 0.05) / len(dl):.0%}; 8+ с — {sum(1 for d in dl if d >= 8) / len(dl):.0%}; "
+             f"фото — {photo_t / tot_:.0%} времени (цель ≤ 5 %){' ✗' if photo_t / tot_ > 0.05 else ''}"]
+    for t0, d, f, n_, i, _ in SHt:                      # справка: говорящая голова без перебивки
+        if d < 8 or "перебивка" in n_ or (SEG[i].get("gain_db", 0) or 0) <= -40: continue
+        w, _, _ = words_for(S[SEG[i]["src"]])
+        if w and sum(1 for x in w if SEG[i]["in"] <= x[1] < SEG[i]["out"]) >= 8:
+            TEMPO.append(f"  {tc(t0)} «{n_[:40]}»: говорящая голова {d:.1f} с без перебивки — перебивка, только если есть кадр о том, о чём речь")
 
 F.sort()
-lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + ([f"Темп: {x}" for x in TEMPO] + [""] if TEMPO else [])
-for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "МЕЛЬК", "ВЫХОД", "ТЕМП"]:
+lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
+for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
