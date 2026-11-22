@@ -84,6 +84,40 @@ const WEB_VISIBLE_HEADING_STYLE = {
 
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
+/** Formatting belongs to the heading's hydration boundary and follows locale changes. */
+function FirstScreenMeta({ travel }: { travel: Travel }) {
+  const metaParts = buildTravelFirstScreenMetaParts(travel);
+  const metaAuthor = metaParts.author;
+  const metaDetails = metaParts.details;
+  const firstScreenMeta = [metaAuthor, metaDetails].filter(Boolean).join(' · ');
+  // #3237: имя автора в строке меты — ссылка на его профиль, уже в серверном HTML.
+  // Обычный клик — переход внутри приложения, с модификатором — браузеру.
+  const authorProfilePath = metaAuthor ? travelAuthorProfilePath(travel) : null;
+
+  if (!firstScreenMeta) return null;
+  return (
+    <p data-testid="travel-details-first-screen-meta" data-travel-first-screen="meta">
+      {authorProfilePath ? (
+        <>
+          <a
+            href={authorProfilePath}
+            data-travel-author-link="true"
+            style={{ color: 'inherit' }}
+            onClick={(event) => {
+              if (!shouldHandleLinkClick(event as unknown as LinkPressEvent)) return;
+              event.preventDefault();
+              router.push(authorProfilePath as Href);
+            }}
+          >
+            {metaAuthor}
+          </a>
+          {metaDetails ? ` · ${metaDetails}` : null}
+        </>
+      ) : firstScreenMeta}
+    </p>
+  );
+}
+
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
   isMobile: boolean;
@@ -267,15 +301,6 @@ export default function TravelDetailsCriticalShell({
   const useNativeStickyNav =
     !!travel && isMobile && Platform.OS !== 'web' && !showDesktopSidebar;
 
-  // Not memoized on `travel`: the days label is locale-dependent.
-  const metaParts = Platform.OS === 'web' && travel ? buildTravelFirstScreenMetaParts(travel) : null;
-  const metaAuthor = metaParts?.author ?? '';
-  const metaDetails = metaParts?.details ?? '';
-  const firstScreenMeta = [metaAuthor, metaDetails].filter(Boolean).join(' · ');
-  // #3237: имя автора в строке меты — ссылка на его профиль, уже в серверном HTML.
-  // Обычный клик — переход внутри приложения, с модификатором — браузеру.
-  const authorProfilePath = metaAuthor ? travelAuthorProfilePath(travel) : null;
-
   // Rendered by the hero between the gallery and the facts/actions. Memoized so
   // the stable hero element below is not invalidated by unrelated shell renders.
   const pageTitle = useMemo(() => Platform.OS === 'web' && travel ? (
@@ -292,36 +317,14 @@ export default function TravelDetailsCriticalShell({
       >
         {travel.name}
       </h1>
-      {/* Mobile-only meta line; `display` is owned by the first-screen stylesheet
-          (hidden ≥768 px, where the facts row right below carries the same data). */}
-      {firstScreenMeta ? (
-        <p data-testid="travel-details-first-screen-meta" data-travel-first-screen="meta">
-          {authorProfilePath ? (
-            <>
-              <a
-                href={authorProfilePath}
-                data-travel-author-link="true"
-                style={{ color: 'inherit' }}
-                onClick={(event) => {
-                  if (!shouldHandleLinkClick(event as unknown as LinkPressEvent)) return;
-                  event.preventDefault();
-                  router.push(authorProfilePath as Href);
-                }}
-              >
-                {metaAuthor}
-              </a>
-              {metaDetails ? ` · ${metaDetails}` : null}
-            </>
-          ) : firstScreenMeta}
-        </p>
-      ) : null}
+      <FirstScreenMeta travel={travel} />
       <div data-travel-first-screen="favorite">
         <Suspense fallback={null}>
           <TravelHeroFavoriteToggleSlot travel={travel} isMobile={isMobile} />
         </Suspense>
       </div>
     </div>
-  ) : null, [travel, isMobile, isRouterSsrTravel, colors.text, firstScreenMeta, authorProfilePath, metaAuthor, metaDetails]);
+  ) : null, [travel, isMobile, isRouterSsrTravel, colors.text]);
 
   // Completed server boundaries keep the visible HTML while React hydrates the
   // hero and article independently. Stable elements prevent unrelated container

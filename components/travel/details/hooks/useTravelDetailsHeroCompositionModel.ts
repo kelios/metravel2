@@ -1,26 +1,20 @@
 import { useCallback, useState } from 'react'
 import { Platform } from 'react-native'
 
-import type { LayoutChangeEvent } from 'react-native'
-
 type UseTravelDetailsHeroCompositionModelArgs = {
   firstImg: { url?: string } | null
-  heroContainerWidth: number | null
   heroSliderImages: Array<unknown>
   isMobile: boolean
   renderSlider: boolean
-  setHeroContainerWidth: (width: number) => void
   sliderUpgradeAllowed: boolean
   webHeroLoaded: boolean
 }
 
 export function useTravelDetailsHeroCompositionModel({
   firstImg,
-  heroContainerWidth,
   heroSliderImages,
   isMobile,
   renderSlider,
-  setHeroContainerWidth,
   sliderUpgradeAllowed,
   webHeroLoaded,
 }: UseTravelDetailsHeroCompositionModelArgs) {
@@ -58,21 +52,10 @@ export function useTravelDetailsHeroCompositionModel({
     setFullscreenVisible(false)
   }, [])
 
-  const handleHeroContainerLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const width = Math.round(e.nativeEvent.layout.width)
-      if (width && Math.abs((heroContainerWidth ?? 0) - width) >= 1) {
-        setHeroContainerWidth(width)
-      }
-    },
-    [heroContainerWidth, setHeroContainerWidth]
-  )
-
   return {
     fullscreenIndex,
     fullscreenVisible,
     handleCloseFullscreen,
-    handleHeroContainerLayout,
     handleImagePress,
     hasInteractiveWebGallery,
     shouldRenderWebOptimizedHero,

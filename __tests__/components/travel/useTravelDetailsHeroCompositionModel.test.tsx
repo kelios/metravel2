@@ -14,11 +14,9 @@ describe('useTravelDetailsHeroCompositionModel', () => {
     await renderHook(() =>
       useTravelDetailsHeroCompositionModel({
         firstImg: { url: 'https://example.com/hero.jpg' },
-        heroContainerWidth: 720,
         heroSliderImages: [{ url: 'https://example.com/hero.jpg' }, { url: 'https://example.com/second.jpg' }],
         isMobile: false,
         renderSlider: true,
-        setHeroContainerWidth: jest.fn(),
         sliderUpgradeAllowed: true,
         webHeroLoaded,
       }),

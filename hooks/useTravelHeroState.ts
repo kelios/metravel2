@@ -69,9 +69,6 @@ function useHeroMediaModel(
   const { height: winH } = useWindowDimensions()
   const insets = useSafeAreaInsets()
   const tdTrace = useTdTrace()
-  const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(
-    null,
-  )
 
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
@@ -248,8 +245,6 @@ function useHeroMediaModel(
     heroSliderImages,
     heroAlt,
     aspectRatio,
-    heroContainerWidth,
-    setHeroContainerWidth,
     webHeroLoaded,
     overlayUnmounted,
     isOverlayFading,

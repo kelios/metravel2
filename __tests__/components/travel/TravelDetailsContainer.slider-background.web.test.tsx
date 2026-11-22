@@ -108,8 +108,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ],
       heroAlt: 'Demo travel',
       aspectRatio: 1200 / 800,
-      setHeroContainerWidth: jest.fn(),
-      heroContainerWidth: 960,
       webHeroLoaded: true,
       overlayUnmounted: false,
       isOverlayFading: false,
@@ -367,9 +365,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(mockReleaseSsgHero).toHaveBeenCalledTimes(1)
   })
 
-  it('updates hero container width from web layout events', async () => {
-    const setHeroContainerWidth = jest.fn()
-
+  it('fits the web LCP image to its CSS frame without measuring it during hydration', async () => {
     mockUseTravelHeroState.mockReturnValueOnce({
       firstImg: {
         url: 'https://cdn.example.com/img.jpg',
@@ -389,8 +385,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ],
       heroAlt: 'Demo travel',
       aspectRatio: 1200 / 800,
-      setHeroContainerWidth,
-      heroContainerWidth: 960,
       webHeroLoaded: true,
       overlayUnmounted: false,
       isOverlayFading: false,
@@ -451,7 +445,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     const heroSliderContainer = within(tree.container).getByTestId('travel-details-hero-slider-container', { includeHiddenElements: true })
 
-    expect(typeof heroSliderContainer.props?.onLayout).toBe('function')
+    expect(heroSliderContainer.props?.onLayout).toBeUndefined()
     const lcpHeroImage = tree.container.queryAll(
       (node: any) => node.type === 'img' && node.props?.['data-lcp'],
     { includeSelf: true })[0]
@@ -463,19 +457,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
         maxHeight: 'none',
       }),
     )
-
-    await act(async () => {
-      heroSliderContainer.props.onLayout({
-        nativeEvent: {
-          layout: {
-            width: 640,
-          },
-        },
-      })
-      await Promise.resolve()
-    })
-
-    expect(setHeroContainerWidth).toHaveBeenCalledWith(640)
   })
 
   it('marks hero section as gallery anchor on web', async () => {
@@ -548,8 +529,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ],
       heroAlt: 'Demo travel',
       aspectRatio: 1200 / 800,
-      setHeroContainerWidth: jest.fn(),
-      heroContainerWidth: 960,
       webHeroLoaded: true,
       overlayUnmounted: false,
       isOverlayFading: false,
@@ -629,8 +608,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ],
       heroAlt: 'Single image travel',
       aspectRatio: 1200 / 800,
-      setHeroContainerWidth: jest.fn(),
-      heroContainerWidth: 960,
       webHeroLoaded: true,
       overlayUnmounted: false,
       isOverlayFading: false,

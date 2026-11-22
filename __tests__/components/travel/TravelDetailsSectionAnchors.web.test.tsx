@@ -99,7 +99,7 @@ jest.mock('@/components/travel/details/TravelHeroSlots', () => ({
   TravelHeroInteractiveSliderSlot: () => null,
 }))
 jest.mock('@/components/travel/details/TravelDetailsOptimizedLCPHero', () => ({
-  OptimizedLCPHero: () => null,
+  OptimizedLCPHero: () => <img data-testid="lcp-cover" alt="Обложка" />,
   OVERLAY_TRANSITION_MS: 0,
 }))
 jest.mock('@/hooks/useTravelHeroState', () => ({
@@ -109,7 +109,7 @@ jest.mock('@/components/travel/details/useTravelSsgHeroHandoff', () => ({
   useTravelSsgHeroHandoff: () => ({ active: false }),
 }))
 jest.mock('@/components/travel/details/hooks/useTravelDetailsHeroCompositionModel', () => ({
-  useTravelDetailsHeroCompositionModel: () => ({}),
+  useTravelDetailsHeroCompositionModel: () => ({ shouldRenderWebOptimizedHero: true }),
 }))
 jest.mock('@/components/travel/details/hooks/useTravelDetailsMapSectionModel', () => ({
   useTravelDetailsMapSectionModel: () => ({}),
@@ -293,11 +293,13 @@ it('hydrates only the tapped photo while scrollspy selects the gallery (#3467)',
   let root: Root | undefined
   try {
     expect(node('travel-details-quick-facts')).not.toBeNull()
+    expect(node('lcp-cover').getAttribute('alt')).toBe('Обложка')
     expect(node('slider-caption').textContent).toContain('Фото маршрута')
     act(() => {
       root = hydrateRoot(host, tree, { onRecoverableError: error => errors.push(error) })
       node('travel-details-hero-slider-container').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
       expect(hydrated('travel-details-hero-slider-container')).toBe(true)
+      expect(hydrated('lcp-cover')).toBe(false)
       expect(hydrated('slider-caption')).toBe(false)
       expect(hydrated('travel-details-quick-facts')).toBe(false)
     })

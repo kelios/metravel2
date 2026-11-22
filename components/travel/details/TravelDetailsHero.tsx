@@ -3,7 +3,6 @@ import { Platform, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
-import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import { resolveTravelAuthorName } from '@/components/listTravel/travelListItemHelpers'
 import { resolveTravelAuthorId } from '@/utils/travelAuthorProfile'
 import {
@@ -95,8 +94,6 @@ function TravelHeroSectionInner({
     heroSliderImages,
     heroAlt,
     aspectRatio,
-    setHeroContainerWidth,
-    heroContainerWidth,
     webHeroLoaded,
     overlayUnmounted,
     isOverlayFading,
@@ -124,18 +121,15 @@ function TravelHeroSectionInner({
     fullscreenIndex,
     fullscreenVisible,
     handleCloseFullscreen,
-    handleHeroContainerLayout,
     handleImagePress,
     shouldRenderWebOptimizedHero: useLcpOverlayFlow,
     shouldRenderWebSlider: mountSliderUnderOverlay,
     sliderPreloadCount,
   } = useTravelDetailsHeroCompositionModel({
     firstImg,
-    heroContainerWidth,
     heroSliderImages,
     isMobile,
     renderSlider,
-    setHeroContainerWidth,
     sliderUpgradeAllowed,
     webHeroLoaded: webHeroLoaded || ssgHeroHandoffActive,
   })
@@ -165,6 +159,19 @@ function TravelHeroSectionInner({
   // заголовку или автору — галерею. Элементы стабильны: перерисовка героя с теми же
   // данными (состояние галереи в layout-эффектах тапа) не меняет пропсы негидратированной
   // границы, иначе React обязан догидратировать её тем же синхронным приоритетом.
+  // The LCP cover is already painted. Input targets the slider container beneath
+  // the pointer-transparent overlay, so its image can hydrate independently.
+  const coverBoundary = useMemo(() => isWeb && firstImg ? (
+    <Suspense fallback={null}>
+      <OptimizedLCPHero
+        img={firstImg}
+        alt={heroAlt}
+        viewportHeight
+        media={firstImg.media}
+        onLoad={handleCoverLoad}
+      />
+    </Suspense>
+  ) : null, [isWeb, firstImg, heroAlt, handleCoverLoad])
   // Number formatting in the caption initializes Intl on the first render. A
   // tap on the adjacent photo can leave the server-rendered caption in place.
   const currentCaption = heroSliderImages[currentIndex]?.caption
@@ -276,7 +283,6 @@ function TravelHeroSectionInner({
           testID="travel-details-hero-slider-container"
           style={heroContainerStyle}
           collapsable={false}
-          onLayout={handleHeroContainerLayout}
         >
           {useLcpOverlayFlow ? (
             <>
@@ -316,15 +322,7 @@ function TravelHeroSectionInner({
                 />
               ) : !overlayUnmounted ? (
                 <View style={lcpOverlayStyle} collapsable={false} {...(lcpOverlayWebProps || {})}>
-                  <OptimizedLCPHero
-                    img={firstImg}
-                    alt={heroAlt}
-                    height={isWeb ? undefined : heroHeight}
-                    viewportHeight={isWeb}
-                    isMobile={isMobile}
-                    media={findGalleryMediaImage(travel.media, firstImg.id)}
-                    onLoad={handleCoverLoad}
-                  />
+                  {coverBoundary}
                 </View>
               ) : null}
             </>

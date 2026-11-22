@@ -7,6 +7,23 @@ import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { buildTravelArticleStructuredData, buildTravelBreadcrumbStructuredData } from '@/utils/travelArticleJsonLd'
 import { DEFAULT_LOCALE } from '@/i18n/config'
 
+function TravelArticleJsonLd({ payload }: { payload: NonNullable<TravelLoaderPayload> }) {
+  const seo = getTravelDetailsSeoMetadata(payload.travel, payload.routeKey)
+  const faq = payload.faqJsonLd ?? null
+  const article = buildTravelArticleStructuredData({
+    headline: payload.travel.name,
+    description: seo.readyDesc,
+    canonical: seo.canonicalUrl,
+    image: seo.readyImage,
+    travel: payload.travel,
+    language: DEFAULT_LOCALE,
+    authorSameAs: payload.authorSameAs,
+  })
+  const breadcrumb = buildTravelBreadcrumbStructuredData({ headline: payload.travel.name, canonical: seo.canonicalUrl })
+  const structuredData = { '@context': 'https://schema.org', '@graph': [article, breadcrumb, faq].filter(Boolean) }
+  return jsonLdScript(structuredData, { marker: 'travel-article' })
+}
+
 export default function TravelLoaderScreen() {
   const loaded = useLoaderData() as TravelLoaderPayload
   const payload = useMemo(() => {
@@ -22,25 +39,16 @@ export default function TravelLoaderScreen() {
       },
     }
   }, [loaded])
-  const structuredData = useMemo(() => {
-    if (!payload?.travel) return null
-    const seo = getTravelDetailsSeoMetadata(payload.travel, payload.routeKey)
-    const faq = payload.faqJsonLd ?? null
-    const article = buildTravelArticleStructuredData({
-      headline: payload.travel.name,
-      description: seo.readyDesc,
-      canonical: seo.canonicalUrl,
-      image: seo.readyImage,
-      travel: payload.travel,
-      language: DEFAULT_LOCALE,
-      authorSameAs: payload.authorSameAs,
-    })
-    const breadcrumb = buildTravelBreadcrumbStructuredData({ headline: payload.travel.name, canonical: seo.canonicalUrl })
-    return { '@context': 'https://schema.org', '@graph': [article, breadcrumb, faq].filter(Boolean) }
-  }, [payload])
+  // Keep the server's JSON-LD script available to crawlers while a tap first
+  // hydrates the article. Only a new loader payload changes the metadata.
+  const structuredData = useMemo(() => payload?.travel ? (
+    <React.Suspense fallback={null}>
+      <TravelArticleJsonLd payload={payload} />
+    </React.Suspense>
+  ) : null, [payload])
   return (
     <TravelLoaderDataContext.Provider value={payload}>
-      {structuredData ? jsonLdScript(structuredData, { marker: 'travel-article' }) : null}
+      {structuredData}
       <TravelDetailsContainer />
     </TravelLoaderDataContext.Provider>
   )
