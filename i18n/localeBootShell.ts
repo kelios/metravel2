@@ -4,14 +4,9 @@ import { DESIGN_COLORS } from '@/constants/designSystem'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
 import { getQuestLocaleRouteParserScript } from '@/utils/questLocaleShell'
 
-export const LOCALE_BOOT_PENDING_CLASS = 'locale-boot-pending'
+import { LOCALE_BOOT_PENDING_CLASS } from './localeBootDom'
 
-declare global {
-  interface Window {
-    __metravelLocaleBootErrorHandler?: EventListener
-    __metravelLocaleBootRecoveryOwner?: 'static' | 'react'
-  }
-}
+export { LOCALE_BOOT_PENDING_CLASS, releaseLocaleBootShell, claimLocaleBootRecovery } from './localeBootDom'
 
 /** Hide untranslated SSG until commit; URL-bound translated SSG stays readable. */
 export const getLocaleBootScript = (): string => `
@@ -86,21 +81,3 @@ export const getLocaleBootCss = (): string =>
    #locale-boot-recovery { position: fixed; inset: 0; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; background: var(--color-surface, ${DESIGN_COLORS.criticalSurfaceLight}); color: var(--color-text, ${DESIGN_COLORS.criticalTextLight}); font: 16px/1.5 system-ui, sans-serif; }
    #locale-boot-recovery button, #locale-boot-recovery a { min-height: 44px; padding: 10px 18px; cursor: pointer; color: inherit; background: var(--color-backgroundSecondary, ${DESIGN_COLORS.criticalBgSecondaryLight}); border: 1px solid currentColor; border-radius: 8px; }
    #locale-boot-recovery[data-url-locale="true"] { inset: auto 16px 16px; max-width: 520px; max-height: 50vh; overflow: auto; margin: 0 auto; padding: 16px; border: 1px solid currentColor; border-radius: 8px; }`
-
-/** React can now recover catalogue errors itself; never stack both panels. */
-export const claimLocaleBootRecovery = (): void => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return
-  window.__metravelLocaleBootRecoveryOwner = 'react'
-  if (window.__metravelLocaleBootErrorHandler) {
-    window.removeEventListener('error', window.__metravelLocaleBootErrorHandler, true)
-    delete window.__metravelLocaleBootErrorHandler
-  }
-  document.querySelectorAll('[data-static-recovery="true"]').forEach((panel) => panel.remove())
-}
-
-export const releaseLocaleBootShell = (): void => {
-  if (typeof document !== 'undefined') {
-    document.documentElement.classList.remove(LOCALE_BOOT_PENDING_CLASS)
-    document.querySelectorAll('[data-static-recovery="true"]').forEach((panel) => panel.remove())
-  }
-}

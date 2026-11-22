@@ -26,7 +26,7 @@ import {
   type LocalePreference,
 } from './localeStorage'
 import { isWebLocaleLoaded, loadWebLocale, translate } from './translate'
-import { claimLocaleBootRecovery, releaseLocaleBootShell } from './localeBootShell'
+import { claimLocaleBootRecovery, releaseLocaleBootShell } from './localeBootDom'
 import { getBootLocaleRecoveryCopy } from './bootLocaleRecoveryCopy'
 import { isServerSsrRuntime, readRequestLocale } from '@/utils/ssr/requestLocale'
 import { prepareServerWebLocale } from './translate.web'
