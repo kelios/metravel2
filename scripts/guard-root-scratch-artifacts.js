@@ -51,6 +51,7 @@ const GIT_PATH_ARGS = ['-c', 'core.quotePath=false']
 const ALLOWED_ROOT_FILES = new Set([
   '.gitattributes',
   '.gitignore',
+  '.mailmap',
   '.mcp.json',
   '.node-version',
   '.npmrc',
