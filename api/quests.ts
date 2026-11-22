@@ -21,7 +21,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { getQuestContentLocale, withQuestLang } from '@/api/questContentLocale';
 import { buildQuestCityLandingGroups, normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
 import {
-    CATALOG_EAGER_PAGES,
+    CATALOG_PAGE_SIZE,
     fetchAllQuestPages,
     withQuestMetaDefaults,
     type PaginatedEnvelope,
@@ -188,6 +188,16 @@ export async function fetchQuestReviews(questId: string): Promise<QuestReview[]>
 // ===================== API ФУНКЦИИ =====================
 
 /**
+ * Каталог квестов одним компактным запросом (#3459): сетка, поиск, порядок по
+ * стране посетителя и фильтры считаются на клиенте по всему каталогу, поэтому
+ * первая порция — это весь каталог в компактной форме (обложка плитки без
+ * полного медиа-манифеста). Полный манифест нужен только бандлу квеста.
+ */
+function fetchQuestCatalogRows(locale: string, signal?: AbortSignal): Promise<ApiQuestMeta[]> {
+    return fetchAllQuestPages<ApiQuestMeta>(withQuestLang('/quests/?compact=1', locale), 20, { signal, pageSize: CATALOG_PAGE_SIZE });
+}
+
+/**
  * Получить список всех квестов (метаданные).
  * При успехе кэширует сырой список в AsyncStorage (fire-and-forget) для офлайна.
  * При сетевом фейле возвращает кэш, если он есть, — иначе пробрасывает ошибку.
@@ -200,7 +210,7 @@ export async function fetchQuestsList(
 ): Promise<ApiQuestMeta[]> {
     const locale = options?.locale ?? getQuestContentLocale();
     try {
-        const list = await fetchAllQuestPages<ApiQuestMeta>(withQuestLang('/quests/', locale), 20, { signal: options?.signal, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchQuestCatalogRows(locale, options?.signal);
         const withDefaults = list.map(withQuestMetaDefaults);
         void writeCachedQuestsList(withDefaults, locale);
         return withDefaults;
@@ -261,9 +271,9 @@ export async function fetchQuestsPreview(
 
 /**
  * Компактный каталог для петли возврата (#1484): коллекция города и подбор
- * следующего квеста. От `fetchQuestsList` отличается двумя вещами — `compact=1`
- * (одна ссылка на обложку вместо полного медиа-манифеста) и отсутствием записи
- * в офлайн-кэш: это срез по полям, и он затёр бы полный список каталога.
+ * следующего квеста. Запрос тот же, что у `fetchQuestsList` (#3459), но без
+ * записи в офлайн-кэш: ключ запроса привязан к пользователю, а кэш каталога
+ * общий на устройство.
  *
  * `is_completed_by_me` приходит по текущему пользователю: серверный кэш
  * списка объявлен `Vary: Authorization`, поэтому чужое прохождение не
@@ -276,7 +286,7 @@ export async function fetchQuestsCompactCatalog(
 ): Promise<ApiQuestMeta[]> {
     const locale = options?.locale ?? getQuestContentLocale();
     try {
-        const list = await fetchAllQuestPages<ApiQuestMeta>(withQuestLang('/quests/?compact=1', locale), 20, { signal: options?.signal, eagerPages: CATALOG_EAGER_PAGES });
+        const list = await fetchQuestCatalogRows(locale, options?.signal);
         return list.map(withQuestMetaDefaults);
     } catch (err) {
         // Офлайн-контракт тот же, что у полного списка: лучше показать кэш

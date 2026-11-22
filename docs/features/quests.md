@@ -294,7 +294,7 @@ tripvenue резолвит по ближайшему городу каталог
 
 | Query / Mutation | Файл | Ключ | Примечания |
 | --- | --- | --- | --- |
-| `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests','catalog',locale]` | единственное определение запроса; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
+| `useQuestsList` | `hooks/useQuestsApi.ts` + `hooks/questsListQuery.ts` | `['quests','catalog',locale]` | единственное определение запроса; весь каталог одним компактным ответом `GET /quests/?compact=1&page_size=1000` (#3459, #3476): сетка показывает первые 24, «Показать ещё», поиск, порядок по стране посетителя и фильтры работают по уже загруженному каталогу; старый лимит бэкенда дочитывается по размеру выборки; `staleTime` 30 мин, `gcTime` 60 мин (`hooks/questsListCachePolicy.ts`) |
 | `useQuestsPreview(limit)` | `hooks/useQuestsApi.ts` | `['quests','preview',limit,locale]` | `GET /quests/?sort=popular&page_size=N` одним запросом (при `400` — повтор без `sort`); `initialData` — топ-N по популярности из каталога той же локали с наследованием `dataUpdatedAt` |
 | `useQuestBundle` / `useQuestRatingMeta` / `useQuestCompletionMeta` / `useQuestPioneerMeta` | `hooks/useQuestsApi.ts`, `hooks/useQuest*Meta.ts`, `hooks/questBundleQuery.ts` | `['quest-bundle', slug, locale]` | один сырой бандл для страницы, breadcrumbs и метаданных; полный каталог для детали не загружается (#1992) |
 | `useQuestReviews` | `hooks/useQuestsApi.ts` | `['quest', questId, 'reviews']` | `staleTime` 60 с |
@@ -1708,7 +1708,7 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
 
 ## Внешние зависимости
 
-- API: `/api/quests/` (пагинация, `page_size=100`, дочитывание до 20 страниц),
+- API: `/api/quests/` (пагинация; каталог — `compact=1&page_size=1000` одним ответом, прочие списки — `page_size=100`; дочитывание до 20 страниц),
   `/api/quests/by-quest-id/{quest_id}/` (`LONG_TIMEOUT`, retry на 0/502/503/504),
   `/api/quests/by-city/{cityId}/`, `/api/quests/{id}/`,
   `/api/quests/near-location/`, `/api/quest-progress/` (+ `/quest/{questId}/`,

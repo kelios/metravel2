@@ -3,10 +3,11 @@ import { QueryClient } from '@tanstack/react-query';
 import { apiClient, ApiError } from '@/api/client';
 import { setActiveQueryClient } from '@/api/activeQueryClient';
 import { queryKeys } from '@/api/queryKeys';
-import { readCachedQuestsList, readCachedQuestBundle } from '@/api/questBundleCache';
+import { readCachedQuestsList, readCachedQuestBundle, writeCachedQuestsList } from '@/api/questBundleCache';
 import { QuestProgressLineageMismatch } from '@/utils/questProgressMerge';
 import {
   fetchQuestsList,
+  fetchQuestsCompactCatalog,
   fetchQuestsPreview,
   fetchQuestsByCity,
   fetchQuestByQuestId,
@@ -99,107 +100,80 @@ describe('api/quests', () => {
   });
 
   describe('fetchQuestsList', () => {
-    it('calls GET /quests/ with the maximum page size', async () => {
-      mockedGet.mockResolvedValueOnce([]);
+    const CATALOG = '/quests/?compact=1&lang=ru&page_size=1000';
+    const NEXT = 'https://metravel.by/api/quests/?compact=1&page=2&page_size=1000';
+    const NEXT3 = 'https://metravel.by/api/quests/?compact=1&page=3&page_size=1000';
+
+    // #3459: сетка, поиск и порядок считаются по всему каталогу на клиенте —
+    // каталог уходит одним компактным запросом, вторая страница не просится.
+    it('loads the whole catalog with one compact request', async () => {
+      mockedGet.mockResolvedValueOnce({
+        results: [{ id: 1, quest_id: 'krakow-dragon', media: { cover: { src: 'https://metravel.by/c.webp?w=640' } } }],
+        count: 1,
+        next: null,
+      });
       const result = await fetchQuestsList();
-      expect(mockedGet).toHaveBeenCalledWith('/quests/?lang=ru&page_size=100');
-      expect(result).toEqual([]);
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(mockedGet).toHaveBeenCalledWith(CATALOG);
+      // Компактная запись несёт обложку только в `media.cover.src`.
+      expect(result[0].cover_url).toBe('https://metravel.by/c.webp?w=640');
+      // Офлайн-кэш получает те же нормализованные компактные записи.
+      expect(writeCachedQuestsList).toHaveBeenCalledWith(result, 'ru');
+    });
+
+    it('keeps the full cover URL when the row has one', async () => {
+      mockedGet.mockResolvedValueOnce([
+        { id: 1, quest_id: 'a', cover_url: 'https://metravel.by/full.webp', media: { cover: { src: 'https://metravel.by/c.webp?w=640' } } },
+      ]);
+      const result = await fetchQuestsList();
+      expect(result[0].cover_url).toBe('https://metravel.by/full.webp');
     });
 
     // Каталог из 139 квестов при дефолтных 20 записях уходил семью
     // последовательными запросами на каждый экран со списком.
     it('keeps the page size while following the next page', async () => {
       mockedGet
-        .mockResolvedValueOnce({
-          results: [{ id: 1, quest_id: 'krakow-dragon' }],
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-        })
+        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'krakow-dragon' }], next: NEXT })
         .mockResolvedValueOnce({ results: [{ id: 2, quest_id: 'pakocim-voices' }], next: null });
 
       const result = await fetchQuestsList();
 
       expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?lang=ru&page_size=100');
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
+      expect(mockedGet).toHaveBeenNthCalledWith(1, CATALOG);
+      expect(mockedGet).toHaveBeenNthCalledWith(2, `${CATALOG}&page=2`);
       expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
     });
 
-    // #1659: номер следующей страницы известен только из ответа предыдущей,
-    // поэтому одного `count` мало — на каталоге ровно в две страницы вторая
-    // всё равно уходила бы после первой. Просим её сразу.
-    it('asks the second catalog page without waiting for the first', async () => {
-      const pending: Array<(value: unknown) => void> = [];
-      mockedGet
-        // Именно `Once`: `jest.clearAllMocks()` чистит вызовы, но не реализацию,
-        // и постоянный `mockImplementation` утёк бы в следующие тесты файла.
-        .mockImplementationOnce(() => new Promise<any>((resolve) => { pending.push(resolve); }))
-        .mockImplementationOnce(() => new Promise<any>((resolve) => { pending.push(resolve); }));
-
-      const promise = fetchQuestsList();
-      await flushMicrotasks();
-
-      // Ни один ответ ещё не пришёл, а вторая страница уже запрошена.
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(1, '/quests/?lang=ru&page_size=100');
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
-
-      pending[1]({ results: [{ id: 2, quest_id: 'pakocim-voices' }], count: 2, next: null });
-      pending[0]({
-        results: [{ id: 1, quest_id: 'krakow-dragon' }],
-        count: 2,
-        next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-      });
-
-      const result = await promise;
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon', 'pakocim-voices']);
-    });
-
-    // Каталог длиннее двух страниц: остаток тоже уходит одним заходом.
+    // Бэкенд со старым лимитом урезает страницу: остаток уходит одним заходом.
     it('reads the remaining pages in one go once the total is known', async () => {
       const pending: Array<(value: unknown) => void> = [];
       const defer = () => new Promise<any>((resolve) => { pending.push(resolve); });
       mockedGet
-        .mockResolvedValueOnce({
-          results: [{ id: 1, quest_id: 'a' }],
-          count: 4,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-        })
-        .mockResolvedValueOnce({
-          results: [{ id: 2, quest_id: 'b' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
-        })
+        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'a' }], count: 3, next: NEXT })
         .mockImplementationOnce(defer)
         .mockImplementationOnce(defer);
 
       const promise = fetchQuestsList();
       await flushMicrotasks();
 
-      // Четвёртая страница запрошена, хотя третья ещё не ответила.
-      expect(mockedGet).toHaveBeenCalledTimes(4);
-      expect(mockedGet).toHaveBeenNthCalledWith(4, '/quests/?lang=ru&page_size=100&page=4');
+      // Третья страница запрошена, хотя вторая ещё не ответила.
+      expect(mockedGet).toHaveBeenCalledTimes(3);
+      expect(mockedGet).toHaveBeenNthCalledWith(3, `${CATALOG}&page=3`);
 
       // Порядок записей не зависит от порядка ответов.
-      pending[1]({ results: [{ id: 4, quest_id: 'd' }], next: null });
-      pending[0]({ results: [{ id: 3, quest_id: 'c' }], next: null });
+      pending[1]({ results: [{ id: 3, quest_id: 'c' }], next: null });
+      pending[0]({ results: [{ id: 2, quest_id: 'b' }], next: null });
 
       const result = await promise;
-      expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c', 'd']);
+      expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c']);
     });
 
     // Бэкенд вправе урезать запрошенный `page_size` своим максимумом —
     // считаем страницы по фактической длине первой, иначе хвост потеряется.
     it('counts pages from the actual page length, not the requested one', async () => {
       mockedGet
-        .mockResolvedValueOnce({
-          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
-          count: 5,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-        })
-        .mockResolvedValueOnce({
-          results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
-        })
+        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }], count: 5, next: NEXT })
+        .mockResolvedValueOnce({ results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }], next: NEXT3 })
         .mockResolvedValueOnce({ results: [{ id: 5, quest_id: 'e' }], next: null });
 
       const result = await fetchQuestsList();
@@ -212,55 +186,19 @@ describe('api/quests', () => {
     // страница видна только по ссылке `next`, её и дочитываем.
     it('reads the tail sequentially when the reported total is too small', async () => {
       mockedGet
-        .mockResolvedValueOnce({
-          results: [{ id: 1, quest_id: 'a' }],
-          count: 2,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-        })
-        .mockResolvedValueOnce({
-          results: [{ id: 2, quest_id: 'b' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
-        })
+        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'a' }], count: 2, next: NEXT })
+        .mockResolvedValueOnce({ results: [{ id: 2, quest_id: 'b' }], next: NEXT3 })
         .mockResolvedValueOnce({ results: [{ id: 3, quest_id: 'c' }], next: null });
 
       const result = await fetchQuestsList();
 
       expect(mockedGet).toHaveBeenCalledTimes(3);
-      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?lang=ru&page_size=100&page=3');
+      expect(mockedGet).toHaveBeenNthCalledWith(3, `${CATALOG}&page=3`);
       expect(result.map((quest) => quest.quest_id)).toEqual(['a', 'b', 'c']);
     });
 
-    // Каталог усох до одной страницы: у DRF несуществующая страница — 404,
-    // и упреждающий запрос не имеет права уронить весь каталог.
-    it('survives the speculative page when the catalog fits a single one', async () => {
-      mockedGet
-        .mockResolvedValueOnce({ results: [{ id: 1, quest_id: 'krakow-dragon' }], count: 1, next: null })
-        .mockRejectedValueOnce(new ApiError(404, 'Invalid page'));
-
-      const result = await fetchQuestsList();
-
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(result.map((quest) => quest.quest_id)).toEqual(['krakow-dragon']);
-    });
-
-    it('does not hide a failing speculative page or request it again', async () => {
-      const error = new ApiError(500, 'Server error');
-      mockedGet
-        .mockResolvedValueOnce({
-          results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
-          count: 4,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
-        })
-        .mockRejectedValueOnce(error);
-
-      await expect(fetchQuestsList()).rejects.toBe(error);
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(mockedGet).toHaveBeenNthCalledWith(2, '/quests/?lang=ru&page_size=100&page=2');
-    });
-
     // #1664: хвостовые страницы посчитаны из размера выборки и ссылкой `next`
-    // не анонсированы — ровно как спекулятивная выше. Отказ «такой страницы
-    // нет» на них означает конец каталога: раньше он отвергал весь `Promise.all`,
+    // не анонсированы. Отказ «такой страницы нет» на них означает конец каталога: раньше он отвергал весь `Promise.all`,
     // каталог подменялся офлайн-копией и прохождения в ней обнулялись.
     it('stops at a missing tail page instead of dropping the whole catalog', async () => {
       mockedGet
@@ -268,11 +206,11 @@ describe('api/quests', () => {
         .mockResolvedValueOnce({
           results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
           count: 6,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+          next: NEXT,
         })
         .mockResolvedValueOnce({
           results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+          next: NEXT3,
         })
         .mockRejectedValueOnce(new ApiError(404, 'Invalid page'));
 
@@ -282,7 +220,7 @@ describe('api/quests', () => {
       // Ровно три запроса: ссылка `next` второй страницы ведёт на ту самую
       // третью, которой нет, и последовательный дочит не запрашивает её снова.
       expect(mockedGet).toHaveBeenCalledTimes(3);
-      expect(mockedGet).toHaveBeenNthCalledWith(3, '/quests/?lang=ru&page_size=100&page=3');
+      expect(mockedGet).toHaveBeenNthCalledWith(3, `${CATALOG}&page=3`);
     });
 
     // Обратная сторона того же правила: глушить всё подряд нельзя, иначе
@@ -292,11 +230,11 @@ describe('api/quests', () => {
         .mockResolvedValueOnce({
           results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
           count: 6,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+          next: NEXT,
         })
         .mockResolvedValueOnce({
           results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+          next: NEXT3,
         })
         .mockRejectedValueOnce(new ApiError(500, 'Server error'));
 
@@ -310,16 +248,43 @@ describe('api/quests', () => {
         .mockResolvedValueOnce({
           results: [{ id: 1, quest_id: 'a' }, { id: 2, quest_id: 'b' }],
           count: 8,
-          next: 'https://metravel.by/api/quests/?page=2&page_size=100',
+          next: NEXT,
         })
         .mockResolvedValueOnce({
           results: [{ id: 3, quest_id: 'c' }, { id: 4, quest_id: 'd' }],
-          next: 'https://metravel.by/api/quests/?page=3&page_size=100',
+          next: NEXT3,
         })
         .mockRejectedValueOnce(new ApiError(500, 'Server error'))
         .mockRejectedValueOnce(new ApiError(404, 'Invalid page'));
 
       await expect(fetchQuestsList()).rejects.toMatchObject({ status: 500 });
+    });
+  });
+
+  // #3459: петля возврата читает тот же компактный ответ, что и каталог, но
+  // офлайн-кэш устройства не пишет — ключ её запроса привязан к пользователю.
+  describe('fetchQuestsCompactCatalog', () => {
+    it('shares the catalog request and leaves the offline cache alone', async () => {
+      mockedGet.mockResolvedValueOnce({
+        results: [{ id: 1, quest_id: 'a', media: { cover: { src: 'https://metravel.by/a.webp' } } }],
+        count: 1,
+        next: null,
+      });
+
+      const result = await fetchQuestsCompactCatalog();
+
+      expect(mockedGet).toHaveBeenCalledTimes(1);
+      expect(mockedGet).toHaveBeenCalledWith('/quests/?compact=1&lang=ru&page_size=1000');
+      expect(result[0].cover_url).toBe('https://metravel.by/a.webp');
+      expect(writeCachedQuestsList).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the offline catalog when the request fails', async () => {
+      const cached = [{ id: 7, quest_id: 'cached' }] as ApiQuestMeta[];
+      mockedGet.mockRejectedValueOnce(new ApiError(503, 'Unavailable'));
+      mockedReadCachedQuestsList.mockResolvedValueOnce(cached);
+
+      await expect(fetchQuestsCompactCatalog()).resolves.toBe(cached);
     });
   });
 

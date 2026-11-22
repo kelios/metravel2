@@ -36,6 +36,9 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
     // заливать `dominant_color` из манифеста (#1208). Карточка знает только
     // `cover_url`, поэтому цвет индексируется и под ним.
     const coverMedia = meta?.media?.cover;
+    // Компактная запись (`compact=1`, каталог с #3459) несёт обложку только в
+    // `media.cover.src`; потребители читают `cover_url`, поэтому поле одно.
+    const coverUrl = meta?.cover_url ?? coverMedia?.src ?? null;
     const indexedCoverMedia: TravelMediaImage | null | undefined = coverMedia
         ? {
             ...coverMedia,
@@ -49,13 +52,14 @@ export function withQuestMetaDefaults(meta: ApiQuestMeta): ApiQuestMeta {
         }
         : coverMedia;
     indexMediaImage(indexedCoverMedia, [
-        meta?.cover_url,
+        coverUrl,
         coverMedia?.src_square,
         coverMedia?.variants?.square_160,
         coverMedia?.variants?.square_320,
     ]);
     return withQuestCompletionMock({
         ...meta,
+        cover_url: coverUrl,
         city_legacy_ids: normalizeQuestCityLegacyIds(meta.city_legacy_ids),
         rating_avg: meta.rating_avg ?? null,
         rating_count: meta.rating_count ?? 0,
@@ -80,16 +84,23 @@ export type PaginatedEnvelope<T> = {
 /**
  * Списочные эндпоинты отдают по 20 записей на страницу, а `fetchAllQuestPages`
  * дочитывает их до конца: каталог из 139 квестов уходил семью последовательными
- * запросами (~405 КБ) на каждый экран, которому нужен список. Просим максимум,
- * который разрешает пагинация бэкенда (max_page_size = 100, проверено на проде):
- * каталог схлопывается до двух запросов.
+ * запросами (~405 КБ) на каждый экран, которому нужен список. Обычный список
+ * просит по 100 записей.
  */
 const LIST_PAGE_SIZE = 100;
 
-function buildListPageUrl(path: string, page: number): string {
+/**
+ * Каталог квестов — одним компактным ответом (#3459, #3476): лимит страницы
+ * каталога на бэкенде 1000, а `compact=1` несёт всё, что нужно плитке
+ * (квадратная обложка и заливка). Бэкенд со старым лимитом урежет страницу —
+ * тогда остаток дочитается по размеру выборки, как у любого списка.
+ */
+export const CATALOG_PAGE_SIZE = 1000;
+
+function buildListPageUrl(path: string, page: number, pageSize: number): string {
     const separator = path.includes('?') ? '&' : '?';
     const pageParam = page > 1 ? `&page=${page}` : '';
-    return `${path}${separator}page_size=${LIST_PAGE_SIZE}${pageParam}`;
+    return `${path}${separator}page_size=${pageSize}${pageParam}`;
 }
 
 /** Номер следующей страницы из ссылки `next` бэкенда; `null`, если страница последняя. */
@@ -109,62 +120,33 @@ function isMissingPage(err: unknown): boolean {
 }
 
 /**
- * Сколько страниц просить, не дожидаясь ответа первой.
- *
- * Номер следующей страницы известен только из уже полученного ответа, поэтому
- * одного лишь `count` мало: на каталоге ровно в две страницы (165 квестов при
- * странице в 100 — замер прода 31.08.2026) вторая всё равно уходила бы после
- * первой, и обмены складывались бы как раньше (#1659). Просим вторую сразу.
- * Лишний запрос возможен единственным образом — если каталог усохнет до одной
- * страницы; тогда ответ на несуществующую страницу гасится и результат тот же.
- */
-export const CATALOG_EAGER_PAGES = 2;
-
-/**
  * Бэкенд перевёл списочные эндпоинты на пагинацию ({data/results, next}) — разворачиваем конверт и дочитываем все страницы.
  *
- * Первые `eagerPages` страниц уходят ОДНОВРЕМЕННО, не дожидаясь друг друга, а
- * дальше число страниц берётся из размера выборки первого ответа, и остаток
- * тоже читается одним заходом. Ответ без размера выборки читается по-старому,
- * страница за страницей.
+ * Число страниц берётся из размера выборки первого ответа, и остаток читается
+ * одним заходом. Ответ без размера выборки читается по-старому, страница за
+ * страницей.
  *
  * Почему это не общий `utils/fetchAllPages` (#1710): тот принимает загрузчик
  * страницы и возвращает список, а здесь на ту же ось намотаны три вещи, которых
- * у остальных потребителей нет — спекулятивные страницы до ответа первой,
- * 404-как-конец-каталога вместо отказа и последовательное дочитывание по ссылке
- * `next`, когда размер выборки разошёлся с отданным. Общее у двух обвязок ровно
+ * у остальных потребителей нет — 404-как-конец-каталога вместо отказа и
+ * последовательное дочитывание по ссылке `next`, когда размер выборки
+ * разошёлся с отданным. Общее у двух обвязок ровно
  * одно — правило «сколько страниц читать», и оно берётся из `resolveTotalPages`
  * общего хелпера, а не считается здесь заново.
  */
 export async function fetchAllQuestPages<T>(
     path: string,
     maxPages = 20,
-    options?: { signal?: AbortSignal; eagerPages?: number },
+    options?: { signal?: AbortSignal; pageSize?: number },
 ): Promise<T[]> {
     const getPage = (page: number) => {
-        const url = buildListPageUrl(path, page);
+        const url = buildListPageUrl(path, page, options?.pageSize ?? LIST_PAGE_SIZE);
         return options?.signal
             ? apiClient.get<T[] | PaginatedEnvelope<T>>(url, undefined, { signal: options.signal })
             : apiClient.get<T[] | PaginatedEnvelope<T>>(url);
     };
 
-    // Страница, существование которой ещё не подтверждено ссылкой `next`: у DRF
-    // несуществующая страница — это 404 «Invalid page», и ронять из-за неё весь
-    // каталог нельзя. `null` означает «дальше дочитываем последовательно».
-    const getPageIfExists = async (page: number) => {
-        try {
-            return await getPage(page);
-        } catch (err) {
-            if (!isMissingPage(err)) throw err;
-            return null;
-        }
-    };
-
-    const eager = Math.min(Math.max(options?.eagerPages ?? 1, 1), maxPages);
-    const [first, ...eagerRest] = await Promise.all([
-        getPage(1),
-        ...Array.from({ length: eager - 1 }, (_, index) => getPageIfExists(index + 2)),
-    ]);
+    const first = await getPage(1);
 
     if (Array.isArray(first)) return [...first];
 
@@ -172,23 +154,15 @@ export async function fetchAllQuestPages<T>(
     // дописывал бы записи следующих страниц в объект ответа первой.
     const out = [...unwrapList<T>(first)];
     const pageSize = out.length;
-    // Первая страница оказалась последней — ответы на спекулятивные не нужны.
+    // Первая страница оказалась последней: каталог пришёл одним ответом (#3459).
     if (nextPageNumber(first) === null) return out;
 
-    // Спекулятивные страницы засчитываем только подряд: пропуск в середине
-    // сломал бы порядок записей, поэтому с первого промаха дочитываем заново.
     let read = 1;
     let lastRead: PaginatedEnvelope<T> = first;
-    for (const res of eagerRest) {
-        if (!res || Array.isArray(res)) break;
-        out.push(...unwrapList<T>(res));
-        lastRead = res;
-        read += 1;
-    }
 
     const total = readEnvelopeTotal(first);
     // Хвостовые страницы посчитаны из размера выборки, а не анонсированы ссылкой
-    // `next`, — природа у них та же, что у спекулятивных выше. Их 404 означает
+    // `next`: у DRF несуществующая страница — 404 «Invalid page». Их 404 означает
     // конец каталога и обрывает дочитывание целиком: `next` последней прочитанной
     // страницы ведёт как раз на ту, которой нет, и последовательный проход ниже
     // запросил бы её повторно.
