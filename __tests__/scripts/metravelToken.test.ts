@@ -4,6 +4,11 @@ import path from 'path'
 import { spawn } from 'child_process'
 import { makeTempDir, removeDir, runNodeCli, runCli, startStubServer } from './cli-test-utils'
 
+jest.mock('@/scripts/lib/metravel-token-cache', () => {
+  const cache = jest.requireActual('@/scripts/lib/metravel-token-cache')
+  return { ...cache, withRefreshLock: jest.fn(cache.withRefreshLock) }
+})
+
 const { createTokenSession, formatTokenError, qaTokenSources, readTokenCandidate, targetPolicy, normalizeLoginCredentials } = require('@/scripts/lib/metravel-token')
 const { atomicPublish, withRefreshLock, processIdentity, readRegular } = require('@/scripts/lib/metravel-token-cache')
 const ROOT = path.resolve(__dirname, '../..')
@@ -62,14 +67,28 @@ describe('identity and trusted authentication boundary', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
   it('does not follow a credential-bearing redirect or expose its reflected body', async () => {
-    const fetchImpl = jest.fn(async (url: string) => me(url) ? response(401, SENTINEL) : response(307, SENTINEL))
-    let error: any
-    try { await session(fetchImpl).request('/api/quests/1/') } catch (caught) { error = caught }
-    expect(formatTokenError(error)).toBe('metravel-auth: request/redirect')
-    expect(fetchImpl.mock.calls).toHaveLength(2)
-    expect(fetchImpl.mock.calls.every((call: any) => call[0].startsWith('https://token.test/'))).toBe(true)
-    expect(fs.readdirSync(homeDir)).toEqual(['.metravel_token.qa104.lock.claims'])
-    expect(fs.readdirSync(path.join(homeDir, '.metravel_token.qa104.lock.claims'))).toEqual([])
+    const origin = 'https://token.test'
+    const fetchImpl = jest.fn(async (url: string, _init: RequestInit) => me(url) ? response(401, SENTINEL) : response(307, SENTINEL))
+    const auth = session(fetchImpl)
+    // Lock election has separate process-level tests. Only exercise the login callback here.
+    let result: unknown
+    jest.useFakeTimers()
+    try {
+      await withRefreshLock.withImplementation(
+        (_file: string, _deadline: number, work: () => Promise<unknown>) => work(),
+        async () => {
+          result = await auth.request('/api/quests/1/').catch(formatTokenError)
+        },
+      )
+    } finally {
+      jest.useRealTimers()
+    }
+    expect(result).toBe('metravel-auth: request/redirect')
+    expect(fetchImpl.mock.calls).toEqual([
+      [`${origin}/api/user/me/`, expect.objectContaining({ method: 'GET' })],
+      [`${origin}/api/user/login/`, expect.objectContaining({ method: 'POST', redirect: 'error' })],
+    ])
+    expect(fs.readdirSync(homeDir)).toEqual([])
   })
   it('does not read ambient credentials or fallback caches in fixture mode', async () => {
     const fetchImpl = jest.fn(async () => response(401, {}))
