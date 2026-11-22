@@ -401,6 +401,10 @@ node .claude/hooks/review-gate.mjs record --task <id> --paths-file <список
 условие пробной прод-сборки `DEPLOY=0 scripts/deploy-prod.sh <снимок>` для
 диффа с импортами в модулях eager-графа или общих чанков (`BUNDLE_PROBE_RULE`).
 Замер 21.11.2026: preflight без изменённых файлов 11,9 → 54 с, с `typecheck` — около 65 с (шаг `pre-push-guards` — 52,1 с).
+Тем же шагом идут Jest-тесты, связанные с diff'ом (#3468,
+`RED-TEST-ON-MAIN-OUTSIDE-GATE-001`): импортирующие или подменяющие изменённый
+модуль; потолок и ручной шаг `npm run test:related -- --full` —
+`docs/TESTING.md` → «Local selective checks».
 
 - коммит только явными путями задачи. `git add -A` и `git commit` без списка путей в общем
   чекауте запрещены: они забирают незаконченные файлы соседних сессий и выкатывают чужой код

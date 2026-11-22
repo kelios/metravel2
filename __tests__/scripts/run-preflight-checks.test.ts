@@ -61,12 +61,14 @@ describe('run-preflight-checks', () => {
     const changedFilesFile = path.join(dir, 'changed.txt')
     writeTextFile(changedFilesFile, 'components/messages/ChatView.tsx\n')
 
+    // Явное значение: тест сам идёт внутри `PREFLIGHT_SKIP_E2E=1 git push` (шаг связанных
+    // тестов, #3468) и не должен наследовать пропуск e2e от внешнего прогона.
     const result = runNodeCli([
       'scripts/run-preflight-checks.js',
       '--changed-files-file', changedFilesFile,
       '--dry-run',
       '--json',
-    ])
+    ], { PREFLIGHT_SKIP_E2E: '0' })
 
     expect(result.status).toBe(0)
     expect(result.stderr).toBe('')

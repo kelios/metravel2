@@ -24,6 +24,8 @@ const {
   SOURCE_TYPECHECK,
   PRE_PUSH_GUARDS,
   NOT_BEFORE_EVERY_PUSH,
+  RELATED_TESTS_RULE,
+  PREFLIGHT_SELECTIVE_TESTS_ENV,
   BUNDLE_PROBE_RULE,
   guardsForStage,
   guardSegment,
@@ -34,6 +36,9 @@ const {
 const { CHECKS } = require('@/scripts/run-preflight-checks');
 const {
   selectGuards,
+  alreadyRunTests,
+  describeRelatedFailure,
+  parseArgs: parseRunnerArgs,
   buildGuardInvocation,
   findDocContractTests,
   formatBundleProbeWarning,
@@ -137,6 +142,15 @@ describe('preflight ↔ guard list', () => {
     const step = JSON.parse(json.stdout).checks.find((check: { name: string }) => check.name === 'pre-push-guards');
     expect(step.payload).toMatchObject({ contractVersion: 1, check: 'pre-push-guards', stage: STAGE_PRE_PUSH });
     expect(step.payload.guards).toEqual(ids(guardsForStage(STAGE_PRE_PUSH)));
+    // Тем же шагом идут связанные с diff'ом Jest-тесты (#3468); план называет потолок.
+    expect(step.payload.relatedTests).toMatchObject({
+      rule: RELATED_TESTS_RULE.id,
+      ceiling: RELATED_TESTS_RULE.ceiling,
+      overCeiling: false,
+      notRun: 0,
+    });
+    // `test:governance` — страж того же шага: его тесты выборка второй раз не запускает.
+    expect(step.payload.relatedTests.selected).not.toContain('__tests__/scripts/pre-push-guards.test.ts');
 
     // Переход `review → testing` пушит с PREFLIGHT_SKIP_E2E=1: стражи при этом остаются.
     const skipE2e = runNodeCli(
@@ -156,6 +170,50 @@ describe('preflight ↔ guard list', () => {
     expect(eslint.command).toBe(process.execPath);
     expect(eslint.args.slice(1)).toEqual(['.', '--max-warnings=0']);
     expect(() => buildGuardInvocation({ command: 'rm -rf .' })).toThrow('unsupported guard command');
+  });
+});
+
+describe('related Jest tests rule (#3468)', () => {
+  it('names a ceiling, a worker limit and a full command that exists', () => {
+    expect(Number.isInteger(RELATED_TESTS_RULE.ceiling)).toBe(true);
+    expect(RELATED_TESTS_RULE.ceiling).toBeGreaterThan(100);
+    expect(RELATED_TESTS_RULE.maxWorkers).toBeGreaterThan(0);
+    // Команда ручного шага — тот же исполнитель, а не второй отбор.
+    expect(packageScripts['test:related']).toBe('node scripts/run-pre-push-guards.js --related-only');
+    expect(RELATED_TESTS_RULE.fullCommand).toBe('npm run test:related -- --full');
+    expect(parseRunnerArgs(['--related-only', '--full'])).toMatchObject({ relatedOnly: true, full: true, all: false });
+    expect(selectGuards({ all: false, relatedOnly: true })).toEqual([]);
+  });
+
+  it('replaces the graph only for data that has its own suite on disk', () => {
+    expect(RELATED_TESTS_RULE.dataSuites.map((item: { prefix: string }) => item.prefix)).toEqual(['i18n/locales/']);
+    for (const item of RELATED_TESTS_RULE.dataSuites) {
+      expect(item.why.length).toBeGreaterThan(10);
+      const suiteTests = fs.readdirSync(path.join(repoRoot, item.suite)).filter((name) => /\.test\.tsx?$/.test(name));
+      expect(suiteTests.length).toBeGreaterThan(0);
+    }
+    // Набор локалей — тот же, что запускает `npm run test:i18n`.
+    expect(packageScripts['test:i18n']).toContain(RELATED_TESTS_RULE.dataSuites[0].suite);
+  });
+
+  it('does not run twice what another step of the same run already ran', () => {
+    const governance = guardsForStage(STAGE_PRE_PUSH);
+    expect(alreadyRunTests({ guards: governance, changedFiles: [], env: {} })).toContain('__tests__/scripts/pre-push-guards.test.ts');
+    expect(alreadyRunTests({ guards: [], changedFiles: ['components/travel/Card.tsx'], env: {} })).toEqual([]);
+    // Внутри preflight выборочные наборы области уже выполнил `fast-scope-checks`.
+    expect(
+      alreadyRunTests({ guards: [], changedFiles: ['components/travel/Card.tsx'], env: { [PREFLIGHT_SELECTIVE_TESTS_ENV]: '1' } })
+    ).toContain('__tests__/api/travels.test.ts');
+    expect(readRepoFile('scripts/run-preflight-checks.js')).toContain("[PREFLIGHT_SELECTIVE_TESTS_ENV]: '1'");
+  });
+
+  it('names the red tests in the failure line of the step', () => {
+    const line = formatGuardFailure('related tests', 1, describeRelatedFailure(['__tests__/app/tripCreateScreen.authGate.test.tsx']));
+    expect(line).toContain('pre-push-guards: FAILED related tests (exit 1)');
+    expect(line).toContain('__tests__/app/tripCreateScreen.authGate.test.tsx');
+    expect(describeRelatedFailure([])).toContain('не отдав результат');
+    // Занятый lock и для связанных тестов — SKIPPED, не PASS.
+    expect(formatGuardFailure('related tests', SKIPPED_EXIT_CODE, '')).toContain('pre-push-guards: SKIPPED related tests');
   });
 });
 
@@ -243,6 +301,19 @@ describe('prod build probe warning', () => {
     // Шаг получает код пропуска в окружении, и Jest при занятом lock выходит именно им
     // (сам выход — `quality-gate-lock.test.ts`).
     expect(guardEnv()[QUALITY_GATE_BUSY_EXIT_ENV]).toBe(String(SKIPPED_EXIT_CODE));
+    // Управляющие переменные preflight стражам и связанным тестам не передаются.
+    const saved = { skip: process.env.PREFLIGHT_SKIP_E2E, selective: process.env[PREFLIGHT_SELECTIVE_TESTS_ENV] };
+    process.env.PREFLIGHT_SKIP_E2E = '1';
+    process.env[PREFLIGHT_SELECTIVE_TESTS_ENV] = '1';
+    try {
+      expect(guardEnv()).not.toHaveProperty('PREFLIGHT_SKIP_E2E');
+      expect(guardEnv()).not.toHaveProperty(PREFLIGHT_SELECTIVE_TESTS_ENV);
+    } finally {
+      if (saved.skip === undefined) delete process.env.PREFLIGHT_SKIP_E2E;
+      else process.env.PREFLIGHT_SKIP_E2E = saved.skip;
+      if (saved.selective === undefined) delete process.env[PREFLIGHT_SELECTIVE_TESTS_ENV];
+      else process.env[PREFLIGHT_SELECTIVE_TESTS_ENV] = saved.selective;
+    }
     expect(resolveQualityGateBusyExitCode(guardEnv())).toBe(SKIPPED_EXIT_CODE);
   });
 

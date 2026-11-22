@@ -3,6 +3,7 @@ const os = require('os')
 const path = require('path')
 const { spawnSync } = require('child_process')
 const { resolveChangedFilesInput } = require('./run-local-selective-checks')
+const { PREFLIGHT_SELECTIVE_TESTS_ENV } = require('./pre-push-guards')
 
 const CHECKS = [
   {
@@ -15,7 +16,8 @@ const CHECKS = [
   },
   // Остаток единого списка стражей до push (`scripts/pre-push-guards.js`, #3371):
   // весь `npm run lint` и `governance:verify` сверх того, что уже прогнал
-  // `fast-scope-checks`. Стоит до e2e и не зависит от `PREFLIGHT_SKIP_E2E`.
+  // `fast-scope-checks`, и Jest-тесты, связанные с diff'ом (#3468). Стоит до e2e
+  // и не зависит от `PREFLIGHT_SKIP_E2E`.
   {
     name: 'pre-push-guards',
     scriptPath: 'scripts/run-pre-push-guards.js',
@@ -85,6 +87,8 @@ const runCheck = ({ scriptPath, changedFilesFile, dryRun, output }) => {
   const result = spawnSync(process.execPath, buildRunnerArgs({ scriptPath, changedFilesFile, dryRun, output }), {
     encoding: 'utf8',
     stdio: output === 'json' ? 'pipe' : 'inherit',
+    // Шаг `pre-push-guards` не повторяет тесты, которые выполнил `fast-scope-checks` (#3468).
+    env: { ...process.env, [PREFLIGHT_SELECTIVE_TESTS_ENV]: '1' },
   })
 
   return {

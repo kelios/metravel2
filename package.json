@@ -44,6 +44,8 @@
     "guard:unimported-modules": "node scripts/guard-unimported-modules.js",
     "guard:pre-push": "node scripts/run-pre-push-guards.js --all",
     "guard:pre-push:dry": "node scripts/run-pre-push-guards.js --all --dry-run",
+    "test:related": "node scripts/run-pre-push-guards.js --related-only",
+    "test:nightly": "node scripts/run-nightly-jest.js",
     "guard:type-debt:update": "node scripts/guard-type-debt.js --update",
     "governance:verify": "npm run guard:env-secrets && npm run guard:external-links && npm run guard:cli-contract && npm run guard:e2e-wait-for-timeout && npm run guard:text-row-sizing && npm run test:governance",
     "test:smoke:critical": "node scripts/run-with-quality-gate-lock.js test:smoke:critical -- node scripts/run-smoke-critical.js",

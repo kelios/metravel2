@@ -86,9 +86,16 @@ npm run check:image-architecture       # если diff трогает карти
 DEPLOY=0 DEPLOY_QUIET=1 scripts/deploy-prod.sh <снимок>
 ```
 
+`guard:pre-push` тем же шагом запускает Jest-тесты, связанные с diff'ом
+(#3468): те, что импортируют или подменяют (`jest.mock`) изменённый модуль.
+Красный связанный тест — `changes_requested`. Обязательный ручной шаг до
+вердикта — `npm run test:related -- --full`, если в выводе есть `НЕ ЗАПУЩЕНО`
+или `related tests NOT RUN` (граф больше потолка) либо diff меняет или
+удаляет существующие строки `i18n/locales/**`; итог запиши в `--note`.
+
 Сверх этого не запускай full/preflight/test/e2e/slider gates. `SKIPPED` (в том
-числе от занятого quality-gate lock в шаге `test:governance`: `guard:pre-push`
-тогда выходит с кодом 75 и строкой `SKIPPED`) — не pass. Красный
+числе от занятого quality-gate lock в Jest-шагах `test:governance` и связанных
+тестов: `guard:pre-push` тогда выходит с кодом 75 и строкой `SKIPPED`) — не pass. Красный
 обязательный guard даёт `changes_requested`; красное только в чужом
 незакоммиченном файле назови в `notes` и проверь свои пути узко. Недоступный
 обязательный check требует exact unblock, а не финального verdict.

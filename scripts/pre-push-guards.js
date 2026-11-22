@@ -12,7 +12,8 @@
  * Кто читает список:
  *   - `scripts/run-fast-scope-checks.js` — стадию `fast` (`check:fast`, pre-commit);
  *   - `scripts/run-pre-push-guards.js`   — стадию `pre-push` как шаг `check:preflight`
- *     (pre-push хук) и весь список по `npm run guard:pre-push` (роль `code-review-gate`).
+ *     (pre-push хук) и весь список по `npm run guard:pre-push` (роль `code-review-gate`);
+ *     тем же шагом идут Jest-тесты, связанные с diff'ом (`RELATED_TESTS_RULE`, #3468).
  *
  * Состав определён замером 21.11.2026 (MacBook, 15 ядер, холостой CPU): весь
  * `npm run lint` — 44,4 с, `governance:verify` — 8,2 с, прежний preflight без
@@ -145,10 +146,66 @@ const NOT_BEFORE_EVERY_PUSH = Object.freeze([
     id: 'test:run',
     what: 'полный Jest',
     cost: 'минуты',
-    why: 'Preflight запускает выборочные наборы по изменённым файлам; полный прогон — правило крупного diff.',
-    runsAt: '`npm run test:run` для крупного diff (`AGENTS.md` §5), `release:check`',
+    why: 'До push идут тесты, связанные с diff\'ом (RELATED_TESTS_RULE): остальной набор от diff\'а не зависит, а ломается он от того, что выборка не достала.',
+    runsAt: 'ночной `npm run test:nightly` на снимке `origin/main` (#3468); `npm run test:run` для крупного diff (`AGENTS.md` §5), `release:check`',
   }),
 ])
+
+/**
+ * Jest-тесты, связанные с diff'ом (#3468, RED-TEST-ON-MAIN-OUTSIDE-GATE-001).
+ * Отбор — `scripts/related-jest-tests.js`, запуск — тот же шаг `pre-push-guards`.
+ *
+ * До карточки шаг подбирал тесты только по документам (литерал пути), а
+ * выборочные наборы `check:fast` — по рукописным спискам областей
+ * (`scripts/run-app-contract-tests-if-needed.js`): `utils/tripPlan*` попадал в
+ * одну категорию с одним тестом. Коммит `8791989d1` ушёл в `main` с красным
+ * `__tests__/app/tripCreateScreen.authGate.test.tsx`: тест подменял
+ * `@/utils/tripPlanLinks` целиком, а импортёр начал брать из него новые имена.
+ *
+ * Замер 22.11.2026 (MacBook, 15 ядер, 24 ГБ), граф зависимостей Jest
+ * (`--findRelatedTests`) без локалей: медиана по 60 коммитам `main` — 0 тестов,
+ * p90 — 146, максимум — 820. Четыре воркера: 93 теста — 18 с, 337 — 26 с,
+ * 820 — 50 с при пике памяти 5,3 ГБ (14 воркеров — 11,3 ГБ, один процесс
+ * втрое-вчетверо дольше).
+ */
+const RELATED_TESTS_RULE = Object.freeze({
+  id: 'related-jest-tests',
+  // ≈55 с на четырёх воркерах: шаг не удлиняет push больше чем на ¾ прежнего
+  // (~77 с). Выше потолка — только ядро (`i18n/index.ts`, `i18n/resources.ts`,
+  // `constants/designSystem.ts`: 953–1465 тестов из 2412), то есть почти полный Jest.
+  ceiling: 900,
+  maxWorkers: 4,
+  // Данные со своим набором: в граф не раскрываются, вместо графа идёт набор.
+  dataSuites: Object.freeze([
+    Object.freeze({
+      prefix: 'i18n/locales/',
+      suite: '__tests__/i18n',
+      why: 'любой файл локали — 1466 тестов графа (61 % набора): `i18n/resources.ts` импортирует почти каждый экран',
+    }),
+  ]),
+  // Конфигурация, setup, зависимости и корневые ручные моки Jest: граф по ним пуст
+  // (замер 22.11.2026: `__tests__/setup.ts`, `jest.config.js`, `babel.config.js`,
+  // `__mocks__/react-native-svg.js` — 0 тестов), а затрагивают они весь набор.
+  // Такой diff называет весь остальной набор незапущенным; `--full` запускает его целиком.
+  wholeSuiteInputs: Object.freeze([
+    'jest.config.js',
+    'babel.config.js',
+    'jest.expo-globals.js',
+    '__tests__/setup.ts',
+    'scripts/jest-resolver.js',
+    'scripts/jest-quality-gate-setup.js',
+    'scripts/jest-quality-gate-teardown.js',
+    'yarn.lock',
+    '__mocks__/',
+  ]),
+  // Обязательный ручной шаг, когда шаг сообщил о незапущенных тестах.
+  fullCommand: 'npm run test:related -- --full',
+  fullCost: '1526 тестов (diff `39cb12a1f` с локалями) — 123 с на четырёх воркерах',
+})
+
+// Preflight выставляет переменную своим шагам: выборочные наборы `fast-scope-checks`
+// для этого scope уже выполнены, шаг связанных тестов их не повторяет.
+const PREFLIGHT_SELECTIVE_TESTS_ENV = 'MT_PREFLIGHT_SELECTIVE_TESTS'
 
 /**
  * Условное правило пробной прод-сборки. Автоматика знает только дешёвый признак
@@ -235,6 +292,8 @@ module.exports = {
   SOURCE_TYPECHECK,
   PRE_PUSH_GUARDS,
   NOT_BEFORE_EVERY_PUSH,
+  RELATED_TESTS_RULE,
+  PREFLIGHT_SELECTIVE_TESTS_ENV,
   BUNDLE_PROBE_RULE,
   RUNTIME_SOURCE_DIRS,
   guardsForStage,

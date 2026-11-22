@@ -38,7 +38,9 @@ const normalizeFileList = (files) => {
 }
 
 const runGit = (args) => {
-  const result = spawnSync('git', args, { encoding: 'utf8' })
+  // Без `core.quotepath=off` git отдаёт кириллический путь в кавычках с октетами
+  // (`"docs/\320\277.md"`), и отбор по такому пути молча ничего не находит.
+  const result = spawnSync('git', ['-c', 'core.quotepath=off', ...args], { encoding: 'utf8' })
   return {
     status: result.status ?? 1,
     stdout: String(result.stdout || ''),
@@ -151,6 +153,23 @@ const CHECKS = [
   },
 ]
 
+/**
+ * Тесты, которые выборочные наборы запускают для этого scope. Шаг связанных
+ * тестов preflight (`scripts/run-pre-push-guards.js`, #3468) их не повторяет.
+ * Наборы областей с графом зависимостей почти не пересекаются (замер 22.11.2026:
+ * 0–3 теста из 1–12): это фиксированный дым области, а не тесты изменённого модуля.
+ */
+const listSelectiveTests = (changedFiles) => {
+  const app = require('./run-app-contract-tests-if-needed')
+  const schema = require('./run-schema-contract-tests-if-needed')
+  const validator = require('./run-validator-contract-tests-if-needed')
+  return normalizeFileList([
+    ...app.getTargetedTestsForChangedFiles(changedFiles),
+    ...(schema.shouldRunForChangedFiles(changedFiles) ? schema.SCHEMA_CONTRACT_TESTS : []),
+    ...(validator.shouldRunForChangedFiles(changedFiles) ? validator.VALIDATOR_CONTRACT_TESTS : []),
+  ])
+}
+
 const runSelectiveChecks = ({ changedFiles, dryRun, output }) => {
   return CHECKS.map((check) => ({
     ...check,
@@ -246,5 +265,6 @@ module.exports = {
   collectWorkingTreeChangedFiles,
   collectBaseRefChangedFiles,
   resolveChangedFilesInput,
+  listSelectiveTests,
   runSelectiveChecks,
 }

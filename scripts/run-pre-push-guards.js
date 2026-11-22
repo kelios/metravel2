@@ -5,11 +5,17 @@
  *
  *   node scripts/run-pre-push-guards.js                 стадия `pre-push` — шаг `check:preflight`
  *   node scripts/run-pre-push-guards.js --all           весь список — `npm run guard:pre-push`
+ *   node scripts/run-pre-push-guards.js --related-only  только связанные с diff'ом Jest-тесты —
+ *                                                       `npm run test:related`; `--full` снимает потолок
  *   … --dry-run [--json]                                только план, ничего не запускает
  *   … --changed-files-file <файл> | --base-ref <ref>    scope для предупреждения о пробной сборке
- *                                                       и для Jest-контрактов изменённых документов
+ *                                                       и для связанных Jest-тестов
  *
- * Занятый quality-gate lock: Jest-шаг (`test:governance`, контракты документов) при
+ * Связанные тесты (#3468): после стражей шаг запускает тесты, которые импортируют
+ * или подменяют изменённый модуль либо читают изменённый документ. Отбор —
+ * `scripts/related-jest-tests.js`, правило и потолок — `RELATED_TESTS_RULE`.
+ *
+ * Занятый quality-gate lock: Jest-шаг (`test:governance`, связанные тесты) при
  * прямом `npm run guard:pre-push` выходил нейтрально с кодом 0, и прогон печатал
  * `PASS` без обязательного шага. Теперь шаг выходит с `SKIPPED_EXIT_CODE`, прогон
  * печатает `SKIPPED` и завершается этим кодом. Внутри `check:preflight` lock уже
@@ -20,27 +26,44 @@
  * случай — `docs/TASK_BOARD_MCP.md` → «Коммит и пуш — часть перехода `review → testing`».
  */
 
-const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
-const { resolveChangedFilesInput } = require('./run-local-selective-checks')
+const { resolveChangedFilesInput, listSelectiveTests } = require('./run-local-selective-checks')
 const { QUALITY_GATE_BUSY_EXIT_ENV } = require('./quality-gate-lock')
 const {
   STAGE_PRE_PUSH,
   PRE_PUSH_GUARDS,
   BUNDLE_PROBE_RULE,
+  RELATED_TESTS_RULE,
+  PREFLIGHT_SELECTIVE_TESTS_ENV,
   guardsForStage,
   isRuntimeSourcePath,
   findImportAdditions,
 } = require('./pre-push-guards')
+const {
+  findDocContractTests,
+  selectRelatedTests,
+  formatRelatedSelection,
+  runRelatedTests,
+  governanceTestsFromPackage,
+} = require('./related-jest-tests')
 
 const CHECK_NAME = 'pre-push-guards'
+const RELATED_LABEL = 'related tests'
 const ESLINT_BIN_PATH = path.resolve(process.cwd(), 'node_modules/eslint/bin/eslint.js')
-const JEST_BIN_PATH = path.resolve(process.cwd(), 'node_modules/jest/bin/jest.js')
 // EX_TEMPFAIL: обязательный шаг не выполнен, потому что quality-gate lock занят.
 const SKIPPED_EXIT_CODE = 75
 
-const guardEnv = () => ({ ...process.env, [QUALITY_GATE_BUSY_EXIT_ENV]: String(SKIPPED_EXIT_CODE) })
+// Управляющие переменные preflight стражам и тестам не передаются: тест, который сам
+// запускает preflight, иначе получал `PREFLIGHT_SKIP_E2E=1` внешнего прогона и видел
+// три шага вместо четырёх (`run-preflight-checks.test.ts`, найдено шагом связанных тестов).
+const PREFLIGHT_CONTROL_ENV = Object.freeze(['PREFLIGHT_SKIP_E2E', PREFLIGHT_SELECTIVE_TESTS_ENV])
+
+const guardEnv = () => {
+  const env = { ...process.env, [QUALITY_GATE_BUSY_EXIT_ENV]: String(SKIPPED_EXIT_CODE) }
+  for (const name of PREFLIGHT_CONTROL_ENV) delete env[name]
+  return env
+}
 
 /** Итоговая строка невыполненного шага: `SKIPPED` из-за занятого lock — не `FAILED` и не `PASS`. */
 const formatGuardFailure = (label, status, why) => (status === SKIPPED_EXIT_CODE
@@ -54,6 +77,8 @@ const parseArgs = (argv) => {
     dryRun: false,
     output: 'text',
     all: false,
+    relatedOnly: false,
+    full: false,
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -76,6 +101,14 @@ const parseArgs = (argv) => {
       out.all = true
       continue
     }
+    if (token === '--related-only') {
+      out.relatedOnly = true
+      continue
+    }
+    if (token === '--full') {
+      out.full = true
+      continue
+    }
     if (token === '--json') {
       out.output = 'json'
     }
@@ -84,7 +117,24 @@ const parseArgs = (argv) => {
   return out
 }
 
-const selectGuards = ({ all }) => (all ? [...PRE_PUSH_GUARDS] : guardsForStage(STAGE_PRE_PUSH))
+const selectGuards = ({ all, relatedOnly }) => {
+  if (relatedOnly) return []
+  return all ? [...PRE_PUSH_GUARDS] : guardsForStage(STAGE_PRE_PUSH)
+}
+
+/**
+ * Тесты, которые тот же прогон выполняет другим шагом: `test:governance` — страж
+ * списка, выборочные наборы `check:fast` — шаг `fast-scope-checks` preflight.
+ */
+const alreadyRunTests = ({ guards, changedFiles, env = process.env }) => [
+  ...(guards.some((item) => item.id === 'test:governance') ? governanceTestsFromPackage() : []),
+  ...(env[PREFLIGHT_SELECTIVE_TESTS_ENV] === '1' ? listSelectiveTests(changedFiles) : []),
+]
+
+/** Причина красного шага связанных тестов: поимённо красные файлы. */
+const describeRelatedFailure = (failed) => (failed.length
+  ? `красные тесты, связанные с diff'ом: ${failed.join(', ')}`
+  : 'Jest завершился с ошибкой, не отдав результат')
 
 /** Команда запуска стража: npm-скрипт по имени либо eslint из локальных node_modules. */
 const buildGuardInvocation = (item) => {
@@ -131,58 +181,6 @@ const collectImportAdditions = (changedFiles) => {
   }
 }
 
-/**
- * Jest-контракты изменённых документов и данных. Тест, который читает документ
- * по литералу пути (`'docs/features/ai-assistant.md'`), краснеет от правки
- * одного документа, а выборочные наборы preflight подбирают тесты только по
- * коду: так `metravel-llm-manifest.test.ts` ушёл в `main` красным с полным
- * sha256 в документе ассистента (`781314569`, #3357). Ищется путь в одинарных
- * или двойных кавычках — то есть в коде теста; упоминание в комментарии
- * (обратные кавычки) тест не выбирает.
- */
-const DOC_CONTRACT_PATTERN = /\.(?:md|json)$/
-// Контракты скриптов `package.json` уже держит `test:governance` из того же шага,
-// а литерал `'package.json'` читают десятки тестов-фикстур.
-const DOC_CONTRACT_SKIP = new Set(['package.json'])
-const TEST_FILE_PATTERN = /\.test\.[jt]sx?$/
-const TESTS_ROOT = '__tests__'
-
-const listTestFiles = (root, dir = TESTS_ROOT) => {
-  let entries
-  try {
-    entries = fs.readdirSync(path.join(root, dir), { withFileTypes: true })
-  } catch {
-    return []
-  }
-  return entries.flatMap((entry) => {
-    const rel = `${dir}/${entry.name}`
-    if (entry.isDirectory()) return listTestFiles(root, rel)
-    return entry.isFile() && TEST_FILE_PATTERN.test(entry.name) ? [rel] : []
-  })
-}
-
-const findDocContractTests = (changedFiles, root = process.cwd()) => {
-  const docs = [...new Set((changedFiles || []).map((file) => String(file || '').replace(/\\/g, '/')))]
-    .filter((file) => DOC_CONTRACT_PATTERN.test(file) && !DOC_CONTRACT_SKIP.has(file) && !file.startsWith(`${TESTS_ROOT}/`))
-  if (!docs.length) return []
-  const needles = docs.flatMap((file) => [`'${file}'`, `"${file}"`])
-  return listTestFiles(root)
-    .filter((file) => {
-      const source = fs.readFileSync(path.join(root, file), 'utf8')
-      return needles.some((needle) => source.includes(needle))
-    })
-    .sort()
-}
-
-const runDocContractTests = (tests) => {
-  const result = spawnSync(process.execPath, [JEST_BIN_PATH, '--runInBand', '--watchAll=false', ...tests], {
-    encoding: 'utf8',
-    stdio: 'inherit',
-    env: guardEnv(),
-  })
-  return result.status ?? 1
-}
-
 const formatBundleProbeWarning = (additions) => {
   if (!additions.length) return []
   const shown = additions.slice(0, 8).map((item) => `${item.file} (+${item.added})`).join(', ')
@@ -202,16 +200,24 @@ const main = () => {
     }
 
     const guards = selectGuards(args)
-    const stage = args.all ? 'all' : STAGE_PRE_PUSH
+    const stage = args.relatedOnly ? 'related-only' : args.all ? 'all' : STAGE_PRE_PUSH
     // Ошибка git при сборе scope не роняет стражей: они читают дерево целиком.
+    // Связанные тесты без scope выбрать нельзя — после стражей шаг становится красным.
     let changedFiles = []
+    let scopeError = ''
     try {
       changedFiles = resolveChangedFilesInput(args).files
-    } catch {
+    } catch (error) {
       changedFiles = []
+      scopeError = String(error.message || error).trim().split('\n')[0]
     }
-    const importAdditions = collectImportAdditions(changedFiles)
-    const docContractTests = findDocContractTests(changedFiles)
+    const importAdditions = args.relatedOnly ? [] : collectImportAdditions(changedFiles)
+    // Сбой отбора — красный шаг, а не «тестов нет»: молчаливо пустая выборка и есть #3468.
+    const related = selectRelatedTests({
+      changedFiles,
+      full: args.full,
+      alreadyRun: alreadyRunTests({ guards, changedFiles }),
+    })
 
     if (args.output === 'json') {
       process.stdout.write(`${JSON.stringify({
@@ -219,16 +225,28 @@ const main = () => {
         check: CHECK_NAME,
         stage,
         guards: guards.map((item) => item.id),
-        docContractTests,
+        docContractTests: related.docContracts,
+        relatedTests: {
+          rule: RELATED_TESTS_RULE.id,
+          ceiling: related.ceiling,
+          full: related.full,
+          graphInputs: related.graphInputs.length,
+          graph: related.graph.length,
+          mocks: related.mocks,
+          dataSuites: related.dataSuites.length,
+          overCeiling: related.overCeiling,
+          wholeSuiteFiles: related.wholeSuiteFiles,
+          notRun: related.notRun.length,
+          selected: related.selected,
+        },
         bundleProbe: { rule: BUNDLE_PROBE_RULE.id, importAdditions },
       }, null, 2)}\n`)
       return
     }
 
     console.log(`${CHECK_NAME}: stage=${stage}, guards=${guards.length}: ${guards.map((item) => item.id).join(', ')}`)
-    if (docContractTests.length) {
-      console.log(`${CHECK_NAME}: doc-contract tests for changed docs/data (${docContractTests.length}): ${docContractTests.join(', ')}`)
-    }
+    for (const line of formatRelatedSelection(related, `${CHECK_NAME}: ${RELATED_LABEL}`)) console.log(line)
+    if (scopeError) console.log(`${CHECK_NAME}: ${RELATED_LABEL}: изменённые файлы не определены (${scopeError}) — связанные тесты не выбраны`)
     for (const line of formatBundleProbeWarning(importAdditions)) console.log(line)
 
     if (args.dryRun) {
@@ -244,14 +262,20 @@ const main = () => {
         process.exit(status)
       }
     }
-    if (docContractTests.length) {
-      const status = runDocContractTests(docContractTests)
+    if (scopeError) {
+      console.error(formatGuardFailure(RELATED_LABEL, 1, `изменённые файлы не определены (${scopeError}): связанные тесты не выбраны`))
+      process.exit(1)
+    }
+    if (related.selected.length) {
+      const { status, failed } = runRelatedTests(related.selected, { env: guardEnv() })
       if (status !== 0) {
-        console.error(formatGuardFailure('doc-contract tests', status, `тест читает изменённый документ по пути: ${docContractTests.join(', ')}`))
+        console.error(formatGuardFailure(RELATED_LABEL, status, describeRelatedFailure(failed)))
         process.exit(status)
       }
     }
-    console.log(`${CHECK_NAME}: PASS (${guards.length} guards, ${docContractTests.length} doc-contract tests, ${((Date.now() - startedAt) / 1000).toFixed(1)} s)`)
+    // Незапущенное повторяется в итоговой строке: предупреждение выше уезжает за вывод Jest.
+    const notRun = related.notRun.length ? `, ${related.notRun.length} related tests NOT RUN — ${RELATED_TESTS_RULE.fullCommand}` : ''
+    console.log(`${CHECK_NAME}: PASS (${guards.length} guards, ${related.selected.length} related tests${notRun}, ${((Date.now() - startedAt) / 1000).toFixed(1)} s)`)
   } catch (error) {
     console.error(`${CHECK_NAME}: failed: ${String(error.message || error)}`)
     process.exit(1)
@@ -265,6 +289,8 @@ if (require.main === module) {
 module.exports = {
   CHECK_NAME,
   SKIPPED_EXIT_CODE,
+  alreadyRunTests,
+  describeRelatedFailure,
   guardEnv,
   formatGuardFailure,
   parseArgs,
