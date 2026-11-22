@@ -347,6 +347,29 @@ describe('LocaleProvider.web boot with a stored locale (#2239)', () => {
     expect(hydrationErrors()).toEqual([])
   })
 
+  it.each([
+    { lang: 'ru', dir: 'ltr', changes: [] },
+    { lang: 'pl', dir: 'ltr', changes: ['lang'] },
+    { lang: 'ru', dir: 'rtl', changes: ['dir'] },
+  ])('writes only stale document attributes when hydrating lang=$lang dir=$dir (#3467)', async ({ lang, dir, changes }) => {
+    const { LocaleProvider, Screen, hydrate } = setup(null)
+    const html = document.documentElement
+    html.lang = lang
+    html.dir = dir
+    const mutations: MutationRecord[] = []
+    const observer = new MutationObserver(records => mutations.push(...records))
+    observer.observe(html, { attributes: true, attributeFilter: ['lang', 'dir'] })
+    try {
+      await hydrate(<LocaleProvider><Screen /></LocaleProvider>)
+      mutations.push(...observer.takeRecords())
+      expect(mutations.map(record => record.attributeName)).toEqual(changes)
+      expect([html.lang, html.dir]).toEqual(['ru', 'ltr'])
+      expect(recoverableErrors).toEqual([])
+    } finally {
+      observer.disconnect()
+    }
+  })
+
   it('hydrates immediately for the Russian default without loading a catalogue', async () => {
     const { LocaleProvider, Screen, mounts, loadWebLocale, hydrate } = setup(null)
 

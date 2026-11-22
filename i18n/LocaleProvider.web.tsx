@@ -45,8 +45,10 @@ const LocaleContext = createContext<LocaleContextValue | null>(null)
 const syncDocumentLocale = (locale: SupportedLocale) => {
   if (typeof document === 'undefined') return
   const definition = getLocaleDefinition(locale)
-  document.documentElement.lang = definition.htmlLang
-  document.documentElement.dir = definition.direction
+  const root = document.documentElement
+  // Reassigning the same lang during hydration invalidates :lang() across the document.
+  if (root.lang !== definition.htmlLang) root.lang = definition.htmlLang
+  if (root.dir !== definition.direction) root.dir = definition.direction
 }
 
 /**
