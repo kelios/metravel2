@@ -646,9 +646,10 @@ else:
                 VO_IV.append((va, min(vb, va + vd)))
         def vo_rms(f, s0, d0):
             r_ = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-ss", f"{max(0.0, s0):.3f}", "-t", f"{d0:.3f}", "-i", f, "-vn", "-af",
-                                 "aformat=channel_layouts=stereo,pan=mono|c0=0.5*c0+0.5*c1,aresample=8000,astats=metadata=0", "-f", "null", "-"], capture_output=True, text=True)
-            m_ = _re.findall(r"RMS level dB:\s*(-?inf|-?[\d.]+)", r_.stderr)
-            return max(float(m_[-1]), -120.0) if m_ else -120.0
+                                 "aformat=channel_layouts=stereo,pan=mono|c0=0.5*c0+0.5*c1,aresample=8000,asetnsamples=n=2000:p=0,astats=metadata=1:reset=1,"
+                                 "ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"], capture_output=True, text=True)
+            m_ = [float(x) for x in _re.findall(r"RMS_level=(-?inf|-?[\d.]+)", r_.stdout + r_.stderr) if x != "-inf"]
+            return max(m_) if m_ else -120.0           # самое громкое окно 0,25 с, не среднее: на нарастании музыки среднее занижало
         def vo_duck(c, a_, d, g):
             """Множитель громкости трека (выражение ffmpeg по t фильма) на время голоса ± VO_EDGE, рампы VO_EDGE; '' — не нужно."""
             parts = []

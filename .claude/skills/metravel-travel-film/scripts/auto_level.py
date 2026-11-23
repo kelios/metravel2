@@ -207,7 +207,9 @@ def envelope(n, music, live, voice, speech_iv, adj, caps=(), vo_plan=()):
     # потолок под голосом за кадром: music меряется мощностью стерео (power=True) — это до +3 дБ к моно ½(L+R) audit_mix
     for s0, e0 in list(vo_iv) + [(a_ - (VO_PRE - VO_EDGE), b_) for a_, b_ in vo_plan]:   # по энергии и по месту файла в плане
         for i in range(max(0, int((s0 - VO_EDGE) / WIN)), min(n, int(math.ceil((e0 + VO_EDGE) / WIN)))):
-            if at(music, i) > -70: g2[i] = min(g2[i], VO_TOP - VO_MARGIN + 3.0 - loc(i, 0, n))
+            if at(music, i) > -70:              # громкость трека — по короткому окну ±0,3 с, не по 3 с: на нарастании музыки
+                lm_ = max(loc(i, 0, n), energy(music, range(max(0, i - 3), min(n, i + 4))))   # (интро под «ранее 1», s6 v14) 3 с занижали
+                g2[i] = min(g2[i], VO_TOP - VO_MARGIN + 3.0 - lm_)
     for t0, t1, top in caps:                          # потолок музыки под речью (аккордеон, 23.11): уровень трека + усиление ≤ top
         for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
             if talk[i] is not None and at(music, i) > -70: g2[i] = min(g2[i], top - loc(i, 0, n))
