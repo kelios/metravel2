@@ -16,6 +16,8 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   ФРАЗА     край куска режет слово или фразу (сосед — не продолжение того же плана) и звучит (громче −38 дБ окнами 50 мс у края);
             край в паузе и разобранные сборщиком (ключ отрезка "phrase_ok": {"in"|"out": причина}) — в справку «ФРАЗА разобрана».
             Находка блокирует film_gate request / plan-verdict (рецензент 23.11)
+  ЗУМ       вертикаль обрезана до полосы 16:9 (владелец 23.11: «без зума»): копия vertical_render mode crop, «память» из вертикали
+            не на размытом фоне, перебивка с явной полосой crop_y/band. Рендер сам кладёт вертикальную перебивку на размытый фон
   РАЗРЫВ    чужой план со своим звуком посреди одной речи: речь A → план B (не заглушён) → речь A с того же места
   ПОКАЗ     перебивка поверх живой речи с сильным указателем («смотрите», «видите», «вон», «написано», «покажу», «вот этот/эта»)
             — прячет показанное
@@ -122,6 +124,43 @@ for c in (plan.get("music") or {}).get("cues", []):
     hit = [w_ for t_, w_ in live_words() if a0 - 0.1 <= t_ <= a0 + L + 0.3]
     if hit:
         add("ГОЛОС", a0, SEG[i0]["note"] if i0 is not None else "", f"«{nm}» заходит на живую речь: «{' '.join(hit[:6])}»")
+
+# ЗУМ (владелец 23.11, s2 v21: «без зума»): вертикаль обрезана до полосы 16:9 — копия vertical_render в mode crop, «память» из
+# вертикали не на размытом фоне, перебивка с явной полосой (crop_y / band). Фото-копии проверяет photo_file (still_blur по умолчанию).
+import glob as _glob
+_HERE = os.path.dirname(os.path.abspath(a[0]))
+_VJ, _MJ = {}, {}
+for _f in _glob.glob(os.path.join(_HERE, "vertical_jobs*.json")):
+    try:
+        for _j in json.load(open(_f)): _VJ[_j["out"]] = _j
+    except (OSError, ValueError, KeyError, TypeError): pass
+for _f in _glob.glob(os.path.join(_HERE, "memory_jobs*.json")):
+    try:
+        for _j in json.load(open(_f)): _MJ[_j["out"]] = _j
+    except (OSError, ValueError, KeyError, TypeError): pass
+_TALL = {}
+def tall(pth):
+    if pth not in _TALL:
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:stream_side_data=rotation",
+                            "-of", "json", pth], capture_output=True, text=True)
+        st = (json.loads(r.stdout or "{}").get("streams") or [{}])[0]; w_, h_ = st.get("width", 16), st.get("height", 9)
+        if abs(int(float((st.get("side_data_list") or [{}])[0].get("rotation", 0) or 0))) in (90, 270): w_, h_ = h_, w_
+        _TALL[pth] = h_ > w_
+    return _TALL[pth]
+for i, s in enumerate(SEG):
+    p_ = S[s["src"]]
+    if p_ in _VJ and _VJ[p_].get("mode") == "crop":
+        add("ЗУМ", T[i], s["note"], f"вертикальная копия {os.path.basename(p_)} обрезана до 16:9 (vertical_render mode crop) — нужен размытый фон")
+    for o in s.get("broll", []):
+        f_ = o["file"]; at_ = T[i] + o["at"] - s["in"]
+        if f_ in _MJ:
+            j_ = _MJ[f_]
+            if j_.get("fit", "cover") != "contain" and os.path.exists(j_["src"]) and not j_["src"].lower().endswith((".png", ".jpg", ".jpeg")) and tall(j_["src"]):
+                add("ЗУМ", at_, s["note"], f"«память» {os.path.basename(f_)} из вертикального {os.path.basename(j_['src'])} — полоса 16:9, нужен размытый фон")
+        elif f_ in _VJ:
+            if _VJ[f_].get("mode") == "crop": add("ЗУМ", at_, s["note"], f"вертикальная перебивка {os.path.basename(f_)} обрезана до 16:9 (mode crop)")
+        elif (o.get("crop_y") is not None or o.get("band")) and os.path.exists(f_) and tall(f_):
+            add("ЗУМ", at_, s["note"], f"вертикальная перебивка {os.path.basename(f_)} — явная полоса 16:9 (crop_y/band), без зума — убрать ключ")
 
 # ФРАЗА — находка, не справка (рецензент 23.11). Не находка: край в паузе — громкость окнами 50 мс ±0,1 с у края ниже
 # −38 дБ (whisper растягивает соседнее слово; метод серии 6: из 14 находок настоящих 4). Разобранная сборщиком — ключ
@@ -329,7 +368,7 @@ _psha = _hl.sha256(open(a[0], "rb").read()).hexdigest()
 _nph = sum(1 for f_ in F if f_[1] == "ФРАЗА"); _nrz = sum(1 for f_ in F if f_[1] == "РАЗРЫВ")
 lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", "",
          f"план sha256: {_psha[:12]} · ФРАЗА неразобранных: {_nph} · РАЗРЫВ: {_nrz}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
-for kind in ["ФРАЗА", "РАЗРЫВ", "ПОКАЗ", "НЕМОЙ", "ГОЛОС", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
+for kind in ["ФРАЗА", "РАЗРЫВ", "ЗУМ", "ПОКАЗ", "НЕМОЙ", "ГОЛОС", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]

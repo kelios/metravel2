@@ -300,8 +300,18 @@ def _tall(p):
         if abs(int(float((r[0].get("side_data_list") or [{}])[0].get("rotation", 0) or 0))) in (90, 270): w, h = h, w
         _DIM[p] = h / max(1, w) > (H / W) * 1.02
     return _DIM[p]
+# Владелец 23.11 (s2 v21): «без зума» — вертикаль не обрезается до 16:9: перебивка из вертикального исходника по умолчанию
+# целиком по высоте на размытом фоне ("fit": "blur"). Полоса по людям — только если в перебивке задано "crop_y" или "band": true
+# (уже утверждённые серии, s1 v23).
+_nb = 0
+for s in SEG:
+    for o in s.get("broll", []):
+        if (o.get("fit", "cover") == "cover" and not o.get("pip") and "crop_y" not in o and not o.get("band")
+                and not o["file"].lower().endswith((".png", ".jpg", ".jpeg")) and os.path.exists(o["file"]) and _tall(o["file"])):
+            o["fit"] = "blur"; _nb += 1
+if _nb: print(f"вертикальные перебивки на размытом фоне (без зума): {_nb}", flush=True)
 _CB = [(o["file"], float(o.get("in", 0)), float(o["dur"])) for s in SEG for o in s.get("broll", [])
-       if o.get("fit") != "contain" and not o.get("pip") and "crop_y" not in o and not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
+       if o.get("band") and o.get("fit") not in ("contain", "blur") and not o.get("pip") and "crop_y" not in o and not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
        and os.path.exists(o["file"]) and _tall(o["file"])]
 if _CB:
     _cb = crop_band.ensure(_CB, crop_band.find_yolox(os.path.dirname(os.path.abspath(sys.argv[1]))))
@@ -411,7 +421,10 @@ for i, s in enumerate(SEG):
                 fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             else:
                 crop_y_expr = ("'max(0,min(ih-oh,ih*%.4f-oh/2))'" % o["crop_y"]) if o.get("crop_y") is not None else "(ih-oh)/2"
-                fit_vf = ("scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2" % (W, H, G(o), W, H)) if o.get("fit") == "contain" else ("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d:(iw-ow)/2:%s%s" % (W, H, W, H, crop_y_expr, G(o)))
+                fit_vf = ("scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2" % (W, H, G(o), W, H)) if o.get("fit") == "contain" else (
+                    "split[_a%d][_b%d];[_a%d]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,boxblur=40:2,eq=brightness=-0.08[_bg%d];"
+                    "[_b%d]scale=-2:%d%s[_fg%d];[_bg%d][_fg%d]overlay=(W-w)/2:0" % (k, k, k, W, H, W, H, k, k, H, G(o), k, k, k)) if o.get("fit") == "blur" else (
+                    "scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d:(iw-ow)/2:%s%s" % (W, H, W, H, crop_y_expr, G(o)))
                 fc.append(f"[{k}:v]fps={FPS},{fit_vf},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
             cur = f"v{k}"; k += 1
