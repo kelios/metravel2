@@ -240,6 +240,11 @@ def jobs(path, film_dir, series, only=None, yp=None):
     J = json.load(open(path)); R = os.path.join(film_dir, "размытие"); os.makedirs(os.path.join(R, "номера"), exist_ok=True)
     manp = os.path.join(R, f"карта_ручная_{series}.json"); MAN = json.load(open(manp)) if os.path.exists(manp) else {}
     autop = os.path.join(R, f"карта_{series}.json"); AUTO = json.load(open(autop)) if os.path.exists(autop) else {}
+    # авто-копии render2 исходника из исключений лиц (автор размыт) в ручную карту не переносим: ручные идут мимо исключений,
+    # и снятая копия вернулась бы в фильм (s2 v23: 0172 «силуэт автора» 269–342 с попал в план через окно номеров 346–410 с)
+    exf = os.path.join(R, f"исключения_{series}.json"); EX = json.load(open(exf)) if os.path.exists(exf) else {}
+    EX = [NF(k) for k, v in EX.items() if not isinstance(v, dict)]
+    AUTO = {k: v for k, v in AUTO.items() if not any(e in NF(os.path.basename(k)) for e in EX)}
     alp = os.path.join(film_dir, f"alias_{series}.json"); AL = json.load(open(alp)) if os.path.exists(alp) else {}
     yp = yp or yolox_path(film_dir)
     for k, j in J.items():
