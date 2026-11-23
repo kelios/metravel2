@@ -26,6 +26,14 @@
           таблица «мысль → кадр» по плану для рецензента без рендера: по каждой мысли — слова и кадр поверх (файл, кусок,
           что видно по каталогу, ⚑ причина закрытия из поля "lock" таблицы перебивок) или «главный план».
 
+  people  --catalog кадры_sN.json [--yolox M.onnx] [--all]
+          YOLOX-подсказка: число людей в кадре середины куска → "число_людей" в каталоге (по умолчанию — только куски с пустым
+          «люди»). uv run --with "opencv-python-headless<5" --with numpy python shot_catalog.py people …; берёт heavy_lock.
+
+Метки людей и действий (владелец 23.11) — piece_tags(кусок): к меткам добавляются мы-вдвоём, Юля, Сергей,
+проходка-в-одну-сторону, еда, завтрак, обед, ужин, отдых, сборы, вечер (из «люди», «видно», меток и времени съёмки) и
+люди-yolox (пустое «люди», но YOLOX видит человека). Их читают audit_cut (ТЕМА, НЕ ВОШЛО С НАМИ) и unused.py.
+
 Слой перебивок из таблицы ставит в план gr21_serial.cutaways(path) (общий код серий на T7), формат строки таблицы:
   {"note": префикс куска, "at": время исходника куска, "dur": 4–6, "day": день, "clip": ключ клипа | "photo": номер,
    "in": вход клипа, "words": слова под кадром, "see": что видно, "lock": "номер машины" | "чужое лицо" | …}
@@ -178,6 +186,52 @@ def cmd_sheets(a):
     if broken: print(f"  пропущены видео без длины (битые): {', '.join(broken)}")
 
 
+# ---------------------------------------------------------------- метки людей и действий (владелец 23.11)
+# «Должны быть все наши ужины и завтраки, вечер на лежаках, красивые проходки» — подбор по словам кадры с нами не видел:
+# в метках не было ни «кто в кадре», ни «что делаем». Производные метки считаются из поля «люди», меток, «видно» и времени
+# съёмки при чтении каталога (piece_tags), без пере-разметки: мы-вдвоём, Юля, Сергей, проходка-в-одну-сторону, еда, завтрак,
+# обед, ужин, отдых, сборы, вечер. Пустое «люди» дополняет подсказка YOLOX (поле "число_людей", подкоманда people).
+FOOD_TAGS = {"еда", "стол-завтрака", "ресторан", "мидии", "кофе", "хлеб-джем", "кухня", "кофемашина"}
+_RX = {
+    "еда": re.compile(r"(\bед[аяуы]\b|\bест\b|едим|завтрак|ужин|обед|перекус|тарелк|кофе|пицц|круассан|багет|сэндвич|бутерброд|салат|мороже|пиво|вино|бокал|кушает|за столом|меню|стол с ед)", re.I),
+    "отдых": re.compile(r"(лежак|шезлонг|лежит|лежат|отдыха|отдых|в гамак|на кровати|сидят на траве|сидит на траве|сидит на бревне|в тени)", re.I),
+    "сборы": re.compile(r"(собира|упаков|пакует|крем|ботин|шнур|наливает вод|солнцезащит|снимает плёнку|надевает)", re.I),
+}
+
+
+def _hour(p):
+    try: return int(str(p.get("время", "")).split(":")[0])
+    except ValueError: return None
+
+
+def piece_tags(p):
+    """Метки куска каталога + производные (кто в кадре, что делаем, вечер). Возвращает set."""
+    T = set(p.get("метки", [])); ppl = (p.get("люди") or "").lower(); see = p.get("видно", "") or ""; h = _hour(p)
+    if ppl.startswith("вдвоём") or ppl == "селфи" or ("юля" in see.lower() and "сергей" in see.lower()): T.add("мы-вдвоём")
+    if "юля" in ppl or re.search(r"\bЮл[яюие]", see): T.add("Юля")
+    if "сергей" in ppl or re.search(r"\bСерге[йяюе]", see): T.add("Сергей")
+    if not (T & {"мы-вдвоём", "Юля", "Сергей"}) and (p.get("число_людей") or 0) >= 1 and "посторонние" not in p.get("флаги", []):
+        T.add("люди-yolox")                                  # кто-то в кадре, разметка не видела: глянуть
+    if ppl == "вдвоём, в одну сторону" or (ppl.endswith("идёт") and "проходка" in see.lower()): T.add("проходка-в-одну-сторону")
+    if T & FOOD_TAGS or _RX["еда"].search(see):
+        T.add("еда")
+        if "стол-завтрака" in T or "завтрак" in see.lower() or (h is not None and h < 11): T.add("завтрак")
+        elif "ужин" in see.lower() or (h is not None and h >= 17): T.add("ужин")
+        elif h is not None: T.add("обед")
+    if _RX["отдых"].search(see) or "привал" in T: T.add("отдых")
+    if _RX["сборы"].search(see) or "крем" in T: T.add("сборы")
+    if h is not None and (h >= 18 or h < 5): T.add("вечер")
+    return T
+
+
+US = {"мы-вдвоём", "Юля", "Сергей"}
+# слова для производных меток (ТЕМА в audit_cut, если в словаре каталога их ещё нет)
+DERIVED_LEX = {"завтрак": ["завтрак", "позавтрак"], "обед": ["обед", "пообед"], "ужин": ["ужин", "поужин"],
+               "отдых": ["отдых", "отдыха", "лежак", "шезлон", "лежим", "валяем", "полежа"],
+               "сборы": ["собира", "собрал", "упаков", "крем", "мажем", "ботин", "рюкзак"], "вечер": ["вечер", "закат"],
+               "проходка-в-одну-сторону": ["идём", "идем", "шагаем", "пошли"]}
+
+
 # ---------------------------------------------------------------- каталог
 def load_themes(paths):
     T = {}
@@ -322,7 +376,34 @@ def cmd_table(a):
     print(f"{n_cut} перебивок → {opt(a, '--out')}")
 
 
+def cmd_people(a):
+    """YOLOX-подсказка «кто-то в кадре» для кусков каталога: кадр середины куска, люди выше 12 % кадра → "число_людей".
+    Только куски видео; по умолчанию — где «люди» пусто (разметка никого не видела). Тяжёлое задание — общий замок."""
+    import numpy as np, cv2, heavy_lock, crop_band
+    from plates import Det
+    cat = opt(a, "--catalog"); C = json.load(open(cat, encoding="utf-8"))
+    yp = opt(a, "--yolox") or crop_band.find_yolox(os.path.dirname(os.path.abspath(cat)), os.getcwd())
+    if not yp: raise SystemExit("нет модели YOLOX: --yolox <object_detection_yolox_2022nov.onnx>")
+    heavy_lock.acquire(f"shot_catalog people {os.path.basename(cat)}")
+    det = Det(yp); todo = [p for p in C["кадры"] if p["file"].lower().endswith((".mp4", ".mov")) and "число_людей" not in p
+                           and ("--all" in a or not p.get("люди"))]
+    print(f"кусков к проверке: {len(todo)}", flush=True)
+    for k, p in enumerate(todo):
+        t = (p.get("in", 0.0) + p.get("out", p.get("in", 0.0) + 2)) / 2
+        r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t:.2f}", "-i", p["file"], "-frames:v", "1", "-vf", "scale=-2:540",
+                            "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True, stdin=subprocess.DEVNULL)
+        img = cv2.imdecode(np.frombuffer(r.stdout, np.uint8), cv2.IMREAD_COLOR) if r.stdout else None
+        if img is None: continue
+        _, ppl = det(img); p["число_людей"] = sum(1 for b in ppl if b[3] / img.shape[0] >= 0.12)
+        if k % 100 == 99:
+            print(f"  {k + 1}/{len(todo)}", flush=True)
+            tmp = cat + ".tmp"; json.dump(C, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1); os.replace(tmp, cat)
+    tmp = cat + ".tmp"; json.dump(C, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1); os.replace(tmp, cat)
+    n = sum(1 for p in todo if p.get("число_людей"))
+    print(f"с людьми по YOLOX среди пустых «люди»: {n} из {len(todo)} — метка «люди-yolox» (piece_tags), глянуть глазами")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] not in ("sheets", "build", "thoughts", "suggest", "table"):
+    if len(sys.argv) < 2 or sys.argv[1] not in ("sheets", "build", "thoughts", "suggest", "table", "people"):
         print(__doc__); sys.exit(2)
-    {"sheets": cmd_sheets, "build": cmd_build, "thoughts": cmd_thoughts, "suggest": cmd_suggest, "table": cmd_table}[sys.argv[1]](sys.argv[2:])
+    {"sheets": cmd_sheets, "build": cmd_build, "thoughts": cmd_thoughts, "suggest": cmd_suggest, "table": cmd_table, "people": cmd_people}[sys.argv[1]](sys.argv[2:])

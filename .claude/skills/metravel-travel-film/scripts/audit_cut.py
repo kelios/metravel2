@@ -27,6 +27,8 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   ТЕМА      перебивка поверх речи (≥3 слов) не показывает того, о чём говорят: ни одна её метка из каталога кадров
             не звучит в словах под ней (±2 с); перебивки нет в каталоге — тоже находка. Нет каталога — пропуск.
   ВЫХОД     возврат из воспоминания к событиям без плашки места/времени
+  НЕ ВОШЛО С НАМИ справка: клипы каталога с нами (метки людей, без брака) ≥ 4 с, которых нет в плане ни секунды —
+            с учётом копий размытия, памяти, вертикалей и фото (unused.py). Владелец 23.11: еда, вечера, проходки.
   ТЕМП      справка, не находки: планов в минуту, медиана, доля 8+ с, фото ≤ 5 % времени; говорящая голова > 8 с без
             перебивки. Цели «медиана ≤ 3,5 с» и «8+ с ≤ 15 %» сняты 22.11 — по ним вышел калейдоскоп s3 v19.
 """
@@ -189,16 +191,17 @@ cat_p = a[a.index("--catalog") + 1] if "--catalog" in a else (
 THEME_NOTE = []
 if cat_p and os.path.exists(cat_p):
     CAT = json.load(open(cat_p))
+    import shot_catalog as SC
     LEX = {k: [x.lower() for x in v] for k, v in (CAT.get("темы") or {}).items()}
     def stems(tag):                                     # метка без словаря — её же слова (начало, 5 букв)
-        return LEX.get(tag) or [w[:5] for w in re.findall(r"\w+", tag.lower()) if len(w) >= 4]
+        return LEX.get(tag) or SC.DERIVED_LEX.get(tag) or [w[:5] for w in re.findall(r"\w+", tag.lower()) if len(w) >= 4]
     def tags_of(f, a0, b0):
         dur = b0 - a0; f, a0 = orig_of(f, a0); b0 = a0 + dur
         out_ = set(); hit = False
         for e in CAT.get("кадры", []):          # метки всех кусков каталога, которые видны в перебивке ≥ 1 с (длинная перебивка — несколько плиток)
             if e["file"] != f and os.path.basename(e["file"]) != os.path.basename(f): continue
             ov = min(b0, e.get("out", 1e9)) - max(a0, e.get("in", 0))
-            if ov >= min(1.0, 0.5 * (b0 - a0)) or ("in" not in e): hit = True; out_ |= set(e.get("метки", []))
+            if ov >= min(1.0, 0.5 * (b0 - a0)) or ("in" not in e): hit = True; out_ |= SC.piece_tags(e)   # + еда/ужин/отдых/сборы…
         return out_ if hit else None
     voice_w = []                                        # слова голоса за кадром во времени фильма
     for c in (plan.get("music") or {}).get("cues", []):
@@ -245,6 +248,19 @@ if SHt:
         if w and sum(1 for x in w if SEG[i]["in"] <= x[1] < SEG[i]["out"]) >= 8:
             TEMPO.append(f"  {tc(t0)} «{n_[:40]}»: говорящая голова {d:.1f} с без перебивки — перебивка, только если есть кадр о том, о чём речь")
 
+# НЕ ВОШЛО С НАМИ — справка (владелец 23.11: «должны быть все ужины, завтраки, вечер на лежаках, красивые проходки»):
+# клипы каталога, где в кадре мы (метки людей, без брака), не короче 4 с, из которых план не взял ничего (unused.py)
+NOT_IN = []
+if cat_p and os.path.exists(cat_p):
+    import unused as UN
+    try:
+        rows_ = UN.unused_with_people(plan, cat_p, os.path.dirname(os.path.abspath(a[0])))
+        NOT_IN = [f"## НЕ ВОШЛО С НАМИ (справка) — {len(rows_)}", "клипы с нами ≥ 4 с вне плана: глянуть, нет ли тут еды, вечера, "
+                  "проходки — полный разбор: unused.py report", ""] + \
+                 [f"- {tm or '—'} `{'/'.join(f_.split('/')[-2:])}` — с нами {ln:.0f} с, {cat_}: {see_[:110]}" for f_, ln, cat_, tm, see_ in rows_] + [""]
+    except Exception as e_:
+        NOT_IN = [f"## НЕ ВОШЛО С НАМИ — ошибка справки: {e_}", ""]
+
 F.sort()
 lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
 for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
@@ -252,6 +268,7 @@ for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТО
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
     lines.append("")
+lines += NOT_IN
 txt = "\n".join(lines)
 if out: open(out, "w").write(txt)
 print(txt)
