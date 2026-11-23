@@ -222,6 +222,31 @@ def run_pool(jobs, what):
             if job.get("after"): job["after"]()
             if job.get("say"): print(job["label"], flush=True)
 
+# перебивка «cover» из кадра выше 16:9 (вертикальное видео телефона): полоса — по людям, не по центру (рецензент 23.11, s3 9:42 и
+# 9:47: Сергей спиной, голова за верхним краем). crop_band.py — YOLOX на 5 кадрах куска, верх самой высокой фигуры − 5 %; без людей —
+# по центру. Центр полосы пишется в перебивку ("crop_y") до ключа куска: изменённые куски перерендерятся сами, остальные — из кеша.
+import crop_band
+_DIM = {}
+def _tall(p):
+    if p not in _DIM:
+        r = json.loads(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:stream_side_data=rotation",
+                                       "-of", "json", p], capture_output=True, text=True).stdout or "{}").get("streams") or [{}]
+        w, h = r[0].get("width", 16), r[0].get("height", 9)
+        if abs(int(float((r[0].get("side_data_list") or [{}])[0].get("rotation", 0) or 0))) in (90, 270): w, h = h, w
+        _DIM[p] = h / max(1, w) > (H / W) * 1.02
+    return _DIM[p]
+_CB = [(o["file"], float(o.get("in", 0)), float(o["dur"])) for s in SEG for o in s.get("broll", [])
+       if o.get("fit") != "contain" and not o.get("pip") and "crop_y" not in o and not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))
+       and os.path.exists(o["file"]) and _tall(o["file"])]
+if _CB:
+    _cb = crop_band.ensure(_CB, crop_band.find_yolox(os.path.dirname(os.path.abspath(sys.argv[1]))))
+    _n = 0
+    for s in SEG:
+        for o in s.get("broll", []):
+            y = _cb.get(crop_band._key(o["file"], float(o.get("in", 0)), float(o["dur"])))
+            if y is not None and o.get("fit") != "contain" and "crop_y" not in o: o["crop_y"] = y; _n += 1
+    print(f"вертикальные перебивки: {len(_CB)}, полоса по людям — {_n}, по центру — {len(_CB) - _n}", flush=True)
+
 aparts, vkeys, akeys, hand, cores, PV = [], [], [], [], [], []
 vjobs, ajobs = [], []
 for i, s in enumerate(SEG):
@@ -310,7 +335,7 @@ for i, s in enumerate(SEG):
             elif is_img:
                 fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             else:
-                fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else 'scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d%s' % (W, H, W, H, G(o))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+                fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else ('scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d:(iw-ow)/2:%s%s' % (W, H, W, H, ("'max(0,min(ih-oh,ih*%.4f-oh/2))'" % o['crop_y']) if o.get('crop_y') is not None else '(ih-oh)/2', G(o)))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
             cur = f"v{k}"; k += 1
         tailf = f"[{cur}]format=yuv420p,trim=end_frame={NF},setpts=PTS-STARTPTS,{SETP}"
