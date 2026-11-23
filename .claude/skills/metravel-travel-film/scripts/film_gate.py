@@ -19,6 +19,10 @@
   film_gate.py check <plan.json> --size 1920x1080      — код 0, если сборка разрешена
   film_gate.py status <папка планов>                    — сводка по сериям
 
+Копии: план, отличающийся от допущенного только подменой исходника его копией (вертикальные/, память/, размытие/,
+шумоподавление/ — по картам копий, тот же исходник и длина куска ±0,05 с), наследует допуск; в журнал — строка «копии: N
+подмен». Любое другое отличие — новый вердикт. owner-4k не наследуется. Снимки допущенных планов — допуск/планы/.
+
 Правило: размер больше 640x360 (черновик) собирается только при допуске по этому плану —
 все шесть оценок (сценарий, сюжет, монтаж, картинка, звук, музыка) не ниже 8,
 блокеров 0, техконтроль черновика «ГОДЕН», сценарий не менялся после оценки.
@@ -83,7 +87,110 @@ def check_series(plan_path, series):
         raise SystemExit(f"план {os.path.basename(plan_path)} — серия {named}, а указана --series {series}")
 
 
-def gate_problems(plan_path, width, height):
+# ---------------------------------------------------------------- допуск переживает подмену копий (рецензент 23.11)
+# Нарезка вертикалей, «памяти», копий размытия и шумоподавления меняет sha плана, хотя монтаж тот же: s3 v21 — 12 вертикалей →
+# новый sha → лишний круг через рецензента. Допуск наследуется, если план отличается от допущенного ТОЛЬКО тем, что исходник
+# заменён своей производной копией (карта копий: alias*.json, *карта*.json, memory/vertical jobs — тот же исходник, время
+# сдвинуто на начало копии, длина куска та же ±0,05 с). Любое другое отличие — отрезки, порядок, музыка, громкость, плашки —
+# новый вердикт. Слово владельца на 4K не наследуется. Снимки допущенных планов — допуск/планы/<sha12>.json.
+TOL = 0.06
+
+
+def snap_path(plans_dir, plan_sha):
+    return os.path.join(plans_dir, "допуск", "планы", f"{plan_sha[:12]}.json")
+
+
+def snapshot(plan_path, plan_sha=None):
+    plan_sha = plan_sha or sha(plan_path)
+    dst = snap_path(os.path.dirname(os.path.abspath(plan_path)), plan_sha)
+    if not os.path.exists(dst):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        tmp = f"{dst}.{os.getpid()}.tmp"
+        with open(plan_path, "rb") as f, open(tmp, "wb") as g: g.write(f.read())
+        os.replace(tmp, dst)
+    return dst
+
+
+def normal_form(P, plans_dir, M):
+    """План без имён копий: каждый путь — исходник, каждое время — время исходника; ключи sources и orig отброшены.
+    Возвращает (нормальная форма, множество путей-копий, которые были подменены)."""
+    import unused as U
+    S = P.get("sources", {}); copies = set()
+    def o(path, t=0.0):
+        n = U.NP(path, plans_dir); r = U.origin(n, t, M)
+        if r[0] != n: copies.add(n)
+        return r
+    def walk(x):
+        if isinstance(x, dict):
+            y = {k: walk(v) for k, v in x.items() if k not in ("orig",)}
+            if isinstance(x.get("src"), str) and x["src"] in S:
+                p_, a_ = o(S[x["src"]], x.get("in", 0.0)); y["src"] = p_
+                if "in" in x and "out" in x: y["in"], y["out"] = a_, a_ + (x["out"] - x["in"])
+            elif isinstance(x.get("file"), str):
+                p_, a_ = o(x["file"], x.get("in", 0.0)); y["file"] = p_
+                if "in" in x: y["in"] = a_
+            return y
+        if isinstance(x, list):
+            if len(x) == 2 and isinstance(x[0], str) and x[0] in S and isinstance(x[1], (int, float)):
+                return list(o(S[x[0]], x[1]))
+            return [walk(v) for v in x]
+        return x
+    return walk({k: v for k, v in P.items() if k != "sources"}), copies
+
+
+def same(a, b, path="", out=None):
+    """Отличия двух нормальных форм (числа — с допуском TOL); out — список «где: было → стало» (первые 5)."""
+    out = [] if out is None else out
+    num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+    if len(out) >= 5: return out
+    if num(a) and num(b):
+        if abs(a - b) > TOL: out.append(f"{path}: {a} → {b}")
+    elif type(a) != type(b):
+        out.append(f"{path}: {str(a)[:60]} → {str(b)[:60]}")
+    elif isinstance(a, dict):
+        for k in sorted(set(a) | set(b)):
+            if k not in a or k not in b: out.append(f"{path}/{k}: {'добавлен' if k in b else 'убран'}")
+            else: same(a[k], b[k], f"{path}/{k}", out)
+            if len(out) >= 5: break
+    elif isinstance(a, list):
+        if len(a) != len(b): out.append(f"{path}: {len(a)} → {len(b)} элементов")
+        else:
+            for i, (x, y) in enumerate(zip(a, b)):
+                same(x, y, f"{path}[{i}]", out)
+                if len(out) >= 5: break
+    elif a != b:
+        out.append(f"{path}: {str(a)[:60]} → {str(b)[:60]}")
+    return out
+
+
+def inherited_film(plan_path, plans_dir):
+    """Вердикт по допущенному плану, от которого этот отличается только подменой копий: (журнал, вердикт, подмен, sha-источник)
+    или (None, None, 0, причины-несовпадения ближайшего)."""
+    import unused as U
+    series = plan_series(plan_path)
+    cands = []
+    for path in sorted(glob.glob(os.path.join(plans_dir, "допуск", "*.json"))):
+        ledger = load(path)
+        for e in reversed(ledger["entries"]):
+            if e.get("kind") != "film" or (series and e.get("series") != series): continue
+            sp = snap_path(plans_dir, e["plan_sha"])
+            if not os.path.exists(sp) and e.get("plan") and os.path.exists(e["plan"]) and sha(e["plan"]) == e["plan_sha"]:
+                snapshot(e["plan"], e["plan_sha"])           # допуск до 23.11: снимок по живому файлу, пока он не изменён
+            if os.path.exists(sp) and all(c[1]["plan_sha"] != e["plan_sha"] for c in cands): cands.append((ledger, e, sp))
+    if not cands: return None, None, 0, []
+    M = U.load_maps(plans_dir)
+    new, cp_new = normal_form(json.load(open(plan_path, encoding="utf-8")), plans_dir, M)
+    best = None
+    for ledger, e, sp in cands[:6]:                      # последние вердикты серии
+        old, cp_old = normal_form(json.load(open(sp, encoding="utf-8")), plans_dir, M)
+        diff = same(old, new)
+        if not diff:
+            return ledger, e, len(cp_new ^ cp_old), e["plan_sha"]
+        best = best or diff
+    return None, None, 0, best or []
+
+
+def gate_problems(plan_path, width, height, inherit=None):
     """Пустой список — сборка разрешена; иначе — причины отказа."""
     if width <= DRAFT_MAX[0] and height <= DRAFT_MAX[1]:
         return []
@@ -99,9 +206,16 @@ def gate_problems(plan_path, width, height):
         return ["вердикты по этому плану записаны в нескольких сериях: " + ", ".join(e["series"] for _, e in found)
                 + " — лишние записи убери из журналов допуска"]
     ledger, film = found[0] if found else (None, None)
+    if film is not None and not os.path.exists(snap_path(plans_dir, plan_sha)):
+        snapshot(plan_path, plan_sha)
     if film is None:
-        return [f"нет вердикта рецензента по этому плану (sha {plan_sha[:12]}): сначала черновик ≤{DRAFT_MAX[0]}x{DRAFT_MAX[1]}, "
-                "автопроверки и film-reviewer → film_gate.py verdict"]
+        ledger, film, n_cp, from_sha = inherited_film(plan_path, plans_dir)
+        if film is not None and inherit is not None:
+            inherit.update(n=n_cp, from_sha=from_sha)
+        if film is None:
+            why = ("; ближайший допущенный план отличается не только копиями: " + "; ".join(from_sha[:3])) if from_sha else ""
+            return [f"нет вердикта рецензента по этому плану (sha {plan_sha[:12]}): сначала черновик ≤{DRAFT_MAX[0]}x{DRAFT_MAX[1]}, "
+                    "автопроверки и film-reviewer → film_gate.py verdict" + why]
     problems = []
     if plan_series(plan_path) and film["series"] != plan_series(plan_path):
         problems.append(f"вердикт записан в серию {film['series']}, а план — серии {plan_series(plan_path)}")
@@ -128,9 +242,19 @@ def gate_problems(plan_path, width, height):
 
 def require(plan_path, width, height):
     """Вызывается из render_plan.py и assemble_film.py до рендера."""
-    problems = gate_problems(plan_path, width, height)
+    inh = {}
+    problems = gate_problems(plan_path, width, height, inherit=inh)
     if problems:
         raise SystemExit(f"сборка {width}x{height} не разрешена:\n- " + "\n- ".join(problems))
+    if inh:                                              # допуск унаследован: строка в журнал и снимок этого плана
+        plans_dir = os.path.dirname(os.path.abspath(plan_path)); psha = sha(plan_path)
+        series = plan_series(plan_path)
+        led = load(ledger_path(plans_dir, series)) if series else {"entries": []}
+        if series and not last(led["entries"], "copies", plan_sha=psha):
+            append(plans_dir, series, {"kind": "copies", "plan": os.path.abspath(plan_path), "plan_sha": psha,
+                                       "from_sha": inh["from_sha"], "note": f"копии: {inh['n']} подмен"})
+        snapshot(plan_path, psha)
+        print(f"допуск: унаследован от плана {inh['from_sha'][:12]} — отличия только в копиях ({inh['n']} подмен)", flush=True)
 
 
 def parse_scores(text):
@@ -232,7 +356,7 @@ def main():
         entry = {"kind": "film", "plan": os.path.abspath(a.plan), "plan_sha": sha(a.plan), "draft": os.path.abspath(a.draft),
                  "scores": parse_scores(a.scores), "blockers": a.blockers, "tech_ok": tech_ok(a.tech, a.draft),
                  "report": os.path.abspath(a.report)}
-        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series, entry)
+        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series, entry); snapshot(a.plan, entry["plan_sha"])
         problems = gate_problems(a.plan, *HD_MAX)
         print("записано:", path)
         print("1080p разрешён" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
@@ -243,7 +367,7 @@ def main():
                 raise SystemExit(f"нет файла: {p}")
         entry = {"kind": "film", "mode": "plan", "plan": os.path.abspath(a.plan), "plan_sha": sha(a.plan), "draft": None,
                  "scores": parse_scores(a.scores), "blockers": a.blockers, "tech_ok": True, "report": os.path.abspath(a.report)}
-        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series, entry)
+        path = append(os.path.dirname(os.path.abspath(a.plan)), a.series, entry); snapshot(a.plan, entry["plan_sha"])
         problems = gate_problems(a.plan, *HD_MAX)
         print("записано:", path)
         print("1080p разрешён (по плану)" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
