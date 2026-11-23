@@ -144,7 +144,7 @@ def speech_windows(w, rng):
     return on or rng
 
 
-def envelope(n, music, live, voice, speech_iv, adj):
+def envelope(n, music, live, voice, speech_iv, adj, caps=()):
     """Усиление музыки (дБ) по окнам WIN. music/live/voice — RMS окон; speech_iv — отрезки-разговоры; adj — [(t0, t1, дБ)].
     Уровень речи — свой у каждого разговора и каждой фразы голоса за кадром (энергия в окнах речи, как меряет audit_mix);
     музыка под ней — на UNDER ниже по 3-секундной громкости трека."""
@@ -197,6 +197,9 @@ def envelope(n, music, live, voice, speech_iv, adj):
     for t0, t1, db in adj:                            # ручная поправка трека поверх автоматики
         for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
             g2[i] += db
+    for t0, t1, top in caps:                          # потолок музыки под речью (аккордеон, 23.11): уровень трека + усиление ≤ top
+        for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
+            if talk[i] is not None and at(music, i) > -70: g2[i] = min(g2[i], top - loc(i, 0, n))
     return g2, ref
 
 

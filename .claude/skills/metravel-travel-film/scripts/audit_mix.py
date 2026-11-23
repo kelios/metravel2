@@ -9,7 +9,8 @@ segments.json — таблица отрезков рендера (start, end, no
 --words-root — расшифровки исходников по словам (*.words.json): с ними проверяется разборчивость речи в готовом звуке.
 
 Находки:
-  ТОНЕТ    на отрезке с речью музыка тише речи меньше чем на 10 LU (цель 12–15) — голос «не слышно»
+  ТОНЕТ    на отрезке с речью музыка тише речи меньше чем на 10 LU (цель 12–15) — голос «не слышно»; треки с аккордеоном
+           (--plan, <данные>/музыка_тембр.json) — справка, если запас < 18 LU (владелец 23.11: «гармонист везде очень громко»)
   НЕСЛЫШНО слова исходника в расшифровке готового звука узнаются меньше чем на 60% (нужен --words-root, долго: whisper по фильму)
   ЗАПАС    на отрезке с речью энергия речи минус энергия музыки < 10 дБ (цель 12–15): 10·log10(mean(x²))
            в окнах речи (0,5 с; окно не тише максимума отрезка на 20 дБ и громче −45) на «без музыки»
@@ -138,6 +139,7 @@ if R_mus and R_base:
         else:
             i += 1
 
+TALKLEV = []                                   # (начало, конец, кусок, речь, музыка) — для справки по тембру (аккордеон)
 for s in segs:
     a0, b0 = s["start"] + 0.3, s["end"] - 0.3
     if b0 - a0 < 1: continue
@@ -154,6 +156,7 @@ for s in segs:
     if not talking and mu > -60:
         SPEECH.setdefault("quiet", []).append((s, mu))
     if talking and sp > -40: SPEECH.setdefault("talk", []).append((s["start"], sp))
+    if talking and sp > -40 and mu > -60: TALKLEV.append((s["start"], s["end"], s["note"], sp, mu))
 
 for s, mu in SPEECH.get("quiet", []):           # музыка без речи против ближайшей настоящей речи (±60 с), а не шума соседнего плана
     near = [v for t, v in SPEECH.get("talk", []) if abs(t - s["start"]) < 60]
@@ -264,8 +267,12 @@ CALM = re.compile(r"город|посёл|посел|деревн|улиц|до�
 EPIC_OK = re.compile(r"дрон|сверху|вершин|полёт|полет|обрыв|утёс|утес|игла|арка|панорам|интро|тизер|финал|закат|рассвет", re.I)
 HAPPY = re.compile(r"\b(зайк|заек|зайч|кролик|смех|смеш|весел|ура\b|праздник|танц|радост|сидр|морожен|пляж)", re.I)
 DARK_M = re.compile(r"sad|suspense|dark|tense|melanchol|mysterious|eerie|somber|sombre", re.I)
+ACC, ACC_REF = None, []
 if opt("--plan"):
     PL = json.load(open(opt("--plan"))); SRC = PL["sources"]
+    _tp = os.path.join(os.path.dirname(os.path.abspath(opt("--plan"))), "..", "данные", "музыка_тембр.json")   # список тембра (render_plan)
+    if os.path.exists(_tp):
+        _T = json.load(open(_tp)); ACC = ([x.lower() for x in _T.get("аккордеон", [])], float(_T.get("запас_под_речью_LU", 18.0)))
     def film_t(si, tt):
         p_ = SRC[si]
         r_ = next((x for x in segs if x["src"] == p_ and x["in"] - 0.01 <= tt <= x["out"] + 0.01), None)
@@ -292,6 +299,10 @@ if opt("--plan"):
             n_ = re.sub(r"^\S+\s", "", x["note"])[:28]
             if n_ not in notes: notes.append(n_)
         MUSIC_REF.append((t0, t1, tg, notes))
+        if ACC and any(x in os.path.basename(f_).lower() for x in ACC[0]):     # аккордеон (владелец 23.11): под речью запас ≥ 18 LU — справка
+            for a_, b_, n_, sp_, mu_ in TALKLEV:
+                if b_ > t0 and a_ < t1 and sp_ > -30 and sp_ - mu_ < ACC[1]:   # тише −30 — вид с обрывком речи, не разговор
+                    ACC_REF.append((a_, n_, f"«{tg['title'] or os.path.basename(f_)}» под речью: речь {sp_:.1f}, музыка {mu_:.1f} — {sp_ - mu_:.1f} LU (для аккордеона нужно ≥ {ACC[1]:.0f})"))
         moods = [m.strip().lower() for m in re.split(r"[,;]", tg["mood"]) if m.strip()]
         hot = "epic" in moods or tg["energy"].lower() == "high"
         dark = bool(moods) and bool(DARK_M.search(moods[0]))        # у Epidemic первое настроение — главное
@@ -317,6 +328,8 @@ lines = [f"# Проверка на слух: {os.path.basename(film)}, нахо�
 for k in ["ЧУЖОЙ ЗВУК", "ХВОСТ", "ГОЛОС", "МУЗЫКА×СЦЕНА", "НАЛОЖЕНИЕ", "ТОНЕТ", "ЗАПАС", "НЕСЛЫШНО", "ГРОМКО", "ПРОВАЛ", "ПАУЗА"]:
     rows = [f for f in F if f[1] == k]
     lines += [f"## {k} — {len(rows)}"] + ([f"- {tc(t)} «{n[:44]}»: {x}" for t, _, n, x, _ in rows] or ["- нет"]) + [""]
+if ACC_REF:                                    # справка: аккордеон под речью громче, чем стоит (владелец 23.11: «гармонист очень громко»)
+    lines += [f"## Аккордеон под речью — запас < {ACC[1]:.0f} LU (справка)"] + [f"- {tc(a_)} «{n_[:46]}»: {t_}" for a_, n_, t_ in sorted(set(ACC_REF))] + [""]
 if MUSIC_REF:                                  # справка: какая музыка под какими сценами (для рецензента)
     lines += ["## Музыка по сценам (справка)"] + [f"- {tc(a_)}–{tc(b_)} «{tg['title']}» — {tg['genre']}; {tg['mood']}; energy {tg['energy']}; "
                                                   f"{tg['tbpm']} bpm: {', '.join(n_[:6])}" for a_, b_, tg, n_ in sorted(MUSIC_REF, key=lambda z: z[0])] + [""]

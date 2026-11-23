@@ -510,7 +510,9 @@ _here = os.path.dirname(os.path.abspath(__file__))
 _fst = lambda p_: [p_, os.path.getsize(p_), int(os.path.getmtime(p_))] if os.path.exists(p_) else [p_, None]
 TKEY = KEY([[os.path.basename(p_) for p_ in ab], pos, round(t, 3), plan.get("music"), [_fst(f_) for f_ in sorted({c["file"] for c in cues})],
             AUTO, _SPEECH, "--words-root" in a, W <= 640,
-            [hashlib.md5(open(os.path.join(_here, f_), "rb").read()).hexdigest() for f_ in ("render_plan.py", "auto_level.py")]])
+            [hashlib.md5(open(os.path.join(_here, f_), "rb").read()).hexdigest() for f_ in ("render_plan.py", "auto_level.py")]
+            + [hashlib.md5(open(p_, "rb").read()).hexdigest() for p_ in (os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "..", "данные", "музыка_тембр.json"),)
+               if os.path.exists(p_)]])                              # список тембра (аккордеон) — правка пересводит музыку
 _tc = os.path.join(wd, f"t_{TKEY}")
 _STEMS = ("_голос.wav", "_музыка.wav")
 _prev_ceil = None                             # потолок пика прошлой сборки серии: звук версий почти одинаков — хватает одной попытки
@@ -591,7 +593,18 @@ else:
                         and not any(m_ and t0_ <= i * AL.WIN < t0_ + (b_ - a_) * k_ for _, a_, b_, t0_, k_, m_ in segi)]
                 speech = AL.merge(loud)
             adj = [(c["_a"], c["_b"], float(c["auto_adj_db"])) for c in seq if c.get("auto_adj_db")]
-            gains, ref = AL.envelope(n_w, R_m, R_b, R_v, speech, adj)
+            # тембр (владелец 23.11, «гармонист везде очень громко»): аккордеон слышен громче замера — <данные>/музыка_тембр.json рядом с планом
+            _tp = next((p_ for p_ in (os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "..", "данные", "музыка_тембр.json"),
+                                      os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "данные", "музыка_тембр.json")) if os.path.exists(p_)), None)
+            caps = []
+            if _tp:
+                _T = json.load(open(_tp)); _acc = [x.lower() for x in _T.get("аккордеон", [])]
+                for c in seq:
+                    if c.get("timbre") == "аккордеон" or any(x in os.path.basename(c["file"]).lower() for x in _acc):
+                        adj.append((c["_a"], c["_b"], float(_T.get("поправка_дБ", -5.0))))
+                        caps.append((c["_a"], c["_b"], float(_T.get("под_речью_не_громче_дБ", -32.0))))
+                if caps: say(f"тембр: аккордеон — {len(caps)} кусков музыки, {_T.get('поправка_дБ', -5.0):+.0f} дБ, под речью не громче {_T.get('под_речью_не_громче_дБ', -32.0):.0f} дБ")
+            gains, ref = AL.envelope(n_w, R_m, R_b, R_v, speech, adj, caps)
             AL.write_ctrl(gains, ctrlp)
             K = len(cues) + 1
             mus_chain = [f"[{K}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[mr]",
