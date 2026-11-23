@@ -126,6 +126,14 @@ for s in segs:                              # ЗАПАС: энергия реч�
 # МУЗЫКА ПОД ГОЛОСОМ (рецензент 23.11): под голосом за кадром (доозвучка, связки, «ранее») музыка не громче −32 дБ —
 # энергия «музыки» в окнах, где звучит голос (> −45 дБ), по каждой фразе (паузы < 1 с — одна фраза)
 VO_TOP = -32.0
+def fine_db(path, t0, dur, win=0.05):
+    """RMS (дБ) окнами 50 мс на отрезке [t0, t0+dur], моно 8 кГц."""
+    if not path or not os.path.exists(path): return []
+    n = int(8000 * win)
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-ss", f"{t0:.3f}", "-t", f"{dur:.3f}", "-i", path, "-vn", "-af",
+                        f"aformat=channel_layouts=mono,aresample=8000,asetnsamples=n={n}:p=0,astats=metadata=1:reset=1,"
+                        "ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"], capture_output=True, text=True)
+    return [max(float(x), -120.0) for x in re.findall(r"lavfi\.astats\.Overall\.RMS_level=(-?inf|-?[\d.]+)", r.stdout + r.stderr)]
 if R_voi and R_mus:
     i, nv = 0, len(R_voi)
     while i < nv:
@@ -134,6 +142,17 @@ if R_voi and R_mus:
         while j < nv and (R_voi[j] > -45 or gap < 2):
             gap = 0 if R_voi[j] > -45 else gap + 1; j += 1
         on_ = [k for k in range(i, j) if R_voi[k] > -45]
+        if on_:                                          # s6 v12: приглушение опаздывает на 0,15–0,5 с — первые слова над музыкой;
+            t0_ = max(0.0, on_[0] * WIN - 0.5)            # окна 0,5 с этого не видят: начало фразы — окнами 50 мс
+            fv, fm = fine_db(voice, t0_, 1.5), fine_db(music, t0_, 1.5)
+            k0 = next((k for k, v_ in enumerate(fv) if v_ > -45), None)
+            if k0 is not None and fm:
+                head = fm[k0:k0 + 10]                    # первые 0,5 с голоса — энергия, без мгновенных пиков
+                top_ = 10 * math.log10(sum(10 ** (x / 10) for x in head) / len(head) + 1e-12) if head else -120.0
+                if top_ > VO_TOP:
+                    sg_ = next((x for x in segs if x["start"] <= t0_ + k0 * 0.05 < x["end"]), None)
+                    F.append((t0_ + k0 * 0.05, "МУЗЫКА ПОД ГОЛОСОМ", sg_["note"] if sg_ else "", f"начало фразы: первые 0,5 с голоса над музыкой {top_:.1f} дБ "
+                              f"(норма ≤ {VO_TOP:.0f}) — приглушение опаздывает", round(top_, 1)))
         if len(on_) >= 2:
             em_ = energy_db(R_mus, i, j, lambda k: k in set(on_))
             if em_ > VO_TOP:

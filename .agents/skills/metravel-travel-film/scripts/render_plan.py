@@ -630,7 +630,7 @@ else:
             """Множитель громкости трека (выражение ffmpeg по t фильма) на время голоса ± VO_EDGE, рампы VO_EDGE; '' — не нужно."""
             parts = []
             for va, vb in VO_IV:
-                x0, x1 = max(a_, va - _ALv.VO_EDGE), min(a_ + d, vb + _ALv.VO_EDGE)
+                x0, x1 = max(a_, va - _ALv.VO_PRE), min(a_ + d, vb + _ALv.VO_EDGE)   # с 0,5 с до голоса: первый слог тихий
                 if x1 - x0 < 0.2: continue
                 lv = vo_rms(c["file"], c.get("src_in", 0.0) + (x0 - a_), x1 - x0) + g
                 cut = (_ALv.VO_TOP - _ALv.VO_MARGIN) - lv
@@ -702,7 +702,7 @@ else:
                         adj.append((c["_a"], c["_b"], float(_T.get("поправка_дБ", -5.0))))
                         caps.append((c["_a"], c["_b"], float(_T.get("под_речью_не_громче_дБ", -32.0))))
                 if caps: say(f"тембр: аккордеон — {len(caps)} кусков музыки, {_T.get('поправка_дБ', -5.0):+.0f} дБ, под речью не громче {_T.get('под_речью_не_громче_дБ', -32.0):.0f} дБ")
-            gains, ref = AL.envelope(n_w, R_m, R_b, R_v, speech, adj, caps)
+            gains, ref = AL.envelope(n_w, R_m, R_b, R_v, speech, adj, caps, vo_plan=VO_IV)
             AL.write_ctrl(gains, ctrlp)
             K = len(cues) + 1
             mus_chain = [f"[{K}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[mr]",

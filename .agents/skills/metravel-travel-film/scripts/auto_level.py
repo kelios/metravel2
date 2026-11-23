@@ -21,6 +21,8 @@ MAX_CUT, MAX_LIFT = 40.0, 12.0
 # audit_mix (моно ½(L+R), окна голоса). Рецензент 23.11, s5 v5b: под доозвучкой −27,6…−28,2 при норме владельца ≤ −32.
 # Подхват — за VO_EDGE до голоса, отпуск — через VO_EDGE после. Запас VO_MARGIN — на разброс 3-секундной оценки.
 VO_TOP, VO_EDGE, VO_MARGIN = -32.0, 0.3, 1.0
+VO_PRE = 0.5   # потолок — от места файла голоса в плане за 0,5 с до начала (s6 v12: по энергии голоса приглушение опаздывало
+               # на 0,15–0,5 с — тихий первый слог ниже порога, первые слова над −20…−28 дБ)
 
 
 def rms_windows(path, win=WIN, half_sum=False, power=False):
@@ -148,7 +150,7 @@ def speech_windows(w, rng):
     return on or rng
 
 
-def envelope(n, music, live, voice, speech_iv, adj, caps=()):
+def envelope(n, music, live, voice, speech_iv, adj, caps=(), vo_plan=()):
     """Усиление музыки (дБ) по окнам WIN. music/live/voice — RMS окон; speech_iv — отрезки-разговоры; adj — [(t0, t1, дБ)].
     Уровень речи — свой у каждого разговора и каждой фразы голоса за кадром (энергия в окнах речи, как меряет audit_mix);
     музыка под ней — на UNDER ниже по 3-секундной громкости трека."""
@@ -203,7 +205,7 @@ def envelope(n, music, live, voice, speech_iv, adj, caps=()):
         for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
             g2[i] += db
     # потолок под голосом за кадром: music меряется мощностью стерео (power=True) — это до +3 дБ к моно ½(L+R) audit_mix
-    for s0, e0 in vo_iv:
+    for s0, e0 in list(vo_iv) + [(a_ - (VO_PRE - VO_EDGE), b_) for a_, b_ in vo_plan]:   # по энергии и по месту файла в плане
         for i in range(max(0, int((s0 - VO_EDGE) / WIN)), min(n, int(math.ceil((e0 + VO_EDGE) / WIN)))):
             if at(music, i) > -70: g2[i] = min(g2[i], VO_TOP - VO_MARGIN + 3.0 - loc(i, 0, n))
     for t0, t1, top in caps:                          # потолок музыки под речью (аккордеон, 23.11): уровень трека + усиление ≤ top
