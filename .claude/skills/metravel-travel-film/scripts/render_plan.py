@@ -18,6 +18,8 @@ render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 38
 Покраска: по умолчанию НЕТ (владелец 23.11: натуральные цвета, как снято) — ключи "grade" плана не применяются, лог
 пишет, сколько их пропущено. --grade — применить ключи "grade" (их пишет grade.py; цепочка фильтров после масштабирования,
 до полей «contain»); без флага применяется только "grade" с "grade_owner": true — по прямой просьбе владельца на план.
+Размытие лиц и номеров — только с --blur (или --final), после «утверждаю» владельца: без флага копии из размытие/
+возвращаются к исходникам (лог: «размытие отключено до утверждения: N подмен пропущено»).
 Заглушённые планом отрезки (gain_db <= -40) идут без звука. Таймкод склейки = таймкод проекта Filmora.
 Чужие смонтированные ролики (FOREIGN: /Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias или alias*.json
 рядом с планом) по умолчанию без звука: там чужая озвучка и музыка. Свой звук — только ключом отрезка "own_audio": true.
@@ -38,6 +40,55 @@ if "--size" in a:                      # полное качество: --size 1
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import film_gate                       # больше 640x360 — только по допуску рецензента, 4K — по слову владельца
 film_gate.require(sys.argv[1], W, H)
+# Размытие лиц и номеров — только после «утверждаю» владельца по серии (23.11): черновик собирается из оригиналов.
+# Владелец в s5 v5b (2:52) увидела размытое лицо Сергея — план брал старую копию размытие/dd17fd31b5.mp4. Без --blur
+# (или --final) каждая копия из размытие/ (лица) и размытие/номера/ возвращается к своему исходнику по картам копий
+# (alias*, карты размытия): путь — исходник, время — со сдвигом копии; сдвигаются отрезки, их перебивки и плашки, якоря
+# музыки. Вертикальные и «память» не трогаются. Допуск по плану тот же (film_gate: подмена копии на исходник — копии).
+BLUR = "--blur" in a or "--final" in a
+if not BLUR:
+    import unused as _U
+    _pd = os.path.dirname(os.path.abspath(sys.argv[1])); _BM = _U.load_maps(_pd)
+    def _unblur(p_, t_=0.0):
+        n_ = _U.NP(p_, _pd); k_ = 0
+        while "/размытие/" in n_ and n_ in _BM and k_ < 4:
+            sp_, off_ = _BM[n_]; n_, t_ = _U.NP(sp_, _pd), t_ + off_; k_ += 1
+        return (n_, t_) if k_ else (None, t_)
+    _sh, _n_unb = {}, 0
+    for k_, p_ in list(plan["sources"].items()):
+        n_, off_ = _unblur(p_)
+        if n_: plan["sources"][k_] = n_; _sh[k_] = off_; _n_unb += 1
+    def _shift_anchors(x):                      # [ключ исходника, время] в музыке и звуках
+        if isinstance(x, list):
+            if len(x) == 2 and isinstance(x[0], str) and x[0] in _sh and isinstance(x[1], (int, float)):
+                x[1] = round(x[1] + _sh[x[0]], 3); return
+            for y in x: _shift_anchors(y)
+        elif isinstance(x, dict):
+            for y in x.values(): _shift_anchors(y)
+    for s_ in plan["segments"]:
+        off_ = _sh.get(s_["src"], 0.0)
+        if off_:
+            s_["in"] = round(s_["in"] + off_, 3); s_["out"] = round(s_["out"] + off_, 3)
+            for o_ in s_.get("broll", []) + s_.get("cards", []):
+                if "at" in o_: o_["at"] = round(o_["at"] + off_, 3)
+        for o_ in s_.get("broll", []) + s_.get("cards", []):
+            if isinstance(o_.get("file"), str) and "/размытие/" in _U.NP(o_["file"], _pd):
+                n_, t_ = _unblur(o_["file"], o_.get("in", 0.0))
+                if n_: o_["file"] = n_; o_["in"] = round(t_, 3); _n_unb += 1
+    _shift_anchors(plan.get("music") or {})
+    if _n_unb: print(f"размытие отключено до утверждения: {_n_unb} подмен пропущено — черновик из оригиналов (--blur — с размытием)", flush=True)
+    # производные копии (вертикальные/, память/, фото/): собраны с копии размытия — размытое лицо останется и без подмены
+    # (рецензент 23.11, s2: задания memory_grade строились с размытие/…). В черновике такие копии запрещены.
+    _bad = set()
+    for _p in list(plan["sources"].values()) + [o_.get("file") for s_ in plan["segments"] for o_ in s_.get("broll", [])]:
+        if not isinstance(_p, str): continue
+        n_ = _U.NP(_p, _pd); k_ = 0
+        while n_ in _BM and k_ < 5:
+            n_ = _U.NP(_BM[n_][0], _pd); k_ += 1
+            if "/размытие/" in n_: _bad.add(os.path.basename(_p)); break
+    if _bad:
+        raise SystemExit(f"черновик без размытия, а {len(_bad)} производных копий собраны с копий размытия: {', '.join(sorted(_bad)[:8])}"
+                         " — пересобери их с исходников (memory_grade / vertical_render: src — исходник, не размытие/…)")
 import heavy_lock                      # одно тяжёлое задание на машину (рендер, поиск машин, лица, проход кадров): параллельные
 # сессии ждут, а не делят CPU и диск (замер 22.11: рендер и два поиска машин разом — load 300, всё в 3–5 раз медленнее).
 # Ждущий печатает, кто держит замок; --no-wait — выйти с кодом 75. Рендер — без понижения приоритета: остальные идут с nice 10.
