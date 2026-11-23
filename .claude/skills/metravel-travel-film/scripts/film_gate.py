@@ -127,6 +127,11 @@ def normal_form(P, plans_dir, M):
             if isinstance(x.get("src"), str) and x["src"] in S:
                 p_, a_ = o(S[x["src"]], x.get("in", 0.0)); y["src"] = p_
                 if "in" in x and "out" in x: y["in"], y["out"] = a_, a_ + (x["out"] - x["in"])
+                # «at» перебивок и плашек куска — время его исходника: копия сдвигает и их (s1 v23d_blur 23.11: cards.at 4.3 → 0.9)
+                sh_ = a_ - x.get("in", 0.0)
+                for k_ in ("broll", "cards"):
+                    for q_ in y.get(k_) or []:
+                        if isinstance(q_, dict) and isinstance(q_.get("at"), (int, float)): q_["at"] = q_["at"] + sh_
             elif isinstance(x.get("file"), str):
                 p_, a_ = o(x["file"], x.get("in", 0.0)); y["file"] = p_
                 if "in" in x: y["in"] = a_
