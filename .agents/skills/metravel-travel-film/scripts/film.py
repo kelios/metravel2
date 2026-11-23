@@ -6,6 +6,8 @@
   film.py draft sN [--hd]             рендер плана → все проверки разом → сводка → копия в черновики → запрос рецензии
 Ещё:
   film.py init <папка подготовки> --sources <папка исходников> [--name ИМЯ]   каркас нового фильма и film.json
+  film.py series sN --days 1 2 [--title "Название"]   новая серия: запись в film.json, сборщик plan_sN.py из шаблона
+                                      (plan_template.py; сцены — первые клипы дней из инвентаря) и части_sN.json для музыки
   film.py status [sN …]               где каждая серия: план, допуск, черновики, кто держит очередь
   film.py check sN [--hd]             только проверки готового черновика
   film.py music                       разбор треков папки музыки (music_fit.py analyze) в общий музыка.json
@@ -25,6 +27,9 @@ film.json лежит в папке планов (или называет её к
    "yolox": "модели/object_detection_yolox_2022nov.onnx", "hd_bitrate": "20M", "tz": 2, "session": "имя сессии сборщика",
    "must_be_zero": ["КОРОЧЕ 4 С"], "after_plan": ["команда с {s}/{v}/{plan}"], "extra_checks": [["имя", "команда с {film}/{segments}/{plan}/{out}"]],
    "series": {"s5": {"n": 5, "days": [5]}}}
+Режиссёрский слой (film_serial.py: рассказ по словам, перебивки, плашки, музыка, интро сериала) читает тот же film.json;
+его ключи — "prep", "maps", "reels", "cards", "sfx", "intro_voice", "intro", "recap", "sounds", "photo_key", "foreign", "fonts",
+"year", "series_total", название серии "series" → "sN" → "title" — описаны в начале film_serial.py.
 Отсутствующий необязательный файл пропускается: каталог кадров, разбор треков, эталоны лиц — с пометкой в сводке; alias и
 перебивки просто не передаются. "sheets" — папка листов prep ({d} — дни через дефис), "plans" — от папки film.json.
 Сводка не читает отчёт, оставшийся от прежнего запуска: упавшая проверка — блокер «не отработала».
@@ -43,7 +48,12 @@ DEFAULTS = {"day_glob": "День {d} — *", "inventory": "../данные/inve
             "reports": "отчёты/{s}", "drafts": "../../7 черновики", "draft_name": "Серия {n} — {v} ({q}).mp4",
             "music": "../../6 музыка", "tracks": "../данные/музыка.json", "end_card": 6, "faces": "модели_и_эталоны",
             "yolox": "модели/object_detection_yolox_2022nov.onnx", "hd_bitrate": "20M", "tz": 2, "session": "",
-            "must_be_zero": ["КОРОЧЕ 4 С"], "after_plan": [], "extra_checks": [], "series": {}}
+            "must_be_zero": ["КОРОЧЕ 4 С"], "after_plan": [], "extra_checks": [], "series": {},
+            # режиссёрский слой — film_serial.py (пути от папки планов)
+            "prep": "../..", "maps": "../../2 карты", "reels": "../../3 нарезки лучших кадров", "cards": "титры", "sfx": "",
+            "intro_voice": "../../1 сценарий/интро серий", "intro": {}, "recap": {}, "photo_key": "Медиатека - {num} из",
+            "sounds": {"whoosh": "вжух — Whoosh Wind Soft 04.mp3", "cash": "касса — Cash Register Kaching.mp3", "bleep": "пи 4с.wav"},
+            "foreign": ["/Собраны/", "/НАШИ ФОТКИ/", "metravel-film-work"], "fonts": {}}
 
 
 def N(s):
@@ -180,11 +190,12 @@ def cmd_plan(F, a):
             os.makedirs(os.path.join(F.dir, "версии"), exist_ok=True)       # снимок сборщика версии — вместо ручных plan_sN.vK.py
             shutil.copy2(b, os.path.join(F.dir, "версии", f"{os.path.splitext(os.path.basename(b))[0]}.{v}.py"))
         log = os.path.join(rep, f"сборщик {s} {v}.log")
-        if run(PY + [b, plan], log, F.dir, dry): print(f"СБОРЩИК УПАЛ — {log}"); print(tail(log)); return 1
+        benv = dict(os.environ, FILM_JSON=F.path, FILM_SCRIPTS=SK)          # сборщик на film_serial.py: тот же film.json и те же скрипты
+        if run(PY + [b, plan], log, F.dir, dry, benv): print(f"СБОРЩИК УПАЛ — {log}"); print(tail(log)); return 1
         for h in F.c["after_plan"]:
             cmd = h.format(s=s, n=ser["n"], v=v, plan=plan); step("после плана: " + cmd[:80])
             if run(["/bin/zsh", "-c", cmd], None, F.dir, dry): print("шаг после плана упал"); return 1
-        if F.c["after_plan"] and run(PY + [b, plan], log, F.dir, dry): print(f"СБОРЩИК УПАЛ (второй проход) — {log}"); return 1
+        if F.c["after_plan"] and run(PY + [b, plan], log, F.dir, dry, benv): print(f"СБОРЩИК УПАЛ (второй проход) — {log}"); return 1
     elif not os.path.exists(plan): sys.exit(f"нет плана {plan}")
     jobs, rows = plan_checks(F, s, v, plan, rep, skipped)
     step(f"проверки плана разом: {', '.join(n_ for n_, _, _ in jobs)}")
@@ -384,7 +395,7 @@ WHERE = """# {name} — подготовка к монтажу
 | **2 карты** | карты дней |
 | **6 музыка** | треки по сериям (`серия N/`), `звуки/` |
 | **7 черновики** | то, что смотрит владелец: только последняя версия каждой серии |
-| служебное/filmora | планы, сборщики серий, `film.json`, отчёты (`отчёты/sN`), допуск рецензента (`допуск/`) |
+| служебное/filmora | планы, сборщики серий `plan_sN.py`, `film.json`, плашки (`титры/`), отчёты (`отчёты/sN`), допуск рецензента (`допуск/`) |
 | служебное/данные | инвентарь, расшифровки (`речь/`), каталоги кадров, разбор музыки |
 
 ## Три команды
@@ -394,6 +405,10 @@ WHERE = """# {name} — подготовка к монтажу
 1. `python3 $SK/film.py prep <дни>` — инвентарь, расшифровка, листы кадров.
 2. `python3 $SK/film.py plan sN` — сборщик → план → проверки плана → сводка.
 3. `python3 $SK/film.py draft sN` — рендер 360p → проверки → сводка → черновик → запрос рецензии; после допуска — `draft sN --hd`.
+
+Новая серия: `python3 $SK/film.py series sN --days <дни> --title "Название"` — запись в `film.json`, сборщик `plan_sN.py`
+(сцены описываются в нём, общая механика — `film_serial.py` скилла) и `части_sN.json` (музыка по частям дня).
+Интро сериала и «ранее» — `film.json` → `intro`, `recap`; музыка — треки в `6 музыка/серия N/`, разбор — `film.py music`.
 """
 
 
@@ -403,13 +418,77 @@ def cmd_init(a):
     if not src or not os.path.isdir(src): sys.exit("--sources: папка исходников (с папками дней)")
     plans = os.path.join(prep, "служебное", "filmora"); cfg = os.path.join(plans, "film.json")
     if os.path.exists(cfg): sys.exit(f"{cfg} уже есть — фильм начат")
-    for d in ("1 сценарий", "2 карты", "6 музыка", "7 черновики", "служебное/filmora/proxy", "служебное/данные/речь"):
+    for d in ("1 сценарий/интро серий", "2 карты", "6 музыка/звуки", "7 черновики", "служебное/filmora/proxy", "служебное/filmora/титры",
+              "служебное/данные/речь"):
         os.makedirs(os.path.join(prep, d), exist_ok=True)
+    # after_plan: копии, которые заказывает сборщик (вертикальные куски, «воспоминание»); заданий нет — шаг выходит сразу
     json.dump({"film": name, "sources": os.path.abspath(src), "words_root": os.path.join(prep, "служебное", "данные", "речь"),
-               "day_glob": "День {d} *", "session": "", "series": {}}, open(cfg, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+               "day_glob": "День {d} *", "session": "", "year": int(time.strftime("%Y")),
+               "after_plan": [f"python3 -I {sh([SK + '/vertical_render.py'])} vertical_jobs_{{s}}.json",
+                              f"python3 -I {sh([SK + '/memory_grade.py'])} memory_jobs_{{s}}.json"],
+               "intro": {"shots": [], "voice": "интро сериала.wav", "music": ""}, "recap": {}, "series": {}},
+              open(cfg, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     w = os.path.join(prep, "ЧТО ГДЕ ЛЕЖИТ.md")
     if not os.path.exists(w): open(w, "w", encoding="utf-8").write(WHERE.format(name=name, sources=os.path.abspath(src), sk=SK))
-    print(f"готово: {cfg}\nДальше: cd {sh([plans])} && python3 {SK}/film.py prep <дни>")
+    print(f"готово: {cfg}\nДальше: cd {sh([plans])} && python3 {SK}/film.py prep <дни>, затем film.py series s1 --days <дни> --title \"Название\"")
+    return 0
+
+
+# ---------------------------------------------------------------- series: новая серия из шаблона
+def scene_lines(F, s, days):
+    """Стартовые сцены сборщика: первые клипы дней серии из инвентаря — живой план с перебивкой и плашкой, вид, ещё до четырёх планов."""
+    inv = F.p("inventory"); items = json.load(open(inv, encoding="utf-8")) if os.path.exists(inv) else []
+    vids = sorted((i for i in items if i["kind"] == "video" and i["day"] in days and i.get("dur", 0) >= 4.5),
+                  key=lambda i: (i["day"], i.get("ct") or "", N(i["path"])))[:6]
+    if not vids: return None
+    def key(i):
+        base = N(os.path.splitext(os.path.basename(i["path"]))[0])
+        same = [j for j in items if j["kind"] == "video" and j["day"] == i["day"] and base in N(os.path.basename(j["path"]))]
+        return base if len(same) == 1 else N(os.path.basename(i["path"]))
+    q = lambda t: json.dumps(t, ensure_ascii=False)
+    a = vids[0]; b = vids[1] if len(vids) > 1 else None; L = ["# Стартовый набор из инвентаря — замени сценами сценария (номер в заметке = номер сцены)."]
+    late = b and b["dur"] >= 11.5                                         # перебивка — из второй половины клипа: первая идёт видом ниже
+    over = f", over=[rv({b['day']}, {q(key(b))}, 7.0)], each=4.0" if late and a["dur"] >= 9.3 else ""
+    L.append(f"sg = clip({a['day']}, {q(key(a))}, note={q('1. ' + key(a))}{over})" + ("     # живой план; over — перебивка поверх говорящего" if over else "     # живой план целиком"))
+    L.append(f"put(sg, card(\"место\", {q(s + ' место пример')}, \"Место · время\"), 0.5, 4.0)     # плашка места: свой текст и своё имя файла")
+    if b: L.append(f"clip({b['day']}, {q(key(b))}, 0.3, {min(6.3, round(b['dur'] - 0.2, 1))}, {q('2. ' + key(b) + ' (вид)')}, mute=True)     # вид без звука места — под музыку")
+    for n_, i in enumerate(vids[2:], 3): L.append(f"clip({i['day']}, {q(key(i))}, note={q(f'{n_}. ' + key(i))})")
+    return L
+
+
+def cmd_series(F, a):
+    if not a or not re.fullmatch(r"s\d+", a[0]): sys.exit('film.py series sN --days 1 2 [--title "Название"]')
+    s = a[0]; raw = json.load(open(F.path, encoding="utf-8")); ent = dict((raw.get("series") or {}).get(s) or {})
+    if "--days" in a:
+        ent["days"] = []
+        for x in a[a.index("--days") + 1:]:                              # до следующего ключа: «--title 3» — не день
+            if not re.fullmatch(r"\d+", x): break
+            ent["days"].append(int(x))
+    if opt(a, "--title"): ent["title"] = opt(a, "--title")
+    ent.setdefault("n", int(s[1:]))
+    if not ent.get("days"): sys.exit(f"дни серии {s} не заданы: film.py series {s} --days 1 2")
+    if (raw.get("series") or {}).get(s) != ent:
+        raw.setdefault("series", {})[s] = ent; tmp = F.path + f".{os.getpid()}"
+        json.dump(raw, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1); os.replace(tmp, F.path)
+        F.c["series"] = raw["series"]; print(f"film.json: серия {s} — дни {ent['days']}" + (f", «{ent['title']}»" if ent.get("title") else ""))
+    b = F.p("builder", s=s)
+    if os.path.exists(b): print(f"сборщик {os.path.basename(b)} уже есть — не переписываю")
+    else:
+        t = open(os.path.join(SK, "plan_template.py"), encoding="utf-8").read().replace("__SK__", SK).replace("__TAG__", s)
+        L = scene_lines(F, s, ent["days"])
+        if L: t = re.sub(r"(?s)# >>> сцены\n.*?# <<< сцены\n", lambda m: "\n".join(L) + "\n", t)
+        else: print(f"клипов дней {ent['days']} в инвентаре нет — в сборщике остались примеры в комментариях (film.py prep <дни>)")
+        open(b, "w", encoding="utf-8").write(t); print(f"сборщик: {b}")
+    pj = os.path.join(F.dir, f"части_{s}.json")
+    if not os.path.exists(pj):
+        md = F.p("music")                                                   # трек папки серии раньше общих
+        tr = [f for d in (os.path.join(md, f"серия {ent['n']}"), md) for f in sorted(glob.glob(os.path.join(glob.escape(d), "*.mp3")))]
+        name = re.sub(r"^ES_", "", os.path.splitext(os.path.basename(tr[0]))[0]) if tr else ""
+        json.dump({"scenes": {}, "skip": ["0."], "default": "день", "parts": {"день": {"track": name, "level": 8}}},
+                  open(pj, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"музыка по частям дня: {pj}" + (f" (трек «{name}»)" if name else " — трека нет: положи mp3 в «серия N» папки музыки и впиши имя"))
+    if not ent.get("title"): print(f"название серии не задано: film.py series {s} --title \"…\" (нужно для плашек «Серия N» и «ранее»)")
+    print(f"Дальше: сцены в {os.path.basename(b)} → film.py music → film.py plan {s} → film.py draft {s}")
     return 0
 
 
@@ -421,6 +500,7 @@ def main():
     F = find_film(a)
     a = [x for i, x in enumerate(a) if x != "--film" and (i == 0 or a[i - 1] != "--film")]
     if cmd == "status": return cmd_status(F, a)
+    if cmd == "series": return cmd_series(F, a)
     if cmd == "music": return cmd_music(F, a)
     if cmd == "prep": return cmd_prep(F, a)
     if cmd in ("plan", "draft", "check"):
