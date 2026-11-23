@@ -25,6 +25,8 @@ base = os.path.dirname(os.path.abspath(a[1]))
 yp = opt("--yolox") or next((p for p in (os.path.join(base, "модели", "object_detection_yolox_2022nov.onnx"),
                                          os.path.join(os.path.dirname(base), "модели", "object_detection_yolox_2022nov.onnx"),
                                          os.path.join(base, "filmora", "модели", "object_detection_yolox_2022nov.onnx")) if os.path.exists(p)), None)
+if not yp:                                   # план в подпапке (v20_s1/машины_v23/куски.json, s1 23.11) — модель выше по дереву
+    import crop_band; yp = crop_band.find_yolox(base, os.getcwd())
 if not yp: raise SystemExit("нет модели YOLOX: --yolox <object_detection_yolox_2022nov.onnx>")
 out = a[2] if mode == "plan" else a[3]
 os.makedirs(out, exist_ok=True)
