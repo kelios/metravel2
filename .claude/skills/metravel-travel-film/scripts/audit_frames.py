@@ -30,6 +30,9 @@ import numpy as np, cv2
 
 a = sys.argv[1:]
 film = a[0]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import heavy_lock                      # проход по фильму и исходникам — тяжёлое задание: по очереди с рендером и поиском машин, nice 10
+heavy_lock.acquire(f"audit_frames {os.path.basename(film)}", wait="--no-wait" not in a)
 opt = lambda k: a[a.index(k) + 1] if k in a else None
 segs = json.load(open(opt("--segments"))); fdir = opt("--faces"); out = opt("--out")
 teaser = [(s["start"], s["end"]) for s in segs if "тизер" in s["note"]]

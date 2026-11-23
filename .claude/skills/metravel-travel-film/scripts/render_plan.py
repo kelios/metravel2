@@ -4,7 +4,8 @@
 render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [60M]] [--crf N] [--prune]
                [--words-root DIR] [--alias alias.json]   — для "music": {"auto_level": true}: речь по словам расшифровки
                [--jobs N] [--sw] [--no-wait]
-  Один рендер на машину (замок ~/.cache/metravel-film-render.lock): второй ждёт и печатает, чей рендер идёт; --no-wait — выход с кодом 75.
+  Одно тяжёлое задание на машину (heavy_lock.py: рендер, поиск машин, лица, проход кадров): второе ждёт и печатает, кто держит
+  замок; --no-wait — выход с кодом 75.
   без --size — черновик 640x360 для рецензента; --size 3840x2160 --hw — финал аппаратным кодером Mac.
 Каждый отрезок главной дорожки рендерится отдельно (перебивки и титры поверх по времени): картинка и звук —
 отдельные куски с отдельными ключами, поэтому правка громкости или музыки не перекодирует картинку. Кеш общий на
@@ -36,24 +37,10 @@ if "--size" in a:                      # полное качество: --size 1
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import film_gate                       # больше 640x360 — только по допуску рецензента, 4K — по слову владельца
 film_gate.require(sys.argv[1], W, H)
-import fcntl                           # один рендер на машину: параллельные сессии ждут, а не делят CPU и диск
-# (замер 22.11: два рендера разных серий разом шли в 3–5 раз медленнее каждый). В файле замка — кто рендерит:
-# ждущий печатает это; --no-wait — не ждать, а выйти с кодом 75 и тем же сообщением.
-_lockp = os.path.expanduser("~/.cache/metravel-film-render.lock"); os.makedirs(os.path.dirname(_lockp), exist_ok=True)
-_lock = open(_lockp, "a+")             # не "w": ждущий не должен стирать запись о том, кто рендерит
-try:
-    fcntl.flock(_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except BlockingIOError:
-    _lock.seek(0); _who = _lock.read().strip() or "запись пуста"
-    print(f"очередь рендеров: уже идёт рендер — {_who}", flush=True)
-    if "--no-wait" in a:
-        print("--no-wait: выхожу; повторите после него (замок ~/.cache/metravel-film-render.lock)", flush=True); sys.exit(75)
-    print("жду его окончания (один рендер на машину; --no-wait — не ждать)", flush=True)
-    fcntl.flock(_lock, fcntl.LOCK_EX)
-_lock.seek(0); _lock.truncate()
-_lock.write(f"{os.path.basename(sys.argv[1])} → {os.path.basename(out)}, {W}x{H}, pid {os.getpid()}, с {_time.strftime('%d.%m %H:%M')}\n"); _lock.flush()
-import atexit                          # после рендера (и при ошибке) запись о нём стирается: в файле — только идущий рендер
-atexit.register(lambda: (_lock.seek(0), _lock.truncate(), _lock.flush()))
+import heavy_lock                      # одно тяжёлое задание на машину (рендер, поиск машин, лица, проход кадров): параллельные
+# сессии ждут, а не делят CPU и диск (замер 22.11: рендер и два поиска машин разом — load 300, всё в 3–5 раз медленнее).
+# Ждущий печатает, кто держит замок; --no-wait — выйти с кодом 75. Рендер — без понижения приоритета: остальные идут с nice 10.
+heavy_lock.acquire(f"рендер {os.path.basename(sys.argv[1])} → {os.path.basename(out)}, {W}x{H}", nice=0, wait="--no-wait" not in a)
 _mark("очередь")
 SERIES = film_gate.plan_series(sys.argv[1])
 if "--workdir" not in a and SERIES:    # общий кеш серии и размера: версии плана берут готовые куски друг друга
