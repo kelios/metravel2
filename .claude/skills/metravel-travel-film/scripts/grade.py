@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Покраска по плану: выравнивание планов между камерами + общий лук фильма.
 
+ВЫКЛЮЧЕНО ПО УМОЛЧАНИЮ (владелец 23.11): фильм рендерится без покраски, как снято; render_plan применяет ключи "grade"
+только с --grade. grade.py запускается лишь по прямой просьбе владельца и с явным режимом: --minimal или --look-on.
+
 uv run --with numpy python grade.py <plan.json> <plan_graded.json> [--look look.cube] [--cache grade_stats.json]
     [--strength 1.0] [--skip-dirs память,титры,карты] [--alias alias.json] [--minimal]
 --minimal — только яркость на стыках разных камер и gamma из ручных поправок: без лука, баланса белого и насыщенности
@@ -25,6 +28,9 @@ import json, os, subprocess, sys, hashlib
 import numpy as np
 
 a = sys.argv[1:]
+if len(a) < 2 or not ({"--minimal", "--look-on"} & set(a)):
+    sys.exit("grade.py: покраска по умолчанию не нужна (владелец 23.11: натуральные цвета, render_plan без --grade её не применяет).\n"
+             "Только по прямой просьбе владельца: --minimal (яркость на стыках, gamma) или --look-on (полный лук).")
 src_plan, dst_plan = a[0], a[1]
 opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
 STRENGTH = float(opt("--strength", "1.0"))

@@ -142,10 +142,17 @@ HLG), дрон DJI (H.264 8 бит). Значит, покраска — это �
 HLG (`arib-std-b67`) или PQ (`smpte2084`) требуют тонмаппинга в bt709 до
 `grade.py`, иначе картинка выйдет блёклой.
 
+**По умолчанию покраски нет (владелец 23.11, s3 v20):** «покраска не должна быть
+явной, нравятся натуральные цвета». Замер: без `grade` рендер совпадает с
+исходником, всё отличие давала `eq=gamma` 1,10–1,18 из `--minimal` (+10–15
+уровней). `render_plan.py` пропускает ключи `grade`, кроме `"grade_owner": true`
+(осветление по её просьбе на конкретный план). Полная покраска — только по
+просьбе владельца:
+
 ```bash
-uv run --with numpy python scripts/grade.py plan.json plan_цвет.json \
+uv run --with numpy python scripts/grade.py plan.json plan_цвет.json --look-on \
     --look "<папка>/цвет/metravel_look.cube" --cache "<папка>/цвет/замеры.json"
-python3 scripts/render_plan.py plan_цвет.json черновик.mp4            # проверка цвета на черновике
+python3 scripts/render_plan.py plan_цвет.json черновик.mp4 --grade    # --grade — применить покраску
 ```
 
 - Замер — 3 кадра на каждый используемый кусок (главная дорожка и перебивки),

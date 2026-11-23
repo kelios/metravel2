@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Технический контроль готового файла перед YouTube: один проход декодирования, вердикт по каждому пункту.
 
-python3 audit_tech.py <фильм.mp4> [--out audit_tech.md] [--quick] [--end-card 6]
+python3 audit_tech.py <фильм.mp4> [--out audit_tech.md] [--quick] [--end-card 6] [--plan plan.json]
+--plan — справка «покраска»: есть ли в плане ключи grade (владелец 23.11: без покраски, только по её просьбе на план).
 
 Пункты (❌ — блокер, ⚠ — посмотреть):
   контейнер   moov в начале файла (faststart), видео и звук одной длины (±0,1 с)
@@ -22,6 +23,12 @@ opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
 out = opt("--out"); quick = "--quick" in a; END = float(opt("--end-card", "6"))
 R = []   # (статус, пункт, подробности)
 add = lambda ok, name, det, warn=False: R.append(("✅" if ok else ("⚠" if warn else "❌"), name, det))
+if opt("--plan"):      # справка (владелец 23.11): покраска — только по прямой просьбе на конкретный план
+    _P = json.load(open(opt("--plan")))
+    _g = [o for s_ in _P.get("segments", []) for o in [s_] + list(s_.get("broll", [])) if o.get("grade")]
+    _own = sum(1 for o in _g if o.get("grade_owner"))
+    add(not _g or _own == len(_g), "покраска", ("в плане нет grade — как снято" if not _g else
+        f"в плане {len(_g)} ключей grade (просьба владельца: {_own}); render_plan без --grade применит только просьбы владельца"), warn=True)
 
 pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", film],
                                capture_output=True, text=True).stdout)
