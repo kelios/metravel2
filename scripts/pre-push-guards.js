@@ -84,6 +84,8 @@ const PRE_PUSH_GUARDS = Object.freeze([
     'Снимки ревью квестов.'),
   fast('guard:quest-data-sources', [SOURCE_FAST],
     '#1554: один quest_id — один локальный файл-источник; дубль появляется вместе с новым файлом. Сетевая половина — `npm run quest:scan-prod-drift` (#1489).'),
+  fast('guard:film-scripts-py39', [SOURCE_FAST],
+    '23.11: render_plan.py не компилировался на системном python3 3.9 (f-строка 3.12) — рендер фильма падал у всех серий.'),
   fast('guard:prod-write-mode', [SOURCE_FAST],
     '#3304: скрипт, пишущий на прод, не пишет без `--apply`; нарушение приносит новый файл-копия.'),
 

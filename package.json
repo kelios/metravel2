@@ -193,6 +193,7 @@
     "quest:backfill-point-roles": "node scripts/backfill-quest-point-roles.js",
     "quest:scan-prod-drift": "node scripts/scan-quest-prod-drift.js",
     "guard:quest-data-sources": "node scripts/guard-quest-data-sources.js",
+    "guard:film-scripts-py39": "node scripts/guard-film-scripts-py39.js",
     "guard:prod-write-mode": "node scripts/guard-prod-write-mode.js",
     "guard:quest-answer-eval": "node scripts/guard-quest-answer-eval.js",
     "guard:advent-config": "node scripts/validate-advent-config.mjs data/advent/2026.json",
