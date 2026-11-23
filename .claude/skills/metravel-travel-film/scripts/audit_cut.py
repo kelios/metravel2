@@ -17,6 +17,9 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
   ПОКАЗ     перебивка поверх живой речи с сильным указателем («смотрите», «видите», «вон», «написано», «покажу», «вот этот/эта»)
             — прячет показанное
   НЕМОЙ     в кадре говорят (≥3 слов), а звук плана заглушён и голоса за кадром нет
+  ГОЛОС     голос за кадром (cue с уровнем ≥ 20: связка, доозвучка) длиннее своего места от a до b — продлить кадр;
+            или звучит поверх живой речи плана (слово ближе 0,1 с до и 0,3 с после голоса). Правило доозвучки 23.11:
+            голос через ≈0,3 с после начала кадра, после голоса ≥ 0,3 с кадра
   ВРЕМЯ     живые сцены идут не в порядке съёмки (откат больше 15 минут)
   ПОВТОР    один и тот же кусок исходника в фильме дважды
   ПЛАШКА    титр короче 3 с; две плашки одновременно
@@ -87,6 +90,35 @@ for c in (plan.get("music") or {}).get("cues", []):
     a0, b0 = film(*c["a"]), film(*c["b"])
     if a0 is None or b0 is None: continue
     (voice if c.get("level_db", 0) >= 20 else music).append((a0, b0))
+
+# ГОЛОС (рецензент 23.11, доозвучка немых моментов): голос за кадром помещается в своё место и не заходит на живую речь
+def _fdur(f):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", f], capture_output=True, text=True)
+    try: return float(r.stdout.strip())
+    except ValueError: return None
+_live = None
+def live_words():
+    """Слова живой речи в фильме: (время фильма, слово) по незаглушённым кускам главного плана."""
+    global _live
+    if _live is None:
+        _live = []
+        for i_, s_ in enumerate(SEG):
+            if (s_.get("gain_db", 0) or 0) <= -40: continue
+            w_, _, _ = words_for(S[s_["src"]])
+            _live += [(T[i_] + x[1] - s_["in"], x[0]) for x in (w_ or []) if s_["in"] <= x[1] < s_["out"]]
+    return _live
+for c in (plan.get("music") or {}).get("cues", []):
+    if c.get("level_db", 0) < 20 or c.get("bed") or c.get("file", "").lower().endswith(".mp3") or not os.path.exists(c.get("file", "")): continue
+    a0, b0 = film(*c["a"]), film(*c["b"])                # подложки после duck_beds тоже бывают ≥ 20 — не голос
+    L = _fdur(c["file"])
+    if a0 is None or b0 is None or not L: continue
+    L -= c.get("src_in", 0.0); nm = c.get("name", os.path.basename(c["file"]))[:40]
+    i0 = next((k for k in range(len(SEG)) if T[k] <= a0 + 0.001 < T[k] + SEG[k]["out"] - SEG[k]["in"]), None)
+    if L > b0 - a0 + 0.05:
+        add("ГОЛОС", a0, SEG[i0]["note"] if i0 is not None else "", f"«{nm}» {L:.2f} с не помещается: место до конца cue {b0 - a0:.2f} с — продлить кадр")
+    hit = [w_ for t_, w_ in live_words() if a0 - 0.1 <= t_ <= a0 + L + 0.3]
+    if hit:
+        add("ГОЛОС", a0, SEG[i0]["note"] if i0 is not None else "", f"«{nm}» заходит на живую речь: «{' '.join(hit[:6])}»")
 
 used = {}
 prev_live = None
@@ -263,7 +295,7 @@ if cat_p and os.path.exists(cat_p):
 
 F.sort()
 lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
-for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
+for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ГОЛОС", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
