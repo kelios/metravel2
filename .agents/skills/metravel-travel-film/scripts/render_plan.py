@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Рендер фильма по плану (тот же план, из которого make_wfp строит проект Filmora).
 
-render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [60M]] [--crf N] [--prune]
+render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 3840x2160] [--hw [20M для 1080p, 60M для 4K]] [--crf N] [--prune]
                [--words-root DIR] [--alias alias.json]   — для "music": {"auto_level": true}: речь по словам расшифровки
                [--jobs N] [--sw] [--no-wait]
   Одно тяжёлое задание на машину (heavy_lock.py: рендер, поиск машин, лица, проход кадров): второе ждёт и печатает, кто держит
@@ -49,8 +49,9 @@ if "--workdir" not in a and SERIES:    # общий кеш серии и раз�
 os.makedirs(wd, exist_ok=True)
 CRF = a[a.index("--crf") + 1] if "--crf" in a else ("28" if W <= 640 else "18")
 PRESET = "veryfast" if W <= 640 else "fast"
-# --hw: аппаратный кодер Mac (4K за часы, а не сутки); 60 Мбит/с для 4K — с запасом для YouTube
-_hwb = a[a.index("--hw") + 1] if "--hw" in a and a.index("--hw") + 1 < len(a) and a[a.index("--hw") + 1].endswith("M") else "60M"
+# --hw: аппаратный кодер Mac (4K за часы, а не сутки). Битрейт по размеру кадра: 4K — 60 Мбит/с с запасом для
+# YouTube, 1080p — 20 Мбит/с (как libx264 crf 18; 60 Мбит/с в 1080p давали 18 ГБ на 40 мин + столько же «без музыки»).
+_hwb = a[a.index("--hw") + 1] if "--hw" in a and a.index("--hw") + 1 < len(a) and a[a.index("--hw") + 1].endswith("M") else ("60M" if W >= 3840 else "20M")
 VENC = (["-c:v", "h264_videotoolbox", "-b:v", _hwb, "-pix_fmt", "yuv420p", "-tag:v", "avc1"]
         if "--hw" in a else ["-c:v", "libx264", "-preset", PRESET, "-crf", CRF, "-pix_fmt", "yuv420p"])
 # Куски и склейка кодируются одним VENC (два поколения сжатия). Сознательно: ProRes-куски 4K на 40 мин — ~200 ГБ на T7,
