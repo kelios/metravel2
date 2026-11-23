@@ -9,7 +9,7 @@ uv run … plates.py jobs <задания.json> --dir <папка filmora> --ser
 copy  — <файл>: то, что сейчас стоит в плане (исходник или копия с размытыми лицами); <от>/<до> — секунды в нём.
         Кадр 1920×1080: YOLOX-S → машины (шире 4 %) и люди. Номер — строка ≥ 4 знаков одной высоты в ряд (MSER, тёмные на светлом
         и наоборот) внутри машины, рамка строки расширяется до таблички. По дорожке машины (IoU ≥ 0,3, пропуск до 5 кадров) номер
-        переносится на кадры, где знаки не нашлись; крупная машина (шире 9 %) без номера на всей дорожке — полоса 30–97 % высоты
+        переносится на кадры, где знаки не нашлись; крупная машина (шире 7 %) или машина у края кадра без номера на всей дорожке — полоса 30–97 % высоты
         (не полоса бампера: на высоких машинах номер на двери багажника — Tucson, s3). Минус люди (рамка ужата на 8 %), рамки ±3 кадра.
         --box — ручная полоса в долях кадра на отрезке секунд копии (детектор не видит машину).
         Сборка: maskedmerge с сильно размытой копией, 10 бит, HEVC 100 Мбит/с, звук AAC 320k. Окно — trim по меткам времени
@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import heavy_lock
 
 VEH = {2, 3, 5, 7}
-_mser = cv2.MSER_create(delta=4, min_area=12, max_area=4000)
+_mser = cv2.MSER_create(delta=3, min_area=8, max_area=4000)
 
 
 # ---------------------------------------------------------------- номер внутри рамки машины (без отдельной модели)
@@ -35,7 +35,7 @@ def _lines(g):
     regs, boxes = _mser.detectRegions(g)
     ch = []
     for x, y, w, h in boxes:
-        if h < 7 or h > 0.25 * g.shape[0] or not (1.1 <= h / max(w, 1) <= 5.5): continue
+        if h < 5 or h > 0.25 * g.shape[0] or not (1.1 <= h / max(w, 1) <= 5.5): continue
         ch.append((x, y, w, h))
     ch = sorted(set(ch), key=lambda b: b[0])
     groups = []
@@ -49,16 +49,36 @@ def _lines(g):
             groups.append([b])
     out = []
     for gr in groups:
-        if len(gr) < 4: continue
+        if len(gr) < 3: continue
         x0 = min(b[0] for b in gr); y0 = min(b[1] for b in gr); x1 = max(b[0] + b[2] for b in gr); y1 = max(b[1] + b[3] for b in gr)
         if (x1 - x0) / max(1, y1 - y0) < 2.0: continue
         out.append((len(gr), (x0, y0, x1 - x0, y1 - y0)))
     return out
 
 
+def _blobs(roi):
+    """Табличка целиком: светлый малонасыщенный прямоугольник 2,2–7 к 1 с вертикальными перепадами знаков (мелкий номер, где
+    MSER сливает знаки в одно пятно: Peugeot 208 у шато, s3 v20). → [(вес, (x, y, w, h))] в пикселях roi."""
+    g = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY); hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV); k = max(3, roi.shape[1] // 40) | 1
+    bh = cv2.morphologyEx(g, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (k * 3, k)))
+    sx = np.abs(cv2.Sobel(bh, cv2.CV_32F, 1, 0, ksize=3)); sx = (255 * sx / (sx.max() + 1e-6)).astype(np.uint8)
+    cl = cv2.morphologyEx(cv2.GaussianBlur(sx, (5, 5), 0), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (k * 3, max(3, k // 2))))
+    _, th = cv2.threshold(cl, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    th = cv2.dilate(cv2.erode(th, None, iterations=1), None, iterations=2)
+    out = []
+    for c in cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]:
+        a, b, cw, ch = cv2.boundingRect(c)
+        if cw < 10 or ch < 4 or not (2.2 <= cw / ch <= 7.0 and 0.07 * roi.shape[1] <= cw <= 0.5 * roi.shape[1]): continue
+        if float(hsv[b:b + ch, a:a + cw, 2].mean()) < 80 or float(hsv[b:b + ch, a:a + cw, 1].mean()) > 120: continue
+        d = float((sx[b:b + ch, a:a + cw] > 60).mean())
+        if d >= 0.15: out.append((d * cw * ch, (a, b, cw, ch)))
+    return out
+
+
 def plate_boxes(img, car):
     """Где номер внутри машины: [(x, y, w, h)] в пикселях кадра. Рамка машины растягивается до ширины ≥ 480 px (мелкие знаки — 3–5 px);
-    строка знаков расширяется до таблички (×1,5 по ширине — синяя полоса ЕС, ×2,2 по высоте); строка шире 60 % машины — надпись/решётка."""
+    строка знаков (центр на 35–97 % высоты машины) расширяется до таблички (≥ 7 высот знака и ×2,6 строки, ×2,8 по высоте);
+    строка шире 60 % машины — надпись/решётка."""
     H, W = img.shape[:2]; x, y, w, h = [int(round(v)) for v in car]
     x0, y0 = max(0, x), max(0, y + int(0.15 * h)); x1, y1 = min(W, x + w), min(H, y + h)
     if x1 - x0 < 24 or y1 - y0 < 12: return []
@@ -66,10 +86,21 @@ def plate_boxes(img, car):
     g = cv2.cvtColor(cv2.resize(roi, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2GRAY)
     g = cv2.createCLAHE(2.0, (8, 8)).apply(g)
     res = []
-    for n, (a, b, cw, chh) in sorted(_lines(g) + _lines(255 - g), reverse=True)[:3]:
+    for n, (a, b, cw, chh) in sorted(_lines(g) + _lines(255 - g), reverse=True)[:4]:
         if cw > 0.6 * g.shape[1]: continue
-        cx, cy = a + cw / 2, b + chh / 2; pw, ph = cw * 1.5, chh * 2.2
+        cx, cy = a + cw / 2, b + chh / 2
+        ry = (y0 + cy / s - y) / max(1, h); rx = (x0 + cx / s - x) / max(1, w)
+        if not (0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96): continue   # строка на стекле/крыше/решётке выше — не номер (s3 v20: Peugeot 3008, 208)
+        # найдена часть номера (4 из 7 знаков — T-Roc «…34-ZZ» открыт): табличка ≥ 7 высот знака и ×2,6 строки, не шире 60 % машины
+        pw = min(max(cw * 2.6, chh * 7.0), 0.6 * g.shape[1]); ph = chh * 2.8
         res.append((int(x0 + (cx - pw / 2) / s), int(y0 + (cy - ph / 2) / s), int(pw / s), int(ph / s)))
+    if not res:                                              # знаки не нашлись — табличка целиком (тот же фильтр положения)
+        for _, (a, b, cw, chh) in sorted(_blobs(cv2.resize(roi, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)), reverse=True)[:2]:
+            cx, cy = a + cw / 2, b + chh / 2
+            ry = (y0 + cy / s - y) / max(1, h); rx = (x0 + cx / s - x) / max(1, w)
+            if not (0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96): continue
+            pw, ph = cw * 1.4, chh * 1.8
+            res.append((int(x0 + (cx - pw / 2) / s), int(y0 + (cy - ph / 2) / s), int(pw / s), int(ph / s)))
     return res[:2]
 
 
@@ -154,7 +185,9 @@ def copy(src, a, b, out, yp, boxes=()):
                 RECT[i] += [(px - 0.15 * pw, py - 0.2 * ph, pw * 1.3, ph * 1.4) for px, py, pw, ph in PL[i][j]]; found += 1
             elif rel:
                 r_ = np.median(np.array(rel), 0); RECT[i].append((x + (r_[0] - 0.1 * r_[2]) * w, y + (r_[1] - 0.15 * r_[3]) * h, r_[2] * 1.2 * w, r_[3] * 1.3 * h)); found += 1
-            elif wmax >= 0.09 * DW:                          # крупная машина, номер ни разу не найден — запасная полоса 30–97 %
+            elif wmax >= 0.07 * DW or ((x <= 2 or x + w >= DW - 2) and w >= 0.04 * DW):   # 7 %: передний номер под углом (Peugeot 3008, Ford — s3 v20) знаками не ловится
+                # крупная машина, номер ни разу не найден — запасная полоса 30–97 %; машина у края кадра — тоже
+                # (обрезанный номер «CP 511…» — меньше 4 знаков в строке, s3 v20 парковка 18:37)
                 RECT[i].append((x + 0.03 * w, y + 0.30 * h, 0.94 * w, 0.67 * h)); fall += 1
     print(f"кадров {N} (ожидалось ≈{exp}), с машинами {sum(1 for c in CARS if c)}, дорожек {len(tracks)}, "
           f"номер по знакам/дорожке {found}, запасная полоса {fall}", flush=True)
