@@ -195,10 +195,10 @@ if cat_p and os.path.exists(cat_p):
     def tags_of(f, a0, b0):
         dur = b0 - a0; f, a0 = orig_of(f, a0); b0 = a0 + dur
         out_ = set(); hit = False
-        for e in CAT.get("кадры", []):
+        for e in CAT.get("кадры", []):          # метки всех кусков каталога, которые видны в перебивке ≥ 1 с (длинная перебивка — несколько плиток)
             if e["file"] != f and os.path.basename(e["file"]) != os.path.basename(f): continue
             ov = min(b0, e.get("out", 1e9)) - max(a0, e.get("in", 0))
-            if ov >= 0.5 * (b0 - a0) or ("in" not in e): hit = True; out_ |= set(e.get("метки", []))
+            if ov >= min(1.0, 0.5 * (b0 - a0)) or ("in" not in e): hit = True; out_ |= set(e.get("метки", []))
         return out_ if hit else None
     voice_w = []                                        # слова голоса за кадром во времени фильма
     for c in (plan.get("music") or {}).get("cues", []):
