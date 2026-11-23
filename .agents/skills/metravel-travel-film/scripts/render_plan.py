@@ -312,6 +312,16 @@ if _CB:
             if y is not None and o.get("fit") != "contain" and "crop_y" not in o: o["crop_y"] = y; _n += 1
     print(f"вертикальные перебивки: {len(_CB)}, полоса по людям — {_n}, по центру — {len(_CB) - _n}", flush=True)
 
+# вертикальный исходник главным планом — узкая полоса с чёрными полями (s1 v23, 42:51: план собран до vertical_render, четыре
+# вечерних кадра ушли оригиналами). Больше 360p — отказ: дорендерить vertical_render.py и пересобрать план. Нарочно — "fit": "contain".
+_VM = [s["note"][:50] for s in SEG if s.get("fit") != "contain" and not plan["sources"][s["src"]].lower().endswith((".png", ".jpg", ".jpeg"))
+       and os.path.exists(plan["sources"][s["src"]]) and _tall(plan["sources"][s["src"]])]
+if _VM and W > 640:
+    raise SystemExit(f"{len(_VM)} отрезков главного плана — вертикальные оригиналы (будут чёрные поля): {'; '.join(_VM[:6])}. "
+                     "Дорендерить vertical_render.py и пересобрать план (или \"fit\": \"contain\" у отрезка, если так задумано)")
+elif _VM:
+    print(f"ВНИМАНИЕ: {len(_VM)} вертикальных оригиналов главным планом (черновик 360p пропускаю): {'; '.join(_VM[:6])}", flush=True)
+
 aparts, vkeys, akeys, hand, cores, PV = [], [], [], [], [], []
 vjobs, ajobs = [], []
 for i, s in enumerate(SEG):
