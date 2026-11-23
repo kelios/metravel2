@@ -348,7 +348,9 @@ for i, s in enumerate(SEG):
             elif is_img:
                 fc.append(f"[{k}:v]scale={W}:{H},format=rgba,setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             else:
-                fc.append(f"[{k}:v]fps={FPS},{'scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2' % (W, H, G(o), W, H) if o.get('fit') == 'contain' else ('scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d:(iw-ow)/2:%s%s' % (W, H, W, H, ("'max(0,min(ih-oh,ih*%.4f-oh/2))'" % o['crop_y']) if o.get('crop_y') is not None else '(ih-oh)/2', G(o)))},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
+                crop_y_expr = ("'max(0,min(ih-oh,ih*%.4f-oh/2))'" % o["crop_y"]) if o.get("crop_y") is not None else "(ih-oh)/2"
+                fit_vf = ("scale=%d:%d:force_original_aspect_ratio=decrease%s,pad=%d:%d:(ow-iw)/2:(oh-ih)/2" % (W, H, G(o), W, H)) if o.get("fit") == "contain" else ("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d:(iw-ow)/2:%s%s" % (W, H, W, H, crop_y_expr, G(o)))
+                fc.append(f"[{k}:v]fps={FPS},{fit_vf},setsar=1{TP(pre, eRp)}{AF(fin, fout, d)},setpts=PTS-STARTPTS+{max(t0,0):.3f}/TB[{lab}]")
             fc.append(f"[{cur}][{lab}]overlay={pos}:enable='between(t,{max(t0,0):.3f},{t0 + d:.3f})':eof_action=pass[v{k}]")
             cur = f"v{k}"; k += 1
         tailf = f"[{cur}]format=yuv420p,trim=end_frame={NF},setpts=PTS-STARTPTS,{SETP}"
