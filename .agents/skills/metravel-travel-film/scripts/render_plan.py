@@ -328,7 +328,7 @@ for i, s in enumerate(SEG):
     hand.append((hL, hR)); cores.append(nf / FPS)
     edges = f"{nfL}|{nfR}|edges2{'+3' if hL - hLa > 0.001 and hR - hRa > 0.001 else ''}"
     graded = s.get("grade") or any(o.get("grade") for o in s.get("broll", []))
-    vk = KEY([{k: v for k, v in s.items() if k not in AUDIO_KEYS}, src, edges, LOOKSUM if graded else "", VSIG, PFMT])
+    vk = KEY([{k: v for k, v in s.items() if k not in AUDIO_KEYS and k != "phrase_ok"}, src, edges, LOOKSUM if graded else "", VSIG, PFMT])
     ak = KEY([{k: v for k, v in s.items() if k in AUDIO_KEYS - {"note", "audio_in_hard"} or k in ("src", "in", "out")}, src,
               edges, round(hLa, 3), round(hRa, 3), FPS, ASIG, HARD.get(i, False), HARD.get(i + 1, False)])
     af = os.path.join(wd, f"a_{ak}.wav")

@@ -13,7 +13,10 @@ plan.json — формат make_wfp/plan_s1 (sources, segments[{src,in,out,note,
 Соглашение заметок: «рассказ:» — воспоминание (рассказ на другой день), «тизер» — намеренно короткие планы.
 
 Проверки (каждая находка — строка с таймкодом фильма):
-  ФРАЗА     край куска режет слово или фразу (сосед — не продолжение того же плана)
+  ФРАЗА     край куска режет слово или фразу (сосед — не продолжение того же плана) и звучит (громче −38 дБ окнами 50 мс у края);
+            край в паузе и разобранные сборщиком (ключ отрезка "phrase_ok": {"in"|"out": причина}) — в справку «ФРАЗА разобрана».
+            Находка блокирует film_gate request / plan-verdict (рецензент 23.11)
+  РАЗРЫВ    чужой план со своим звуком посреди одной речи: речь A → план B (не заглушён) → речь A с того же места
   ПОКАЗ     перебивка поверх живой речи с сильным указателем («смотрите», «видите», «вон», «написано», «покажу», «вот этот/эта»)
             — прячет показанное
   НЕМОЙ     в кадре говорят (≥3 слов), а звук плана заглушён и голоса за кадром нет
@@ -120,6 +123,26 @@ for c in (plan.get("music") or {}).get("cues", []):
     if hit:
         add("ГОЛОС", a0, SEG[i0]["note"] if i0 is not None else "", f"«{nm}» заходит на живую речь: «{' '.join(hit[:6])}»")
 
+# ФРАЗА — находка, не справка (рецензент 23.11). Не находка: край в паузе — громкость окнами 50 мс ±0,1 с у края ниже
+# −38 дБ (whisper растягивает соседнее слово; метод серии 6: из 14 находок настоящих 4). Разобранная сборщиком — ключ
+# отрезка "phrase_ok": {"in"|"out": причина} — идёт в справку «ФРАЗА разобрана».
+PAUSE_DB = -38.0
+SPRAVKA_PHRASE = []
+def edge_quiet(path, t):
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-ss", f"{max(0.0, t - 0.5):.3f}", "-t", "1.0", "-i", path, "-vn", "-af",
+                        "aformat=channel_layouts=mono,aresample=8000,asetnsamples=n=400:p=0,astats=metadata=1:reset=1,"
+                        "ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"], capture_output=True, text=True)
+    v = [max(float(x), -120.0) for x in re.findall(r"lavfi\.astats\.Overall\.RMS_level=(-?inf|-?[\d.]+)", r.stdout + r.stderr)]
+    if not v: return False, None
+    c = int(round(min(t, 0.5) / 0.05)); near = v[max(0, c - 2):c + 2]
+    return (max(near) < PAUSE_DB if near else False), (max(near) if near else None)
+def phrase(at, note, s, edge, path, t, text):
+    ok = (s.get("phrase_ok") or {}).get(edge)
+    q, lv = edge_quiet(path, t)
+    if q: SPRAVKA_PHRASE.append(f"- {tc(at)} «{note[:46]}»: {text} — край в паузе ({lv:.0f} дБ < {PAUSE_DB:.0f}), не находка")
+    elif ok: SPRAVKA_PHRASE.append(f"- {tc(at)} «{note[:46]}»: {text} — разобрано: {ok}")
+    else: add("ФРАЗА", at, note, text + (f" (у края {lv:.0f} дБ)" if lv is not None else ""))
+
 used = {}
 prev_live = None
 for i, s in enumerate(SEG):
@@ -136,9 +159,16 @@ for i, s in enumerate(SEG):
             bef = [x for x in w if x[2] > s["in"] - 0.6 and x[1] < s["in"] - 0.05]
             aft = [x for x in w if x[1] < s["out"] + 0.6 and x[2] > s["out"] + 0.05]
             if bef and not cont_p:
-                add("ФРАЗА", T[i], note, f"начало режет: …{' '.join(x[0] for x in bef[-4:])} | {' '.join(x[0] for x in inside[:4])}")
+                phrase(T[i], note, s, "in", p, s["in"], f"начало режет: …{' '.join(x[0] for x in bef[-4:])} | {' '.join(x[0] for x in inside[:4])}")
             if aft and not cont_n:
-                add("ФРАЗА", T[i] + d, note, f"конец режет: {' '.join(x[0] for x in inside[-4:])} | {' '.join(x[0] for x in aft[:5])}…")
+                phrase(T[i] + d, note, s, "out", p, s["out"], f"конец режет: {' '.join(x[0] for x in inside[-4:])} | {' '.join(x[0] for x in aft[:5])}…")
+        # РАЗРЫВ (владелец 23.11, s5 10:15 «непонятный кусочек перебивает мою речь»): речь A → чужой план со своим звуком → речь A
+        if (not muted and prv and nxt and prv["src"] == nxt["src"] != s["src"] and (prv.get("gain_db", 0) or 0) > -40
+                and (nxt.get("gain_db", 0) or 0) > -40 and -0.1 <= nxt["in"] - prv["out"] < 1.5):
+            wp, _, _ = words_for(S[prv["src"]])
+            if wp and any(prv["out"] - 1.0 <= x[1] < prv["out"] for x in wp) and any(nxt["in"] <= x[1] < nxt["in"] + 1.0 for x in wp):
+                add("РАЗРЫВ", T[i], note, f"{d:.1f} с со своим звуком посреди речи «{prv['note'][:36]}» — речь прервана и продолжена после "
+                    "(перебивкой поверх речи, без звука или убрать)")
         if not muted and not recap:
             for o in s.get("broll", []):
                 if o.get("flash"): continue
@@ -294,12 +324,17 @@ if cat_p and os.path.exists(cat_p):
         NOT_IN = [f"## НЕ ВОШЛО С НАМИ — ошибка справки: {e_}", ""]
 
 F.sort()
-lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
-for kind in ["ФРАЗА", "ПОКАЗ", "НЕМОЙ", "ГОЛОС", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
+import hashlib as _hl
+_psha = _hl.sha256(open(a[0], "rb").read()).hexdigest()
+_nph = sum(1 for f_ in F if f_[1] == "ФРАЗА"); _nrz = sum(1 for f_ in F if f_[1] == "РАЗРЫВ")
+lines = [f"# Автопроверка монтажа: {os.path.basename(a[0])}, {t / 60:.1f} мин, находок {len(F)}", "",
+         f"план sha256: {_psha[:12]} · ФРАЗА неразобранных: {_nph} · РАЗРЫВ: {_nrz}", ""] + THEME_NOTE + [""] + ([f"Темп (справка): {TEMPO[0]}"] + TEMPO[1:] + [""] if TEMPO else [])
+for kind in ["ФРАЗА", "РАЗРЫВ", "ПОКАЗ", "НЕМОЙ", "ГОЛОС", "ВРЕМЯ", "ПОВТОР", "ПЛАШКА", "ОКНО", "МУЗЫКА", "ВЫХОД", "КОРОЧЕ 4 С", "ТЕМА"]:
     rows = [f for f in F if f[1] == kind]
     lines.append(f"## {kind} — {len(rows)}")
     lines += [f"- {tc(at)} «{note[:46]}»: {text}" for at, _, note, text in rows] or ["- нет"]
     lines.append("")
+lines += ([f"## ФРАЗА разобрана / в паузе (справка) — {len(SPRAVKA_PHRASE)}"] + SPRAVKA_PHRASE + [""]) if SPRAVKA_PHRASE else []
 lines += NOT_IN
 txt = "\n".join(lines)
 if out: open(out, "w").write(txt)

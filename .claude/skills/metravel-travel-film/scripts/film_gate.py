@@ -13,7 +13,8 @@
   film_gate.py plan-verdict <plan.json> --series s3 --scores … --blockers 0 --report <рецензия.md>
       вердикт по плану без черновика 360p (владелец 22.11: правки проверены по плану) — засчитывается для 1080p;
       после 1080p рецензент пишет обычный verdict по готовому файлу. Для 4K вердикта «по плану» мало
-  film_gate.py request <plan.json> --series s3 --draft <черновик.mp4> --from "<сессия>"
+  film_gate.py request <plan.json> --series s3 --draft <черновик.mp4> --from "<сессия>" [--audit-cut audit_cut.md]
+      и plan-verdict: только если audit_cut по этому плану (строка «план sha256») без неразобранных ФРАЗА и РАЗРЫВ
       сборщик просит рецензию: status показывает черновик в очереди, пока по этому плану нет вердикта
   film_gate.py owner-4k <plan.json> --series s3 --quote "<слова владельца из чата>"
   film_gate.py check <plan.json> --size 1920x1080      — код 0, если сборка разрешена
@@ -143,8 +144,9 @@ def same(a, b, path="", out=None):
     out = [] if out is None else out
     num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
     if len(out) >= 5: return out
-    if num(a) and num(b):
-        if abs(a - b) > TOL: out.append(f"{path}: {a} → {b}")
+    if num(a) and num(b):                    # громкость куска перемеряется по копии (s3, рецензент 23.11): loud_gain/lufs — до 1 дБ
+        tol = 1.0 if path.rsplit("/", 1)[-1] in ("loud_gain", "lufs") else TOL
+        if abs(a - b) > tol: out.append(f"{path}: {a} → {b}")
     elif type(a) != type(b):
         out.append(f"{path}: {str(a)[:60]} → {str(b)[:60]}")
     elif isinstance(a, dict):
@@ -240,6 +242,23 @@ def gate_problems(plan_path, width, height, inherit=None):
     return problems
 
 
+def phrase_problems(plan_path, report=None):
+    """Рецензент 23.11 (s5 10:15): план с неразобранной ФРАЗА или РАЗРЫВ не идёт ни в plan-verdict, ни в request.
+    Отчёт audit_cut по этому плану: --audit-cut или любой audit_cut*.md в папке планов, где строка «план sha256: <sha12>»."""
+    psha = sha(plan_path)[:12]; pd = os.path.dirname(os.path.abspath(plan_path))
+    cands = [report] if report else sorted(glob.glob(os.path.join(pd, "**", "audit_cut*.md"), recursive=True), key=os.path.getmtime, reverse=True)
+    for r in cands:
+        if not r or not os.path.exists(r): continue
+        with open(r, encoding="utf-8") as f:
+            head = "".join(f.readline() for _ in range(4))
+        m = re.search(r"план sha256: (\w+) · ФРАЗА неразобранных: (\d+) · РАЗРЫВ: (\d+)", head)
+        if not m or m.group(1) != psha: continue
+        n_ph, n_rz = int(m.group(2)), int(m.group(3))
+        return [] if not (n_ph or n_rz) else [f"audit_cut {os.path.basename(r)}: ФРАЗА неразобранных {n_ph}, РАЗРЫВ {n_rz} — поправь края "
+                                               "или разбери (ключ отрезка phrase_ok: {\"in\"|\"out\": причина}) и перезапусти audit_cut"]
+    return [f"нет отчёта audit_cut по этому плану (sha {psha}): audit_cut.py <план> --words-root … --out audit_cut_….md (или --audit-cut)"]
+
+
 def require(plan_path, width, height):
     """Вызывается из render_plan.py и assemble_film.py до рендера."""
     inh = {}
@@ -330,9 +349,10 @@ def main():
     v.add_argument("--report", required=True)
     pv = sub.add_parser("plan-verdict"); pv.add_argument("plan"); pv.add_argument("--series", required=True)
     pv.add_argument("--scores", required=True); pv.add_argument("--blockers", type=int, required=True)
-    pv.add_argument("--report", required=True)
+    pv.add_argument("--report", required=True); pv.add_argument("--audit-cut", dest="audit_cut")
     r = sub.add_parser("request"); r.add_argument("plan"); r.add_argument("--series", required=True)
     r.add_argument("--draft", required=True); r.add_argument("--from", dest="sender", required=True)
+    r.add_argument("--audit-cut", dest="audit_cut")
     o = sub.add_parser("owner-4k"); o.add_argument("plan"); o.add_argument("--series", required=True)
     o.add_argument("--quote", required=True)
     c = sub.add_parser("check"); c.add_argument("plan"); c.add_argument("--size", required=True)
@@ -362,6 +382,8 @@ def main():
         print("1080p разрешён" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
     elif a.cmd == "plan-verdict":
         check_series(a.plan, a.series)
+        pp = phrase_problems(a.plan, a.audit_cut)
+        if pp: raise SystemExit("plan-verdict не записан:\n- " + "\n- ".join(pp))
         for p in (a.plan, a.report):
             if not os.path.exists(p):
                 raise SystemExit(f"нет файла: {p}")
@@ -373,6 +395,8 @@ def main():
         print("1080p разрешён (по плану)" if not problems else "1080p закрыт:\n- " + "\n- ".join(problems))
     elif a.cmd == "request":
         check_series(a.plan, a.series)
+        pp = phrase_problems(a.plan, a.audit_cut)
+        if pp: raise SystemExit("request не записан:\n- " + "\n- ".join(pp))
         if not a.sender.strip():
             raise SystemExit("нужно имя сессии-сборщика в --from")
         for p in (a.plan, a.draft):
