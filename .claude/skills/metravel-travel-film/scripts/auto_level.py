@@ -17,6 +17,10 @@ ATTACK, RELEASE = 0.4, 0.6   # приглушение начинается до 
 GAP = 0.8            # паузы между словами короче этого — одна фраза
 VO_GAP = 2.0         # голос за кадром: паузы между фразами короче этого — музыка не поднимается (s3 v14: «ранее», запас 9 дБ)
 MAX_CUT, MAX_LIFT = 40.0, 12.0
+# Голос за кадром (доозвучка, связки, «ранее») — как речь, но с потолком: музыка под ним не громче VO_TOP дБ по метрике
+# audit_mix (моно ½(L+R), окна голоса). Рецензент 23.11, s5 v5b: под доозвучкой −27,6…−28,2 при норме владельца ≤ −32.
+# Подхват — за VO_EDGE до голоса, отпуск — через VO_EDGE после. Запас VO_MARGIN — на разброс 3-секундной оценки.
+VO_TOP, VO_EDGE, VO_MARGIN = -32.0, 0.3, 1.0
 
 
 def rms_windows(path, win=WIN, half_sum=False, power=False):
@@ -151,7 +155,8 @@ def envelope(n, music, live, voice, speech_iv, adj, caps=()):
     at = lambda w, i: w[i] if i < len(w) else -120.0
     win = lambda s, e: range(max(0, int(s / WIN)), min(n, int(math.ceil(e / WIN))))
     spans = [(win(s, e), live) for s, e in speech_iv]
-    spans += [(win(s, e), voice) for s, e in merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > SPEECH_MIN], VO_GAP)]
+    vo_iv = merge([(i * WIN, (i + 1) * WIN) for i in range(n) if at(voice, i) > SPEECH_MIN], VO_GAP)
+    spans += [(win(s, e), voice) for s, e in vo_iv]
     h = int(1.5 / WIN)
     loc = lambda i, lo, hi: energy(music, range(max(lo, i - h), min(hi, i + h)))
     talk, levels = [None] * n, []
@@ -197,6 +202,10 @@ def envelope(n, music, live, voice, speech_iv, adj, caps=()):
     for t0, t1, db in adj:                            # ручная поправка трека поверх автоматики
         for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
             g2[i] += db
+    # потолок под голосом за кадром: music меряется мощностью стерео (power=True) — это до +3 дБ к моно ½(L+R) audit_mix
+    for s0, e0 in vo_iv:
+        for i in range(max(0, int((s0 - VO_EDGE) / WIN)), min(n, int(math.ceil((e0 + VO_EDGE) / WIN)))):
+            if at(music, i) > -70: g2[i] = min(g2[i], VO_TOP - VO_MARGIN + 3.0 - loc(i, 0, n))
     for t0, t1, top in caps:                          # потолок музыки под речью (аккордеон, 23.11): уровень трека + усиление ≤ top
         for i in range(max(0, int(t0 / WIN)), min(n, int(math.ceil(t1 / WIN)))):
             if talk[i] is not None and at(music, i) > -70: g2[i] = min(g2[i], top - loc(i, 0, n))

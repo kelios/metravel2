@@ -558,13 +558,44 @@ else:
         if os.path.exists(_noext + suf): os.remove(_noext + suf)
     if cues:
         ins = ["-i", base]; fc = []; labs = []
+        # голос за кадром (рецензент 23.11): музыка под ним не громче VO_TOP (−32 дБ по метрике audit_mix). Автоуровни держат
+        # потолок в огибающей; без них — понижение каждого трека на время голоса ± VO_EDGE по замеру его куска
+        import auto_level as _ALv
+        VO_IV = []
+        for c in cues:
+            if isvoice(c) and not c.get("name", "").startswith("пи"):
+                va = film(*c["a"]); vb = film(*c["b"])
+                if va is None or vb is None: continue
+                r_ = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", c["file"]], capture_output=True, text=True)
+                try: vd = float(r_.stdout.strip()) - c.get("src_in", 0.0)
+                except ValueError: vd = vb - va
+                VO_IV.append((va, min(vb, va + vd)))
+        def vo_rms(f, s0, d0):
+            r_ = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-ss", f"{max(0.0, s0):.3f}", "-t", f"{d0:.3f}", "-i", f, "-vn", "-af",
+                                 "aformat=channel_layouts=stereo,pan=mono|c0=0.5*c0+0.5*c1,aresample=8000,astats=metadata=0", "-f", "null", "-"], capture_output=True, text=True)
+            m_ = _re.findall(r"RMS level dB:\s*(-?inf|-?[\d.]+)", r_.stderr)
+            return max(float(m_[-1]), -120.0) if m_ else -120.0
+        def vo_duck(c, a_, d, g):
+            """Множитель громкости трека (выражение ffmpeg по t фильма) на время голоса ± VO_EDGE, рампы VO_EDGE; '' — не нужно."""
+            parts = []
+            for va, vb in VO_IV:
+                x0, x1 = max(a_, va - _ALv.VO_EDGE), min(a_ + d, vb + _ALv.VO_EDGE)
+                if x1 - x0 < 0.2: continue
+                lv = vo_rms(c["file"], c.get("src_in", 0.0) + (x0 - a_), x1 - x0) + g
+                cut = (_ALv.VO_TOP - _ALv.VO_MARGIN) - lv
+                if cut >= 0: continue
+                k = 10 ** (cut / 20); e = _ALv.VO_EDGE
+                parts.append(f"(1-{1 - k:.4f}*clip(min((t-{x0 - e:.3f})/{e},({x1 + e:.3f}-t)/{e}),0,1))")
+                say(f"голос за кадром {va:.1f}–{vb:.1f} с: «{os.path.basename(c['file'])[:30]}» {lv:.1f} → {lv + cut:.1f} дБ")
+            return ("," + "volume='" + "*".join(parts) + "':eval=frame") if parts else ""
         for j, c in enumerate(cues, 1):
             a_, b_ = (c["_a"], c["_b"]) if "_a" in c else (film(*c["a"]), film(*c["b"])); d = b_ - a_
             g = (-36.0 + c.get("level_db", 0)) - lufs(c["file"])
             if AUTO and any(c is x for x in seq): g = -23.0 - lufs(c["file"])   # автоуровни: трек к −23 LUFS, дальше огибающая
             fo = c.get("fade_out", 3.0)
             ins += ["-ss", str(c.get("src_in", 0)), "-t", f"{d:.3f}", "-i", c["file"]]
-            fc.append(f"[{j}:a]aresample=48000,aformat=channel_layouts=stereo,volume={g:.2f}dB,afade=t=in:d={max(c.get('fade_in', 1.5), 0.01)},afade=t=out:st={max(d - fo, 0):.3f}:d={max(fo, 0.01)},adelay={int(a_ * 1000)}|{int(a_ * 1000)}[m{j}]")
+            duck = vo_duck(c, a_, d, g) if (not AUTO and not isvoice(c) and VO_IV) else ""
+            fc.append(f"[{j}:a]aresample=48000,aformat=channel_layouts=stereo,volume={g:.2f}dB,afade=t=in:d={max(c.get('fade_in', 1.5), 0.01)},afade=t=out:st={max(d - fo, 0):.3f}:d={max(fo, 0.01)},adelay={int(a_ * 1000)}|{int(a_ * 1000)}{duck}[m{j}]")
             labs.append(f"[m{j}]")
         fc.append(f"[0:a]{''.join(labs)}amix=inputs={len(labs) + 1}:normalize=0:duration=first[a]")   # пики ограничивает encode_master() ниже
         _mark("громкость треков")
