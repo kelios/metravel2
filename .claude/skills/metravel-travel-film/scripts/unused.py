@@ -16,7 +16,7 @@ python3 unused.py report <plan.json> --days "День 0" "День 1" [--root /V
 
 Из кода: used_intervals(plan, maps) — {исходник: [(от, до)]}; day_clips(days, root); unused_with_people(plan, catalog) — для
 audit_cut («НЕ ВОШЛО С НАМИ»)."""
-import glob, json, os, re, subprocess, sys
+import glob, json, os, re, subprocess, sys, unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 VID = (".mp4", ".mov")
@@ -40,6 +40,14 @@ def duration(f):
     return _dur[f]
 
 
+def NP(p, base=None):
+    """Один вид пути: абсолютный (относительный — от папки плана/карт: plates.py jobs --dir . пишет ./размытие/номера/…)
+    и NFC (macOS отдаёт имена папок в NFD: «Вёль» из glob ≠ «Вёль» из плана — сборщик s3, 23.11)."""
+    if not isinstance(p, str): return p
+    if base and not os.path.isabs(p): p = os.path.join(base, p)
+    return unicodedata.normalize("NFC", os.path.normpath(p))
+
+
 def load_maps(*dirs):
     """{копия: (исходник, сдвиг)} — исходник-время = сдвиг + время копии. Узнаёт три формы JSON (см. шапку)."""
     M = {}
@@ -47,6 +55,7 @@ def load_maps(*dirs):
     for d in dirs:
         files += glob.glob(os.path.join(d, "*.json")) + glob.glob(os.path.join(d, "*", "*.json")) + glob.glob(os.path.join(d, "*", "*", "*.json"))
     for f in files:
+        d = next((x for x in dirs if f.startswith(x)), os.path.dirname(f)); n = lambda p: NP(p, os.path.abspath(d))
         b = os.path.basename(f)
         if b.startswith(("._", "plan_")) or os.path.getsize(f) > 30_000_000: continue
         try: J = json.load(open(f, encoding="utf-8"))
@@ -55,13 +64,13 @@ def load_maps(*dirs):
             for k, v in J.items():
                 if not isinstance(k, str): continue
                 if isinstance(v, list) and len(v) == 2 and isinstance(v[0], str) and isinstance(v[1], (int, float)):
-                    M.setdefault(k, (v[0], float(v[1])))                       # alias: копия → [исходник, сдвиг]
+                    M.setdefault(n(k), (n(v[0]), float(v[1])))                       # alias: копия → [исходник, сдвиг]
                 elif isinstance(v, list) and v and all(isinstance(r, list) and len(r) == 3 and isinstance(r[2], str) for r in v):
-                    for a, _, cp in v: M.setdefault(cp, (k, float(a)))          # карта размытия: исходник → [[от, до, копия]]
+                    for a, _, cp in v: M.setdefault(n(cp), (n(k), float(a)))          # карта размытия: исходник → [[от, до, копия]]
         elif isinstance(J, list):
             for r in J:
                 if isinstance(r, dict) and isinstance(r.get("src"), str) and isinstance(r.get("out"), str):
-                    M.setdefault(r["out"], (r["src"], float(r.get("in") or 0.0)))  # память, вертикали
+                    M.setdefault(n(r["out"]), (n(r["src"]), float(r.get("in") or 0.0)))  # память, вертикали
     return M
 
 
@@ -89,17 +98,17 @@ def origin(path, t, M, root=None):
         m = _PH.search(path)
         if m and root:
             g = _media(root).get(m.group(1), [])
-            if g: return sorted(g, key=lambda x: not x.lower().endswith(".mov"))[0], 0.0
+            if g: return NP(sorted(g, key=lambda x: not x.lower().endswith(".mov"))[0]), 0.0
         break
     return path, t
 
 
-def used_intervals(P, M, root=None):
-    """{исходник: [(от, до)]} — что план берёт из каждого файла (главный план и перебивки)."""
+def used_intervals(P, M, root=None, base=None):
+    """{исходник: [(от, до)]} — что план берёт из каждого файла (главный план и перебивки). base — папка плана."""
     U = {}
     def add(path, a, d):
         if not path or d <= 0: return
-        o, oa = origin(path, a, M, root)
+        o, oa = origin(NP(path, base), a, M, root)
         U.setdefault(o, []).append((oa, oa + d))
     for x in P["segments"]:
         add(P["sources"].get(x["src"]), x["in"], x["out"] - x["in"])
@@ -126,7 +135,7 @@ def day_clips(days, root):
         for D in glob.glob(os.path.join(root, f"{d} — *")) or glob.glob(os.path.join(root, d)):
             for f in sorted(glob.glob(D + "/**/*", recursive=True)):
                 if not f.lower().endswith(VID) or "/._" in f or "/Собраны/" in f: continue
-                (reels if ("/телефон/" in f and f.endswith(".MP4")) else src).append(f)
+                (reels if ("/телефон/" in f and f.endswith(".MP4")) else src).append(NP(f))
     return src, reels
 
 
@@ -135,7 +144,7 @@ def catalog_index(cat_path):
     import shot_catalog
     C = json.load(open(cat_path, encoding="utf-8")); I = {}
     for p in C["кадры"]:
-        p = dict(p); p["_tags"] = shot_catalog.piece_tags(p); I.setdefault(p["file"], []).append(p)
+        p = dict(p); p["file"] = NP(p["file"]); p["_tags"] = shot_catalog.piece_tags(p); I.setdefault(p["file"], []).append(p)
     return I
 
 
@@ -158,7 +167,7 @@ def has_us(pieces):
 
 def report(P, days, root, cat=None, maps=None, mn=0.5):
     M = load_maps(*(maps or []))
-    U = used_intervals(P, M, root)
+    U = used_intervals(P, M, root, os.path.abspath(maps[0]) if maps else None)
     src, reels = day_clips(days, root)
     I = catalog_index(cat)
     rows = []
@@ -176,7 +185,7 @@ def unused_with_people(P, cat, plan_dir, min_len=4.0, mn=0.5):
     import shot_catalog
     M = load_maps(plan_dir)
     root = next((r for r in ("/Volumes/T7/GR21",) if os.path.isdir(r)), None)
-    U = used_intervals(P, M, root)
+    U = used_intervals(P, M, root, os.path.abspath(plan_dir))
     I = catalog_index(cat); out = []
     for f, pcs in I.items():
         if not f.lower().endswith(VID) or "/фото/" in f: continue     # фото и их копии (без in/out) — не клипы
