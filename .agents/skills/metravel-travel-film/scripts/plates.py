@@ -5,6 +5,7 @@
 uv run --with "opencv-python-headless<5" --with numpy python plates.py copy <файл> <от> <до> <копия.mp4> [--yolox M.onnx]
                                                                     [--box x0,y0,x1,y1,с,по[,1] …]
 uv run … plates.py jobs <задания.json> --dir <папка filmora> --series sN [--only ключ,…]
+uv run … plates.py check <план_blur.json> <папка> [--only /номера/] [--per 5]   — после подстановки: «НОМЕР ВИДЕН?» по ≥ 5 моментам куска
 
 copy  — <файл>: то, что сейчас стоит в плане (исходник или копия с размытыми лицами); <от>/<до> — секунды в нём.
         Кадр 1920×1080: YOLOX-S → машины (шире 4 %) и люди. Номер — строка ≥ 4 знаков одной высоты в ряд (MSER, тёмные на светлом
@@ -76,7 +77,7 @@ def _blobs(roi):
     return out
 
 
-def plate_boxes(img, car):
+def plate_boxes(img, car, cap=2):
     """Где номер внутри машины: [(x, y, w, h)] в пикселях кадра. Рамка машины растягивается до ширины ≥ 480 px (мелкие знаки — 3–5 px);
     строка знаков (центр на 35–97 % высоты машины) расширяется до таблички (≥ 7 высот знака и ×2,6 строки, ×2,8 по высоте);
     строка шире 60 % машины — надпись/решётка."""
@@ -102,7 +103,7 @@ def plate_boxes(img, car):
             if not (0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96): continue
             pw, ph = cw * 1.4, chh * 1.8
             res.append((int(x0 + (cx - pw / 2) / s), int(y0 + (cy - ph / 2) / s), int(pw / s), int(ph / s)))
-    return res[:2]
+    return res[:cap]
 
 
 # ---------------------------------------------------------------- YOLOX-S: машины и люди
@@ -142,7 +143,13 @@ def yolox_path(start):
 
 # ---------------------------------------------------------------- копия с размытыми номерами
 def copy(src, a, b, out, yp, boxes=()):
-    MAN = [[float(t) for t in s.split(",")] for s in boxes]
+    # рамка «x0,y0,x1,y1,с,по» — номер (минус люди); седьмое поле «головы» — головы людей, чей центр в рамке, по детектору людей
+    # кадр за кадром (профили посторонних: детектор лиц их не видит — s1 v23d_blur 23.11, официантка 3:08, мужчина с телефоном 6:25)
+    MAN, HEADS = [], []
+    for s in boxes:
+        f_ = s.split(",")
+        if len(f_) > 6 and f_[6].strip() == "головы": HEADS.append([float(t) for t in f_[:6]])
+        else: MAN.append([float(t) for t in f_[:7]])          # седьмое поле 1 — рамка-лицо (люди не вычитаются)
     pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
                                     "stream=codec_name,width,height,r_frame_rate,pix_fmt,color_primaries,color_transfer,color_space",
                                     "-of", "json", src], capture_output=True, text=True).stdout)["streams"][0]
@@ -159,8 +166,9 @@ def copy(src, a, b, out, yp, boxes=()):
         if len(buf) < DW * DH * 3: break
         img = np.frombuffer(buf, np.uint8).reshape(DH, DW, 3)
         c, pp = det(img); CARS.append(c); PPL.append(pp)
-        k_ = len(CARS) - 1                                   # знаки — на каждом 3-м кадре и у машин шире 5 % (дорожка переносит рамку)
-        PL.append([plate_boxes(img, x) if (k_ % 3 == 0 and x[2] >= 0.05 * DW) else [] for x in c])
+        # знаки — на каждом кадре, у машин от 4 %, до 4 строк на машину: на каждом 3-м кадре, от 5 % и по 2 строки номер «BN-714-EL»
+        # уступал надписи/наклейке и оставался читаемым (s1 v23d_blur 23.11, 0074 — рецензент; plates.py check ловил его на копии)
+        PL.append([plate_boxes(img, x, cap=4) if x[2] >= 0.04 * DW else [] for x in c])
     p.wait()
     N = len(CARS); exp = round((b - a) * fps)
 
@@ -207,6 +215,13 @@ def copy(src, a, b, out, yp, boxes=()):
         for x, y, w, h in PPL[i]:
             x, y, w, h = x * SX, y * SX, w * SX, h * SX
             m[int(y + 0.08 * h):int(y + 0.92 * h), int(x + 0.08 * w):int(x + 0.92 * w)] = 0
+        for x0, y0, x1, y1, ta, tb in HEADS:                 # головы — после вычета людей: это и есть люди
+            if not (ta <= t <= tb): continue
+            for j in range(max(0, i - D), min(N, i + D + 1)):
+                for x, y, w, h in PPL[j]:
+                    if not (x0 * DW <= x + w / 2 <= x1 * DW and y0 * DH <= y + h / 2 <= y1 * DH): continue
+                    hh = min(0.5 * w, 0.35 * h)              # голова: верх рамки человека (в полный рост ~0,13 h, по пояс ~0,3 h)
+                    m[max(0, int((y - 0.1 * hh) * SX)):int((y + hh * 1.1) * SX), max(0, int((x - 0.05 * w) * SX)):int((x + 1.05 * w) * SX)] = 255
         for x0, y0, x1, y1, ta, tb, *_ in [r for r in MAN if len(r) == 7 and r[6] == 1]:   # рамка-лицо: людей не вычитаем
             if ta <= t <= tb: m[int(y0 * H):int(y1 * H), int(x0 * W):int(x1 * W)] = 255
         covered += bool(m.any())
@@ -274,8 +289,63 @@ def jobs(path, film_dir, series, only=None, yp=None):
     print("карта номеров:", manp, "—", len(MAN), "исходников")
 
 
+def check(plan_path, out_dir, only="/номера/", per=5, yp=None):
+    """Остались ли знаки номера в готовых копиях: каждый кусок плана, чей файл содержит only (пусто — все), ≥ per моментов
+    (и ≥ 1 к/с), кадр 1920×1080, машины шире 4 %, строка ≥ 4 знаков на месте номера — находка «НОМЕР ВИДЕН?» с вырезом машины
+    в лист. Размытый номер строки знаков не даёт. Лист по одному кадру куска пропустил отставшую рамку (s1 v23d_blur 23.11, 0074 22:27)."""
+    from PIL import Image, ImageDraw
+    P = json.load(open(plan_path)); SRC = P["sources"]; det = Det(yp or yolox_path(os.path.dirname(os.path.abspath(plan_path))))
+    jobs, t0 = [], 0.0
+    for x in P["segments"]:
+        d = x["out"] - x["in"]
+        jobs.append((t0, x.get("note", ""), SRC[x["src"]], x["in"], d))
+        for o in x.get("broll", []):
+            if isinstance(o.get("file"), str): jobs.append((t0 + o["at"] - x["in"], x.get("note", "") + " / перебивка", o["file"], o.get("in", 0.0), o["dur"]))
+        t0 += d
+    jobs = [j for j in jobs if (not only or only in unicodedata.normalize("NFC", j[2])) and not j[2].lower().endswith((".png", ".jpg", ".jpeg"))]
+    os.makedirs(out_dir, exist_ok=True); hits, n_fr, n_car = [], 0, 0
+    for ft, note, f, a0, d in jobs:
+        n = max(per, int(d + 0.999))
+        for i in range(n):
+            st = a0 + d * (i + 0.5) / n
+            buf = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{st:.3f}", "-i", f, "-frames:v", "1", "-vf", "scale=1920:1080",
+                                  "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, stdin=subprocess.DEVNULL).stdout
+            if len(buf) < 1920 * 1080 * 3: continue
+            img = np.frombuffer(buf, np.uint8).reshape(1080, 1920, 3); n_fr += 1
+            cars, _ = det(img)
+            for car in cars:
+                n_car += 1; x, y, w, h = [int(round(v)) for v in car]
+                x0_, y0_, x1_, y1_ = max(0, x), max(0, y + int(0.15 * h)), min(1920, x + w), min(1080, y + h)
+                if x1_ - x0_ < 24 or y1_ - y0_ < 12: continue
+                s = max(1.0, 480 / (x1_ - x0_))
+                g = cv2.createCLAHE(2.0, (8, 8)).apply(cv2.cvtColor(cv2.resize(img[y0_:y1_, x0_:x1_], None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2GRAY))
+                ok = []
+                for nn, (a_, b_, cw, chh) in sorted(_lines(g) + _lines(255 - g), reverse=True)[:4]:
+                    ry = (y0_ + (b_ + chh / 2) / s - y) / max(1, h); rx = (x0_ + (a_ + cw / 2) / s - x) / max(1, w)
+                    if cw <= 0.6 * g.shape[1] and 0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96: ok.append(nn)
+                if ok:
+                    hits.append((ft + st - a0, note, f, st, max(ok), img[max(0, y - h // 6):min(1080, y + h + h // 6), max(0, x - w // 6):min(1920, x + w + w // 6)].copy()))
+    tc = lambda s_: f"{int(s_ // 60)}:{s_ % 60:04.1f}"
+    L = [f"# НОМЕР ВИДЕН? — {os.path.basename(plan_path)}: кусков {len(jobs)}, кадров {n_fr}, машин {n_car}, находок {len(hits)}", "",
+         "Строка знаков на месте номера в готовой копии. Проверить глазами по листу; читается — рамка в задание plates.py jobs.", ""]
+    L += [f"- [{k + 1}] {tc(ft)} «{note}»: `{os.path.basename(f)}` @ {st:.2f} с, знаков в строке {nn}" for k, (ft, note, f, st, nn, _) in enumerate(hits)] or ["- нет"]
+    open(os.path.join(out_dir, "номер виден.md"), "w").write("\n".join(L) + "\n")
+    tiles = []
+    for k, (ft, note, f, st, nn, cr) in enumerate(hits):
+        im = Image.fromarray(cr[:, :, ::-1]); im.thumbnail((480, 300)); tl = Image.new("RGB", (480, 324), "black"); tl.paste(im, (0, 24))
+        ImageDraw.Draw(tl).text((4, 4), f"[{k + 1}] {tc(ft)} {os.path.basename(f)[-24:]} {st:.1f}s", fill="white"); tiles.append(tl)
+    for n_ in range(0, len(tiles), 16):
+        part = tiles[n_:n_ + 16]; sh = Image.new("RGB", (4 * 484, ((len(part) + 3) // 4) * 328), "black")
+        for i, tl in enumerate(part): sh.paste(tl, ((i % 4) * 484, (i // 4) * 328))
+        sh.save(os.path.join(out_dir, f"номер виден {n_ // 16 + 1:02d}.jpg"), quality=88)
+    print(f"НОМЕР ВИДЕН?: кусков {len(jobs)}, кадров {n_fr}, машин {n_car}, находок {len(hits)} → {out_dir}")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
+    if len(a) >= 3 and a[0] == "check":
+        opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
+        check(a[1], a[2], opt("--only", "/номера/"), int(opt("--per", "5")), opt("--yolox")); sys.exit(0)
     if len(a) < 2 or a[0] not in ("copy", "jobs"): print(__doc__); sys.exit(2)
     opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
     heavy_lock.acquire(f"plates {a[0]} {os.path.basename(a[1])}", wait="--no-wait" not in a)
