@@ -57,9 +57,11 @@ def load_maps(*dirs):
     for f in files:
         d = next((x for x in dirs if f.startswith(x)), os.path.dirname(f)); n = lambda p: NP(p, os.path.abspath(d))
         b = os.path.basename(f)
-        if b.startswith(("._", "plan_")) or os.path.getsize(f) > 30_000_000: continue
-        try: J = json.load(open(f, encoding="utf-8"))
-        except Exception: continue
+        if b.startswith(("._", "plan_")) or "/proxy/" in f or "_parts/" in f: continue   # рендеры и их кеш — карт копий там нет
+        try:                                     # файл могла удалить другая сессия, пока шёл glob (s3 23.11: чистка proxy s4)
+            if os.path.getsize(f) > 30_000_000: continue
+            J = json.load(open(f, encoding="utf-8"))
+        except (OSError, ValueError): continue
         if isinstance(J, dict):
             for k, v in J.items():
                 if not isinstance(k, str): continue
