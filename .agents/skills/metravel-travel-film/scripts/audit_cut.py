@@ -50,7 +50,15 @@ a = sys.argv[1:]
 plan = json.load(open(a[0]))
 root = a[a.index("--words-root") + 1]
 alias = json.load(open(a[a.index("--alias") + 1])) if "--alias" in a else {}
-out = a[a.index("--out") + 1] if "--out" in a else None
+# копии размытия, номеров, вертикалей — по тем же картам, что film_gate (unused.load_maps): иначе размытый план терял ВРЕМЯ/ПОКАЗ,
+# а ТЕМА писала «нет в каталоге кадров» про s1_C3767_номера.mp4 и т. п. (s1 v23d_blur 23.11). --alias — поверх карт.
+import unused as _U
+_M = _U.load_maps(os.path.dirname(os.path.abspath(a[0])))
+for _p in set(plan["sources"].values()) | {o["file"] for x in plan["segments"] for o in x.get("broll", []) if isinstance(o.get("file"), str)}:
+    if _p in alias: continue
+    _s, _t = _U.origin(_U.NP(_p, os.path.dirname(os.path.abspath(a[0]))), 0.0, _M)
+    if _s != _U.NP(_p, os.path.dirname(os.path.abspath(a[0]))): alias[_p] = [_s, _t]
+out =a[a.index("--out") + 1] if "--out" in a else None
 S, SEG = plan["sources"], plan["segments"]
 # сильные указатели (рецензент 22.11, s3 v19: «вот», «это», «тут» звучат в разговоре каждые 2 с — 57 ложных ПОКАЗ):
 # одно слово — «смотрите / видите / вон / написано / покажу», или пара «вот этот / вот эта / вот это …»
