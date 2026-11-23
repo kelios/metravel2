@@ -52,6 +52,8 @@ except BlockingIOError:
     fcntl.flock(_lock, fcntl.LOCK_EX)
 _lock.seek(0); _lock.truncate()
 _lock.write(f"{os.path.basename(sys.argv[1])} → {os.path.basename(out)}, {W}x{H}, pid {os.getpid()}, с {_time.strftime('%d.%m %H:%M')}\n"); _lock.flush()
+import atexit                          # после рендера (и при ошибке) запись о нём стирается: в файле — только идущий рендер
+atexit.register(lambda: (_lock.seek(0), _lock.truncate(), _lock.flush()))
 _mark("очередь")
 SERIES = film_gate.plan_series(sys.argv[1])
 if "--workdir" not in a and SERIES:    # общий кеш серии и размера: версии плана берут готовые куски друг друга
