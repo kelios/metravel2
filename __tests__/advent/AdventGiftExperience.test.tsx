@@ -186,6 +186,16 @@ describe('door sheet as a gift (#3482)', () => {
     expect(view.queryByText(/задание засчитано/i)).toBeNull()
   })
 
+  it('keeps long button labels inside the paper on 320–390 px (acceptance #3482)', async () => {
+    // Подпись подарка в 30 символов вылезала за бумагу: кнопка в ряду брала ширину текста.
+    const door = doorOf(7)
+    const view = await renderSheet({ ...door, gift: { ...door.gift, link: '/travels', linkLabel: 'Даты и адреса польских ярмарок' } })
+    const giftLink = view.getByTestId('advent-gift-link')
+    expect(StyleSheet.flatten(giftLink.props.style).maxWidth).toBe('100%')
+    const cta = view.getByTestId('advent-task-cta')
+    expect(StyleSheet.flatten(cta.props.style).maxWidth).toBe('100%')
+  })
+
   it('invites a guest warmly to make the gift count', async () => {
     const view = await renderSheet(doorOf(3), false)
     expect(view.getByText('Хотите, чтобы этот подарок засчитался?')).toBeTruthy()

@@ -119,8 +119,8 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
           <Text style={styles.guestTitle}>{i18nT('adventStatic:sheet.guest.title')}</Text>
           <Text style={styles.body}>{i18nT('adventStatic:sheet.guest.text')}</Text>
           <View style={styles.buttonRow}>
-            <Button label={i18nT('adventStatic:sheet.guest.login')} onPress={handleLogin} testID="advent-guest-login" />
-            <Button label={i18nT('adventStatic:sheet.guest.register')} variant="outline" onPress={handleRegister} testID="advent-guest-register" />
+            <Button label={i18nT('adventStatic:sheet.guest.login')} onPress={handleLogin} style={styles.rowButton} labelNumberOfLines={2} testID="advent-guest-login" />
+            <Button label={i18nT('adventStatic:sheet.guest.register')} variant="outline" onPress={handleRegister} style={styles.rowButton} labelNumberOfLines={2} testID="advent-guest-register" />
           </View>
         </View>
       )
@@ -158,7 +158,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
           // Ручной отметки нет: сервер засчитает само действие на сайте (#2940).
           return (
             <View style={styles.ctaRow}>
-              <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} testID="advent-task-cta" />
+              <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} style={styles.rowButton} labelNumberOfLines={2} testID="advent-task-cta" />
               <Text style={styles.hint} testID="advent-task-server-credit-hint">
                 {i18nT('adventStatic:sheet.serverCreditHint')}
               </Text>
@@ -167,12 +167,12 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
         }
         return (
           <View style={styles.buttonRow}>
-            <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} testID="advent-task-cta" />
-            <Button label={i18nT('adventStatic:sheet.markDone')} variant="soft" onPress={handleDone} testID="advent-task-done-button" />
+            <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} style={styles.rowButton} labelNumberOfLines={2} testID="advent-task-cta" />
+            <Button label={i18nT('adventStatic:sheet.markDone')} variant="soft" onPress={handleDone} style={styles.rowButton} labelNumberOfLines={2} testID="advent-task-done-button" />
           </View>
         )
       default:
-        return <Button label={i18nT('adventStatic:sheet.markDone')} variant="soft" onPress={handleDone} testID="advent-task-done-button" />
+        return <Button label={i18nT('adventStatic:sheet.markDone')} variant="soft" onPress={handleDone} style={styles.rowButton} labelNumberOfLines={2} testID="advent-task-done-button" />
     }
   }
 
@@ -206,17 +206,17 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
             <Text style={styles.giftTitle}>{door.gift.title}</Text>
             <Text style={styles.body}>{door.gift.text}</Text>
             {door.gift.link ? (
-              <View style={styles.buttonRow}>
-                <Button
-                  label={door.gift.linkLabel ?? i18nT('adventStatic:sheet.openLink')}
-                  variant="soft"
-                  size="sm"
-                  icon={<Feather name="arrow-right" size={16} color={colors.primaryDark} />}
-                  iconPosition="right"
-                  onPress={handleGiftLink}
-                  testID="advent-gift-link"
-                />
-              </View>
+              <Button
+                label={door.gift.linkLabel ?? i18nT('adventStatic:sheet.openLink')}
+                variant="soft"
+                size="sm"
+                icon={<Feather name="arrow-right" size={16} color={colors.primaryDark} />}
+                iconPosition="right"
+                onPress={handleGiftLink}
+                style={styles.giftLink}
+                labelNumberOfLines={2}
+                testID="advent-gift-link"
+              />
             ) : null}
             {/* Открытка Рождества доступна всем: это сам подарок дверцы. */}
             {door.day === ADVENT_POSTCARD_DAY && door.bonus ? (
@@ -314,6 +314,10 @@ const createStyles = (colors: ThemedColors, paper: AdventPaperPalette) =>
     taskTitleRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
     taskTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', color: paper.ink },
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
+    // Кнопка по ширине подписи, но не шире бумаги: длинная подпись переносится,
+    // а не выталкивает лист вбок (приёмка #3482, 320–390 px).
+    rowButton: { maxWidth: '100%' },
+    giftLink: { alignSelf: 'flex-start', maxWidth: '100%' },
     ctaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
     hint: { flexShrink: 1, fontSize: 14, lineHeight: 20, color: paper.inkMuted },
     doneRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
