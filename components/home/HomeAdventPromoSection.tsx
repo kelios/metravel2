@@ -5,7 +5,7 @@ import { ResponsiveContainer } from '@/components/layout'
 import AdventWindowCrop from '@/components/advent/AdventWindowCrop'
 import Button from '@/components/ui/Button'
 import { ADVENT_MAIN_DOORS, ADVENT_ROUTE, isoDateToLocalMidnight } from '@/constants/advent'
-import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
+import { ADVENT_ART_COLORS, ADVENT_FACADE_BANNER_SOURCES } from '@/constants/adventVisuals'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAdventCampaign } from '@/hooks/useAdventCampaign'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -21,7 +21,12 @@ import { isPhoneLayout } from '@/utils/phoneLayout'
  * Живёт в отложенных секциях главной — на LCP не влияет. Оформление —
  * маленькое окно того же дома (#3482): кроп фасада на ночной подложке, цвета
  * иллюстрации не зависят от темы интерфейса.
+ * Кроп берёт облегчённую часть фасада, а не полный файл (#3488): на телефоне
+ * рамка во всю ширину — полоса ряда окон в полном разрешении, на desktop окно
+ * 120 px — уменьшенный фасад.
  */
+const DESKTOP_FACADE_SOURCES = [ADVENT_FACADE_BANNER_SOURCES.small] as const
+
 function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean; topGap?: number | string }) {
   const router = useRouter()
   const { width, isPhone, isLargePhone } = useResponsive()
@@ -57,6 +62,7 @@ function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean;
           <AdventWindowCrop
             day={isAnnounce ? null : door?.day}
             aspectRatio={isMobile ? 2.2 : 3 / 4}
+            sources={isMobile ? ADVENT_FACADE_BANNER_SOURCES.bands : DESKTOP_FACADE_SOURCES}
             style={styles.window}
             testID="home-advent-window"
           />

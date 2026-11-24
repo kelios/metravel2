@@ -179,6 +179,7 @@ function AdventYearInReviewCard({ year, preview }: Props) {
             canDownload={canDownload}
             onShare={() => void share()}
             onDownload={() => void download()}
+            tone="night"
             testIDPrefix="advent-yir"
           />
         </View>

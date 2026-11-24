@@ -1,8 +1,10 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 import AdventYearInReviewCard from '@/components/advent/AdventYearInReviewCard'
 import AdventShareCard from '@/components/advent/AdventShareCard'
 import { normalizeYearInReview } from '@/api/advent'
+import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
 import { i18n } from '@/i18n'
 
 let mockQuery: { isLoading: boolean; data: unknown } = { isLoading: false, data: undefined }
@@ -52,6 +54,16 @@ describe('AdventYearInReviewCard (#2868)', () => {
     expect(mockShare).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'year', year: 2026, text: 'Мои итоги 2026 года путешественника на MeTravel' }),
     )
+  })
+
+  it('reports a copied link in night colours on the diploma (#3488)', async () => {
+    mockQuery = { isLoading: false, data: fullYear }
+    mockShare.mockResolvedValue('copied')
+    const screen = await render(<AdventYearInReviewCard year={2026} />)
+    await fireEvent.press(screen.getByTestId('advent-yir-share'))
+    const status = await screen.findByTestId('advent-yir-status')
+    expect(screen.getByText('Ссылка скопирована')).toBeTruthy()
+    expect(StyleSheet.flatten(status.props.style).color).toBe(ADVENT_ART_COLORS.nightTextMuted)
   })
 
   it('shows a soft call to plan next year for an empty year', async () => {

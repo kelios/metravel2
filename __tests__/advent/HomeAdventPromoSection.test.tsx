@@ -71,6 +71,16 @@ describe('HomeAdventPromoSection visibility window (#2866)', () => {
     mockResponsive = { isPhone: true, isLargePhone: false, width: 390 }
     const screen = await renderAt(new Date(2026, 11, 5, 12))
     expect(screen.getByTestId('home-advent-cta')).toBeTruthy()
+    // Окно 5 — второй ряд фасада: полоса ряда в полном разрешении, не весь фасад (#3488).
+    expect(screen.getByTestId('home-advent-window-source-row-2', { includeHiddenElements: true })).toBeTruthy()
+    mockResponsive = { isPhone: false, isLargePhone: false, width: 1280 }
+  })
+
+  it('crops the light facade copies instead of the full 239 KB artwork (#3488)', async () => {
+    expect((await renderAt(new Date(2026, 11, 5, 12))).getByTestId('home-advent-window-source-small', { includeHiddenElements: true })).toBeTruthy()
+    mockResponsive = { isPhone: true, isLargePhone: false, width: 390 }
+    // Анонс — крыша дома под луной.
+    expect((await renderAt(new Date(2026, 10, 24, 12))).getByTestId('home-advent-window-source-roof', { includeHiddenElements: true })).toBeTruthy()
     mockResponsive = { isPhone: false, isLargePhone: false, width: 1280 }
   })
 })
