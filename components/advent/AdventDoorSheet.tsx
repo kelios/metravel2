@@ -23,14 +23,15 @@ import AdventCelebration from './AdventCelebration'
 import AdventRiddleTask from './AdventRiddleTask'
 import AdventGeoTask from './AdventGeoTask'
 import AdventGiftMedia from './AdventGiftMedia'
+// Открытка дверцы 25 — в чанке маршрута: шеринг и кнопки уже там (AdventShareCard), а новая
+// точка import() сдвигала id модулей, на которые ссылается entry (бюджет entry, #3482).
+import AdventPostcard from './AdventPostcard'
 import AdventSparkles from './AdventSparkles'
 import AdventWindowCrop from './AdventWindowCrop'
 import { useAdventPaper } from './useAdventPaper'
 
 // Только для дверцы 24 — отдельным чанком, вместе с контуром шеринга.
 const AdventYearInReviewCard = lazy(() => import('./AdventYearInReviewCard'))
-// Открытка дверцы 25 — тоже отдельным чанком с шерингом.
-const AdventPostcard = lazy(() => import('./AdventPostcard'))
 
 type Props = {
   door: AdventDoorView | null
@@ -219,9 +220,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
             ) : null}
             {/* Открытка Рождества доступна всем: это сам подарок дверцы. */}
             {door.day === ADVENT_POSTCARD_DAY && door.bonus ? (
-              <Suspense fallback={null}>
-                <AdventPostcard year={campaignYear} preview={preview} />
-              </Suspense>
+              <AdventPostcard year={campaignYear} preview={preview} />
             ) : null}
             {/* Дверца-подарок без задания: тихая строка вместо пустого «задания». */}
             {isOpenGift ? (
