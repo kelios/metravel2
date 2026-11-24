@@ -4,6 +4,7 @@ import { ResponsiveContainer } from '@/components/layout'
 import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -35,6 +36,10 @@ const openURL = (url: string) =>
 
 function FooterDesktop({ testID }: FooterDesktopProps) {
   const colors = useThemedColors()
+  // #3489: год — по живой дате только после гидратации. Статический HTML собран в
+  // другом году, чем открыт (январь до пересборки) — текст расходился, React #418.
+  const hydrated = useHydrationReady()
+  const copyrightYear = hydrated ? String(new Date().getFullYear()) : ''
   const localizeHref = useLocalizedNavHref()
   const iconColor = colors.primary
 
@@ -369,7 +374,7 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
             </View>
 
             <Text style={styles.copy} numberOfLines={1}>
-              {i18nT('navigation:components.layout.FooterDesktop.metravel_2020_1c77d748')}{new Date().getFullYear()}{' · '}{SITE_OWNER_LEGAL_NAME}
+              {i18nT('navigation:components.layout.FooterDesktop.metravel_2020_1c77d748')}{copyrightYear}{' · '}{SITE_OWNER_LEGAL_NAME}
             </Text>
           </View>
         </View>

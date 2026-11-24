@@ -123,6 +123,24 @@ describe('useTheme web contract', () => {
     expect(document.documentElement.getAttribute('data-season')).toBe(stored)
   })
 
+  it('renders without a season until mount on web, then the live season (#3489, React #418)', async () => {
+    // Статический HTML собран в другой день: живая дата в первом рендере давала
+    // рождественские элементы логотипа, которых нет в HTML.
+    jest.useFakeTimers({ now: new Date(2026, 11, 5, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'requestAnimationFrame', 'cancelAnimationFrame'] })
+    try {
+      const seen: Array<string | null> = []
+      const { result } = renderHook(() => {
+        const theme = useTheme()
+        seen.push(theme.activeSeasonalTheme)
+        return theme
+      }, { wrapper })
+      expect(seen[0]).toBeNull()
+      await waitFor(() => expect(result.current.activeSeasonalTheme).toBe('christmas'))
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('keeps the boot-script data-theme="dark" until the stored theme is read (no hydration flash, #2381)', async () => {
     localStorage.setItem('theme', 'dark')
     document.documentElement.setAttribute('data-theme', 'dark')

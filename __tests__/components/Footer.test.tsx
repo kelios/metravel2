@@ -13,6 +13,16 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isSuperuser: false, logout: jest.fn() }),
 }))
 
+// #3489: первый (до гидратации) кадр подвала — переключаемо в отдельном тесте.
+let mockHydrationReady: boolean | null = null
+jest.mock('@/hooks/useHydrationReady', () => {
+  const actual = jest.requireActual('@/hooks/useHydrationReady')
+  return {
+    ...actual,
+    useHydrationReady: (options?: unknown) => mockHydrationReady ?? actual.useHydrationReady(options),
+  }
+})
+
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>
     (global as any).__mockResponsive ?? {
@@ -209,6 +219,13 @@ describe('Footer', () => {
       // #1999: Meta Business Verification сверяет имя владельца с текстом сайта —
       // строка копирайта несёт его на каждой desktop-странице.
       expect(getByText(new RegExp(`© MeTravel 2020–\\d{4} · ${SITE_OWNER_LEGAL_NAME}$`))).toBeTruthy()
+      // #3489: до гидратации год не берётся из живой даты — статический HTML собран в
+      // другом году, чем открыт (React #418). Имя владельца (#1999) в строке остаётся.
+      mockHydrationReady = false
+      const preHydration = await render(<FooterDesktop />)
+      expect(preHydration.getByText(`© MeTravel 2020– · ${SITE_OWNER_LEGAL_NAME}`)).toBeTruthy()
+      preHydration.unmount()
+      mockHydrationReady = null
       expect(getByTestId('footer-item-privacy')).toBeTruthy()
       expect(getByTestId('footer-item-cookies')).toBeTruthy()
       expect(getByTestId('footer-item-fb')).toBeTruthy()

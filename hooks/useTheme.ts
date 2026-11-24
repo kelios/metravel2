@@ -193,11 +193,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Местная календарная дата обновляется в полночь и после восстановления вкладки.
   const calendarDate = useLocalCalendarDate();
   const calendar = useMemo(() => getSeasonalCalendar(calendarDate), [calendarDate]);
-  const activeSeasonalTheme = useMemo(
-    () => seasonalTheme === 'auto' ? calendar.activeId : resolveSeasonalTheme(seasonalTheme, calendarDate),
-    [seasonalTheme, calendarDate, calendar],
-  );
-
 
   // До чтения хранилища атрибуты `<html>` не трогаем (#2376, #2381): SSR-дефолты
   // (`auto`/светлая) расходятся с сохранёнными, и первый эффект на них затирал
@@ -205,6 +200,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // противоположной темы на каждой загрузке. На web чтение синхронное, поэтому
   // сохранённые значения, итоговая схема и флаг попадают в один рендер.
   const [prefsRead, setPrefsRead] = useState(false);
+  // #3489: на web сезон до чтения настроек — `null`. Статический HTML собран в
+  // другой день, чем открыт: живая дата в первом рендере давала элементы сезона
+  // (рождественские шапка и ёлка логотипа), которых нет в HTML, — React #418 на
+  // каждой странице с 01.12. Цвета сезона до гидратации ставит стартовый скрипт
+  // (`data-season`), а сезонные элементы появляются после монтирования.
+  const activeSeasonalTheme = useMemo(() => {
+    if (Platform.OS === 'web' && !prefsRead) return null;
+    return seasonalTheme === 'auto' ? calendar.activeId : resolveSeasonalTheme(seasonalTheme, calendarDate);
+  }, [prefsRead, seasonalTheme, calendarDate, calendar]);
   const seasonalCalendar = prefsRead ? calendar : null;
   // Системная схема на момент чтения; дальше её ведёт свой эффект, а чтение — одноразовое.
   const systemColorSchemeRef = useRef(systemColorScheme);
@@ -266,9 +270,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Синхронизация темы для web (data-theme + color-scheme)
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof document === 'undefined') return;
-    if (!prefsRead) return;
+    // Эффекты не исполняются при SSR, поэтому на web `document` здесь всегда есть.
+    if (Platform.OS !== 'web' || !prefsRead) return;
 
     const root = document.documentElement;
     root.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -281,9 +284,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Синхронизация праздничного оформления для web: `data-season` читает app/global.css.
   // Android/iOS receive the seasonal literals through useThemedColors instead.
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof document === 'undefined') return;
-    if (!prefsRead) return;
+    // Эффекты не исполняются при SSR, поэтому на web `document` здесь всегда есть.
+    if (Platform.OS !== 'web' || !prefsRead) return;
 
     const root = document.documentElement;
     if (activeSeasonalTheme) {
