@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_MAIN_DOORS } from '@/constants/advent'
+import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
 import { isYearInReviewEmpty, type YearInReview } from '@/api/advent'
 import { useYearInReviewQuery } from '@/hooks/useYearInReviewQuery'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -13,6 +14,7 @@ import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
 import type { AdventCardSpec, AdventCardStat } from '@/utils/advent/adventShareImage'
 import AdventShareActions from './AdventShareActions'
+import AdventWindowCrop from './AdventWindowCrop'
 import { useAdventCardShare } from './useAdventCardShare'
 
 type Props = { year: number; preview?: boolean }
@@ -74,6 +76,7 @@ function AdventYearInReviewCard({ year, preview }: Props) {
       title,
       subtitle: data?.countries.names.slice(0, 4).join(' · ') || undefined,
       stats: stats.map(({ value, label }) => ({ value, label })),
+      house: { lit: data?.advent.opened ?? 0 },
     }),
     [title, data, stats],
   )
@@ -130,41 +133,56 @@ function AdventYearInReviewCard({ year, preview }: Props) {
     )
   }
 
+  // «Грамота» на ночном фасаде (#3482): одна главная цифра, остальное — строками.
+  const [hero, ...rest] = stats
   return (
-    <View style={styles.card} testID="advent-yir-card">
-      <View style={styles.titleRow}>
-        <Feather name="star" size={20} color={colors.accent} />
-        <Text style={styles.title}>{title}</Text>
-      </View>
-      <Text style={styles.body}>{i18nT('adventStatic:yir.subtitle')}</Text>
-      <View style={styles.grid}>
-        {stats.map((stat) => (
-          <View key={stat.key} style={styles.tile} testID={`advent-yir-stat-${stat.key}`}>
-            <Feather name={stat.icon} size={16} color={colors.primaryDark} />
-            <Text style={styles.tileValue}>{stat.value}</Text>
-            <Text style={styles.tileLabel}>{stat.label}</Text>
-          </View>
-        ))}
-      </View>
-      {data.countries.names.length > 0 ? (
-        <View style={styles.chips} testID="advent-yir-countries">
-          {data.countries.names.slice(0, MAX_COUNTRY_CHIPS).map((name, index) => (
-            <View key={`${index}-${name}`} style={styles.chip}>
-              <Text style={styles.chipText}>{name}</Text>
-            </View>
-          ))}
+    <View style={styles.diploma} testID="advent-yir-card">
+      <AdventWindowCrop aspectRatio={2.4} style={styles.diplomaArt} />
+      <View style={styles.diplomaBody}>
+        <View style={styles.titleRow}>
+          <Feather name="star" size={20} color={ADVENT_ART_COLORS.gold} />
+          <Text style={styles.diplomaTitle}>{title}</Text>
         </View>
-      ) : null}
-      {data.firstSubscriptionAuthor ? (
-        <Text style={styles.body}>{i18nT('adventStatic:yir.author', { value1: data.firstSubscriptionAuthor })}</Text>
-      ) : null}
-      <AdventShareActions
-        status={status}
-        canDownload={canDownload}
-        onShare={() => void share()}
-        onDownload={() => void download()}
-        testIDPrefix="advent-yir"
-      />
+        <Text style={styles.diplomaSubtitle}>{i18nT('adventStatic:yir.subtitle')}</Text>
+        {hero ? (
+          <View style={styles.hero} testID={`advent-yir-stat-${hero.key}`}>
+            <Text style={styles.heroValue}>{hero.value}</Text>
+            <Text style={styles.heroLabel}>{hero.label}</Text>
+          </View>
+        ) : null}
+        {rest.length > 0 ? (
+          <View style={styles.lines}>
+            {rest.map((stat) => (
+              <View key={stat.key} style={styles.line} testID={`advent-yir-stat-${stat.key}`}>
+                <Feather name={stat.icon} size={15} color={ADVENT_ART_COLORS.gold} />
+                <Text style={styles.lineLabel}>{stat.label}</Text>
+                <Text style={styles.lineValue}>{stat.value}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {data.countries.names.length > 0 ? (
+          <View style={styles.chips} testID="advent-yir-countries">
+            {data.countries.names.slice(0, MAX_COUNTRY_CHIPS).map((name, index) => (
+              <View key={`${index}-${name}`} style={styles.chip}>
+                <Text style={styles.chipText}>{name}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {data.firstSubscriptionAuthor ? (
+          <Text style={styles.diplomaSubtitle}>{i18nT('adventStatic:yir.author', { value1: data.firstSubscriptionAuthor })}</Text>
+        ) : null}
+        <View style={styles.shareWrap}>
+          <AdventShareActions
+            status={status}
+            canDownload={canDownload}
+            onShare={() => void share()}
+            onDownload={() => void download()}
+            testIDPrefix="advent-yir"
+          />
+        </View>
+      </View>
     </View>
   )
 }
@@ -184,27 +202,34 @@ const createStyles = (colors: ThemedColors) =>
     title: { fontSize: 18, fontWeight: '700', color: colors.text, flexShrink: 1 },
     body: { fontSize: 15, lineHeight: 22, color: colors.textSecondary },
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
-    tile: {
-      flexGrow: 1,
-      flexBasis: 140,
-      padding: DESIGN_TOKENS.spacing.sm,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surface,
-      gap: DESIGN_TOKENS.spacing.xxs,
-    },
-    tileValue: { fontSize: 22, fontWeight: '800', color: colors.text },
-    tileLabel: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xxs },
     chip: {
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xxs,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: ADVENT_ART_COLORS.goldDeep,
     },
-    chipText: { fontSize: 13, color: colors.text },
+    chipText: { fontSize: 13, color: ADVENT_ART_COLORS.nightText },
+    diploma: {
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 2,
+      borderColor: ADVENT_ART_COLORS.gold,
+      backgroundColor: ADVENT_ART_COLORS.night,
+      overflow: 'hidden',
+    },
+    diplomaArt: { opacity: 0.9 },
+    diplomaBody: { padding: DESIGN_TOKENS.spacing.md, gap: DESIGN_TOKENS.spacing.sm },
+    diplomaTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: ADVENT_ART_COLORS.nightText, flexShrink: 1 },
+    diplomaSubtitle: { fontSize: 15, lineHeight: 22, color: ADVENT_ART_COLORS.nightTextMuted },
+    hero: { alignItems: 'flex-start', gap: 2 },
+    heroValue: { fontSize: 48, lineHeight: 54, fontWeight: '800', color: ADVENT_ART_COLORS.gold },
+    heroLabel: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: ADVENT_ART_COLORS.nightText },
+    lines: { gap: DESIGN_TOKENS.spacing.xs },
+    line: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    lineLabel: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 20, color: ADVENT_ART_COLORS.nightTextMuted },
+    lineValue: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: ADVENT_ART_COLORS.nightText },
+    shareWrap: { paddingTop: DESIGN_TOKENS.spacing.xs },
   })
 
 export default memo(AdventYearInReviewCard)

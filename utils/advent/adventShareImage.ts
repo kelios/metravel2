@@ -29,6 +29,11 @@ export type AdventCardSpec = {
   progress?: { done: number; total: number }
   /** Подпись внизу; по умолчанию адрес `/advent` без протокола. */
   footer?: string
+  /**
+   * Ночной дом с окнами внизу карточки (#3482): открытка и итоги года — тот же
+   * дом, что на странице, а не голый градиент. `lit` — сколько окон горит.
+   */
+  house?: { lit: number }
 }
 
 const FONT = '"Helvetica Neue", Arial, sans-serif'
@@ -102,6 +107,71 @@ const drawProgressGrid = (
     ctx.beginPath()
     if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, cell, cell, Math.round(cell / 5))
     else ctx.rect(x, y, cell, cell)
+    ctx.fill()
+  }
+}
+
+const HOUSE_COLUMNS = 4
+const HOUSE_ROWS = 6
+
+/**
+ * Силуэт дома-календаря: стена, крыша со снегом, труба и 24 окна — горящие
+ * золотом и тёмные. Детерминированно, без загрузки картинок: canvas остаётся
+ * синхронным, и `navigator.share` не теряет жест пользователя.
+ */
+const drawHouse = (
+  ctx: CanvasRenderingContext2D,
+  area: { centerX: number; bottom: number; width: number },
+  lit: number,
+  colors: { wall: string; roof: string; snow: string; window: string; dark: string },
+) => {
+  const wallW = area.width
+  const wallH = Math.round(wallW * 1.05)
+  const left = area.centerX - wallW / 2
+  const top = area.bottom - wallH
+  const roofH = Math.round(wallW * 0.42)
+  // Труба за крышей.
+  ctx.fillStyle = colors.roof
+  ctx.fillRect(left + wallW * 0.7, top - roofH * 0.85, wallW * 0.09, roofH * 0.6)
+  // Крыша и снег на ней.
+  ctx.beginPath()
+  ctx.moveTo(left - wallW * 0.08, top)
+  ctx.lineTo(area.centerX, top - roofH)
+  ctx.lineTo(left + wallW * 1.08, top)
+  ctx.closePath()
+  ctx.fill()
+  ctx.fillStyle = colors.snow
+  ctx.beginPath()
+  ctx.moveTo(left - wallW * 0.08, top)
+  ctx.lineTo(area.centerX, top - roofH)
+  ctx.lineTo(left + wallW * 1.08, top)
+  ctx.lineTo(left + wallW * 1.02, top + 10)
+  ctx.lineTo(area.centerX, top - roofH + 18)
+  ctx.lineTo(left - wallW * 0.02, top + 10)
+  ctx.closePath()
+  ctx.fill()
+  // Стена.
+  ctx.fillStyle = colors.wall
+  ctx.fillRect(left, top, wallW, wallH)
+  // Окна: 4 × 6, по порядку дверец.
+  const total = HOUSE_COLUMNS * HOUSE_ROWS
+  const litCount = Math.min(total, Math.max(0, Math.floor(lit)))
+  const padX = wallW * 0.1
+  const padY = wallH * 0.07
+  const gap = wallW * 0.06
+  const cellW = (wallW - padX * 2 - gap * (HOUSE_COLUMNS - 1)) / HOUSE_COLUMNS
+  const cellH = (wallH - padY * 2 - gap * (HOUSE_ROWS - 1)) / HOUSE_ROWS
+  for (let index = 0; index < total; index += 1) {
+    const x = left + padX + (index % HOUSE_COLUMNS) * (cellW + gap)
+    const y = top + padY + Math.floor(index / HOUSE_COLUMNS) * (cellH + gap)
+    ctx.fillStyle = index < litCount ? colors.window : colors.dark
+    ctx.fillRect(x, y, cellW, cellH)
+  }
+  // Сугроб у подножия.
+  if (typeof ctx.ellipse === 'function') {
+    ctx.fillStyle = colors.snow
+    ctx.beginPath()
+    ctx.ellipse(area.centerX, area.bottom, wallW * 0.75, 26, 0, Math.PI, 0)
     ctx.fill()
   }
 }
@@ -196,6 +266,22 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec):
         ctx.fillText(line, x + 28, top + 92 + lineIndex * 32)
       })
     })
+  }
+
+  if (spec.house) {
+    // Дом стоит над подписью внизу и занимает свободную середину карточки.
+    const bottom = H - pad - 70
+    const room = bottom - (y + 40)
+    const width = Math.max(0, Math.min(W * 0.5, (room / 1.47)))
+    if (width > 120) {
+      drawHouse(ctx, { centerX: W / 2, bottom, width }, spec.house.lit, {
+        wall: '#3b2f2a',
+        roof: '#2a2220',
+        snow: 'rgba(255, 255, 255, 0.92)',
+        window: gold,
+        dark: 'rgba(255, 255, 255, 0.12)',
+      })
+    }
   }
 
   if (spec.progress) {

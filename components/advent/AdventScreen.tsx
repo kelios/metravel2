@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 
 import Button from '@/components/ui/Button'
@@ -8,11 +8,12 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { asBottomDimension, useBottomChromeInset } from '@/components/layout/bottomChromeInset'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { ADVENT_ROUTE } from '@/constants/advent'
+import { ADVENT_MAIN_DOORS, ADVENT_ROUTE } from '@/constants/advent'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
 import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useReduceMotion } from '@/hooks/useReduceMotion'
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -27,6 +28,7 @@ import AdventDockContent from './AdventDockContent'
 import AdventDoorSheet from './AdventDoorSheet'
 import AdventHouseFacade from './AdventHouseFacade'
 import AdventStage from './AdventStage'
+import { ADVENT_UNWRAP_MS } from './AdventWindowUnwrap'
 import { ADVENT_DOCK_MIN_WIDTH, ADVENT_DOCK_WIDTH, ADVENT_SCREEN_LAYOUT } from './adventScreenLayout'
 
 // Отдельным чанком: тост тянет весь контур значков, а статический импорт
@@ -66,18 +68,48 @@ export default function AdventScreen() {
 
   const selectedDoor = useMemo(() => doors.find((door) => door.day === selectedDay) ?? null, [doors, selectedDay])
 
+  // Первое открытие окна — «распаковка» на фасаде, лист появляется следом (#3482).
+  // Состояние дверцы пишется сразу, задержка только у листа; тапы во время
+  // распаковки игнорируются. При «уменьшить движение» лист открывается сразу.
+  const reduceMotion = useReduceMotion()
+  useInputModality()
+  const [unwrappingDay, setUnwrappingDay] = useState<number | null>(null)
+  const unwrapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (unwrapTimer.current) clearTimeout(unwrapTimer.current)
+  }, [])
+  const revealDoor = useCallback(
+    (door: AdventDoorView, select: (day: number) => void) => {
+      if (unwrapTimer.current) return
+      const onFacade = !door.bonus && door.day <= ADVENT_MAIN_DOORS
+      if (reduceMotion || !onFacade || door.state !== 'available') {
+        select(door.day)
+        return
+      }
+      setUnwrappingDay(door.day)
+      unwrapTimer.current = setTimeout(() => {
+        unwrapTimer.current = null
+        setUnwrappingDay(null)
+        select(door.day)
+      }, ADVENT_UNWRAP_MS)
+    },
+    [reduceMotion],
+  )
+
   const handlePressDoor = useCallback(
     (door: AdventDoorView) => {
-      if (door.state === 'locked' || !ready || !campaign.hydrated) return
+      // Тап во время распаковки другого окна игнорируется целиком: без него дверца
+      // записалась бы открытой (а подарок-`open` — выполненным), но лист не показался бы.
+      if (door.state === 'locked' || !ready || !campaign.hydrated || unwrapTimer.current) return
       if (door.state === 'available') {
         sendAnalyticsEvent('Advent_DoorOpen', { day: door.day, kind: door.kind, guest: !isAuthenticated })
         openDoor(door.day, campaign.now)
         // Дверца-подарок без действия засчитывается самим открытием — только аккаунту.
         if (door.task.type === 'open' && isAuthenticated) completeTask(door.day, campaign.now)
       }
-      setSelectedDay(door.day)
+      revealDoor(door, setSelectedDay)
     },
-    [ready, isAuthenticated, openDoor, completeTask, campaign.now, campaign.hydrated],
+    [ready, isAuthenticated, openDoor, completeTask, campaign.now, campaign.hydrated, revealDoor],
   )
 
   // Возврат после входа гостя (`/advent?day=N`): один раз открываем ту же дверцу.
@@ -99,7 +131,12 @@ export default function AdventScreen() {
   )
 
   const disabled = !ready || !campaign.hydrated
-  const pressDoor = preview.active ? (door: AdventDoorView) => preview.selectDay(door.day) : handlePressDoor
+  const pressDoor = preview.active ? (door: AdventDoorView) => revealDoor(door, preview.selectDay) : handlePressDoor
+  const closeSheet = () => {
+    if (preview.active) preview.selectDay(null)
+    else setSelectedDay(null)
+    releasePointerFocus()
+  }
   const renderDockContent = (onPressDoor: (door: AdventDoorView) => void) => (
     <AdventDockContent
       campaign={preview.active ? { ...campaign, doors: preview.doors } : campaign}
@@ -125,6 +162,10 @@ export default function AdventScreen() {
           <Button
             label={t(preview.active ? 'adventStatic:preview.exit' : 'adventStatic:preview.enter')}
             onPress={() => {
+              // Отложенный лист распаковки принадлежит прежнему режиму — отменяем.
+              if (unwrapTimer.current) clearTimeout(unwrapTimer.current)
+              unwrapTimer.current = null
+              setUnwrappingDay(null)
               setSelectedDay(null)
               preview.toggle()
             }}
@@ -140,7 +181,13 @@ export default function AdventScreen() {
         {...breakpointLayoutProps(ADVENT_SCREEN_LAYOUT, 'body')}
       >
         <AdventStage>
-          <AdventHouseFacade doors={preview.doors} todayDay={campaign.todayDoor?.day} disabled={disabled} onPressDoor={pressDoor} />
+          <AdventHouseFacade
+            doors={preview.doors}
+            todayDay={campaign.todayDoor?.day}
+            disabled={disabled}
+            unwrappingDay={unwrappingDay}
+            onPressDoor={pressDoor}
+          />
         </AdventStage>
         {isWide || !widthKnown ? (
           <View
@@ -177,7 +224,7 @@ export default function AdventScreen() {
         isAuthenticated={isAuthenticated}
         creditedDays={preview.active ? undefined : sync.creditedDays}
         campaignYear={campaign.campaign.year}
-        onClose={() => preview.active ? preview.selectDay(null) : setSelectedDay(null)}
+        onClose={closeSheet}
         onCompleteTask={preview.active ? preview.completeTask : handleCompleteTask}
       />
       {/* Значки адвента выдаёт сервер после синхронизации (#2864) — тост как в квестах. */}
@@ -188,6 +235,34 @@ export default function AdventScreen() {
       ) : null}
     </View>
   )
+}
+
+/**
+ * Web: после закрытия листа браузер возвращает фокус окну дома и рисует вокруг
+ * него рамку `:focus-visible`, даже если лист открыли мышью или пальцем (#3482).
+ * Рамка нужна только клавиатуре: после указателя фокус снимаем.
+ */
+let lastInputWasKeyboard = false
+const markKeyboard = () => { lastInputWasKeyboard = true }
+const markPointer = () => { lastInputWasKeyboard = false }
+function useInputModality() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return
+    document.addEventListener('keydown', markKeyboard, true)
+    document.addEventListener('pointerdown', markPointer, true)
+    return () => {
+      document.removeEventListener('keydown', markKeyboard, true)
+      document.removeEventListener('pointerdown', markPointer, true)
+    }
+  }, [])
+}
+const FOCUS_RESTORE_DELAY_MS = 60
+function releasePointerFocus() {
+  if (Platform.OS !== 'web' || typeof document === 'undefined' || lastInputWasKeyboard) return
+  setTimeout(() => {
+    const active = document.activeElement as HTMLElement | null
+    if (active?.closest?.('[data-testid="advent-screen"]')) active.blur()
+  }, FOCUS_RESTORE_DELAY_MS)
 }
 
 const createStyles = (colors: ThemedColors) =>

@@ -24,6 +24,7 @@ export const UserPointsMapNative: React.FC<UserPointsMapProps> = ({
   onMapPress,
   routeLines,
   height,
+  initialView,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -45,9 +46,9 @@ export const UserPointsMapNative: React.FC<UserPointsMapProps> = ({
   const travelData = React.useMemo(() => buildUserPointsTravelData(safePoints), [safePoints]);
 
   const mapCenter = React.useMemo(() => {
-    const c = getUserPointsCenter(center, safePoints) ?? NATIVE_WORLD_VIEW_CENTER;
+    const c = getUserPointsCenter(center ?? initialView, safePoints) ?? NATIVE_WORLD_VIEW_CENTER;
     return { latitude: c.lat, longitude: c.lng };
-  }, [center, safePoints]);
+  }, [center, initialView, safePoints]);
 
   const activeCoordinates = React.useMemo(() => {
     const activeId = Number(activePointId);

@@ -15,6 +15,11 @@ jest.mock('@/hooks/useAdventApi', () => ({
   useAdventCampaignQuery: () => null,
   useAdventServerSync: (params: unknown) => mockSync(params),
 }))
+// Предпросмотр проверяет состояние, не анимацию распаковки (#3482).
+jest.mock('@/hooks/useReduceMotion', () => ({
+  ...jest.requireActual('@/hooks/useReduceMotion'),
+  useReduceMotion: () => true,
+}))
 jest.mock('@/hooks/useResponsive', () => ({
   ...jest.requireActual('@/hooks/useResponsive'),
   useBreakpoints: () => ({ width: 1280 }),
@@ -70,7 +75,7 @@ describe('Advent admin preview', () => {
     }
 
     await fireEvent.press(view.getByTestId('advent-door-1'))
-    expect(view.getByTestId('advent-task-done')).toBeTruthy()
+    expect(view.getByTestId('advent-open-note')).toBeTruthy()
     await fireEvent(view.getByTestId('preview-test-sheet'), 'touchEnd')
 
     await fireEvent.press(view.getByTestId('advent-door-27'))
@@ -79,7 +84,8 @@ describe('Advent admin preview', () => {
     await fireEvent.press(view.getByTestId('advent-door-3'))
     await fireEvent.changeText(view.getByTestId('advent-riddle-input'), 'несвиж')
     await fireEvent.press(view.getByTestId('advent-riddle-check'))
-    expect(view.getByTestId('advent-task-done')).toBeTruthy()
+    // Решённая загадка остаётся на виду праздничным откликом (#3482).
+    expect(view.getByTestId('advent-riddle-correct')).toBeTruthy()
     await fireEvent(view.getByTestId('preview-test-sheet'), 'touchEnd')
     await fireEvent.press(view.getByTestId('advent-door-3'))
     expect(view.getByTestId('advent-riddle-input').props.value).toBe('')

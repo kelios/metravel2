@@ -13,18 +13,20 @@ type Props = {
   canDownload: boolean
   onShare: () => void
   onDownload: () => void
+  /** Подпись главной кнопки; по умолчанию «Поделиться». */
+  shareLabel?: string
   testIDPrefix: string
 }
 
 /** Кнопки «Поделиться» / «Скачать картинку» и строка результата (#2868). */
-function AdventShareActions({ status, canDownload, onShare, onDownload, testIDPrefix }: Props) {
+function AdventShareActions({ status, canDownload, onShare, onDownload, shareLabel, testIDPrefix }: Props) {
   const colors = useThemedColors()
   const busy = status === 'busy'
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
         <Button
-          label={i18nT('adventStatic:share.share')}
+          label={shareLabel ?? i18nT('adventStatic:share.share')}
           size="sm"
           onPress={onShare}
           disabled={busy}

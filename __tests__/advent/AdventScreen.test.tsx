@@ -1,7 +1,8 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 
 import AdventScreen from '@/components/advent/AdventScreen'
+import { ADVENT_UNWRAP_MS } from '@/components/advent/AdventWindowUnwrap'
 import { ApiError } from '@/api/clientErrors'
 import { useAdventProgressStore } from '@/stores/adventProgressStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -34,6 +35,12 @@ jest.mock('@/components/ui/BottomSheet', () => {
   return ({ visible, children }: { visible: boolean; children: React.ReactNode }) =>
     visible ? React.createElement(View, { testID: 'advent-sheet-mock' }, children) : null
 })
+// Сценарии потока проверяют лист сразу; распаковку окна (#3482) — отдельные тесты с движением.
+let mockReduceMotion = true
+jest.mock('@/hooks/useReduceMotion', () => ({
+  ...jest.requireActual('@/hooks/useReduceMotion'),
+  useReduceMotion: () => mockReduceMotion,
+}))
 let mockWidth = 1280
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isPhone: false, isLargePhone: false, width: 1280, height: 800 }),
@@ -62,6 +69,7 @@ describe('AdventScreen (#2861)', () => {
     mockSyncAdventProgress.mockImplementation(missing)
     mockFetchYearInReview.mockImplementation(missing)
     mockWidth = 1280
+    mockReduceMotion = true
     await i18n.changeLanguage('ru')
   })
   afterEach(() => jest.useRealTimers())
@@ -191,7 +199,9 @@ describe('AdventScreen (#2861)', () => {
     await fireEvent.press(screen.getByTestId('advent-door-3'))
     await fireEvent.changeText(screen.getByTestId('advent-riddle-input'), 'Мир')
     await fireEvent.press(screen.getByTestId('advent-riddle-check'))
-    expect(screen.getByTestId('advent-riddle-wrong').props.children.join('')).toMatch(/Подсказка/)
+    expect(screen.getByText('Почти! Попробуйте ещё раз.')).toBeTruthy()
+    // B7 (#3482): подсказка — отдельной строкой, а не приклеенной к «Попробуйте ещё раз».
+    expect(screen.getByTestId('advent-riddle-hint').props.children).toMatch(/^Подсказка: /)
     await fireEvent.changeText(screen.getByTestId('advent-riddle-input'), 'несвиж')
     await fireEvent.press(screen.getByTestId('advent-riddle-check'))
     expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['3']).toBe('2026-12-03')
@@ -201,7 +211,10 @@ describe('AdventScreen (#2861)', () => {
     const screen = await renderAt(new Date(2026, 11, 1, 12))
     await fireEvent.press(screen.getByTestId('advent-door-1'))
     expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBe('2026-12-01')
-    expect(screen.getByTestId('advent-task-done')).toBeTruthy()
+    // P2-3 (#3482): у дверцы-подарка нет блока задания и строки «задание засчитано».
+    expect(screen.getByTestId('advent-open-note')).toBeTruthy()
+    expect(screen.queryByTestId('advent-task-section')).toBeNull()
+    expect(screen.getByTestId('advent-reward-state').props.children).toBe('Получено')
   })
 
   it('lets a guest open the gift but routes tasks to login with a return path', async () => {
@@ -345,5 +358,41 @@ describe('AdventScreen (#2861)', () => {
     expect(screen.queryByTestId('advent-share-card')).toBeNull()
     await fireEvent.press(screen.getByTestId('advent-door-2'))
     expect(screen.getByText('Мой адвент 1/24')).toBeTruthy()
+  })
+
+  describe('window unwrap (#3482)', () => {
+    it('plays the unwrap on the facade first and opens the sheet only after it', async () => {
+      mockReduceMotion = false
+      const screen = await renderAt(new Date(2026, 11, 11, 12))
+      jest.useFakeTimers({ now: new Date(2026, 11, 11, 12) })
+      await fireEvent.press(screen.getByTestId('advent-door-11'))
+      // Состояние записано сразу, лист ещё нет — идёт распаковка окна.
+      expect(useAdventProgressStore.getState().byOwner.u7.opened['11']).toBe('2026-12-11')
+      expect(screen.getByTestId('advent-window-unwrap-11', { includeHiddenElements: true })).toBeTruthy()
+      expect(screen.queryByTestId('advent-door-sheet-11')).toBeNull()
+      // Тап во время распаковки не открывает второе окно и не пишет его состояние.
+      await fireEvent.press(screen.getByTestId('advent-door-10'))
+      expect(useAdventProgressStore.getState().byOwner.u7.opened['10']).toBeUndefined()
+      await act(async () => {
+        jest.advanceTimersByTime(ADVENT_UNWRAP_MS - 100)
+      })
+      expect(screen.queryByTestId('advent-door-sheet-11')).toBeNull()
+      await act(async () => {
+        jest.advanceTimersByTime(100)
+      })
+      expect(screen.getByTestId('advent-door-sheet-11')).toBeTruthy()
+      expect(screen.queryByTestId('advent-window-unwrap-11', { includeHiddenElements: true })).toBeNull()
+      expect(screen.queryByTestId('advent-door-sheet-10')).toBeNull()
+      expect(ADVENT_UNWRAP_MS).toBeGreaterThanOrEqual(800)
+    })
+
+    it('reopens an already opened window without the unwrap delay', async () => {
+      mockReduceMotion = false
+      useAdventProgressStore.setState({ byOwner: { u7: { opened: { '11': '2026-12-11' }, tasksDone: {}, streak: 0 } } } as never)
+      const screen = await renderAt(new Date(2026, 11, 11, 12))
+      await fireEvent.press(screen.getByTestId('advent-door-11'))
+      expect(screen.getByTestId('advent-door-sheet-11')).toBeTruthy()
+      expect(screen.queryByTestId('advent-window-unwrap-11', { includeHiddenElements: true })).toBeNull()
+    })
   })
 })

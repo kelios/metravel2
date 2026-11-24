@@ -5,6 +5,9 @@ import { translate as i18nT } from '@/i18n'
 
 export type FeatherName = keyof typeof Feather.glyphMap
 
+/** Рождественская бонусная дверца 25.12 дарит открытку (#3482, B5). */
+export const ADVENT_POSTCARD_DAY = 25
+
 /** Иконка типа дверцы — для открытых плиток и шапки листа. */
 export const KIND_ICONS: Record<AdventDoorKind, FeatherName> = {
   content: 'gift',

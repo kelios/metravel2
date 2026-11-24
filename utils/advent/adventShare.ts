@@ -12,7 +12,7 @@ import { buildCanonicalUrl } from '@/utils/seo'
 import { appendQueryParam } from '@/utils/urlParams'
 import { getShareUtmMedium } from '@/utils/utm'
 
-export type AdventShareKind = 'progress' | 'year'
+export type AdventShareKind = 'progress' | 'year' | 'postcard'
 export type AdventShareResult = 'shared' | 'copied' | 'cancelled' | 'failed'
 
 /** `https://metravel.by/advent?utm_source=…&utm_medium=…&utm_campaign=advent_<year>_<kind>`. */

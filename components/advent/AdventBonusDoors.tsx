@@ -38,8 +38,9 @@ const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     section: { gap: DESIGN_TOKENS.spacing.xs },
     title: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: colors.text },
-    bonuses: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
-    cell: { flexBasis: '30%', flexGrow: 1, flexShrink: 1, minWidth: 84 },
+    // Строки на всю ширину: в узкой панели три колонки рвали «Откроется» по буквам (#3482 B4).
+    bonuses: { gap: DESIGN_TOKENS.spacing.xs },
+    cell: { width: '100%' },
   })
 
 export default memo(AdventBonusDoors)

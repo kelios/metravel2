@@ -95,6 +95,13 @@ export interface UserPointsMapProps {
    * Map height
    */
   height?: number;
+
+  /**
+   * Стартовый вид карты для заданий «найди на карте» (адвент, #3482): центр и
+   * зум задачи. Это не геопозиция пользователя — маркера «Моё местоположение»
+   * и подтягивания зума к 12 нет. Web применяет зум; native — только центр.
+   */
+  initialView?: { lat: number; lng: number; zoom: number };
 }
 
 /**
@@ -141,6 +148,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
   onMapUiApiReady,
   routeLines,
   height,
+  initialView,
 }) => {
   if (Platform.OS === 'web') {
     return (
@@ -159,6 +167,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
         onMapUiApiReady={onMapUiApiReady}
         routeLines={routeLines}
         height={height}
+        initialView={initialView}
       />
     );
   }
@@ -175,6 +184,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
       pendingMarkerColor={pendingMarkerColor}
       routeLines={routeLines}
       height={height}
+      initialView={initialView}
     />
   );
 };
@@ -194,6 +204,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   onMapUiApiReady,
   routeLines,
   height,
+  initialView,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -235,9 +246,10 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
       {Platform.OS === 'web' ? <UserPointsMapWebStyles colors={colors} /> : null}
       <mods.MapContainer
         ref={mapRef}
-        center={center ? [center.lat, center.lng] : WORLD_VIEW_CENTER}
-        // Стартовый зум прежний (10 с точками, 5 только по геолокации); мир — когда центра нет.
-        zoom={!center ? WORLD_VIEW_ZOOM : safePoints.length > 0 ? 10 : 5}
+        center={initialView ? [initialView.lat, initialView.lng] : center ? [center.lat, center.lng] : WORLD_VIEW_CENTER}
+        // Стартовый зум прежний (10 с точками, 5 только по геолокации); мир — когда центра нет;
+        // у задания на карте — его собственный вид (#3482).
+        zoom={initialView ? initialView.zoom : !center ? WORLD_VIEW_ZOOM : safePoints.length > 0 ? 10 : 5}
         // leaflet.markercluster бросает «Map has no maxZoom specified» при добавлении
         // группы на карту без maxZoom (#3131, прод 08.11): потолок — как у тайлов прокси.
         maxZoom={OSM_PROXY_MAX_ZOOM}

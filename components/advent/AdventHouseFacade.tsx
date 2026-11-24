@@ -6,17 +6,20 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { ADVENT_ART_COLORS, ADVENT_VISUAL_ASSETS } from '@/constants/adventVisuals'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import AdventHouseWindow from './AdventHouseWindow'
+import AdventWindowUnwrap from './AdventWindowUnwrap'
 import { ADVENT_HOUSE_ASPECT_RATIO, ADVENT_HOUSE_MAX_WIDTH, ADVENT_HOUSE_WINDOWS } from './adventHouseLayout'
 
 type Props = {
   doors: AdventDoorView[]
   todayDay?: number | null
   disabled?: boolean
+  /** Окно, которое сейчас «распаковывается» перед листом (#3482). */
+  unwrappingDay?: number | null
   onPressDoor: (door: AdventDoorView) => void
 }
 
 /** The real campaign owns state; the facade only maps its 24 main doors onto the artwork. */
-function AdventHouseFacade({ doors, todayDay, disabled, onPressDoor }: Props) {
+function AdventHouseFacade({ doors, todayDay, disabled, unwrappingDay, onPressDoor }: Props) {
   const mainDoors = useMemo(() => new Map(doors.filter((door) => !door.bonus).map((door) => [door.day, door])), [doors])
 
   return (
@@ -49,6 +52,11 @@ function AdventHouseFacade({ doors, todayDay, disabled, onPressDoor }: Props) {
           <AdventHouseWindow key={day} door={door} placement={style} disabled={disabled} today={day === todayDay} onPress={onPressDoor} />
         ) : null
       })}
+      {unwrappingDay
+        ? ADVENT_HOUSE_WINDOWS.filter(({ day }) => day === unwrappingDay).map(({ day, style }) => (
+            <AdventWindowUnwrap key={`unwrap-${day}`} day={day} placement={style} />
+          ))
+        : null}
     </View>
   )
 }
