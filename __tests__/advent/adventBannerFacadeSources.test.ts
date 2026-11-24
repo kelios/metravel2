@@ -1,6 +1,9 @@
 import { pickAdventFacadeSource, resolveAdventWindowRect } from '@/components/advent/AdventWindowCrop'
 import { resolveAdventShareToneColors } from '@/components/advent/AdventShareActions'
-import { ADVENT_ART_COLORS, ADVENT_FACADE_BANNER_SOURCES } from '@/constants/adventVisuals'
+// Jest собирает под native (ios): web-копии берём из `.web` явно, native-пару — обычным импортом.
+import { ADVENT_FACADE_BANNER_SOURCES } from '@/constants/adventFacadeBannerSources.web'
+import { ADVENT_FACADE_BANNER_SOURCES as NATIVE_BANNER_SOURCES } from '@/constants/adventFacadeBannerSources'
+import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
 
 // Те же рамки, что у баннера главной: телефон — во всю ширину, desktop — окно 3:4.
 const PHONE_ASPECT = 2.2
@@ -31,24 +34,29 @@ const contrast = (fg: string, bg: string) => {
 describe('home banner facade sources (#3488)', () => {
   it('serves every phone crop from a full-resolution band, never the full facade', () => {
     for (const day of DAYS) {
-      const picked = pickAdventFacadeSource(resolveAdventWindowRect(day, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.bands)
+      const picked = pickAdventFacadeSource(resolveAdventWindowRect(day, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.phone)
       expect({ day, key: picked.key }).not.toEqual({ day, key: 'full' })
     }
-    expect(pickAdventFacadeSource(resolveAdventWindowRect(5, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.bands).key).toBe('row-2')
-    expect(pickAdventFacadeSource(resolveAdventWindowRect(24, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.bands).key).toBe('row-6')
-    expect(pickAdventFacadeSource(resolveAdventWindowRect(null, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.bands).key).toBe('roof')
+    expect(pickAdventFacadeSource(resolveAdventWindowRect(5, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.phone).key).toBe('row-2')
+    expect(pickAdventFacadeSource(resolveAdventWindowRect(24, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.phone).key).toBe('row-6')
+    expect(pickAdventFacadeSource(resolveAdventWindowRect(null, PHONE_ASPECT), ADVENT_FACADE_BANNER_SOURCES.phone).key).toBe('roof')
   })
 
   it('serves the desktop window from the small facade', () => {
     for (const day of DAYS) {
-      expect(pickAdventFacadeSource(resolveAdventWindowRect(day, DESKTOP_ASPECT), [ADVENT_FACADE_BANNER_SOURCES.small]).key).toBe('small')
+      expect(pickAdventFacadeSource(resolveAdventWindowRect(day, DESKTOP_ASPECT), ADVENT_FACADE_BANNER_SOURCES.desktop).key).toBe('small')
     }
   })
 
   it('falls back to the full facade when no copy covers the crop, so the frame never shows a gap', () => {
     // Окно 3:4 выше любой полосы.
-    expect(pickAdventFacadeSource(resolveAdventWindowRect(10, DESKTOP_ASPECT), ADVENT_FACADE_BANNER_SOURCES.bands).key).toBe('full')
+    expect(pickAdventFacadeSource(resolveAdventWindowRect(10, DESKTOP_ASPECT), ADVENT_FACADE_BANNER_SOURCES.phone).key).toBe('full')
     expect(pickAdventFacadeSource(resolveAdventWindowRect(10, DESKTOP_ASPECT)).key).toBe('full')
+  })
+
+  it('ships no facade copies in the native app: the banner crops the bundled full facade', () => {
+    expect(NATIVE_BANNER_SOURCES).toEqual({ phone: [], desktop: [] })
+    expect(pickAdventFacadeSource(resolveAdventWindowRect(5, PHONE_ASPECT), NATIVE_BANNER_SOURCES.phone).key).toBe('full')
   })
 })
 

@@ -17,39 +17,16 @@ export type AdventFacadeRegion = { x: number; y: number; width: number; height: 
 /** Облегчённая производная фасада для кропа окна (#3488). */
 export type AdventFacadeSource = { key: string; source: ImageRequireSource; region: AdventFacadeRegion }
 
-/** Высота исходника `winter-house.webp` в пикселях: границы полос заданы по нарезке. */
-const FACADE_H = 1350
-const band = (key: string, source: ImageRequireSource, topPx: number, heightPx: number): AdventFacadeSource => ({
-  key,
-  source,
-  region: { x: 0, y: topPx / FACADE_H, width: 1, height: heightPx / FACADE_H },
-})
-
 /**
- * Кропы баннера главной (#3488). Полный фасад (239 КБ) нужен только дому и листу
- * дверцы; баннеру хватает части картинки:
- * - `small` — весь фасад в 480 px по ширине: маленькое окно 120 px на desktop;
- * - `bands` — полосы фасада в полном разрешении по ряду окон и крыша: кроп во всю
- *   ширину телефона, где уменьшенная копия заметно мылит. Кроп сам берёт самую
- *   узкую полосу, внутри которой целиком лежит его область (`pickAdventFacadeSource`).
- * Пиксельные границы полос совпадают с нарезкой файлов (см. `PROMPT.md`).
+ * Облегчённые копии фасада для баннера главной (#3488): `phone` — кроп во всю
+ * ширину телефона, `desktop` — окно 120 px. Сами копии — только в web-бандле
+ * (`adventFacadeBannerSources.web.ts`); на native фасад уже в приложении и
+ * баннер кадрирует его, лишние ~316 КБ картинок в сборку не попадают.
  */
-export const ADVENT_FACADE_BANNER_SOURCES = {
-  small: {
-    key: 'small',
-    source: require('@/assets/advent/2026/winter-house-small.webp') as ImageRequireSource,
-    region: { x: 0, y: 0, width: 1, height: 1 },
-  } satisfies AdventFacadeSource,
-  bands: [
-    band('roof', require('@/assets/advent/2026/winter-house-roof.webp') as ImageRequireSource, 0, 445),
-    band('row-1', require('@/assets/advent/2026/winter-house-row-1.webp') as ImageRequireSource, 50, 216),
-    band('row-2', require('@/assets/advent/2026/winter-house-row-2.webp') as ImageRequireSource, 229, 217),
-    band('row-3', require('@/assets/advent/2026/winter-house-row-3.webp') as ImageRequireSource, 414, 216),
-    band('row-4', require('@/assets/advent/2026/winter-house-row-4.webp') as ImageRequireSource, 595, 216),
-    band('row-5', require('@/assets/advent/2026/winter-house-row-5.webp') as ImageRequireSource, 780, 216),
-    band('row-6', require('@/assets/advent/2026/winter-house-row-6.webp') as ImageRequireSource, 964, 216),
-  ] as readonly AdventFacadeSource[],
-} as const
+export type AdventFacadeBannerSources = {
+  phone: readonly AdventFacadeSource[]
+  desktop: readonly AdventFacadeSource[]
+}
 
 /** Fixed pigments of the approved illustration, independent of the surrounding UI theme. */
 export const ADVENT_ART_COLORS = {

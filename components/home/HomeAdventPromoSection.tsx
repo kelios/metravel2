@@ -5,7 +5,8 @@ import { ResponsiveContainer } from '@/components/layout'
 import AdventWindowCrop from '@/components/advent/AdventWindowCrop'
 import Button from '@/components/ui/Button'
 import { ADVENT_MAIN_DOORS, ADVENT_ROUTE, isoDateToLocalMidnight } from '@/constants/advent'
-import { ADVENT_ART_COLORS, ADVENT_FACADE_BANNER_SOURCES } from '@/constants/adventVisuals'
+import { ADVENT_FACADE_BANNER_SOURCES } from '@/constants/adventFacadeBannerSources'
+import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAdventCampaign } from '@/hooks/useAdventCampaign'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -21,13 +22,11 @@ import { isPhoneLayout } from '@/utils/phoneLayout'
  * Живёт в отложенных секциях главной — на LCP не влияет. Оформление —
  * маленькое окно того же дома (#3482): кроп фасада на ночной подложке, цвета
  * иллюстрации не зависят от темы интерфейса.
- * Кроп берёт облегчённую часть фасада, а не полный файл (#3488): на телефоне
+ * Кроп берёт облегчённую часть фасада, а не полный файл (#3488, только web): на телефоне
  * рамка во всю ширину — полоса ряда окон в полном разрешении, на desktop окно
  * 120 px — уменьшенный фасад. До гидратации ширина экрана 0 и раскладка
  * неизвестна — рамка ждёт без картинки, чтобы телефон не скачал ещё и desktop-копию.
  */
-const DESKTOP_FACADE_SOURCES = [ADVENT_FACADE_BANNER_SOURCES.small] as const
-
 function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean; topGap?: number | string }) {
   const router = useRouter()
   const { width, isPhone, isLargePhone } = useResponsive()
@@ -63,7 +62,7 @@ function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean;
           <AdventWindowCrop
             day={isAnnounce ? null : door?.day}
             aspectRatio={isMobile ? 2.2 : 3 / 4}
-            sources={isMobile ? ADVENT_FACADE_BANNER_SOURCES.bands : DESKTOP_FACADE_SOURCES}
+            sources={isMobile ? ADVENT_FACADE_BANNER_SOURCES.phone : ADVENT_FACADE_BANNER_SOURCES.desktop}
             deferImage={!(width > 0)}
             style={styles.window}
             testID="home-advent-window"

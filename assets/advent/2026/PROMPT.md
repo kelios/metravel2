@@ -29,7 +29,7 @@ One transparent texture atlas, exactly 2×2 equal square cells, edge to edge. Fo
   - `winter-house-small.webp`: the whole facade at 480×720, `-q 70` (~52 KB), for the 120 px desktop window.
   - `winter-house-row-1.webp`…`winter-house-row-6.webp`: full-resolution 900 px bands around each window row, `-q 75` (23–31 KB), for the full-width phone crop. Source pixel rows: 50–266, 229–446, 414–630, 595–811, 780–996, 964–1180.
   - `winter-house-roof.webp`: rows 0–445 at full resolution, `-q 75` (~54 KB), the roof crop of the announce.
-  - Band boundaries are mirrored in `constants/adventVisuals.ts` (`ADVENT_FACADE_BANNER_SOURCES`); recut the bands and update both together if the window grid or the banner frame changes. `__tests__/advent/adventBannerFacadeSources.test.ts` fails when a phone crop no longer fits a band.
+  - Web only: band boundaries are mirrored in `constants/adventFacadeBannerSources.web.ts` (`ADVENT_FACADE_BANNER_SOURCES`); the native pair `constants/adventFacadeBannerSources.ts` ships no copies (the app already bundles the full facade); recut the bands and update both together if the window grid or the banner frame changes. `__tests__/advent/adventBannerFacadeSources.test.ts` fails when a phone crop no longer fits a band.
 - `frost-1.webp`–`frost-4.webp`: the four original atlas quadrants, technically sliced and encoded at 400×400 with alpha retained. No repainting or new narrative content.
 - Glass coordinates and number/button placement are defined by the approved facade contract, not inferred from image loading.
 - The image pack is imported only by advent components. The global seasonal logo must not import this module.

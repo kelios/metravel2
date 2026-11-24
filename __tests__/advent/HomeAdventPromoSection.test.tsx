@@ -13,6 +13,8 @@ jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn(), queueAnal
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true, userId: '7', authReady: true }),
 }))
+// Облегчённые копии фасада есть только в web-бандле (#3488); jest собирает под native.
+jest.mock('@/constants/adventFacadeBannerSources', () => jest.requireActual('@/constants/adventFacadeBannerSources.web'))
 let mockResponsive = { isPhone: false, isLargePhone: false, width: 1280 }
 jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => mockResponsive }))
 
