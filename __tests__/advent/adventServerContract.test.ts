@@ -32,8 +32,8 @@ describe('advent server contract (#2867, #2868)', () => {
     expect(isValidAdventCampaign('nope', 2026)).toBe(false)
   })
 
-  it('bundled config flags the 8 site-action doors the server credits itself (#2940, #3487)', () => {
-    expect([...selectServerCreditedDays(campaign.doors as never)]).toEqual([2, 4, 7, 8, 14, 20, 23, 26])
+  it('bundled config flags the 7 site-action doors the server credits itself (#2940, #3487)', () => {
+    expect([...selectServerCreditedDays(campaign.doors as never)]).toEqual([2, 7, 14, 19, 20, 23, 26])
   })
 
   it('normalizes serverCredited to a strict boolean and keeps doors without it unchanged (#2940)', () => {

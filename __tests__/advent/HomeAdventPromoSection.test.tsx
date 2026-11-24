@@ -60,7 +60,7 @@ describe('HomeAdventPromoSection visibility window (#2866)', () => {
   it('shows the secret door title on its own day and reads the owner progress', async () => {
     useAdventProgressStore.setState({ byOwner: { u7: { opened: { '1': '2026-12-01', '2': '2026-12-02' }, tasksDone: {} } } })
     const screen = await renderAt(new Date(2027, 0, 7, 12))
-    expect(screen.getByText('Дверца 27: Коляды: секретная дверца')).toBeTruthy()
+    expect(screen.getByText('Дверца 27: Святочное гадание')).toBeTruthy()
     expect(screen.getByText('Открыто 2 из 24')).toBeTruthy()
   })
 

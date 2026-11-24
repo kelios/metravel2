@@ -17,8 +17,9 @@ describe('advent config validator (#2862)', () => {
 
   it('requires a variant to share the primary task credit-on-open rule (#3486, #3487)', () => {
     const broken = clone() as unknown as { doors: Array<{ day: number; variants?: Array<{ task: Record<string, unknown> }> }> }
-    const door = broken.doors.find((candidate) => candidate.day === 1)!
-    door.variants![0]!.task.game = { kind: 'pick', items: [{ label: 'a', correct: true }, { label: 'b', correct: false }, { label: 'c', correct: true }, { label: 'd', correct: false }] }
+    // Дверца 21: основное задание — игра с запасным `open`; вариант без игры засчитался бы открытием.
+    const door = broken.doors.find((candidate) => candidate.day === 21)!
+    delete door.variants![0]!.task.game
     const errors = validateAdventConfig(broken, { routeExists })
     expect(errors).toEqual([expect.stringContaining('зачёт открытием')])
   })

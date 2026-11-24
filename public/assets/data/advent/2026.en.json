@@ -4,22 +4,46 @@
   "doors": {
     "1": {
       "gift": {
-        "title": "Opening: the winter trip of the day",
-        "text": "Torun is an old town of red brick where the air smells of gingerbread. A one-day route: from the Town Hall to the Gingerbread Museum.",
-        "linkLabel": "Read the route"
+        "title": "Christmas quest: Torun",
+        "text": "In December Torun smells of honey, cinnamon and cloves, and gingerbread has been baked here since the 14th century. The quest \"The Gingerbread City Under the First Star\" is a kilometer and a half through the Old and New Town: from the Franciscan church across the Market Square to the gingerbread museums. For centuries two Christmases lived side by side here — with a tree for some and the first star for others.",
+        "linkLabel": "Open the quest"
       },
       "task": {
-        "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight."
+        "text": "The first question of the season. Don't know? Guess — the quest will tell you the rest.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "An old Polish saying named the four best things in the country. What did Torun get?",
+              "options": [
+                "Gingerbread",
+                "Little shoes",
+                "Vodka"
+              ]
+            }
+          ]
+        }
       },
       "variants": {
         "by": {
           "gift": {
-            "title": "Opening: the winter trip of the day",
-            "text": "Brest — home to a lamplighter who lights the kerosene lamps on Sovetskaya Street by hand every evening. A one-day route: the fortress, the railway museum and the old center.",
-            "linkLabel": "Read the route"
+            "title": "Christmas quest: Brest",
+            "text": "In Brest the winter holidays last almost a month: Christmas on 25 December and 7 January, New Year, Shchodrukha and Vadokhryshcha. The quest \"While the Candle Burns\" is two and a half kilometers from the university past churches, theaters and a hundred-year-old pharmacy to the Mukhavets, with a warm stop at a bakery.",
+            "linkLabel": "Open the quest"
           },
           "task": {
-            "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight."
+            "text": "The first question of the season. Don't know? Guess — the quest will tell you the rest.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "What did carolers from the Brest region carry down the street so that people could see from afar: Kalyada is coming?",
+                  "options": [
+                    "A paper lantern with a candle",
+                    "A bell on a stick",
+                    "An icon in an embroidered towel"
+                  ]
+                }
+              ]
+            }
           }
         }
       }
@@ -105,30 +129,85 @@
     "3": {
       "gift": {
         "title": "Riddle: guess the town",
-        "text": "A town with a Radziwill family palace and a UNESCO-listed park. In winter the ponds freeze over and the palace is reflected in the snow.",
-        "linkLabel": "Open the map"
+        "text": "In the 1580s Prince Mikolaj Radziwill, nicknamed the Orphan, set about rebuilding this town: a stone castle, a Jesuit church, a town hall on the market square. Today the Radziwill ensemble is on the UNESCO list, and in winter the ponds around the castle freeze and everything turns quiet and white.",
+        "linkLabel": "Quest for this town"
       },
       "task": {
         "text": "Name this town.",
         "riddle": {
           "questions": [
             {
-              "question": "Which town in Belarus is known for the Radziwiłł palace and park ensemble, a UNESCO World Heritage Site?",
-              "hint": "Minsk region, near Mir."
+              "question": "What is the town of Prince the Orphan called?",
+              "hint": "Minsk region."
             }
           ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Riddle: guess the town",
+            "text": "A town on the Oder where in August 1982 artists began drawing little men in pointed caps on the walls — right on top of the patches used to paint over slogans. Now there are more than a thousand bronze gnomes here: on cornices, by doors and right underfoot.",
+            "linkLabel": "Quest for this town"
+          },
+          "task": {
+            "text": "Name this town.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "In which Polish city do more than a thousand bronze gnomes live?",
+                  "hint": "Lower Silesia."
+                }
+              ]
+            }
+          }
         }
       }
     },
     "4": {
       "gift": {
-        "title": "An author's story about winter",
-        "text": "MeTravel authors share how they travel in winter: short days, frost, empty castles with no lines. Read the community's articles and pick your favorite authors.",
-        "linkLabel": "Read articles"
+        "title": "Winter story: Viazynka",
+        "text": "In February 2025 we came to Viazynka and found it completely empty: a grey sky, snow on the paths, not a single tour group. By the entrance is a bronze bust of the poet, with snow lying along his shoulders in an even stripe. In the clearing there is a well with a sweep, and on the wall of the house a carved board: \"25 чэрвеня 1882 у гэтай хаце нарадзіўся…\"\n\nEnjoyed the story? Subscribe to the author — new trips will arrive in your feed.",
+        "linkLabel": "Read the story"
       },
       "task": {
-        "text": "Follow an author whose route you liked — their new trips will show up in your feed.",
-        "ctaLabel": "Find an author"
+        "text": "Finished reading? One question about the story.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Who was born in this house on 25 June 1882?",
+              "options": [
+                "Yanka Kupala",
+                "Yakub Kolas",
+                "Maksim Bahdanovich"
+              ]
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Winter story: the hut on Maciejowa",
+            "text": "On 7 December 2025 we climbed from Rabka-Zdroj in the Gorce Mountains to the wooden hut on Maciejowa: about 5 km one way, 340 meters of ascent and ice on the trail — we were right to bring crampons. At the top is the Przyslop clearing, on a clear day you can see the Tatras and Babia Gora, and inside it is warm and there is something hot waiting after the climb.\n\nThe hut has a story of its own. Its first manager insisted that guests take off their street shoes and change into slippers: there was even a shoe crate by the entrance. The local press wrote about it.\n\nEnjoyed the story? Subscribe to the author — new trips will arrive in your feed.",
+            "linkLabel": "Read the story"
+          },
+          "task": {
+            "text": "Finished reading? One question about the story.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "What did the hut's first manager require of guests?",
+                  "options": [
+                    "To change into slippers",
+                    "To sing a carol at the entrance",
+                    "To bring a log with them"
+                  ]
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "5": {
@@ -179,18 +258,19 @@
     "6": {
       "gift": {
         "title": "Kalyady: fact of the day",
-        "text": "Kalyady in Belarus run from Christmas to Epiphany. Carolers go from house to house with a star on a pole, and in a wooden box theater, the batlejka, puppets act out the story of the Nativity."
+        "text": "Kalyady are the longest holidays of the Belarusian winter: from Christmas to Epiphany carolers go from house to house with songs, costumed performers and a little puppet theater of their own. What is carried at the head of the group, what is this theater called, and what holiday ends it all? Test yourself — and then take the Minsk quest, where the batlejka puppets have scattered across the city.",
+        "linkLabel": "The Star over the Batlejka quest"
       },
       "task": {
         "text": "Quiz: three questions about Kalyady.",
         "riddle": {
           "questions": [
             {
-              "question": "On which day of January do Orthodox Christians in Belarus celebrate Christmas?",
+              "question": "What is Vadokhryshcha?",
               "options": [
-                "6",
-                "7",
-                "14"
+                "Epiphany",
+                "Generous Evening",
+                "Maslenitsa"
               ]
             },
             {
@@ -269,12 +349,12 @@
       "variants": {
         "by": {
           "gift": {
-            "title": "Minsk at Christmas",
-            "text": "In December the center of Minsk is decorated for Christmas, and Independence Avenue is beautifully lit. A weekend guide: the Upper Town, Freedom Square, quiet courtyards.",
-            "linkLabel": "Read the guide"
+            "title": "Where to go on the holiday weekend",
+            "text": "25 December and 7 January are days off in Belarus — two free days to get out of the city. Our collection has 13 day trips from Minsk: lakes and springs, old manors, the Stalin Line and the Smolevud film town. We have driven every one ourselves. In winter the Stalin Line and a walk up Bald Mountain are especially good.",
+            "linkLabel": "13 trips from Minsk"
           },
           "task": {
-            "text": "Pick a day and mark the trip to Minsk with the \"I'm planning\" status and a date.",
+            "text": "Choose a trip for a holiday weekend and mark it with the \"I'm planning\" status and a date.",
             "ctaLabel": "Plan a trip"
           }
         }
@@ -282,13 +362,92 @@
     },
     "8": {
       "gift": {
-        "title": "Winter quest in Grodno",
-        "text": "The quest “Two stars above the Neman”: Grodno celebrates Christmas twice, on 25 December and 7 January. The old town above the river, two hours on foot, with hints on your phone.",
-        "linkLabel": "Open the quest"
+        "title": "Dictionary of Kalyady",
+        "text": "Kalyady has a language of its own. Shchodrukha, the Goat, the hungry kutia — do you know what stands behind each word? Match the word with its meaning. All the facts come from our Christmas quests in Belarus, and the most “Kalyady” of them is the one in Gomel: twelve days of holidays on a single street.",
+        "linkLabel": "Quest for Gomel"
       },
       "task": {
-        "text": "Complete the first step of a winter quest in your city.",
-        "ctaLabel": "Choose a city"
+        "text": "Make six “word — meaning” pairs.",
+        "game": {
+          "pairs": [
+            {
+              "left": "Shchodrukha",
+              "right": "Generous Evening in the Brest region",
+              "fact": "On Shchodrukha pancakes were always baked, and carolers were given a pancake brushed with butter or lard. From the Brest quest."
+            },
+            {
+              "left": "The Goat",
+              "right": "A costumed figure in a sheepskin coat, fur outward",
+              "fact": "The Goat danced at the threshold, fell down exhausted and came back to life only when the host brought out sausage, lard or pancakes. From the Brest quest."
+            },
+            {
+              "left": "Hungry kutia",
+              "right": "A fasting supper on the eve of Epiphany",
+              "fact": "At Christmastide three kutias were laid out: a lenten one before Christmas, a rich one with meat on Generous Evening, and the “hungry”, watery one. From the Gomel quest."
+            },
+            {
+              "left": "Hay under the tablecloth",
+              "right": "A memory of the Infant's manger",
+              "fact": "It, together with the lenten kutia, the first of the three Christmas ones, opened the Christmas evening. From the Minsk quest."
+            },
+            {
+              "left": "Pasterka",
+              "right": "A midnight Mass in honor of the shepherds",
+              "fact": "The shepherds were the first to come to the manger. People gather for pasterka before midnight between 24 and 25 December. From the Brest quest."
+            },
+            {
+              "left": "King Herod",
+              "right": "The villain of the batlejka's lower tier",
+              "fact": "At the top of the box the puppets played out the Nativity, below Herod ruled with his soldiers, costumed figures and devils. From the Minsk quest."
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Who comes at Christmas?",
+            "text": "In every corner of Poland a different guest comes at Christmas: one with a sack and a rod, one invisible, one riding a white horse. Match the guest with his region. All the facts come from our Christmas quests, and the place to start is Poznan, where Gwiazdor knocks at the door.",
+            "linkLabel": "Quest for Poznan"
+          },
+          "task": {
+            "text": "Make six “guest — region” pairs.",
+            "game": {
+              "pairs": [
+                {
+                  "left": "Gwiazdor in a sheepskin coat, fur outward, with a sack and a rod",
+                  "right": "Greater Poland",
+                  "fact": "Good children get apples, nuts and gingerbread, lazy ones a rod or a pair of “pyry” — potatoes, Poznan-style. From the Poznan quest."
+                },
+                {
+                  "left": "The Little Angel, who cannot be seen",
+                  "right": "Lesser Poland and Subcarpathia",
+                  "fact": "While the family sits down to Wigilia, he quietly leaves parcels under the tree and vanishes. From the Rzeszow quest."
+                },
+                {
+                  "left": "The Dzieciatko — the Infant himself",
+                  "right": "Upper Silesia",
+                  "fact": "Before midnight people hurry here to the Pasterka: whoever makes it will have a lucky year. From the Katowice quest."
+                },
+                {
+                  "left": "Saint Nicholas with presents under the tree",
+                  "right": "Warsaw",
+                  "fact": "In Greater Poland Nicholas visits too, but he comes on 6 December and leaves small change in a boot. From the Poznan quest."
+                },
+                {
+                  "left": "The white horse Szemel at the head of the costumed troupe",
+                  "right": "Warmia",
+                  "fact": "The horse was a village lad with a wooden horse's head on a stick, and he handed out treats to children. From the Olsztyn quest."
+                },
+                {
+                  "left": "The Herody troupe with a king, the Devil and Death",
+                  "right": "Holy Cross region",
+                  "fact": "Only unmarried lads went about as the Herody; there were no women in the troupe. From the Kielce quest."
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "9": {
@@ -314,18 +473,18 @@
     "10": {
       "gift": {
         "title": "A traveler's Christmas story",
-        "text": "On the eve of Christmas a traveler was walking through the forest to the station and missed the last train. A blizzard was burying the rails, and his phone had died. At the edge of the village one window was lit, and a candle stood on the sill: by an old custom it is set out on Christmas Eve so that anyone on the road knows they are expected here.\n\nThe door opened at once. They poured him hot tea, set an extra plate and asked nothing. By morning the blizzard had died down. On leaving, the traveler left his road map on the sill, marked \"I was expected here\".\n\nThey say that since then every route of his has one point without a name. He stops there every winter."
+        "text": "Just before Christmas a traveler was walking through the forest to the station and missed the last train. A blizzard was burying the rails, and his phone had died. At the edge of the village one window was lit, and on the sill stood a candle: by an old custom it is set out on Christmas Eve so that anyone on the road knows they are expected here.\n\nThe door was opened at once. They poured him hot tea, set an extra plate and asked him nothing. In the morning the blizzard died down. On leaving, the traveler left his road map on the windowsill with the note \"I was expected here\".\n\nThey say that since then every route of his has one point with no name. He stops there every winter."
       },
       "task": {
-        "text": "Finished reading? One question about the story.",
+        "text": "Read to the end? One question about the story.",
         "riddle": {
           "questions": [
             {
-              "question": "What stood on the sill to show the traveler he was expected?",
+              "question": "What did the traveler leave on the windowsill when he left?",
               "options": [
-                "Tree",
-                "Candle",
-                "Lantern"
+                "His road map",
+                "A candle",
+                "A letter"
               ]
             }
           ]
@@ -377,15 +536,94 @@
     },
     "12": {
       "gift": {
-        "title": "Photo of the day from the community",
-        "text": "Winter photos by travelers: snow-covered churches, frozen lakes, the lights of Christmas markets. The best shots of December will receive a rare award from the team."
+        "title": "Which winter trip is yours?",
+        "text": "For some, winter means an ice rink and hot chocolate; for others, a mountain pass and frost on the scarf. Tick what sounds like you and get a title along with a route that suits you."
       },
       "task": {
-        "text": "Upload your winter photo to a new trip or note.",
-        "ctaLabel": "Add a photo"
+        "text": "Tick everything that sounds like you — and find your winter route.",
+        "game": {
+          "items": [
+            "Getting up before dawn for a sunrise — easy",
+            "I have boots with a good sole",
+            "10 km in the snow is a normal walk",
+            "I have crampons or microspikes",
+            "I like it when the trail goes uphill",
+            "Hot tea in a mountain hut is the best reward",
+            "Ready to drive two hours for a single view",
+            "Frost below −10 doesn't cancel plans",
+            "I pack the thermos the evening before",
+            "The offline map is downloaded in advance"
+          ],
+          "tiers": [
+            {
+              "title": "Winter city dweller",
+              "text": "Your winter trip is short and warm: half a day out of town and home for dinner. Start with our collection of weekend trips from Minsk: lakes, springs, manors and the Stalin Line.",
+              "linkLabel": "Weekend trips"
+            },
+            {
+              "title": "Lover of old walls",
+              "text": "A trip with history suits you: a castle or manor, a walk through an old park and tea from a thermos. The collection has 19 routes from Minsk — from Lida Castle to quiet manors.",
+              "linkLabel": "Castles and manors"
+            },
+            {
+              "title": "Winter walker",
+              "text": "A half-day walk is within your reach: Bald Mountain, 342 meters — the second-highest point in Belarus. A font, a church and springs along the way, about 40 km from Minsk.",
+              "linkLabel": "Route to Bald Mountain"
+            },
+            {
+              "title": "Winter tracker",
+              "text": "You need a route with some adventure: 8–10 km along the Teply Stan stream to the partisan base \"Shturmovaya\", in places through fallen trees. It is especially beautiful here in winter — the stream does not freeze over completely.",
+              "linkLabel": "Route to Shturmovaya"
+            }
+          ]
+        }
       },
-      "reward": {
-        "label": "Rare award candidate"
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Which winter trip is yours?",
+            "text": "For some, winter means an ice rink and hot chocolate; for others, a mountain pass and frost on the scarf. Tick what sounds like you and get a title along with a route that suits you."
+          },
+          "task": {
+            "text": "Tick everything that sounds like you — and find your winter route.",
+            "game": {
+              "items": [
+                "Getting up before dawn for a sunrise — easy",
+                "I have boots with a good sole",
+                "10 km in the snow is a normal walk",
+                "I have crampons or microspikes",
+                "I like it when the trail goes uphill",
+                "Hot tea in a mountain hut is the best reward",
+                "Ready to drive two hours for a single view",
+                "Frost below −10 doesn't cancel plans",
+                "I pack the thermos the evening before",
+                "The offline map is downloaded in advance"
+              ],
+              "tiers": [
+                {
+                  "title": "Winter city dweller",
+                  "text": "Start with the rink: at the Cracovia arena in Krakow you can rent skates, and the nearest slopes, Siepraw-Ski, are 25 km from the city.",
+                  "linkLabel": "Rink and slopes"
+                },
+                {
+                  "title": "Lover of mountain huts",
+                  "text": "Your format is a short climb to a mountain hut: Jaworzyna Krynicka, about 4 km one way and 400 meters of ascent, with lunch in a warm hut at the top.",
+                  "linkLabel": "Route in Krynica"
+                },
+                {
+                  "title": "Winter walker",
+                  "text": "A real Beskid day is within your reach: Muńcuł, about 12 km there and back, more than 600 meters of ascent and the wooden Bacówka na Muńcole hut. Be sure to bring crampons.",
+                  "linkLabel": "Route to Muńcuł"
+                },
+                {
+                  "title": "Pass conqueror",
+                  "text": "The Brona pass awaits, 1,408 meters: a climb from Zawoja Markowa past the Markowe Szczawiny hut with a view of Babia Gora. The stretch above the hut ices over and the wind blows straight through, so you can't do without crampons.",
+                  "linkLabel": "Route to Brona"
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "13": {
@@ -394,7 +632,7 @@
         "text": "The day is short, the frost nips, and the warm cafe is still three hours away. What will you need on a winter walk, and what is better left at home?"
       },
       "task": {
-        "text": "Choose the six things you never leave without in winter.",
+        "text": "Choose the seven things you never leave without in winter.",
         "game": {
           "items": [
             {
@@ -436,8 +674,12 @@
               "label": "Small first-aid kit"
             },
             {
-              "label": "Thick paper atlas",
-              "hint": "heavy; an offline map on your phone is lighter"
+              "label": "Microspikes or crampons",
+              "hint": "on an icy trail it can be hard going without them"
+            },
+            {
+              "label": "Beach towel",
+              "hint": "let it wait for summer"
             }
           ]
         }
@@ -445,11 +687,11 @@
     },
     "14": {
       "gift": {
-        "title": "How to thank authors",
-        "text": "A peer award is a badge one traveler gives another for a helpful route. The author sees who thanked them and for what."
+        "title": "Thank the author",
+        "text": "A badge on the site is a way to say \"thank you\" to an author for a route: \"Inspired me\", \"Want to repeat it\", \"Best photos\". The author sees who thanked them and for what. In two weeks of the calendar you have already opened several routes — which one stuck with you?"
       },
       "task": {
-        "text": "Give a badge to the author of a route that helped you.",
+        "text": "Give a badge to the author of a route you opened in this calendar: in door 2, 4 or 12.",
         "ctaLabel": "Find a route"
       },
       "reward": {
@@ -458,9 +700,9 @@
     },
     "15": {
       "gift": {
-        "title": "Polish winter quests",
-        "text": "Krakow, Wroclaw, Gdansk and fifteen more Polish cities — Christmas quests through old towns with markets and nativity scenes.",
-        "linkLabel": "Krakow quest"
+        "title": "Christmas quests of Poland",
+        "text": "Christmas quests await in Warsaw, Wroclaw, Poznan, Torun, Katowice, Olsztyn, Kielce and Rzeszow — walks toward dusk, when the lights come on. Start with Warsaw, \"Lights of the Royal Route\": a nativity play that comes to life in the cellar of an old church, the city's main Christmas tree on Castle Square and traces of Chopin at every step.",
+        "linkLabel": "Quest for Warsaw"
       },
       "task": {
         "text": "Open a city landing page and save the quest route.",
@@ -470,8 +712,8 @@
         "by": {
           "gift": {
             "title": "Winter quests of Belarus",
-            "text": "Minsk, Vitebsk, Mogilev, Brest, Gomel and Grodno: Christmas quests through old towns, with a star on a pole, a batlejka puppet theater and lights. Start with Minsk, \"Star over the Batlejka\".",
-            "linkLabel": "Minsk quest"
+            "text": "Minsk, Vitebsk, Mogilev, Brest, Gomel and Grodno: Christmas quests through old towns with a star on a pole, a batlejka and lights. Start with Vitebsk, \"The Star over the Dvina\": churches that changed their names but kept welcoming Christmas, and the street where children were taught by the collectors of Vitebsk carols.",
+            "linkLabel": "Quest for Vitebsk"
           },
           "task": {
             "text": "Open a city landing page and save the quest route.",
@@ -482,18 +724,23 @@
     },
     "16": {
       "gift": {
-        "title": "Riddle: guess the place",
-        "text": "The largest lake in Belarus: 80 square kilometers of water, a pine-covered shore and health resorts where winter is quieter than anywhere else."
+        "title": "Where is this? Map",
+        "text": "The oldest city in Belarus: it is first mentioned in a chronicle in 862. Saint Euphrosyne lived here, the first printer Francysk Skaryna came from here, and St Sophia Cathedral stands above the Dvina.",
+        "linkLabel": "Quest for this city"
       },
       "task": {
-        "text": "Name this lake.",
-        "riddle": {
-          "questions": [
-            {
-              "question": "Which lake is the largest in Belarus?",
-              "hint": "Minsk region, Myadel district."
-            }
-          ]
+        "text": "Tap the map where this city stands. A hit within a 5 km radius counts."
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Where is this? Map",
+            "text": "Poland's third-largest castle after Wawel and Malbork stands on a rock above the Pelcznica river, among the forests and gorges of Lower Silesia. In December 2022 we spent a whole day there, and at Christmas the castle is decorated very beautifully.",
+            "linkLabel": "How to get there and what to see"
+          },
+          "task": {
+            "text": "Tap the map of Poland where this castle stands. A hit within a 5 km radius counts."
+          }
         }
       }
     },
@@ -526,45 +773,156 @@
     },
     "18": {
       "gift": {
-        "title": "Group trips",
-        "text": "Travelers are looking for companions for winter trips: from one-day outings to New Year tours. Browse the plans or create your own.",
-        "linkLabel": "See trips"
+        "title": "Calendar of winter holidays",
+        "text": "In winter Belarus has more holidays than days off: Winter Nicholas, two Christmases, New Year, Generous Evening, Epiphany. Can you place them in the calendar? It will help you plan trips — and all the answers are in our Christmas quests, for example the one in Mogilev.",
+        "linkLabel": "Quest for Mogilev"
       },
       "task": {
-        "text": "Apply to join a group trip or create a plan.",
-        "ctaLabel": "To trips"
-      }
-    },
-    "19": {
-      "gift": {
-        "title": "The article you never finished",
-        "text": "Many of us have a trip sitting in drafts that we never got around to telling about. December is the time to finish it: readers are looking for winter ideas right now."
-      },
-      "task": {
-        "text": "Publish a draft or start a new article.",
-        "ctaLabel": "To drafts"
-      }
-    },
-    "20": {
-      "gift": {
-        "title": "Winter routes of Belarus",
-        "text": "Lida Castle is open to visitors all year round. Nesvizh and Mir make a two-day route with an overnight stay in Nesvizh.",
-        "linkLabel": "Routes in Belarus"
-      },
-      "task": {
-        "text": "Mark five trips with the \"Was\" status — they will appear in your travel calendar.",
-        "ctaLabel": "Open calendar"
+        "text": "Quiz: three questions about the winter calendar.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "When do Orthodox believers remember Winter Nicholas?",
+              "options": [
+                "19 December",
+                "6 December",
+                "25 December"
+              ]
+            },
+            {
+              "question": "How many days do Kalyady last?",
+              "options": [
+                "Twelve",
+                "Seven",
+                "Forty"
+              ]
+            },
+            {
+              "question": "On what date is Generous Evening, the Belarusian Old New Year?",
+              "options": [
+                "13 January",
+                "31 December",
+                "19 January"
+              ]
+            }
+          ]
+        }
       },
       "variants": {
         "pl": {
           "gift": {
-            "title": "Winter routes of Poland",
-            "text": "In winter from Krakow, head for the mountains: the Gorce and the Beskids are an hour and a half to two hours away by car. The selection covers Turbacz, the Brona pass, Szczawnica and Zakopane.",
-            "linkLabel": "Winter routes"
+            "title": "Calendar of winter holidays",
+            "text": "Polish winter is a string of holidays of its own, each with its own day: from miners' bands in Silesia to costumed troupes that go around the villages after Christmas. Three questions about when things are celebrated — all the answers are in our Christmas quests, for example the one in Katowice.",
+            "linkLabel": "Quest for Katowice"
           },
           "task": {
-            "text": "Mark five trips with the \"Was\" status — they will appear in your travel calendar.",
-            "ctaLabel": "Open calendar"
+            "text": "Quiz: three questions about the winter calendar.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "When do miners' bands wake the districts of Silesia before dawn?",
+                  "options": [
+                    "4 December, St Barbara's Day",
+                    "6 December, St Nicholas's Day",
+                    "24 December, Christmas Eve"
+                  ]
+                },
+                {
+                  "question": "From which day did the “Herody” go around the villages of the Holy Cross region?",
+                  "options": [
+                    "From 26 December, St Stephen's Day",
+                    "From 1 January",
+                    "From 6 January"
+                  ]
+                },
+                {
+                  "question": "Until which holiday did the Warmian “gody”, the Christmas season, last?",
+                  "options": [
+                    "Until Epiphany, 6 January",
+                    "Until New Year's Eve, 31 December",
+                    "Until the second day of Christmas, 26 December"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "19": {
+      "gift": {
+        "title": "Where were you in 2026?",
+        "text": "In five days your \"Year in Review\" will open: countries, cities and the trips to them are counted by the \"Was here\" marks. Think back over the year — weekends out of town, vacations, short outings — and mark your trips before they are forgotten."
+      },
+      "task": {
+        "text": "Mark five trips with the \"Was here\" status — they will go into your \"Year in Review\".",
+        "ctaLabel": "Open calendar"
+      }
+    },
+    "20": {
+      "gift": {
+        "title": "Winter trips: castles and palaces",
+        "text": "Belarus's manors are lovely all year round, but in winter, as we wrote in the collection \"Castles and Manors of Belarus\", the old walls look at their most atmospheric. Here are six places from it: from Lida Castle, open all year, to Bykhov and Priluki. Which of them are waiting for you this winter?",
+        "linkLabel": "All 19 routes"
+      },
+      "task": {
+        "text": "Mark two places as \"I want to go\" right here — they will be saved to your trip list.",
+        "ctaLabel": "All castles and manors",
+        "game": {
+          "places": [
+            {
+              "title": "Lida Castle — open all year"
+            },
+            {
+              "title": "Bykhov Castle and the Tolstoy manor"
+            },
+            {
+              "title": "Adam Khmara's palace and the rowing canal"
+            },
+            {
+              "title": "Zhemyslavl: the Umiastowski palace"
+            },
+            {
+              "title": "Priluki and the Sula museum park"
+            },
+            {
+              "title": "The Slotwinski palace and the Potocki manor"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Where to go in winter from Krakow",
+            "text": "Six winter trips from our collection: Turbacz in the Gorce, Radziejowa with its lookout tower and Szczawnica, and if you want to go abroad — Dresden, Karlovy Vary and Hallstatt. Which of them are waiting for you this winter?",
+            "linkLabel": "The whole collection"
+          },
+          "task": {
+            "text": "Mark two places as \"I want to go\" right here — they will be saved to your trip list.",
+            "ctaLabel": "All winter trips",
+            "game": {
+              "places": [
+                {
+                  "title": "Turbacz in winter: the trail from Hucisko"
+                },
+                {
+                  "title": "Radziejowa and the lookout tower"
+                },
+                {
+                  "title": "Szczawnica in winter and Dzwonkówka"
+                },
+                {
+                  "title": "Winter Dresden and the Bastei"
+                },
+                {
+                  "title": "Karlovy Vary and Loket in winter"
+                },
+                {
+                  "title": "Hallstatt in winter: the salt mine and the lake"
+                }
+              ]
+            }
           }
         }
       }
@@ -676,10 +1034,10 @@
     "22": {
       "gift": {
         "title": "Story of the year",
-        "text": "Which trip of 2026 do you remember most? A short note — three paragraphs and one photo — will become part of the community's \"Year in Review\"."
+        "text": "Which trip of 2026 do you remember most? A note needs just one photo and three sentences: where you went, what you saw and why you want to go back. A winter shot — all the better."
       },
       "task": {
-        "text": "Write a short note \"My trip of 2026\".",
+        "text": "Write a note \"My trip of 2026\": one photo and three sentences.",
         "ctaLabel": "Write a note"
       },
       "reward": {
@@ -689,17 +1047,17 @@
     "23": {
       "gift": {
         "title": "Plans for 2027",
-        "text": "A trip with a date happens more often. Choose a route for 2027 and give it a date — the calendar will remind you."
+        "text": "A trip with a date happens more often. Look into your \"I want to go\" list — the places from doors 2 and 20 landed there — and pick one you will definitely visit in 2027."
       },
       "task": {
-        "text": "Plan a 2027 trip with a date in the calendar.",
+        "text": "Give one place from your \"I want to go\" list the \"I'm planning\" status with a date in 2027.",
         "ctaLabel": "Open calendar"
       }
     },
     "24": {
       "gift": {
         "title": "Traveler's year in review",
-        "text": "Your 2026 in numbers: the countries and cities you visited, trips, quests and badges.",
+        "text": "Your 2026 in numbers: the countries and cities you visited, trips, quests and badges.\n\nToday is Christmas Eve. In Poland an extra plate is set on Wigilia for a wanderer — may there be room for a guest at your table too.",
         "linkLabel": "Open profile"
       },
       "task": {
@@ -771,11 +1129,27 @@
     },
     "27": {
       "gift": {
-        "title": "Kalyady: the secret door",
-        "text": "Merry Christmas! Kalyady continues until Epiphany: on these days people in Belarusian villages still walk with the star. Thank you for being with us all December."
+        "title": "Christmastide fortune-telling",
+        "text": "Merry Christmas! In Warmia the twelve days after Christmas were considered prophetic: the weather of each one was used to predict what the matching month of the new year would be like. And in the Brest region on Shchodrukha girls carried a pancake out into the street and listened for which side a dog would bark from — that is where a matchmaker would come from.\n\nOur fortune-telling is kinder and about roads: draw a card and it will name your month of 2027. Thank you for being with us all December."
       },
       "task": {
-        "text": "A secret door: it opens only on its own day."
+        "text": "Draw a card — it will name your travel month of 2027.",
+        "game": {
+          "items": [
+            "Your month is January. The first trip of the year will take place on fresh snow, and you will remember that crunch underfoot until spring.",
+            "Your month is February. A short weekend trip will turn out bigger than any vacation: so much you will manage to see.",
+            "Your month is March. The last snow in the mountains and the first sun in the city — you will catch both on a single trip.",
+            "Your month is April. An old manor park will only just be waking up, and you will be the first one in it.",
+            "Your month is May. The road will call unexpectedly. Say yes: you haven't had a May like this in a long time.",
+            "Your month is June. You will meet the longest day of the year not at home but where the sunset is in no hurry.",
+            "Your month is July. A lake with clear water, a tent and silence — in summer everything falls into place by itself.",
+            "Your month is August. A meteor shower will catch you on the road. Wish on a falling star for your next trip.",
+            "Your month is September. A warm autumn will give you back the route you didn't have time for in summer.",
+            "Your month is October. Golden avenues and tea from a thermos: you will take the best shot of the year then.",
+            "Your month is November. While everyone sits at home, you will find a city without queues or tourists, all to yourself.",
+            "Your month is December. Lights, a market and the smell of gingerbread: you will open next Advent already on the road."
+          ]
+        }
       },
       "reward": {
         "label": "Secret badge"

@@ -74,7 +74,8 @@ describe('Advent admin preview', () => {
       expect(view.getByTestId(`advent-door-${day}`).props.accessibilityState.disabled).toBe(false)
     }
 
-    await fireEvent.press(view.getByTestId('advent-door-1'))
+    // Дверца-подарок без задания с v3 — итоги года (24).
+    await fireEvent.press(view.getByTestId('advent-door-24'))
     expect(view.getByTestId('advent-open-note')).toBeTruthy()
     await fireEvent(view.getByTestId('preview-test-sheet'), 'touchEnd')
 

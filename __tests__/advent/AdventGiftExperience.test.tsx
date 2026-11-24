@@ -79,7 +79,7 @@ describe('riddle responses (#3482)', () => {
     await fireEvent.changeText(view.getByTestId('advent-riddle-input'), 'минск')
     await fireEvent.press(view.getByTestId('advent-riddle-check'))
     expect(view.getByText('Почти! Попробуйте ещё раз.')).toBeTruthy()
-    expect(view.getByTestId('advent-riddle-hint').props.children).toBe('Подсказка: Минская область, рядом с Миром.')
+    expect(view.getByTestId('advent-riddle-hint').props.children).toBe('Подсказка: Минская область.')
   })
 
   it('B2: the final correct answer stays on screen with the answer and XP', async () => {
@@ -96,7 +96,7 @@ describe('riddle responses (#3482)', () => {
     const quiz = doorOf(6).task.riddle!.questions
     const view = await render(<AdventRiddleTask questions={quiz} onComplete={jest.fn()} />)
     jest.useFakeTimers()
-    await fireEvent.press(view.getByTestId('advent-riddle-option-7'))
+    await fireEvent.press(view.getByTestId('advent-riddle-option-Крещение'))
     expect(view.getByTestId('advent-riddle-step-correct')).toBeTruthy()
     expect(ADVENT_STEP_CELEBRATE_MS).toBeGreaterThanOrEqual(800)
     await act(async () => {
@@ -118,7 +118,7 @@ describe('riddle responses (#3482)', () => {
   it('marks a wrong quiz option instead of a bare error', async () => {
     const quiz = doorOf(6).task.riddle!.questions
     const view = await render(<AdventRiddleTask questions={quiz} onComplete={jest.fn()} />)
-    await fireEvent.press(view.getByTestId('advent-riddle-option-14'))
+    await fireEvent.press(view.getByTestId('advent-riddle-option-Масленица'))
     expect(view.getByText('Не этот — но вы близко.')).toBeTruthy()
   })
 })

@@ -65,7 +65,7 @@ describe('validateAdventOverlay', () => {
     ;(overlay.doors['2'].gift as Record<string, unknown>).link = '/x'
     overlay.doors['4'].gift!.title = '  '
     overlay.doors['6'].task!.riddle!.questions[0].options = ['6', '7']
-    overlay.doors['10'].task!.riddle!.questions[0].options![1] = 'Greenland'
+    overlay.doors['10'].task!.riddle!.questions[0].options![0] = 'Greenland'
     const errors = validateAdventOverlay(overlay, config, { locale: 'en' })
     expect(errors).toEqual(
       expect.arrayContaining([
@@ -103,20 +103,18 @@ describe('ответы загадок на всех языках', () => {
         })
       })
     })
-    // Коляды 3 + шопки 3 + святочная история 1 (#3487; викторину дверцы 21 сменил рецепт).
-    expect(checked).toBe(7)
+    // Все викторины с вариантами, включая варианты «Беларусь / Польша» (v3 по ревью, #3487).
+    expect(checked).toBe(17)
   })
 
   it('свободные загадки принимают написания BE/UK/PL/EN и латиницу', () => {
     const nesvizh = buildAdventAnswerChecker(config.doors[2].task.riddle!.questions[0].answer_pattern)
     ;['Несвиж', 'нясвіж', 'Нясьвіж', 'Несвіж', 'Nieśwież', 'nesvizh', 'Niasvizh'].forEach((answer) => expect(nesvizh(answer)).toBe(true))
     expect(nesvizh('Мир')).toBe(false)
-    const naroch = buildAdventAnswerChecker(config.doors[15].task.riddle!.questions[0].answer_pattern)
-    ;['Нарочь', 'Нарач', 'Нароч', 'Narocz', 'Lake Naroch', 'jezioro Narocz', 'naroch'].forEach((answer) => expect(naroch(answer)).toBe(true))
-    expect(naroch('Свитязь')).toBe(false)
-    const candle = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
-    ;['Свеча', 'Свечка', 'Свяча', 'Свічка', 'Świeca', 'Candle'].forEach((answer) => expect(candle(answer)).toBe(true))
-    expect(candle('Ёлка')).toBe(false)
+    // Святочная история (дверца 10, v3): ответ «дорожная карта» на всех языках.
+    const map = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
+    ;['Свою дорожную карту', 'Карту', 'Дарожную мапу', 'Дорожню карту', 'Mapę drogową', 'His map'].forEach((answer) => expect(map(answer)).toBe(true))
+    expect(map('Свечу')).toBe(false)
   })
 })
 
@@ -166,10 +164,8 @@ describe('web-загрузчик накладок', () => {
 
 describe('правила языка интерфейса в чекере загадок (#2883, ревью-гейт)', () => {
   it('принимает написания, которых нет в списке, через нормализаторы языка', () => {
-    const candle = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
-    expect(candle('The candle', 'en')).toBe(true)
-    const naroch = buildAdventAnswerChecker(config.doors[15].task.riddle!.questions[0].answer_pattern)
-    expect(naroch('the Lake Naroch', 'en')).toBe(true)
+    const map = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
+    expect(map('his road map', 'en')).toBe(true)
     const nesvizh = buildAdventAnswerChecker(config.doors[2].task.riddle!.questions[0].answer_pattern)
     expect(nesvizh('Nieswiez', 'pl')).toBe(true)
     expect(nesvizh('Niasviz', 'en')).toBe(true)

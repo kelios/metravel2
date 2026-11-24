@@ -4,22 +4,46 @@
   "doors": {
     "1": {
       "gift": {
-        "title": "Otwarcie: zimowa podróż dnia",
-        "text": "Toruń — stare miasto z czerwonej cegły, gdzie pachnie piernikami. Trasa na jeden dzień: od Ratusza do Muzeum Piernika.",
-        "linkLabel": "Czytaj trasę"
+        "title": "Bożonarodzeniowy quest: Toruń",
+        "text": "W grudniu Toruń pachnie miodem, cynamonem i goździkami, a pierniki piecze się tu od XIV wieku. Quest „Piernikowe miasto pod pierwszą gwiazdką” to półtora kilometra po Starym i Nowym Mieście: od kościoła franciszkanów przez Rynek do muzeów piernika. Przez wieki mieszkały tu obok siebie dwa Boże Narodzenia — z choinką u jednych i pierwszą gwiazdką u drugich.",
+        "linkLabel": "Otwórz quest"
       },
       "task": {
-        "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy."
+        "text": "Pierwsze pytanie sezonu. Nie wiesz — zgaduj, quest opowie resztę.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Stare polskie porzekadło wymieniało cztery najlepsze rzeczy kraju. Co przypadło w nim Toruniowi?",
+              "options": [
+                "Piernik",
+                "Pantofelki",
+                "Wódka"
+              ]
+            }
+          ]
+        }
       },
       "variants": {
         "by": {
           "gift": {
-            "title": "Otwarcie: zimowa podróż dnia",
-            "text": "Brześć — jest tu latarnik, który co wieczór ręcznie zapala naftowe lampy na ulicy Sowieckiej. Trasa na jeden dzień: twierdza, muzeum parowozów i stare centrum.",
-            "linkLabel": "Czytaj trasę"
+            "title": "Bożonarodzeniowy quest: Brześć",
+            "text": "W Brześciu zimowe święta trwają prawie miesiąc: Boże Narodzenie 25 grudnia i 7 stycznia, Nowy Rok, Szczodrucha i Wadochryszcza. Quest „Póki płonie świeca” to dwa i pół kilometra od uniwersytetu przez cerkwie, teatry i stuletnią aptekę nad Muchawiec, z ciepłym przystankiem w piekarni.",
+            "linkLabel": "Otwórz quest"
           },
           "task": {
-            "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy."
+            "text": "Pierwsze pytanie sezonu. Nie wiesz — zgaduj, quest opowie resztę.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "Co niosły ulicą kolędniki z okolic Brześcia, żeby gospodarze z daleka widzieli: idzie Kolada?",
+                  "options": [
+                    "Papierowy lampion ze świecą",
+                    "Dzwoneczek na kiju",
+                    "Ikonę w haftowanym ręczniku"
+                  ]
+                }
+              ]
+            }
           }
         }
       }
@@ -105,30 +129,85 @@
     "3": {
       "gift": {
         "title": "Zagadka: zgadnij miasto",
-        "text": "Miasto z pałacem Radziwiłłów i parkiem wpisanym na listę UNESCO. Zimą stawy zamarzają, a pałac odbija się w śniegu.",
-        "linkLabel": "Otwórz mapę"
+        "text": "W latach 80. XVI wieku książę Mikołaj Radziwiłł zwany Sierotką wziął się za przebudowę tego miasta: kamienny zamek, jezuicki kościół, ratusz na rynku. Dziś zespół Radziwiłłów jest na liście UNESCO, a zimą stawy wokół zamku zamarzają i wszystko dookoła robi się ciche i białe.",
+        "linkLabel": "Quest po tym mieście"
       },
       "task": {
         "text": "Nazwij to miasto.",
         "riddle": {
           "questions": [
             {
-              "question": "Które miasto Białorusi słynie z zespołu pałacowo-parkowego Radziwiłłów, obiektu UNESCO?",
-              "hint": "Obwód miński, niedaleko Miru."
+              "question": "Jak nazywa się miasto księcia Sierotki?",
+              "hint": "Obwód miński."
             }
           ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Zagadka: zgadnij miasto",
+            "text": "Miasto nad Odrą, gdzie w sierpniu 1982 roku artyści zaczęli rysować na ścianach małe ludziki w czapkach — prosto na plamach, którymi zamalowywano hasła. Dziś mieszka tu ponad tysiąc brązowych krasnali: na gzymsach, przy drzwiach i tuż pod nogami.",
+            "linkLabel": "Quest po tym mieście"
+          },
+          "task": {
+            "text": "Nazwij to miasto.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "W którym mieście Polski mieszka ponad tysiąc brązowych krasnali?",
+                  "hint": "Dolny Śląsk."
+                }
+              ]
+            }
+          }
         }
       }
     },
     "4": {
       "gift": {
-        "title": "Historia autora o zimie",
-        "text": "Autorzy MeTravel opowiadają, jak podróżują zimą: krótki dzień, mróz, puste zamki bez kolejek. Czytaj artykuły społeczności i wybieraj swoich autorów.",
-        "linkLabel": "Czytaj artykuły"
+        "title": "Zimowa opowieść: Wiązynka",
+        "text": "W lutym 2025 roku przyjechaliśmy do Wiązynki i zastaliśmy ją zupełnie pustą: szare niebo, śnieg na ścieżkach, ani jednej wycieczki. Przy wejściu stoi brązowe popiersie poety, a śnieg leży mu na ramionach równym pasem. Na polanie studnia z żurawiem, a na ścianie chaty — rzeźbiona tablica: „25 чэрвеня 1882 у гэтай хаце нарадзіўся…”\n\nPodobała Ci się ta historia? Zasubskrybuj autora — nowe wyjazdy trafią do Twojego kanału.",
+        "linkLabel": "Czytaj historię"
       },
       "task": {
-        "text": "Zaobserwuj autora, którego trasa Ci się spodobała — nowe wyjazdy pojawią się w Twoich aktualnościach.",
-        "ctaLabel": "Znajdź autora"
+        "text": "Doczytane? Jedno pytanie do historii.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Kto urodził się w tej chacie 25 czerwca 1882 roku?",
+              "options": [
+                "Janka Kupała",
+                "Jakub Kołas",
+                "Maksim Bahdanowicz"
+              ]
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Zimowa opowieść: chata na Maciejowej",
+            "text": "7 grudnia 2025 roku wspięliśmy się z Rabki-Zdroju w Gorcach do drewnianej chaty na Maciejowej: około 5 km w jedną stronę, 340 metrów przewyższenia i lód na szlaku — raki wzięliśmy nie bez powodu. Na górze polana Przysłop, w pogodny dzień widać Tatry i Babią Górę, a w środku jest ciepło i czeka coś gorącego po podejściu.\n\nChata ma własną historię. Jej pierwszy gospodarz wymagał, by goście zdejmowali obuwie z ulicy i zmieniali je na kapcie: przy wejściu stała nawet skrzynia na buty. Pisała o tym lokalna prasa.\n\nPodobała Ci się ta historia? Zasubskrybuj autora — nowe wyjazdy trafią do Twojego kanału.",
+            "linkLabel": "Czytaj historię"
+          },
+          "task": {
+            "text": "Doczytane? Jedno pytanie do historii.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "Czego wymagał od gości pierwszy gospodarz chaty?",
+                  "options": [
+                    "Zmieniać buty na kapcie",
+                    "Śpiewać przy wejściu kolędę",
+                    "Przynosić ze sobą polano"
+                  ]
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "5": {
@@ -179,22 +258,23 @@
     "6": {
       "gift": {
         "title": "Kolady: fakt dnia",
-        "text": "Kolady na Białorusi trwają od Bożego Narodzenia do Chrztu Pańskiego. Kolędnicy chodzą po domach z gwiazdą na drzewcu, a w drewnianym teatrzyku w skrzyni, zwanym batlejką, kukiełki odgrywają historię Narodzenia."
+        "text": "Kolady to najdłuższe święta białoruskiej zimy: od Bożego Narodzenia do Chrztu Pańskiego po domach chodzą kolędnicy z pieśniami, przebierańcami i własnym małym teatrzykiem lalkowym. Co niesie się na czele orszaku, jak nazywa się ten teatrzyk i jakim świętem wszystko się kończy? Sprawdź się — a potem przejdź quest po Mińsku, gdzie lalki z batlejki rozbiegły się po mieście.",
+        "linkLabel": "Quest „Gwiazda nad batlejką”"
       },
       "task": {
-        "text": "Quiz: trzy pytania o Koladach.",
+        "text": "Quiz: trzy pytania o Kolady.",
         "riddle": {
           "questions": [
             {
-              "question": "Którego dnia stycznia prawosławni chrześcijanie Białorusi obchodzą Boże Narodzenie?",
+              "question": "Czym jest Wadochryszcza?",
               "options": [
-                "6",
-                "7",
-                "14"
+                "Chrzest Pański",
+                "Szczodry Wieczór",
+                "Maslenica"
               ]
             },
             {
-              "question": "Jaki symbol niosą na drzewcu na czele procesji kolędników?",
+              "question": "Jaki symbol niesie się na drzewcu na czele orszaku kolędników?",
               "options": [
                 "Gwiazda",
                 "Słońce",
@@ -269,12 +349,12 @@
       "variants": {
         "by": {
           "gift": {
-            "title": "Mińsk na Boże Narodzenie",
-            "text": "W grudniu centrum Mińska jest ozdobione na święta, a Prospekt Niepodległości pięknie podświetlony. Przewodnik na weekend: Górne Miasto, plac Wolności, ciche podwórka.",
-            "linkLabel": "Czytaj przewodnik"
+            "title": "Dokąd pojechać na świąteczny weekend",
+            "text": "25 grudnia i 7 stycznia na Białorusi są dniami wolnymi od pracy — dwa dni, żeby wyrwać się z miasta. W naszym zestawieniu jest 13 jednodniowych wyjazdów z Mińska: jeziora i źródła, stare dwory, Linia Stalina i miasteczko filmowe Smolewud. Każdą trasę przejechaliśmy sami. Zimą szczególnie dobre są Linia Stalina i spacer na Łysą Górę.",
+            "linkLabel": "13 wyjazdów z Mińska"
           },
           "task": {
-            "text": "Wybierz dzień i oznacz wyjazd do Mińska statusem „Planuję” z datą.",
+            "text": "Wybierz wyjazd na świąteczny weekend i oznacz go statusem „Planuję” z datą.",
             "ctaLabel": "Zaplanuj"
           }
         }
@@ -282,13 +362,92 @@
     },
     "8": {
       "gift": {
-        "title": "Zimowy quest w Grodnie",
-        "text": "Quest „Dwie gwiazdy nad Niemnem”: w Grodnie Boże Narodzenie świętuje się dwa razy — 25 grudnia i 7 stycznia. Stare miasto nad rzeką, dwie godziny pieszo, podpowiedzi — w telefonie.",
-        "linkLabel": "Otwórz quest"
+        "title": "Słownik Kolad",
+        "text": "Kolady mają swój język. Szczodrucha, Koza, głodna kucia — wiesz, co kryje się za każdym słowem? Połącz słowo z jego znaczeniem. Wszystkie fakty pochodzą z naszych bożonarodzeniowych questów po Białorusi, a najbardziej „kolędowy” z nich jest po Homlu: dwanaście dni świąt na jednej ulicy.",
+        "linkLabel": "Quest po Homlu"
       },
       "task": {
-        "text": "Przejdź pierwszy krok zimowego questu w swoim mieście.",
-        "ctaLabel": "Wybierz miasto"
+        "text": "Złóż sześć par „słowo — znaczenie”.",
+        "game": {
+          "pairs": [
+            {
+              "left": "Szczodrucha",
+              "right": "Szczodry Wieczór w okolicach Brześcia",
+              "fact": "Na Szczodruchę obowiązkowo pieczono naleśniki, a kolędnikom dawano naleśnik posmarowany masłem lub słoniną. Z questu po Brześciu."
+            },
+            {
+              "left": "Koza",
+              "right": "Przebieraniec w kożuchu włosem na wierzch",
+              "fact": "Koza tańczyła przy progu, padała bez sił i ożywała dopiero wtedy, gdy gospodarz wynosił kiełbasę, słoninę lub naleśniki. Z questu po Brześciu."
+            },
+            {
+              "left": "Głodna kucia",
+              "right": "Postna kolacja w wigilię Chrztu Pańskiego",
+              "fact": "Na święta nakrywano trzy kucie: postną przed Bożym Narodzeniem, szczodrą z mięsem w Szczodry Wieczór i „głodną”, wodną. Z questu po Homlu."
+            },
+            {
+              "left": "Siano pod obrusem",
+              "right": "Pamiątka żłóbka Dzieciątka",
+              "fact": "Od niego i od postnej kuci, pierwszej z trzech kolędowych, zaczynał się bożonarodzeniowy wieczór. Z questu po Mińsku."
+            },
+            {
+              "left": "Pasterka",
+              "right": "Północna msza ku czci pasterzy",
+              "fact": "Pasterze jako pierwsi przyszli do żłóbka. Na pasterkę zbiera się przed północą z 24 na 25 grudnia. Z questu po Brześciu."
+            },
+            {
+              "left": "Król Herod",
+              "right": "Czarny charakter dolnego piętra batlejki",
+              "fact": "Na górze skrzyni lalki odgrywały Boże Narodzenie, na dole rządził Herod z żołnierzami, przebierańcami i diabłami. Z questu po Mińsku."
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Kto przychodzi na Boże Narodzenie?",
+            "text": "W każdym zakątku Polski na Boże Narodzenie przychodzi inny gość: ktoś z workiem i rózgą, ktoś niewidzialny, ktoś na białym koniu. Połącz gościa z jego krainą. Wszystkie fakty pochodzą z naszych bożonarodzeniowych questów, a zacząć warto od Poznania, gdzie do drzwi puka Gwiazdor.",
+            "linkLabel": "Quest po Poznaniu"
+          },
+          "task": {
+            "text": "Złóż sześć par „gość — kraina”.",
+            "game": {
+              "pairs": [
+                {
+                  "left": "Gwiazdor w kożuchu włosem na wierzch, z workiem i rózgą",
+                  "right": "Wielkopolska",
+                  "fact": "Grzecznym — jabłka, orzechy i pierniki, leniom — rózga albo para „pyr”, czyli ziemniaków po poznańsku. Z questu po Poznaniu."
+                },
+                {
+                  "left": "Aniołek, którego nie można zobaczyć",
+                  "right": "Małopolska i Podkarpacie",
+                  "fact": "Gdy rodzina siedzi przy Wigilii, po cichu zostawia paczki pod choinką i znika. Z questu po Rzeszowie."
+                },
+                {
+                  "left": "Dzieciątko — sam Jezusek",
+                  "right": "Górny Śląsk",
+                  "fact": "Przed północą spieszy się tu na Pasterkę: kto zdążył, temu rok się uda. Z questu po Katowicach."
+                },
+                {
+                  "left": "Święty Mikołaj z prezentami pod choinkę",
+                  "right": "Warszawa",
+                  "fact": "W Wielkopolsce Mikołaj też bywa, ale przychodzi 6 grudnia i zostawia drobiazgi w bucie. Z questu po Poznaniu."
+                },
+                {
+                  "left": "Biały koń-szemel na czele przebierańców",
+                  "right": "Warmia",
+                  "fact": "Koniem był wiejski chłopak z drewnianym końskim łbem na kiju, który rozdawał dzieciom smakołyki. Z questu po Olsztynie."
+                },
+                {
+                  "left": "Grupa „Herody” z królem, Diabłem i Śmiercią",
+                  "right": "Ziemia Świętokrzyska",
+                  "fact": "W Herodach chodzili tylko nieżonaci chłopcy, kobiet w grupie nie bywało. Z questu po Kielcach."
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "9": {
@@ -314,18 +473,18 @@
     "10": {
       "gift": {
         "title": "Świąteczna opowieść podróżnika",
-        "text": "Tuż przed Bożym Narodzeniem podróżnik szedł lasem na stację i spóźnił się na ostatni pociąg. Zamieć zasypywała tory, telefon się rozładował. Na skraju osady paliło się jedno okno, a na parapecie stała świeca: według dawnego zwyczaju stawia się ją w Wigilię, aby każdy, kto jest w drodze, wiedział, że ktoś tu na niego czeka.\n\nDrzwi otworzono od razu. Nalano mu gorącej herbaty, postawiono dodatkowy talerz i o nic nie pytano. Rano zamieć ucichła. Wychodząc, podróżnik zostawił na parapecie swoją mapę podróży z dopiskiem „tu na mnie czekano”.\n\nMówią, że od tamtej pory w każdej jego trasie jest jeden punkt bez nazwy. Zajeżdża tam każdej zimy."
+        "text": "Przed Bożym Narodzeniem podróżnik szedł przez las na stację i spóźnił się na ostatni pociąg. Zamieć zasypywała tory, telefon się rozładował. Na skraju osady paliło się jedno okno, a na parapecie stała świeca: według starego zwyczaju stawia się ją w Wigilię, by każdy, kto jest w drodze, wiedział — tu na niego czekają.\n\nDrzwi otwarto od razu. Nalano mu gorącej herbaty, postawiono dodatkowy talerz i o nic nie pytano. Rano zamieć ucichła. Wychodząc, podróżnik zostawił na parapecie swoją mapę drogową z dopiskiem „tu na mnie czekano”.\n\nPodobno od tamtej pory w każdej jego trasie jest jeden punkt bez nazwy. Zajeżdża tam co zimę."
       },
       "task": {
-        "text": "Doczytane? Jedno pytanie do opowieści.",
+        "text": "Doczytane do końca? Jedno pytanie do opowieści.",
         "riddle": {
           "questions": [
             {
-              "question": "Co stało na parapecie i pokazało podróżnikowi, że ktoś na niego czeka?",
+              "question": "Co podróżnik zostawił na parapecie, gdy odchodził?",
               "options": [
-                "Choinka",
-                "Świeca",
-                "Latarnia"
+                "Swoją mapę drogową",
+                "Świecę",
+                "List"
               ]
             }
           ]
@@ -377,15 +536,94 @@
     },
     "12": {
       "gift": {
-        "title": "Zdjęcie dnia od społeczności",
-        "text": "Zimowe fotografie podróżników: zaśnieżone kościoły, zamarznięte jeziora, światła jarmarków. Najlepsze zdjęcia grudnia otrzymają rzadką nagrodę od zespołu."
+        "title": "Który zimowy wyjazd jest Twój?",
+        "text": "Dla jednych zima to lodowisko i gorąca czekolada, dla innych — przełęcz i szron na szaliku. Zaznacz, co o Tobie, i zdobądź tytuł razem z trasą, która pasuje właśnie do Ciebie."
       },
       "task": {
-        "text": "Wgraj swoje zimowe zdjęcie do nowego wyjazdu lub notatki.",
-        "ctaLabel": "Dodaj zdjęcie"
+        "text": "Zaznacz wszystko, co o Tobie — i poznaj swoją zimową trasę.",
+        "game": {
+          "items": [
+            "Wstać przed świtem dla wschodu słońca — łatwo",
+            "Mam buty z dobrą podeszwą",
+            "10 km po śniegu — normalny spacer",
+            "Mam raczki lub raki",
+            "Lubię, gdy szlak prowadzi w górę",
+            "Gorąca herbata w górskiej chacie — najlepsza nagroda",
+            "Jestem gotów(-owa) jechać dwie godziny dla jednego widoku",
+            "Mróz poniżej −10 nie odwołuje planów",
+            "Termos pakuję od wieczora",
+            "Mapa offline pobrana z wyprzedzeniem"
+          ],
+          "tiers": [
+            {
+              "title": "Zimowy mieszczuch",
+              "text": "Twój zimowy wyjazd jest krótki i ciepły: pół dnia za miastem i do domu na kolację. Zacznij od naszego zestawienia weekendowych wyjazdów z Mińska: jeziora, źródła, dwory i Linia Stalina.",
+              "linkLabel": "Wyjazdy na weekend"
+            },
+            {
+              "title": "Miłośnik starych murów",
+              "text": "Dla Ciebie wyjazd z historią: zamek lub dwór, spacer po starym parku i herbata z termosu. W zestawieniu jest 19 tras z Mińska — od zamku w Lidzie po ciche dwory.",
+              "linkLabel": "Zamki i dwory"
+            },
+            {
+              "title": "Zimowy piechur",
+              "text": "Dasz radę przejść pół dnia: Łysa Góra, 342 metry — drugi pod względem wysokości punkt Białorusi. Po drodze kąpielisko, cerkiew i źródła, od Mińska około 40 km.",
+              "linkLabel": "Trasa na Łysą Górę"
+            },
+            {
+              "title": "Zimowy tropiciel",
+              "text": "Potrzebujesz trasy z przygodą: 8–10 km wzdłuż strumienia Ciepły Stan do partyzanckiej bazy „Szturmowa”, miejscami przez zwalone drzewa. Zimą jest tu szczególnie pięknie — strumień nie zamarza całkowicie.",
+              "linkLabel": "Trasa do bazy Szturmowa"
+            }
+          ]
+        }
       },
-      "reward": {
-        "label": "Kandydat do rzadkiej nagrody"
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Który zimowy wyjazd jest Twój?",
+            "text": "Dla jednych zima to lodowisko i gorąca czekolada, dla innych — przełęcz i szron na szaliku. Zaznacz, co o Tobie, i zdobądź tytuł razem z trasą, która pasuje właśnie do Ciebie."
+          },
+          "task": {
+            "text": "Zaznacz wszystko, co o Tobie — i poznaj swoją zimową trasę.",
+            "game": {
+              "items": [
+                "Wstać przed świtem dla wschodu słońca — łatwo",
+                "Mam buty z dobrą podeszwą",
+                "10 km po śniegu — normalny spacer",
+                "Mam raczki lub raki",
+                "Lubię, gdy szlak prowadzi w górę",
+                "Gorąca herbata w górskiej chacie — najlepsza nagroda",
+                "Jestem gotów(-owa) jechać dwie godziny dla jednego widoku",
+                "Mróz poniżej −10 nie odwołuje planów",
+                "Termos pakuję od wieczora",
+                "Mapa offline pobrana z wyprzedzeniem"
+              ],
+              "tiers": [
+                {
+                  "title": "Zimowy mieszczuch",
+                  "text": "Zacznij od lodowiska: na arenie Cracovia w Krakowie łyżwy można wypożyczyć, a najbliższe stoki, Siepraw-Ski, są 25 km od miasta.",
+                  "linkLabel": "Lodowisko i stoki"
+                },
+                {
+                  "title": "Miłośnik górskich chat",
+                  "text": "Twój format to krótkie podejście do schroniska: Jaworzyna Krynicka, około 4 km w jedną stronę i 400 metrów przewyższenia, a na górze obiad w ciepłej chacie.",
+                  "linkLabel": "Trasa w Krynicy"
+                },
+                {
+                  "title": "Zimowy piechur",
+                  "text": "Dasz radę na prawdziwy beskidzki dzień: Muńcuł, około 12 km tam i z powrotem, ponad 600 metrów przewyższenia i drewniana Bacówka na Muńcole. Raki zabierz koniecznie.",
+                  "linkLabel": "Trasa na Muńcuł"
+                },
+                {
+                  "title": "Zdobywca przełęczy",
+                  "text": "Czeka na Ciebie przełęcz Brona, 1408 metrów: podejście z Zawoja Markowa obok schroniska Markowe Szczawiny i widok na Babią Górę. Odcinek nad schroniskiem jest oblodzony i przewiewany na wylot, więc bez raków ani rusz.",
+                  "linkLabel": "Trasa na Bronę"
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "13": {
@@ -394,7 +632,7 @@
         "text": "Dzień krótki, mróz szczypie, do ciepłej kawiarni jeszcze trzy godziny. Co przyda się na zimowym spacerze, a co lepiej zostawić w domu?"
       },
       "task": {
-        "text": "Wybierz sześć rzeczy, bez których zimą nie wychodzi się w drogę.",
+        "text": "Wybierz siedem rzeczy, bez których zimą nie wychodzi się w drogę.",
         "game": {
           "items": [
             {
@@ -436,8 +674,12 @@
               "label": "Mała apteczka"
             },
             {
-              "label": "Gruby papierowy atlas",
-              "hint": "ciężki — mapa offline w telefonie jest lżejsza"
+              "label": "Raczki lub raki",
+              "hint": "na oblodzonym szlaku bez nich bywa trudno"
+            },
+            {
+              "label": "Ręcznik plażowy",
+              "hint": "niech poczeka do lata"
             }
           ]
         }
@@ -445,11 +687,11 @@
     },
     "14": {
       "gift": {
-        "title": "Jak dziękować autorom",
-        "text": "Nagroda peer to odznaka, którą jeden podróżnik daje drugiemu za przydatną trasę. Autor widzi, kto i za co podziękował."
+        "title": "Podziękuj autorowi",
+        "text": "Odznaka na stronie to sposób, by powiedzieć autorowi „dziękuję” za trasę: „Zainspirował mnie”, „Chcę powtórzyć”, „Najlepsze zdjęcia”. Autor widzi, kto i za co mu podziękował. Przez dwa tygodnie kalendarza otworzyło się przed Tobą kilka tras — która zapadła Ci w pamięć?"
       },
       "task": {
-        "text": "Podaruj odznakę autorowi trasy, która Ci pomogła.",
+        "text": "Podaruj odznakę autorowi trasy z tego kalendarza: z okienka 2, 4 lub 12.",
         "ctaLabel": "Znajdź trasę"
       },
       "reward": {
@@ -458,9 +700,9 @@
     },
     "15": {
       "gift": {
-        "title": "Polskie zimowe questy",
-        "text": "Kraków, Wrocław, Gdańsk i jeszcze piętnaście miast Polski — bożonarodzeniowe questy po starych miastach z jarmarkami i szopkami.",
-        "linkLabel": "Quest po Krakowie"
+        "title": "Bożonarodzeniowe questy Polski",
+        "text": "Bożonarodzeniowe questy czekają w Warszawie, Wrocławiu, Poznaniu, Toruniu, Katowicach, Olsztynie, Kielcach i Rzeszowie — spacery o zmierzchu, gdy zapalają się światła. Zacznij od Warszawy, „Światła Traktu Królewskiego”: szopka, która ożywa w podziemiach starego kościoła, główna choinka miasta na Placu Zamkowym i ślady Chopina na każdym kroku.",
+        "linkLabel": "Quest po Warszawie"
       },
       "task": {
         "text": "Otwórz stronę miasta i zapisz trasę questu.",
@@ -470,8 +712,8 @@
         "by": {
           "gift": {
             "title": "Zimowe questy Białorusi",
-            "text": "Mińsk, Witebsk, Mohylew, Brześć, Homel i Grodno: bożonarodzeniowe questy po starych miastach z gwiazdą na drzewcu, batlejką i światełkami. Zacznij od Mińska — „Gwiazda nad batlejką”.",
-            "linkLabel": "Quest po Mińsku"
+            "text": "Mińsk, Witebsk, Mohylew, Brześć, Homel i Grodno: bożonarodzeniowe questy po starych miastach z gwiazdą na drzewcu, batlejką i światłami. Zacznij od Witebska, „Gwiazda nad Dźwiną”: cerkwie, które zmieniały imiona, ale wciąż witały Boże Narodzenie, i ulica, gdzie uczyli dzieci zbieracze witebskich kolęd.",
+            "linkLabel": "Quest po Witebsku"
           },
           "task": {
             "text": "Otwórz stronę miasta i zapisz trasę questu.",
@@ -482,18 +724,23 @@
     },
     "16": {
       "gift": {
-        "title": "Zagadka: zgadnij miejsce",
-        "text": "Największe jezioro Białorusi: 80 kilometrów kwadratowych wody, sosnowy brzeg i sanatoria, gdzie zimą jest cicho jak nigdzie indziej."
+        "title": "Gdzie to jest? Mapa",
+        "text": "Najstarsze miasto Białorusi: w kronice po raz pierwszy wspomniane w 862 roku. Mieszkała tu święta Eufrozyna, stąd pochodzi pierwodrukarz Franciszek Skaryna, a nad Dźwiną stoi sobór Mądrości Bożej.",
+        "linkLabel": "Quest po tym mieście"
       },
       "task": {
-        "text": "Nazwij to jezioro.",
-        "riddle": {
-          "questions": [
-            {
-              "question": "Które jezioro jest największe na Białorusi?",
-              "hint": "Obwód miński, rejon miadziolski."
-            }
-          ]
+        "text": "Kliknij na mapie tam, gdzie leży to miasto. Liczy się trafienie w promieniu 5 km."
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Gdzie to jest? Mapa",
+            "text": "Trzeci co do wielkości zamek w Polsce po Wawelu i Malborku stoi na skale nad rzeką Pełcznicą, wśród lasów i wąwozów Dolnego Śląska. W grudniu 2022 roku spędziliśmy w nim cały dzień, a na Boże Narodzenie zamek jest bardzo pięknie przystrojony.",
+            "linkLabel": "Jak dojechać i co zobaczyć"
+          },
+          "task": {
+            "text": "Kliknij na mapie Polski tam, gdzie stoi ten zamek. Liczy się trafienie w promieniu 5 km."
+          }
         }
       }
     },
@@ -526,45 +773,156 @@
     },
     "18": {
       "gift": {
-        "title": "Wspólne wyjazdy",
-        "text": "Podróżnicy szukają towarzyszy na zimowe wyjazdy: od jednodniowych wypadów do noworocznych wycieczek. Zobacz plany innych lub stwórz własny.",
-        "linkLabel": "Zobacz wyjazdy"
+        "title": "Kalendarz zimowych świąt",
+        "text": "Zimą na Białorusi świąt jest więcej niż dni wolnych: Mikołaj Zimowy, dwa Boże Narodzenia, Nowy Rok, Szczodry Wieczór, Wadochryszcza. Potrafisz ułożyć je w kalendarzu? Przyda się do planowania wyjazdów — a wszystkie odpowiedzi są w naszych bożonarodzeniowych questach, na przykład po Mohylewie.",
+        "linkLabel": "Quest po Mohylewie"
       },
       "task": {
-        "text": "Zgłoś się do wspólnego wyjazdu lub stwórz plan.",
-        "ctaLabel": "Do wyjazdów"
-      }
-    },
-    "19": {
-      "gift": {
-        "title": "Artykuł, który czeka na dokończenie",
-        "text": "Wielu z nas ma w szkicach wyjazd, o którym nigdy nie opowiedziało. Grudzień to czas, by go dokończyć: czytelnicy szukają zimowych pomysłów właśnie teraz."
-      },
-      "task": {
-        "text": "Opublikuj szkic lub zacznij nowy artykuł.",
-        "ctaLabel": "Do szkiców"
-      }
-    },
-    "20": {
-      "gift": {
-        "title": "Zimowe trasy Białorusi",
-        "text": "Zamek w Lidzie jest otwarty dla zwiedzających przez cały rok. Nieśwież i Mir — trasa na dwa dni z noclegiem w Nieświeżu.",
-        "linkLabel": "Trasy po Białorusi"
-      },
-      "task": {
-        "text": "Oznacz pięć wyjazdów statusem „Był” — trafią do Twojego kalendarza podróży.",
-        "ctaLabel": "Otwórz kalendarz"
+        "text": "Quiz: trzy pytania o zimowy kalendarz.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Kiedy prawosławni wspominają Mikołaja Zimowego?",
+              "options": [
+                "19 grudnia",
+                "6 grudnia",
+                "25 grudnia"
+              ]
+            },
+            {
+              "question": "Ile dni trwają Kolady?",
+              "options": [
+                "Dwanaście",
+                "Siedem",
+                "Czterdzieści"
+              ]
+            },
+            {
+              "question": "Którego dnia jest Szczodry Wieczór — białoruski Stary Nowy Rok?",
+              "options": [
+                "13 stycznia",
+                "31 grudnia",
+                "19 stycznia"
+              ]
+            }
+          ]
+        }
       },
       "variants": {
         "pl": {
           "gift": {
-            "title": "Zimowe trasy Polski",
-            "text": "Zimą z Krakowa — w góry: w Gorce i Beskidy jedzie się półtorej do dwóch godzin samochodem. W zestawieniu Turbacz, przełęcz Brona, Szczawnica i Zakopane.",
-            "linkLabel": "Zimowe trasy"
+            "title": "Kalendarz zimowych świąt",
+            "text": "Polska zima to ciąg własnych świąt i każde ma swój dzień: od górniczych orkiestr na Śląsku po przebierańców, którzy po Bożym Narodzeniu chodzą po wsiach. Trzy pytania o to, kiedy co się obchodzi — wszystkie odpowiedzi są w naszych bożonarodzeniowych questach, na przykład po Katowicach.",
+            "linkLabel": "Quest po Katowicach"
           },
           "task": {
-            "text": "Oznacz pięć wyjazdów statusem „Był” — trafią do Twojego kalendarza podróży.",
-            "ctaLabel": "Otwórz kalendarz"
+            "text": "Quiz: trzy pytania o zimowy kalendarz.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "Kiedy na Śląsku górnicze orkiestry budzą osiedla jeszcze po ciemku?",
+                  "options": [
+                    "4 grudnia, w dzień świętej Barbary",
+                    "6 grudnia, w dzień świętego Mikołaja",
+                    "24 grudnia, w Wigilię"
+                  ]
+                },
+                {
+                  "question": "Od którego dnia po wsiach Ziemi Świętokrzyskiej chodziły „Herody”?",
+                  "options": [
+                    "Od 26 grudnia, dnia świętego Szczepana",
+                    "Od 1 stycznia",
+                    "Od 6 stycznia"
+                  ]
+                },
+                {
+                  "question": "Do jakiego święta na Warmii trwały „gody” — czas bożonarodzeniowy?",
+                  "options": [
+                    "Do Trzech Króli, 6 stycznia",
+                    "Do Sylwestra, 31 grudnia",
+                    "Do drugiego dnia świąt, 26 grudnia"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "19": {
+      "gift": {
+        "title": "Gdzie Cię zaniosło w 2026 roku?",
+        "text": "Za pięć dni otworzy się Twoje „Podsumowanie roku”: kraje, miasta i wyjazdy do nich liczą się według oznaczeń „Byłem tutaj”. Przypomnij sobie rok — weekendy za miastem, urlop, krótkie wypady — i oznacz wyjazdy, zanim ulecą z pamięci."
+      },
+      "task": {
+        "text": "Oznacz pięć wyjazdów statusem „Byłem tutaj” — trafią do Twojego „Podsumowania roku”.",
+        "ctaLabel": "Otwórz kalendarz"
+      }
+    },
+    "20": {
+      "gift": {
+        "title": "Zimowe wyjazdy: zamki i pałace",
+        "text": "Dwory Białorusi są piękne przez cały rok, a zimą, jak napisaliśmy w zestawieniu „Zamki i dwory Białorusi”, stare mury wyglądają najbardziej klimatycznie. Oto sześć miejsc z niego: od zamku w Lidzie, otwartego cały rok, po Bychów i Prełuki. Które z nich czekają na Ciebie tej zimy?",
+        "linkLabel": "Wszystkie 19 tras"
+      },
+      "task": {
+        "text": "Zaznacz dwa miejsca „Chcę pojechać” od razu tutaj — zapiszą się na Twojej liście wyjazdów.",
+        "ctaLabel": "Wszystkie zamki i dwory",
+        "game": {
+          "places": [
+            {
+              "title": "Zamek w Lidzie — otwarty cały rok"
+            },
+            {
+              "title": "Zamek w Bychowie i dwór Tołstojów"
+            },
+            {
+              "title": "Pałac Adama Chmary i kanał wioślarski"
+            },
+            {
+              "title": "Żemysław: pałac Umiastowskich"
+            },
+            {
+              "title": "Prełuki i park-muzeum Sula"
+            },
+            {
+              "title": "Pałac Słotwińskich i dwór Potockich"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Dokąd pojechać zimą z Krakowa",
+            "text": "Sześć zimowych wyjazdów z naszego zestawienia: Turbacz w Gorcach, Radziejowa z wieżą widokową i Szczawnica, a jeśli chcesz za granicę — Drezno, Karlowe Wary i Hallstatt. Które z nich czekają na Ciebie tej zimy?",
+            "linkLabel": "Całe zestawienie"
+          },
+          "task": {
+            "text": "Zaznacz dwa miejsca „Chcę pojechać” od razu tutaj — zapiszą się na Twojej liście wyjazdów.",
+            "ctaLabel": "Wszystkie zimowe wyjazdy",
+            "game": {
+              "places": [
+                {
+                  "title": "Turbacz zimą: szlak od Huciska"
+                },
+                {
+                  "title": "Radziejowa i wieża widokowa"
+                },
+                {
+                  "title": "Szczawnica zimą i Dzwonkówka"
+                },
+                {
+                  "title": "Zimowe Drezno i Bastei"
+                },
+                {
+                  "title": "Karlowe Wary i Loket zimą"
+                },
+                {
+                  "title": "Hallstatt zimą: kopalnia soli i jezioro"
+                }
+              ]
+            }
           }
         }
       }
@@ -676,10 +1034,10 @@
     "22": {
       "gift": {
         "title": "Opowieść roku",
-        "text": "Który wyjazd 2026 roku najbardziej zapadł Ci w pamięć? Krótka notatka — trzy akapity i jedno zdjęcie — stanie się częścią „Podsumowania roku” społeczności."
+        "text": "Który wyjazd 2026 roku najbardziej zapadł Ci w pamięć? Do notatki wystarczy jedno zdjęcie i trzy zdania: gdzie to było, co zachwyciło i dlaczego chce się tam wrócić. Zimowe ujęcie — tym lepiej."
       },
       "task": {
-        "text": "Napisz krótką notatkę „Moja podróż 2026”.",
+        "text": "Napisz notatkę „Moja podróż 2026”: jedno zdjęcie i trzy zdania.",
         "ctaLabel": "Napisz notatkę"
       },
       "reward": {
@@ -689,17 +1047,17 @@
     "23": {
       "gift": {
         "title": "Plany na 2027",
-        "text": "Podróż, która ma datę, zdarza się częściej. Wybierz trasę na rok 2027 i ustaw jej datę — kalendarz przypomni."
+        "text": "Podróż, która ma datę, zdarza się częściej. Zajrzyj na swoją listę „Chcę pojechać” — trafiły tam miejsca z okienek 2 i 20 — i wybierz jedno, do którego na pewno pojedziesz w 2027 roku."
       },
       "task": {
-        "text": "Zaplanuj wyjazd w 2027 roku z datą w kalendarzu.",
+        "text": "Ustaw jednemu miejscu z listy „Chcę pojechać” status „Planuję” z datą w 2027 roku.",
         "ctaLabel": "Otwórz kalendarz"
       }
     },
     "24": {
       "gift": {
         "title": "Podsumowanie roku podróżnika",
-        "text": "Twój rok 2026 w liczbach: odwiedzone kraje i miasta, wyjazdy, questy i odznaki.",
+        "text": "Twój rok 2026 w liczbach: odwiedzone kraje i miasta, wyjazdy, questy i odznaki.\n\nDziś Wigilia. W Polsce przy wigilijnym stole stawia się dodatkowy talerz dla wędrowca — niech i u Ciebie znajdzie się miejsce dla gościa.",
         "linkLabel": "Otwórz profil"
       },
       "task": {
@@ -771,11 +1129,27 @@
     },
     "27": {
       "gift": {
-        "title": "Kolady: sekretne drzwiczki",
-        "text": "Wesołych Świąt! Kolady (białoruskie Kolędy) trwają do Chrztu Pańskiego: w te dni w białoruskich wsiach wciąż chodzą z gwiazdą. Dziękujemy, że byliście z nami przez cały grudzień."
+        "title": "Świąteczna wróżba",
+        "text": "Wesołych Świąt! Na Warmii dwanaście dni po Bożym Narodzeniu uważano za wróżebne: po pogodzie każdego z nich wróżono, jaki będzie odpowiadający mu miesiąc nowego roku. A w okolicach Brześcia na Szczodruchę dziewczyny wynosiły na ulicę naleśnik i nasłuchiwały, z której strony zaszczeka pies — stamtąd przyjdzie swat.\n\nNasza wróżba jest łagodniejsza i o drogach: wylosuj kartę, a nazwie Twój miesiąc 2027 roku. Dziękujemy, że byliście z nami przez cały grudzień."
       },
       "task": {
-        "text": "Sekretne drzwiczki: otwierają się tylko w swoim dniu."
+        "text": "Wylosuj kartę — nazwie Twój podróżny miesiąc 2027 roku.",
+        "game": {
+          "items": [
+            "Twój miesiąc — styczeń. Pierwszy wyjazd roku odbędzie się po świeżym śniegu, a to skrzypienie pod nogami będziesz wspominać do wiosny.",
+            "Twój miesiąc — luty. Krótki wypad na weekend okaże się większy niż jakikolwiek urlop: tyle wszystkiego zdążysz zobaczyć.",
+            "Twój miesiąc — marzec. Ostatni śnieg w górach i pierwsze słońce w mieście — złapiesz oba w jednej podróży.",
+            "Twój miesiąc — kwiecień. Stary park dworski dopiero się obudzi, a Ty będziesz w nim pierwszy.",
+            "Twój miesiąc — maj. Droga zawoła niespodziewanie. Zgódź się: takiego maja dawno nie było.",
+            "Twój miesiąc — czerwiec. Najdłuższy dzień roku powitasz nie w domu, tylko tam, gdzie zachód słońca się nie spieszy.",
+            "Twój miesiąc — lipiec. Jezioro z przejrzystą wodą, namiot i cisza — latem wszystko ułoży się samo.",
+            "Twój miesiąc — sierpień. Deszcz meteorów zastanie Cię w drodze. Pomyśl życzenie na spadającą gwiazdę: następna podróż.",
+            "Twój miesiąc — wrzesień. Ciepła jesień zwróci Ci trasę, na którą latem zabrakło czasu.",
+            "Twój miesiąc — październik. Złote aleje i herbata z termosu: najlepsze ujęcie roku zrobisz właśnie wtedy.",
+            "Twój miesiąc — listopad. Gdy wszyscy siedzą w domu, Ty znajdziesz miasto bez kolejek i turystów, tylko dla siebie.",
+            "Twój miesiąc — grudzień. Światła, jarmark i zapach pierników: następny adwent otworzysz już w drodze."
+          ]
+        }
       },
       "reward": {
         "label": "Sekretna odznaka"

@@ -140,7 +140,9 @@ describe('AdventScreen (#2861)', () => {
     expect(screen.getByTestId('advent-today-action')).toBeTruthy()
     await fireEvent.press(screen.getByTestId('advent-today-open'))
     expect(screen.getByTestId('advent-door-sheet-1')).toBeTruthy()
-    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBe('2026-12-01')
+    // Дверца 1 с v3 — квест и вопрос: открытие пишет дверцу, задание ждёт ответа (#3487).
+    expect(useAdventProgressStore.getState().byOwner.u7.opened['1']).toBe('2026-12-01')
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBeUndefined()
   })
 
   it('shows an honest countdown before launch, without a current-day action or fake progress', async () => {
@@ -169,29 +171,30 @@ describe('AdventScreen (#2861)', () => {
   })
 
   it('opens a door into the sheet, marks the task done and updates progress', async () => {
-    const screen = await renderAt(new Date(2026, 11, 18, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-18'))
-    expect(screen.getByTestId('advent-door-sheet-18')).toBeTruthy()
+    // Дверца 17 — переход с ручной отметкой «Сделано» (книга в подарок).
+    const screen = await renderAt(new Date(2026, 11, 17, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-17'))
+    expect(screen.getByTestId('advent-door-sheet-17')).toBeTruthy()
     expect(screen.getByText('Открыто 1 из 24 дверец')).toBeTruthy()
     expect(screen.queryByTestId('advent-task-server-credit-hint')).toBeNull()
     await fireEvent.press(screen.getByTestId('advent-task-done-button'))
     expect(screen.getByTestId('advent-task-done')).toBeTruthy()
     const progress = useAdventProgressStore.getState().byOwner.u7
-    expect(progress.opened['18']).toBe('2026-12-18')
-    expect(progress.tasksDone['18']).toBe('2026-12-18')
+    expect(progress.opened['17']).toBe('2026-12-17')
+    expect(progress.tasksDone['17']).toBe('2026-12-17')
     expect(screen.getByText('Заданий выполнено: 1')).toBeTruthy()
   })
 
   // #2940: статусы «Хочу/Планирую/Был», подписку, оценку, peer-значок и шаг
   // квеста засчитывает сервер — ручной отметки нет, вместо неё подсказка.
   it('shows the action link and a server-credit hint instead of the manual "done" button', async () => {
-    const screen = await renderAt(new Date(2026, 11, 4, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-4'))
-    expect(screen.getByText('История автора о зиме')).toBeTruthy()
+    const screen = await renderAt(new Date(2026, 11, 14, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-14'))
+    expect(screen.getByText('Спасибо автору')).toBeTruthy()
     expect(screen.getByTestId('advent-task-cta')).toBeTruthy()
     expect(screen.getByText('Засчитаем, когда вы это сделаете')).toBeTruthy()
     expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
-    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['4']).toBeUndefined()
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['14']).toBeUndefined()
   })
 
   // #3487: игра с запасным `type: open` засчитывается итогом игры, а не открытием.
@@ -218,9 +221,10 @@ describe('AdventScreen (#2861)', () => {
   })
 
   it('completes an open-type door by opening it for a signed-in user', async () => {
-    const screen = await renderAt(new Date(2026, 11, 1, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-1'))
-    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBe('2026-12-01')
+    // С v3 «открытие = задание» осталось у дверцы 24 (итоги года).
+    const screen = await renderAt(new Date(2026, 11, 24, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-24'))
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['24']).toBe('2026-12-24')
     // P2-3 (#3482): у дверцы-подарка нет блока задания и строки «задание засчитано».
     expect(screen.getByTestId('advent-open-note')).toBeTruthy()
     expect(screen.queryByTestId('advent-task-section')).toBeNull()
@@ -253,7 +257,7 @@ describe('AdventScreen (#2861)', () => {
     try {
       const screen = await renderAt(new Date(2026, 11, 1, 12))
       expect(await screen.findByTestId('advent-door-sheet-1')).toBeTruthy()
-      expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBe('2026-12-01')
+      expect(useAdventProgressStore.getState().byOwner.u7.opened['1']).toBe('2026-12-01')
     } finally {
       expoRouter.useLocalSearchParams = original
     }
