@@ -14,6 +14,7 @@ copy rules into this skill:
 | 1. Topic and date | `.claude/agents/instagram-planner.md` | `brief.md`, calendar row in `docs/INSTAGRAM_PLAN.md` |
 | 2. Facts | `.claude/agents/instagram-researcher.md` | `sources.md`, `article-edits.md` |
 | 3. Slides / Reel / caption | `.claude/agents/instagram-creator.md` | `slides/`, `spec.json` or `slides.txt`, `caption.txt`, `package.md` |
+| 3a. Text review (every score ≥ 8) | `.claude/agents/instagram-text-editor.md` + `docs/INSTAGRAM_TEXT_REVIEW.md` | `text-review.md` |
 | 4. Review | `.claude/agents/instagram-visual-qa.md` | `qa.md`, `qa-sheet.jpg` |
 | 5. Schedule, publish, metrics, follower cleanup | `.claude/agents/instagram-editor.md` + `docs/INSTAGRAM_OPERATIONS.md` | `published.md` |
 
