@@ -100,7 +100,7 @@ const REGISTERED = {
   },
   'scripts/instagram-post.js': {
     evidence: /if \(!args\.publishApproved\) \{/,
-    reason: 'публикация — только с --publish-approved после «да» владельца; репетиция грузит слайды в неопубликованный служебный черновик',
+    reason: 'публикация — только с --publish-approved после «да» владельца; на metravel.by не пишет: слайды и большие Reels Instagram забирает через временный туннель (#3483)',
   },
   'scripts/books/storage.cjs': {
     evidence: /throw new Error\('Usage: storage\.cjs verify\|upload/,

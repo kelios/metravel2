@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { makeTempDir, runCli } = require('./cli-test-utils')
-const { listSlides, parseArgs, parseRange, readCaption, verifyAccount } = require('../../scripts/instagram-post')
+const { listSlides, parseArgs, parseRange, publicRoutes, readCaption, verifyAccount } = require('../../scripts/instagram-post')
 
 describe('instagram-post', () => {
   const dir = makeTempDir('ig-post-')
@@ -70,5 +70,22 @@ describe('instagram-post', () => {
     expect(parseRange('bytes=-10', 100)).toEqual({ start: 90, end: 99 })
     expect(parseRange('bytes=50-500', 100)).toEqual({ start: 50, end: 99 })
     expect(parseRange('bytes=200-300', 100)).toBeNull()
+  })
+
+  it('serves slides with their own media type over unguessable routes and never writes to the site (#3483)', () => {
+    const jpg = path.join(dir, '01.jpg')
+    const png = path.join(dir, '02.png')
+    const mp4 = path.join(dir, 'reel.mp4')
+    fs.writeFileSync(jpg, 'jpg')
+    fs.writeFileSync(png, 'png-bytes')
+    fs.writeFileSync(mp4, 'mp4')
+    const routes = publicRoutes([jpg, png, mp4])
+    expect(routes.map((r) => r.type)).toEqual(['image/jpeg', 'image/png', 'video/mp4'])
+    expect(routes.map((r) => r.size)).toEqual([3, 9, 3])
+    expect(routes.every((r) => /^\/[0-9a-f]{32}\.(jpg|png|mp4)$/.test(r.route))).toBe(true)
+    expect(new Set(routes.map((r) => r.route)).size).toBe(3)
+    expect(() => publicRoutes([path.join(dir, 'x.gif')])).toThrow('Cannot serve')
+    const source = fs.readFileSync(path.join(__dirname, '../../scripts/instagram-post.js'), 'utf8')
+    expect(source).not.toMatch(/\/api\/upload|SLIDES_TRAVEL_ID|createToolSession/)
   })
 })
