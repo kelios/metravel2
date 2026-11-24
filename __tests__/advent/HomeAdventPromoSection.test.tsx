@@ -83,4 +83,13 @@ describe('HomeAdventPromoSection visibility window (#2866)', () => {
     expect((await renderAt(new Date(2026, 10, 24, 12))).getByTestId('home-advent-window-source-roof', { includeHiddenElements: true })).toBeTruthy()
     mockResponsive = { isPhone: false, isLargePhone: false, width: 1280 }
   })
+
+  it('loads no facade copy until the screen width is known (#3488)', async () => {
+    // Кадр до гидратации: ширина 0, раскладка — догадка «desktop».
+    mockResponsive = { isPhone: false, isLargePhone: false, width: 0 }
+    const screen = await renderAt(new Date(2026, 11, 5, 12))
+    expect(screen.getByTestId('home-advent-window', { includeHiddenElements: true })).toBeTruthy()
+    expect(screen.queryByTestId(/home-advent-window-source-/, { includeHiddenElements: true })).toBeNull()
+    mockResponsive = { isPhone: false, isLargePhone: false, width: 1280 }
+  })
 })

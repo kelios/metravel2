@@ -17,6 +17,12 @@ type Props = {
    * Берётся наименьшая, чья область целиком содержит кроп; иначе — полный фасад.
    */
   sources?: readonly AdventFacadeSource[]
+  /**
+   * Рамка без картинки: вызывающий ещё не знает размер рамки, значит и
+   * подходящую производную (ширина экрана до гидратации = 0). Иначе грузятся
+   * две картинки — по догадке и по факту (#3488).
+   */
+  deferImage?: boolean
   style?: StyleProp<ViewStyle>
   testID?: string
 }
@@ -92,7 +98,7 @@ export function pickAdventFacadeSource(rect: AdventWindowRect, sources: readonly
   return best ?? FULL_FACADE
 }
 
-function AdventWindowCrop({ day, aspectRatio, zoom, sources, style, testID }: Props) {
+function AdventWindowCrop({ day, aspectRatio, zoom, sources, deferImage = false, style, testID }: Props) {
   const crop = useMemo(() => resolveAdventWindowCrop(day, aspectRatio, zoom), [day, aspectRatio, zoom])
   const picked = useMemo(
     () => pickAdventFacadeSource(resolveAdventWindowRect(day, aspectRatio, zoom), sources),
@@ -118,21 +124,23 @@ function AdventWindowCrop({ day, aspectRatio, zoom, sources, style, testID }: Pr
       importantForAccessibility="no-hide-descendants"
       aria-hidden
     >
-      <View style={[styles.art, crop]}>
-        <View style={[styles.art, placement]} testID={testID ? `${testID}-source-${picked.key}` : undefined}>
-          <ImageCardMedia
-            source={picked.source}
-            alt=""
-            fit="cover"
-            borderRadius={0}
-            placeholderColor="#00000000"
-            transition={0}
-            showImmediately
-            showLoadingIndicator={false}
-            style={styles.fill}
-          />
+      {deferImage ? null : (
+        <View style={[styles.art, crop]}>
+          <View style={[styles.art, placement]} testID={testID ? `${testID}-source-${picked.key}` : undefined}>
+            <ImageCardMedia
+              source={picked.source}
+              alt=""
+              fit="cover"
+              borderRadius={0}
+              placeholderColor="#00000000"
+              transition={0}
+              showImmediately
+              showLoadingIndicator={false}
+              style={styles.fill}
+            />
+          </View>
         </View>
-      </View>
+      )}
     </View>
   )
 }

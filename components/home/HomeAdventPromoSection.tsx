@@ -23,7 +23,8 @@ import { isPhoneLayout } from '@/utils/phoneLayout'
  * иллюстрации не зависят от темы интерфейса.
  * Кроп берёт облегчённую часть фасада, а не полный файл (#3488): на телефоне
  * рамка во всю ширину — полоса ряда окон в полном разрешении, на desktop окно
- * 120 px — уменьшенный фасад.
+ * 120 px — уменьшенный фасад. До гидратации ширина экрана 0 и раскладка
+ * неизвестна — рамка ждёт без картинки, чтобы телефон не скачал ещё и desktop-копию.
  */
 const DESKTOP_FACADE_SOURCES = [ADVENT_FACADE_BANNER_SOURCES.small] as const
 
@@ -63,6 +64,7 @@ function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean;
             day={isAnnounce ? null : door?.day}
             aspectRatio={isMobile ? 2.2 : 3 / 4}
             sources={isMobile ? ADVENT_FACADE_BANNER_SOURCES.bands : DESKTOP_FACADE_SOURCES}
+            deferImage={!(width > 0)}
             style={styles.window}
             testID="home-advent-window"
           />
