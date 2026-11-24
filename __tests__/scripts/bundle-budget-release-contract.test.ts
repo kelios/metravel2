@@ -408,6 +408,26 @@ describe('bundle budget release contract', () => {
     })
   })
 
+  it('delivers the complete JSON report through a pipe when it exceeds 8192 bytes', () => {
+    const tmpDir = makeTempDir('bundle-budget-large-report-')
+    try {
+      const files = Array.from({ length: 64 }, (_, index) => `part${index}-0123abcd.js`)
+      for (const file of files) fs.writeFileSync(path.join(tmpDir, file), 'globalThis.part = 1;')
+      const configPath = path.join(tmpDir, 'budget.json')
+      fs.writeFileSync(configPath, JSON.stringify({ tolerancePct: 0, chunks: {} }))
+
+      const result = runNodeCli([guardScriptPath, '--fail', '--json'], {
+        BUNDLE_BUDGET_JS_DIR: tmpDir,
+        BUNDLE_BUDGET_CONFIG: configPath,
+      })
+      expect(result.status).toBe(0)
+      expect(Buffer.byteLength(result.stdout)).toBeGreaterThan(8192)
+      const report = JSON.parse(result.stdout)
+      expect(Object.keys(report.diagnostic_report.measurements.files).sort()).toEqual(files.sort())
+      expect(report.breaches).toEqual([])
+    } finally { fs.rmSync(tmpDir, { recursive: true, force: true }) }
+  })
+
   it('keeps the committed bundle budget spare at or below five percent', () => {
     const budget = validateCommittedBudget(budgetPath)
     const tmpDir = makeTempDir('metravel-bundle-budget-contract-')

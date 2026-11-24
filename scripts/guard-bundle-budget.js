@@ -1162,5 +1162,5 @@ if (JSON_OUT) {
   }
 }
 
-if (breaches.length > 0 && FAIL) process.exit(1)
-process.exit(0)
+// Let Node finish writing the report to piped stdout before exiting.
+process.exitCode = FAIL && breaches.length > 0 ? 1 : 0
