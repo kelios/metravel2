@@ -5,7 +5,7 @@
     "1": {
       "gift": {
         "title": "Opening: the winter trip of the day",
-        "text": "Torun is an old town of red brick where the air smells of gingerbread and mulled wine simmers on the market square. A route for one winter day: from the Town Hall to the Gingerbread Museum.",
+        "text": "Torun is an old town of red brick where the air smells of gingerbread. A one-day route: from the Town Hall to the Gingerbread Museum.",
         "linkLabel": "Read the route"
       },
       "task": { "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight." }
@@ -89,7 +89,7 @@
     "8": {
       "gift": {
         "title": "Winter quest in Grodno",
-        "text": "The \"Christmas and New Year\" quest in Grodno: the old town, castles above the Neman River and the Christmas tree on the square. It takes two hours on foot, with hints on your phone.",
+        "text": "The quest “Two stars above the Neman”: Grodno celebrates Christmas twice, on 25 December and 7 January. The old town above the river, two hours on foot, with hints on your phone.",
         "linkLabel": "Open the quest"
       },
       "task": { "text": "Complete the first step of a winter quest in your city.", "ctaLabel": "Choose a city" }

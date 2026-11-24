@@ -5,7 +5,7 @@
     "1": {
       "gift": {
         "title": "Otwarcie: zimowa podróż dnia",
-        "text": "Toruń — stare miasto z czerwonej cegły, gdzie pachnie piernikami, a na rynku warzą grzane wino. Trasa na jeden zimowy dzień: od Ratusza do Muzeum Piernika.",
+        "text": "Toruń — stare miasto z czerwonej cegły, gdzie pachnie piernikami. Trasa na jeden dzień: od Ratusza do Muzeum Piernika.",
         "linkLabel": "Czytaj trasę"
       },
       "task": { "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy." }
@@ -74,7 +74,7 @@
     "8": {
       "gift": {
         "title": "Zimowy quest w Grodnie",
-        "text": "Quest „Boże Narodzenie i Nowy Rok” po Grodnie: stare miasto, zamki nad Niemnem i choinka na placu. Przechodzi się go pieszo w dwie godziny, podpowiedzi — w telefonie.",
+        "text": "Quest „Dwie gwiazdy nad Niemnem”: w Grodnie Boże Narodzenie świętuje się dwa razy — 25 grudnia i 7 stycznia. Stare miasto nad rzeką, dwie godziny pieszo, podpowiedzi — w telefonie.",
         "linkLabel": "Otwórz quest"
       },
       "task": { "text": "Przejdź pierwszy krok zimowego questu w swoim mieście.", "ctaLabel": "Wybierz miasto" }
