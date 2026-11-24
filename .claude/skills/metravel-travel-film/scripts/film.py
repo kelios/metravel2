@@ -11,11 +11,13 @@
   film.py status [sN …]               где каждая серия: план, допуск, черновики, кто держит очередь
   film.py check sN [--hd]             только проверки готового черновика
   film.py music                       разбор треков папки музыки (music_fit.py analyze) в общий музыка.json
+  film.py projects [sN …] [--rebuild]  папка проектов Filmora = по проекту на серию той же версии, что последний черновик:
+                                      нет — собрать (project_builder), прежние проекты серии — в Корзину; draft делает это сам
 Общие ключи: --film <film.json> (иначе ищется вверх от текущей папки), --dry-run (напечатать команды и выйти),
   --as vK (версия плана; по умолчанию plan — следующая по номеру, draft/check — последняя; готовый план plan не
   переписывает, лог сборщика — в отчётах), --no-build (plan: не запускать
   сборщик, проверить последний план), --no-request, --no-copy, --prune-old (draft: удалить прежние черновики серии того же
-  качества из папки черновиков — правило «только последняя»).
+  качества из папки черновиков — правило «только последняя»), --no-project (draft: не собирать проект Filmora).
 
 film.json лежит в папке планов (или называет её ключом "plans"); пути — от неё. Подстановки: {s} — серия (s5), {n} — её номер, {v} — версия, {q} — качество.
   {"film": "GR21", "sources": "/Volumes/T7/GR21", "words_root": "/Volumes/T7/GR21", "day_glob": "День {d} — *",
@@ -49,6 +51,9 @@ DEFAULTS = {"day_glob": "День {d} — *", "inventory": "../данные/inve
             "music": "../../6 музыка", "tracks": "../данные/музыка.json", "end_card": 6, "faces": "модели_и_эталоны",
             "yolox": "модели/object_detection_yolox_2022nov.onnx", "hd_bitrate": "20M", "tz": 2, "session": "",
             "must_be_zero": ["КОРОЧЕ 4 С"], "after_plan": [], "extra_checks": [], "series": {},
+            # проекты Filmora: по одному на серию, версии последнего черновика (film.py projects)
+            "projects": "../../5 проект Filmora", "project_builder": "make_wfp_plan.py", "project_name": "{film} серия {n} — {v}.wfp",
+            "project_guide": "КАК ОТКРЫТЬ.md",
             # режиссёрский слой — film_serial.py (пути от папки планов)
             "prep": "../..", "maps": "../../2 карты", "reels": "../../3 нарезки лучших кадров", "cards": "титры", "sfx": "",
             "intro_voice": "../../1 сценарий/интро серий", "intro": {}, "recap": {}, "photo_key": "Медиатека - {num} из",
@@ -296,10 +301,116 @@ def cmd_draft(F, a, only_check=False):
         if old and "--prune-old" in a and "{q}" in F.c["draft_name"] and "{v}" in F.c["draft_name"]:
             for f in old: os.remove(os.path.join(dr, f)); print("  удалён прежний черновик:", f)
         elif old: print("  прежние черновики того же качества (удалить: --prune-old; в draft_name нужны {v} и {q}): " + ", ".join(old))
+    if "--no-copy" not in a and "--no-project" not in a and os.path.isdir(dr):
+        cmd_projects(F, [s])
     if "--no-request" not in a:
         step("запрос рецензии")
         run(PY + [f"{SK}/film_gate.py", "request", plan, "--series", s, "--draft", film, "--from", F.c["session"] or f"сборщик {s}"], None, F.dir)
     return 0
+
+
+# ---------------------------------------------------------------- проекты Filmora: по одному на серию, версии черновика
+def to_trash(path):
+    """В Корзину того тома, где лежит файл (внешний диск — <том>/.Trashes/<uid>), без Finder: он не отвечает, пока диск
+    занят рендером. Имя занято — суффикс времени. AppleDouble-спутник «._имя» (exFAT) удаляется."""
+    p = os.path.abspath(path); m = os.path.dirname(p)
+    while not os.path.ismount(m): m = os.path.dirname(m)
+    tr = os.path.expanduser("~/.Trash") if m == "/" or p.startswith(os.path.expanduser("~") + "/") else os.path.join(m, ".Trashes", str(os.getuid()))
+    os.makedirs(tr, exist_ok=True)
+    b = os.path.basename(p); dst = os.path.join(tr, b)
+    if os.path.exists(dst): r, e = os.path.splitext(b); dst = os.path.join(tr, f"{r} {time.strftime('%H-%M-%S')}{e}")
+    shutil.move(p, dst)
+    ad = os.path.join(os.path.dirname(p), "._" + b)
+    if os.path.exists(ad): os.remove(ad)
+
+
+def draft_versions(F, s):
+    """Черновики серии в папке черновиков: [(ключ версии, версия, качество-и-пометки, имя)], по возрастанию версии."""
+    dr = F.p("drafts"); t = re.escape(F.c["draft_name"]).replace(r"\{n\}", str(F.series(s)["n"])).replace(r"\{s\}", s)
+    rx = re.compile("^" + t.replace(r"\{q\}", r"(?P<q>[^()]+)").replace(r"\{v\}", r"(?P<v>v(?P<num>\d+)(?P<suf>[a-z]*))") + "$")
+    out = []
+    for f in (os.listdir(dr) if os.path.isdir(dr) else []):
+        m = rx.match(N(f))
+        if m: out.append(((int(m.group("num")), m.group("suf"), "1080" in m.group("q")), m.group("v"), m.group("q"), N(f)))
+    return sorted(out)
+
+
+def project_note(F, s):
+    pd = F.p("projects"); D = draft_versions(F, s)
+    if not os.path.isdir(pd) or not D: return ""
+    name = F.c["project_name"].format(film=F.c.get("film", ""), n=F.series(s)["n"], v=D[-1][1], s=s)
+    return f"; проект Filmora {D[-1][1]} " + ("есть" if os.path.exists(os.path.join(pd, name)) else "НЕТ — film.py projects " + s)
+
+
+def cmd_projects(F, a):
+    """Папка проектов Filmora = по одному проекту на серию, той же версии, что последний черновик в папке черновиков.
+    Нет проекта этой версии — собирается сборщиком проекта; собран — прежние проекты серии и их раскладки уходят в Корзину.
+    Упала сборка — прежний проект остаётся. Черновик «размыт…» (но не «не размыт…») — проект с размытием (--blur,
+    план plan_sN_vK_blur.json, если он есть). --rebuild — пересобрать и существующий."""
+    dry = "--dry-run" in a; rebuild = "--rebuild" in a
+    pd = F.p("projects"); builder = F.p("project_builder")
+    if not os.path.isdir(pd) or not os.path.exists(builder):
+        print(f"проекты Filmora: пропуск — нет папки проектов {pd} или сборщика {builder} (ключи film.json projects, project_builder)"); return 0
+    pick = [x for x in a if re.fullmatch(r"s\d+", x)] or sorted(F.c["series"])
+    side_dir = os.path.join(os.path.dirname(builder), "раскладки Filmora")
+    # проект, сохранённый в Filmora после сборки (новее своей раскладки), — работа владельца: не заменяется и не удаляется
+    edited = lambda f: not os.path.exists(sc_ := os.path.join(side_dir, os.path.splitext(f)[0] + ".plan.json")) \
+        or os.path.getmtime(os.path.join(pd, f)) > os.path.getmtime(sc_) + 120
+    bad = 0
+    for s in pick:
+        D = draft_versions(F, s); ser = F.series(s)
+        if not D: print(f"{s}: черновиков нет — проект не нужен"); continue
+        _, v, q, dname = D[-1]
+        blur = "размыт" in q and not re.search(r"не\s+размыт", q)
+        plan = os.path.join(F.dir, f"plan_{s}_{v}_blur.json") if blur and os.path.exists(os.path.join(F.dir, f"plan_{s}_{v}_blur.json")) \
+            else os.path.join(F.dir, f"plan_{s}_{v}.json")
+        name = F.c["project_name"].format(film=F.c.get("film", ""), n=ser["n"], v=v, s=s); out = os.path.join(pd, name)
+        pat = re.compile("^" + re.escape(F.c["project_name"].format(film=F.c.get("film", ""), n=ser["n"], v="\0", s=s)).replace("\0", r"v\d+[a-z]*") + "$")
+        old = [f for f in os.listdir(pd) if pat.match(N(f)) and N(f) != N(name)]
+        if os.path.exists(out) and rebuild and edited(name):
+            print(f"{s}: {name} менялся в Filmora после сборки — не пересобираю (это работа владельца)"); rebuild_ok = False
+        else: rebuild_ok = True
+        if os.path.exists(out) and not (rebuild and rebuild_ok):
+            print(f"{s}: проект {name} есть (черновик «{dname}»)")
+        elif not os.path.exists(plan):
+            print(f"{s}: нет плана {os.path.basename(plan)} для черновика «{dname}» — проект не собран"); bad += 1; continue
+        else:
+            step(f"проект Filmora {s} {v}{' с размытием' if blur else ''}: {os.path.basename(plan)} → {name}")
+            tmpd = os.path.join(pd, ".сборка"); tmp = os.path.join(tmpd, name)   # сборка рядом: прежний проект цел до успеха
+            cmd = PY + [builder, plan, tmp] + (["--blur"] if blur else []) + common(F, s)
+            log = os.path.join(F.p("reports", s=s), f"проект Filmora {s} {v}.log")
+            if not dry:
+                os.makedirs(os.path.dirname(log), exist_ok=True); shutil.rmtree(tmpd, ignore_errors=True); os.makedirs(tmpd)
+            if run(cmd, log, F.dir, dry):
+                print(f"  СБОРКА ПРОЕКТА УПАЛА — {log}; прежний проект оставлен"); print(tail(log)); bad += 1
+                shutil.rmtree(tmpd, ignore_errors=True); continue
+            if dry: continue
+            print("  " + tail(log, 3).replace("\n", "\n  "))
+            if os.path.exists(out): to_trash(out)
+            os.replace(tmp, out); guide_merge(pd, os.path.join(tmpd, F.c["project_guide"])); shutil.rmtree(tmpd, ignore_errors=True)
+        for f in old:
+            if edited(f): print(f"  {f} менялся в Filmora после сборки — оставлен, решает владелец"); continue
+            if dry: print(f"  в Корзину (dry-run): {f}"); continue
+            to_trash(os.path.join(pd, f)); print(f"  прежний проект — в Корзину: {f}")
+            sc = os.path.join(side_dir, os.path.splitext(f)[0] + ".plan.json")
+            if os.path.exists(sc): to_trash(sc)
+    if not dry: guide_merge(pd, None)
+    return 1 if bad else 0
+
+
+def guide_merge(pd, new_guide, guide="КАК ОТКРЫТЬ.md"):
+    """Инструкция папки проектов: раздел «## <проект>.wfp» на каждый лежащий там проект, по порядку имён; разделы
+    из new_guide (инструкция свежей сборки) заменяют прежние, разделы проектов, которых в папке нет, — убираются."""
+    path = os.path.join(pd, guide); txt = open(path, encoding="utf-8").read() if os.path.exists(path) else "# Как открыть проекты Filmora\n"
+    split = lambda t: re.split(r"(?m)^(?=## )", t)
+    head, *secs = split(txt)
+    sec = {N(x.split("\n", 1)[0][3:].strip()): x.rstrip() + "\n" for x in secs}
+    if new_guide and os.path.exists(new_guide):
+        for x in split(open(new_guide, encoding="utf-8").read())[1:]: sec[N(x.split("\n", 1)[0][3:].strip())] = x.rstrip() + "\n"
+    have = {N(f) for f in os.listdir(pd)}
+    key = lambda n_: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", n_)]
+    body = "\n".join(sec[k] for k in sorted(sec, key=key) if k in have)
+    open(path + ".part", "w", encoding="utf-8").write(head.rstrip() + "\n\n" + body); os.replace(path + ".part", path)
 
 
 # ---------------------------------------------------------------- status / music / prep / init
@@ -315,7 +426,8 @@ def cmd_status(F, a):
         dr = F.p("drafts"); mine = sorted(f for f in (os.listdir(dr) if os.path.isdir(dr) else []) if draft_re(F, s).match(N(f)))
         d360, d1080 = (os.path.exists(names(F, s, v, h)[1]) for h in (False, True))
         print(f"{s}: план {v}" + (" (сборщик новее плана — film.py plan)" if stale else "") +
-              f"; черновик 360p {'есть' if d360 else 'нет'}, 1080p {'есть' if d1080 else 'нет'}; в черновиках: {', '.join(mine[-2:]) or '—'}")
+              f"; черновик 360p {'есть' if d360 else 'нет'}, 1080p {'есть' if d1080 else 'нет'}; в черновиках: {', '.join(mine[-2:]) or '—'}"
+              + project_note(F, s))
     sys.stdout.flush()
     run(PY + [f"{SK}/film_gate.py", "status", F.dir]); run(PY + [f"{SK}/heavy_lock.py", "status"])
     return 0
@@ -503,6 +615,7 @@ def main():
     if cmd == "series": return cmd_series(F, a)
     if cmd == "music": return cmd_music(F, a)
     if cmd == "prep": return cmd_prep(F, a)
+    if cmd == "projects": return cmd_projects(F, a)
     if cmd in ("plan", "draft", "check"):
         if not a or not re.fullmatch(r"s\d+", a[0]): sys.exit(f"film.py {cmd} sN")
         return cmd_plan(F, a) if cmd == "plan" else cmd_draft(F, a, only_check=cmd == "check")
