@@ -3,7 +3,14 @@ import type {
   AdventCampaignOverlay,
   AdventDoor,
   AdventDoorOverlay,
+  AdventGame,
+  AdventGameOverlay,
+  AdventGift,
+  AdventGiftOverlay,
   AdventRiddleQuestion,
+  AdventRiddleQuestionOverlay,
+  AdventTask,
+  AdventTaskOverlay,
 } from '@/types/advent'
 
 const text = (candidate: string | undefined, fallback: string): string =>
@@ -12,40 +19,104 @@ const text = (candidate: string | undefined, fallback: string): string =>
 const optionalText = (candidate: string | undefined, fallback: string | undefined): string | undefined =>
   fallback === undefined ? undefined : text(candidate, fallback)
 
-const applyQuestion = (question: AdventRiddleQuestion, overlay: AdventDoorOverlay['task']): AdventRiddleQuestion[] => {
-  const translated = overlay?.riddle?.questions
-  return [question].map((item, index) => {
-    const patch = translated?.[index]
-    if (!patch) return item
-    const options =
-      item.options && patch.options && patch.options.length === item.options.length && patch.options.every((o) => text(o, '') !== '')
-        ? patch.options
-        : item.options
-    return { ...item, question: text(patch.question, item.question), hint: optionalText(patch.hint, item.hint), options }
-  })
+const applyQuestion = (question: AdventRiddleQuestion, patch: AdventRiddleQuestionOverlay | undefined): AdventRiddleQuestion => {
+  if (!patch) return question
+  const options =
+    question.options && patch.options && patch.options.length === question.options.length && patch.options.every((o) => text(o, '') !== '')
+      ? patch.options
+      : question.options
+  return { ...question, question: text(patch.question, question.question), hint: optionalText(patch.hint, question.hint), options }
 }
+
+/** Перевод игры: тексты по индексу; ответы, флаги и ссылки остаются из RU (#3487). */
+const applyGame = (game: AdventGame, patch: AdventGameOverlay | undefined): AdventGame => {
+  if (!patch) return game
+  switch (game.kind) {
+    case 'selfcheck':
+      return {
+        ...game,
+        items: game.items.map((item, index) => {
+          const translated = patch.items?.[index]
+          return text(typeof translated === 'string' ? translated : undefined, item)
+        }),
+        tiers: game.tiers.map((tier, index) => {
+          const translated = patch.tiers?.[index]
+          return {
+            ...tier,
+            title: text(translated?.title, tier.title),
+            text: text(translated?.text, tier.text),
+            linkLabel: optionalText(translated?.linkLabel, tier.linkLabel),
+          }
+        }),
+      }
+    case 'match':
+      return {
+        ...game,
+        pairs: game.pairs.map((pair, index) => {
+          const translated = patch.pairs?.[index]
+          return {
+            ...pair,
+            left: text(translated?.left, pair.left),
+            right: text(translated?.right, pair.right),
+            fact: optionalText(translated?.fact, pair.fact),
+          }
+        }),
+      }
+    case 'pick':
+      return {
+        ...game,
+        items: game.items.map((item, index) => {
+          const translated = patch.items?.[index]
+          const entry = typeof translated === 'object' && translated ? translated : undefined
+          return { ...item, label: text(entry?.label, item.label), hint: optionalText(entry?.hint, item.hint) }
+        }),
+      }
+    case 'fortune':
+      return {
+        ...game,
+        items: game.items.map((item, index) => {
+          const translated = patch.items?.[index]
+          return text(typeof translated === 'string' ? translated : undefined, item)
+        }),
+      }
+    case 'wishlist':
+      return {
+        ...game,
+        places: game.places.map((place, index) => ({ ...place, title: text(patch.places?.[index]?.title, place.title) })),
+      }
+    default:
+      return game
+  }
+}
+
+const applyGift = (gift: AdventGift, patch: AdventGiftOverlay | undefined): AdventGift => ({
+  ...gift,
+  title: text(patch?.title, gift.title),
+  text: text(patch?.text, gift.text),
+  linkLabel: optionalText(patch?.linkLabel, gift.linkLabel),
+})
+
+const applyTask = (task: AdventTask, patch: AdventTaskOverlay | undefined): AdventTask => ({
+  ...task,
+  text: text(patch?.text, task.text),
+  ctaLabel: optionalText(patch?.ctaLabel, task.ctaLabel),
+  riddle: task.riddle
+    ? { ...task.riddle, questions: task.riddle.questions.map((question, index) => applyQuestion(question, patch?.riddle?.questions?.[index])) }
+    : task.riddle,
+  game: task.game ? applyGame(task.game, patch?.game) : task.game,
+})
 
 const applyDoor = (door: AdventDoor, patch: AdventDoorOverlay | undefined): AdventDoor => {
   if (!patch) return door
-  const questions = door.task.riddle?.questions.map((question, index) => {
-    const translated = patch.task?.riddle?.questions?.[index]
-    return applyQuestion(question, translated ? { riddle: { questions: [translated] } } : undefined)[0]
-  })
   return {
     ...door,
-    gift: {
-      ...door.gift,
-      title: text(patch.gift?.title, door.gift.title),
-      text: text(patch.gift?.text, door.gift.text),
-      linkLabel: optionalText(patch.gift?.linkLabel, door.gift.linkLabel),
-    },
-    task: {
-      ...door.task,
-      text: text(patch.task?.text, door.task.text),
-      ctaLabel: optionalText(patch.task?.ctaLabel, door.task.ctaLabel),
-      riddle: door.task.riddle && questions ? { ...door.task.riddle, questions } : door.task.riddle,
-    },
+    gift: applyGift(door.gift, patch.gift),
+    task: applyTask(door.task, patch.task),
     reward: { ...door.reward, label: optionalText(patch.reward?.label, door.reward.label) },
+    variants: door.variants?.map((variant) => {
+      const translated = patch.variants?.[variant.region]
+      return { ...variant, gift: applyGift(variant.gift, translated?.gift), task: applyTask(variant.task, translated?.task) }
+    }),
   }
 }
 

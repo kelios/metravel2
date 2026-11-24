@@ -9,6 +9,10 @@ const path = require('path')
 const PUBLIC_FILES = Object.freeze({
   '.well-known/assetlinks.json': 'Android App Links verification',
   'apple-touch-icon.png': 'Browser touch icon',
+  'assets/data/advent/2026.be.json': 'Advent 2026 door content, Belarusian overlay; web loads it at runtime instead of a JS chunk (#3487)',
+  'assets/data/advent/2026.en.json': 'Advent 2026 door content, English overlay (#3487)',
+  'assets/data/advent/2026.pl.json': 'Advent 2026 door content, Polish overlay (#3487)',
+  'assets/data/advent/2026.uk.json': 'Advent 2026 door content, Ukrainian overlay (#3487)',
   'assets/data/ai-similar.json': 'Precomputed semantic neighbours for the "similar articles" blocks (#3292, npm run ai:similar:build)',
   'assets/data/lasy-zanocuj.json': 'Polish forest camping map data',
   'assets/data/world-trails-osm-LICENSE.txt': 'ODbL 1.0 terms and attribution for the world hiking trails OSM layer (#3357)',

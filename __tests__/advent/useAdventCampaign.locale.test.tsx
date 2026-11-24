@@ -13,7 +13,7 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: false, userId: null, authReady: true }),
 }))
 
-const be = require('../../data/advent/2026.be.json') as { doors: Record<string, { gift: { title: string } }> }
+const be = require('../../public/assets/data/advent/2026.be.json') as { doors: Record<string, { gift: { title: string } }> }
 
 describe('useAdventCampaign — контент по локали (#2883)', () => {
   afterEach(async () => {

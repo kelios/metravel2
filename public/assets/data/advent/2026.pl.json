@@ -1,0 +1,785 @@
+{
+  "locale": "pl",
+  "year": 2026,
+  "doors": {
+    "1": {
+      "gift": {
+        "title": "Otwarcie: zimowa podróż dnia",
+        "text": "Toruń — stare miasto z czerwonej cegły, gdzie pachnie piernikami. Trasa na jeden dzień: od Ratusza do Muzeum Piernika.",
+        "linkLabel": "Czytaj trasę"
+      },
+      "task": {
+        "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy."
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Otwarcie: zimowa podróż dnia",
+            "text": "Brześć — jest tu latarnik, który co wieczór ręcznie zapala naftowe lampy na ulicy Sowieckiej. Trasa na jeden dzień: twierdza, muzeum parowozów i stare centrum.",
+            "linkLabel": "Czytaj trasę"
+          },
+          "task": {
+            "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy."
+          }
+        }
+      }
+    },
+    "2": {
+      "gift": {
+        "title": "Lista życzeń na 2027 rok",
+        "text": "Osiem miejsc, o których na stronie czyta się najczęściej. Które z nich już były w Twoim życiu, a które jeszcze czekają? Zaznaczaj od razu w oknie."
+      },
+      "task": {
+        "text": "Zaznacz trzy miejsca „Chcę pojechać” od razu tutaj — zapiszą się na Twojej liście wyjazdów.",
+        "ctaLabel": "Więcej tras",
+        "game": {
+          "places": [
+            {
+              "title": "Smolewud: plan zdjęciowy „Biełaruśfilmu”"
+            },
+            {
+              "title": "Jezioro Głębokie — jedno z najprzejrzystszych"
+            },
+            {
+              "title": "Łysa Góra, 342 metry"
+            },
+            {
+              "title": "Ścieżka ekologiczna Jelnia i dwory w jeden dzień"
+            },
+            {
+              "title": "Źródła „Święte Krynice” pod Mińskiem"
+            },
+            {
+              "title": "Oszmiana: kościoły, synagoga, dwór"
+            },
+            {
+              "title": "Jezioro Chotomle i sąsiednie jeziora"
+            },
+            {
+              "title": "Dwór Nowickich w Sowiejkach"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Lista życzeń na 2027 rok",
+            "text": "Osiem polskich miejsc, o których na stronie czyta się najczęściej: od gór po turkusowe kamieniołomy. Które już były w Twoim życiu, a które jeszcze czekają?"
+          },
+          "task": {
+            "text": "Zaznacz trzy miejsca „Chcę pojechać” od razu tutaj — zapiszą się na Twojej liście wyjazdów.",
+            "ctaLabel": "Więcej tras",
+            "game": {
+              "places": [
+                {
+                  "title": "Energylandia — polski Disneyland"
+                },
+                {
+                  "title": "Zakrzówek: turkusowy kamieniołom w Krakowie"
+                },
+                {
+                  "title": "Bielsko-Biała: wieża widokowa i Trzy Kopce"
+                },
+                {
+                  "title": "Zakopane: Giewont, Nosal i termy"
+                },
+                {
+                  "title": "Morskie Oko — jezioro w Tatrach"
+                },
+                {
+                  "title": "Park Gródek — „polskie Malediwy”"
+                },
+                {
+                  "title": "Kraków: Park Doświadczeń Stanisława Lema"
+                },
+                {
+                  "title": "Kasprowy Wierch, 1987 metrów"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "3": {
+      "gift": {
+        "title": "Zagadka: zgadnij miasto",
+        "text": "Miasto z pałacem Radziwiłłów i parkiem wpisanym na listę UNESCO. Zimą stawy zamarzają, a pałac odbija się w śniegu.",
+        "linkLabel": "Otwórz mapę"
+      },
+      "task": {
+        "text": "Nazwij to miasto.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Które miasto Białorusi słynie z zespołu pałacowo-parkowego Radziwiłłów, obiektu UNESCO?",
+              "hint": "Obwód miński, niedaleko Miru."
+            }
+          ]
+        }
+      }
+    },
+    "4": {
+      "gift": {
+        "title": "Historia autora o zimie",
+        "text": "Autorzy MeTravel opowiadają, jak podróżują zimą: krótki dzień, mróz, puste zamki bez kolejek. Czytaj artykuły społeczności i wybieraj swoich autorów.",
+        "linkLabel": "Czytaj artykuły"
+      },
+      "task": {
+        "text": "Zaobserwuj autora, którego trasa Ci się spodobała — nowe wyjazdy pojawią się w Twoich aktualnościach.",
+        "ctaLabel": "Znajdź autora"
+      }
+    },
+    "5": {
+      "gift": {
+        "title": "Czy jesteś prawdziwym podróżnikiem?",
+        "text": "Mały test bez poprawnych odpowiedzi. Zaznacz, co już Ci się przydarzyło, i odbierz tytuł. Złych tytułów tu nie ma: najlepsze drogi każdego jeszcze przed nim."
+      },
+      "task": {
+        "text": "Zaznacz, co już Ci się zdarzyło w podróży, i sprawdź, jaki tytuł zdobywasz.",
+        "game": {
+          "items": [
+            "Noc w namiocie",
+            "Świt w górach",
+            "Nocny pociąg lub autobus",
+            "Zgubić się — i znaleźć najlepsze miejsce wyjazdu",
+            "Danie, o którym nie miało się pojęcia przed zamówieniem",
+            "Pięć krajów lub więcej",
+            "Ponad 20 km pieszo w ciągu dnia",
+            "Morze zimą",
+            "Wrócić w to samo miejsce drugi raz",
+            "Spakować się na wyjazd w jeden wieczór"
+          ],
+          "tiers": [
+            {
+              "title": "Podróżnik na początku drogi",
+              "text": "Najpiękniejsze wyjazdy dopiero przed Tobą — i to najlepsza wiadomość dnia. Zacznij od krótkiej trasy na weekend.",
+              "linkLabel": "Trasy w pobliżu"
+            },
+            {
+              "title": "Ciekawski wędrowiec",
+              "text": "Znasz już smak drogi. Następny krok to quest po starym mieście: spacer, w którym każda ulica zadaje zagadkę.",
+              "linkLabel": "Wybierz quest"
+            },
+            {
+              "title": "Bywały podróżnik",
+              "text": "Plecak pakuje się u Ciebie sam. Opowiedz o swoim wyjeździe — komuś Twoja trasa zaoszczędzi weekend.",
+              "linkLabel": "Opowiedz o wyjeździe"
+            },
+            {
+              "title": "Legenda dróg",
+              "text": "O Twoich wyjazdach czas napisać książkę. Dosłownie: złóż ją ze swoich tras.",
+              "linkLabel": "Złóż książkę"
+            }
+          ]
+        }
+      }
+    },
+    "6": {
+      "gift": {
+        "title": "Kolady: fakt dnia",
+        "text": "Kolady na Białorusi trwają od Bożego Narodzenia do Chrztu Pańskiego. Kolędnicy chodzą po domach z gwiazdą na drzewcu, a w drewnianym teatrzyku w skrzyni, zwanym batlejką, kukiełki odgrywają historię Narodzenia."
+      },
+      "task": {
+        "text": "Quiz: trzy pytania o Koladach.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Którego dnia stycznia prawosławni chrześcijanie Białorusi obchodzą Boże Narodzenie?",
+              "options": [
+                "6",
+                "7",
+                "14"
+              ]
+            },
+            {
+              "question": "Jaki symbol niosą na drzewcu na czele procesji kolędników?",
+              "options": [
+                "Gwiazda",
+                "Słońce",
+                "Dzwon"
+              ]
+            },
+            {
+              "question": "Jak nazywa się kukiełkowy wertep w drewnianej skrzyni?",
+              "options": [
+                "Batlejka",
+                "Szopka",
+                "Lalka"
+              ]
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Szopki: fakt dnia",
+            "text": "Co roku w pierwszy czwartek grudnia na krakowski Rynek przynoszą szopki — bożonarodzeniowe budowle w kształcie pałaców z kartonu, folii i kolorowego papieru. W 2018 roku UNESCO wpisało krakowskie szopkarstwo na listę niematerialnego dziedzictwa.",
+            "linkLabel": "Questowy szlak szopkarzy"
+          },
+          "task": {
+            "text": "Quiz: trzy pytania o krakowskich szopkach.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "W którym roku UNESCO wpisało krakowskie szopkarstwo na listę niematerialnego dziedzictwa?",
+                  "options": [
+                    "2008",
+                    "2018",
+                    "2022"
+                  ]
+                },
+                {
+                  "question": "Kiedy w Krakowie niesie się szopki na Rynek?",
+                  "options": [
+                    "W pierwszy czwartek grudnia",
+                    "W Wigilię",
+                    "W Nowy Rok"
+                  ]
+                },
+                {
+                  "question": "Z czego buduje się szopkę?",
+                  "options": [
+                    "Karton, folia i kolorowy papier",
+                    "Glina i drewno",
+                    "Lód i śnieg"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "7": {
+      "gift": {
+        "title": "Jarmarki, dla których warto pojechać",
+        "text": "Kraków — Rynek Główny i konkurs szopek, tradycja z listy UNESCO.\nWrocław — domki na kilku placach, „Bajkowy Las” i brązowe krasnale.\nGdańsk — jarmark na Targu Węglowym, wstęp wolny.\nDrezno — Striezelmarkt, jeden z najstarszych w Niemczech, od 1434 roku.\nStrasburg — jarmark od 1570 roku, miasto nazywa siebie „stolicą Bożego Narodzenia”.\nWiedeń — jarmark przed ratuszem i lodowisko do 6 stycznia.\nTallin — Plac Ratuszowy, gdzie według miasta choinkę stawia się od 1441 roku.",
+        "linkLabel": "Daty i adresy polskich jarmarków"
+      },
+      "task": {
+        "text": "Wybierz jarmark marzeń i oznacz wyjazd statusem „Planuję” z datą.",
+        "ctaLabel": "Zaplanuj"
+      },
+      "reward": {
+        "label": "Odznaka „7 drzwiczek”"
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Mińsk na Boże Narodzenie",
+            "text": "W grudniu centrum Mińska jest ozdobione na święta, a Prospekt Niepodległości pięknie podświetlony. Przewodnik na weekend: Górne Miasto, plac Wolności, ciche podwórka.",
+            "linkLabel": "Czytaj przewodnik"
+          },
+          "task": {
+            "text": "Wybierz dzień i oznacz wyjazd do Mińska statusem „Planuję” z datą.",
+            "ctaLabel": "Zaplanuj"
+          }
+        }
+      }
+    },
+    "8": {
+      "gift": {
+        "title": "Zimowy quest w Grodnie",
+        "text": "Quest „Dwie gwiazdy nad Niemnem”: w Grodnie Boże Narodzenie świętuje się dwa razy — 25 grudnia i 7 stycznia. Stare miasto nad rzeką, dwie godziny pieszo, podpowiedzi — w telefonie.",
+        "linkLabel": "Otwórz quest"
+      },
+      "task": {
+        "text": "Przejdź pierwszy krok zimowego questu w swoim mieście.",
+        "ctaLabel": "Wybierz miasto"
+      }
+    },
+    "9": {
+      "gift": {
+        "title": "Gdzie to jest? Mapa",
+        "text": "Zamek z XVI wieku w osadzie w obwodzie grodzieńskim, obiekt UNESCO: pięć wież, dziedziniec i staw pod murami."
+      },
+      "task": {
+        "text": "Kliknij na mapie tam, gdzie stoi ten zamek. Liczy się trafienie w promieniu 5 km."
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Gdzie to jest? Mapa",
+            "text": "Zamek zakonny z czerwonej cegły, największy ceglany zamek świata, od 1997 roku na liście UNESCO. Z Gdańska to około godziny jazdy samochodem."
+          },
+          "task": {
+            "text": "Kliknij na mapie Polski tam, gdzie stoi ten zamek. Liczy się trafienie w promieniu 5 km."
+          }
+        }
+      }
+    },
+    "10": {
+      "gift": {
+        "title": "Świąteczna opowieść podróżnika",
+        "text": "Tuż przed Bożym Narodzeniem podróżnik szedł lasem na stację i spóźnił się na ostatni pociąg. Zamieć zasypywała tory, telefon się rozładował. Na skraju osady paliło się jedno okno, a na parapecie stała świeca: według dawnego zwyczaju stawia się ją w Wigilię, aby każdy, kto jest w drodze, wiedział, że ktoś tu na niego czeka.\n\nDrzwi otworzono od razu. Nalano mu gorącej herbaty, postawiono dodatkowy talerz i o nic nie pytano. Rano zamieć ucichła. Wychodząc, podróżnik zostawił na parapecie swoją mapę podróży z dopiskiem „tu na mnie czekano”.\n\nMówią, że od tamtej pory w każdej jego trasie jest jeden punkt bez nazwy. Zajeżdża tam każdej zimy."
+      },
+      "task": {
+        "text": "Doczytane? Jedno pytanie do opowieści.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Co stało na parapecie i pokazało podróżnikowi, że ktoś na niego czeka?",
+              "options": [
+                "Choinka",
+                "Świeca",
+                "Latarnia"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "11": {
+      "gift": {
+        "title": "Czyj to zwyczaj?",
+        "text": "Boże Narodzenie i Nowy Rok świętuje się na różne sposoby: gdzieś je się winogrona przy biciu zegara, gdzieś daruje się książki i czyta je tego samego wieczoru. Połącz zwyczaj z krajem."
+      },
+      "task": {
+        "text": "Złóż sześć par „zwyczaj — kraj”.",
+        "game": {
+          "pairs": [
+            {
+              "left": "12 winogron na 12 uderzeń zegara w sylwestrową północ",
+              "right": "Hiszpania",
+              "fact": "Każde winogrono to miesiąc nowego roku. Zdążyć zjeść wszystkie dwanaście — na szczęście."
+            },
+            {
+              "left": "Daruje się książki w Wigilię i czyta je tego samego wieczoru",
+              "right": "Islandia",
+              "fact": "Sezon książkowy nazywa się tu „potopem”: katalog nowości od 1944 roku trafia do każdego domu."
+            },
+            {
+              "left": "Gwiazda-latarnia parol na każdym domu",
+              "right": "Filipiny",
+              "fact": "W San Fernando odbywa się festiwal gigantycznych latarni: mają nawet do 12 metrów średnicy."
+            },
+            {
+              "left": "Czarownica Befana przynosi prezenty w noc na 6 stycznia",
+              "right": "Włochy",
+              "fact": "Grzecznym dzieciom słodycze, niegrzecznym węgielek. Zwykle cukrowy."
+            },
+            {
+              "left": "Choinkowy pajączek-pajęczynka przynosi szczęście",
+              "right": "Ukraina",
+              "fact": "Według legendy u biednej wdowy pająk w nocy oplótł choinkę, a rano słońce zamieniło pajęczynę w złoto i srebro."
+            },
+            {
+              "left": "Dodatkowe nakrycie na Wigilię — dla niespodziewanego gościa",
+              "right": "Polska",
+              "fact": "Puste miejsce czeka na każdego wędrowca, który zapuka w Wigilię."
+            }
+          ]
+        }
+      }
+    },
+    "12": {
+      "gift": {
+        "title": "Zdjęcie dnia od społeczności",
+        "text": "Zimowe fotografie podróżników: zaśnieżone kościoły, zamarznięte jeziora, światła jarmarków. Najlepsze zdjęcia grudnia otrzymają rzadką nagrodę od zespołu."
+      },
+      "task": {
+        "text": "Wgraj swoje zimowe zdjęcie do nowego wyjazdu lub notatki.",
+        "ctaLabel": "Dodaj zdjęcie"
+      },
+      "reward": {
+        "label": "Kandydat do rzadkiej nagrody"
+      }
+    },
+    "13": {
+      "gift": {
+        "title": "Spakuj plecak na zimową wyprawę",
+        "text": "Dzień krótki, mróz szczypie, do ciepłej kawiarni jeszcze trzy godziny. Co przyda się na zimowym spacerze, a co lepiej zostawić w domu?"
+      },
+      "task": {
+        "text": "Wybierz sześć rzeczy, bez których zimą nie wychodzi się w drogę.",
+        "game": {
+          "items": [
+            {
+              "label": "Termos z gorącą herbatą"
+            },
+            {
+              "label": "Klapki",
+              "hint": "dobre do sauny, ale nie na śnieg"
+            },
+            {
+              "label": "Czołówka"
+            },
+            {
+              "label": "Parasol",
+              "hint": "w śnieżycy ratuje kaptur"
+            },
+            {
+              "label": "Zapasowe wełniane skarpetki"
+            },
+            {
+              "label": "Suszarka do włosów",
+              "hint": "w lesie nie ma gniazdek"
+            },
+            {
+              "label": "Powerbank"
+            },
+            {
+              "label": "Dmuchane koło",
+              "hint": "jeziora zimą są pod lodem"
+            },
+            {
+              "label": "Ciepła czapka"
+            },
+            {
+              "label": "Kryształowy kieliszek",
+              "hint": "do herbaty z termosu jest nakrętka-kubek"
+            },
+            {
+              "label": "Mała apteczka"
+            },
+            {
+              "label": "Gruby papierowy atlas",
+              "hint": "ciężki — mapa offline w telefonie jest lżejsza"
+            }
+          ]
+        }
+      }
+    },
+    "14": {
+      "gift": {
+        "title": "Jak dziękować autorom",
+        "text": "Nagroda peer to odznaka, którą jeden podróżnik daje drugiemu za przydatną trasę. Autor widzi, kto i za co podziękował."
+      },
+      "task": {
+        "text": "Podaruj odznakę autorowi trasy, która Ci pomogła.",
+        "ctaLabel": "Znajdź trasę"
+      },
+      "reward": {
+        "label": "Odznaka „14 drzwiczek”"
+      }
+    },
+    "15": {
+      "gift": {
+        "title": "Polskie zimowe questy",
+        "text": "Kraków, Wrocław, Gdańsk i jeszcze piętnaście miast Polski — bożonarodzeniowe questy po starych miastach z jarmarkami i szopkami.",
+        "linkLabel": "Quest po Krakowie"
+      },
+      "task": {
+        "text": "Otwórz stronę miasta i zapisz trasę questu.",
+        "ctaLabel": "Miasta questów"
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Zimowe questy Białorusi",
+            "text": "Mińsk, Witebsk, Mohylew, Brześć, Homel i Grodno: bożonarodzeniowe questy po starych miastach z gwiazdą na drzewcu, batlejką i światełkami. Zacznij od Mińska — „Gwiazda nad batlejką”.",
+            "linkLabel": "Quest po Mińsku"
+          },
+          "task": {
+            "text": "Otwórz stronę miasta i zapisz trasę questu.",
+            "ctaLabel": "Miasta questów"
+          }
+        }
+      }
+    },
+    "16": {
+      "gift": {
+        "title": "Zagadka: zgadnij miejsce",
+        "text": "Największe jezioro Białorusi: 80 kilometrów kwadratowych wody, sosnowy brzeg i sanatoria, gdzie zimą jest cicho jak nigdzie indziej."
+      },
+      "task": {
+        "text": "Nazwij to jezioro.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Które jezioro jest największe na Białorusi?",
+              "hint": "Obwód miński, rejon miadziolski."
+            }
+          ]
+        }
+      }
+    },
+    "17": {
+      "gift": {
+        "title": "Książka w prezencie",
+        "text": "„Białoruś. Księga questów”: 41 questów w jednej książce. Po każdym — strona na zdjęcia i notatki, na końcu — mapa kraju. PDF za darmo i bez rejestracji.",
+        "linkLabel": "Otwórz książkę"
+      },
+      "task": {
+        "text": "Pobierz książkę — albo złóż własną z własnych wyjazdów.",
+        "ctaLabel": "Pobierz książkę"
+      },
+      "reward": {
+        "label": "Książka PDF bezpłatnie"
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Książka w prezencie",
+            "text": "„Polska. Księga questów”: 37 questów — od Smoka Wawelskiego po wrocławskie krasnale. Po każdym — strona na zdjęcia i notatki. PDF za darmo i bez rejestracji.",
+            "linkLabel": "Otwórz książkę"
+          },
+          "task": {
+            "text": "Pobierz książkę — albo złóż własną z własnych wyjazdów.",
+            "ctaLabel": "Pobierz książkę"
+          }
+        }
+      }
+    },
+    "18": {
+      "gift": {
+        "title": "Wspólne wyjazdy",
+        "text": "Podróżnicy szukają towarzyszy na zimowe wyjazdy: od jednodniowych wypadów do noworocznych wycieczek. Zobacz plany innych lub stwórz własny.",
+        "linkLabel": "Zobacz wyjazdy"
+      },
+      "task": {
+        "text": "Zgłoś się do wspólnego wyjazdu lub stwórz plan.",
+        "ctaLabel": "Do wyjazdów"
+      }
+    },
+    "19": {
+      "gift": {
+        "title": "Artykuł, który czeka na dokończenie",
+        "text": "Wielu z nas ma w szkicach wyjazd, o którym nigdy nie opowiedziało. Grudzień to czas, by go dokończyć: czytelnicy szukają zimowych pomysłów właśnie teraz."
+      },
+      "task": {
+        "text": "Opublikuj szkic lub zacznij nowy artykuł.",
+        "ctaLabel": "Do szkiców"
+      }
+    },
+    "20": {
+      "gift": {
+        "title": "Zimowe trasy Białorusi",
+        "text": "Zamek w Lidzie jest otwarty dla zwiedzających przez cały rok. Nieśwież i Mir — trasa na dwa dni z noclegiem w Nieświeżu.",
+        "linkLabel": "Trasy po Białorusi"
+      },
+      "task": {
+        "text": "Oznacz pięć wyjazdów statusem „Był” — trafią do Twojego kalendarza podróży.",
+        "ctaLabel": "Otwórz kalendarz"
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Zimowe trasy Polski",
+            "text": "Zimą z Krakowa — w góry: w Gorce i Beskidy jedzie się półtorej do dwóch godzin samochodem. W zestawieniu Turbacz, przełęcz Brona, Szczawnica i Zakopane.",
+            "linkLabel": "Zimowe trasy"
+          },
+          "task": {
+            "text": "Oznacz pięć wyjazdów statusem „Był” — trafią do Twojego kalendarza podróży.",
+            "ctaLabel": "Otwórz kalendarz"
+          }
+        }
+      }
+    },
+    "21": {
+      "gift": {
+        "title": "Kucia na świąteczny stół",
+        "text": "Kucia to kasza jęczmienna z miodem i makiem. Tak nazywa się i samo danie, i wieczerza w wigilię Bożego Narodzenia.\n\nBędziesz potrzebować:\n— kasza jęczmienna — 200 g\n— woda — 700 ml\n— mak — 3 łyżki\n— miód — 3 łyżki\n— rodzynki — 50 g\n— orzechy włoskie — 50 g\n— sól — szczypta\n\nJak przygotować:\n1. Mak zalej wrzątkiem na godzinę, odcedź i utrzyj.\n2. Kaszę wsyp do wrzącej osolonej wody i gotuj 10–15 minut na małym ogniu.\n3. Rodzynki sparz wrzątkiem, orzechy podpraż i posiekaj.\n4. Do ciepłej kaszy dodaj mak, miód i rodzynki, wymieszaj.\n5. Owiń garnek ręcznikiem na 30 minut, przed podaniem posyp orzechami."
+      },
+      "task": {
+        "text": "Zbierz składniki do kuci — przepis kawałek wyżej.",
+        "game": {
+          "items": [
+            {
+              "label": "Kasza jęczmienna"
+            },
+            {
+              "label": "Majonez",
+              "hint": "zostawmy go na sałatkę jarzynową"
+            },
+            {
+              "label": "Mak"
+            },
+            {
+              "label": "Cebula",
+              "hint": "niech poczeka na placki ziemniaczane"
+            },
+            {
+              "label": "Miód"
+            },
+            {
+              "label": "Ogórki kiszone",
+              "hint": "ich miejsce obok ziemniaków"
+            },
+            {
+              "label": "Rodzynki"
+            },
+            {
+              "label": "Ketchup",
+              "hint": "kasza obejdzie się bez niego"
+            },
+            {
+              "label": "Orzechy włoskie"
+            },
+            {
+              "label": "Czosnek",
+              "hint": "pasuje do smalcu, nie do kaszy"
+            },
+            {
+              "label": "Woda"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Pierniki inspirowane toruńskimi",
+            "text": "Toruńskie pierniki znane są od XIV wieku: pierwszy piekarz wspomniany jest w mieście w 1380 roku. To domowe pierniki inspirowane toruńskimi — nie „te same”, ale pachną równie świątecznie.\n\nBędziesz potrzebować:\n— mąka pszenna — 500 g\n— miód — 200 g\n— masło — 150 g\n— cukier puder — 100 g\n— jajko — 1 szt.\n— soda — 1 łyżeczka\n— przyprawa do piernika — 1 saszetka (albo po szczypcie cynamonu, imbiru i goździków)\n\nJak przygotować:\n1. Miód, masło, cukier puder i przyprawy podgrzej na małym ogniu, ostudź do ciepłego.\n2. Mąkę wymieszaj z sodą, dodaj jajko i miodową masę, zagnieć ciasto.\n3. Schowaj ciasto do lodówki na 2 godziny.\n4. Rozwałkuj na grubość 3–4 mm, wytnij figurki, ułóż na papierze do pieczenia.\n5. Piecz w 180 °C 8–10 minut, ostudź i udekoruj lukrem."
+          },
+          "task": {
+            "text": "Zbierz wszystko, co potrzebne na pierniki — przepis kawałek wyżej.",
+            "game": {
+              "items": [
+                {
+                  "label": "Mąka pszenna"
+                },
+                {
+                  "label": "Burak",
+                  "hint": "czeka na czerwony barszcz"
+                },
+                {
+                  "label": "Miód"
+                },
+                {
+                  "label": "Śledź",
+                  "hint": "jego miejsce na stole z zakąskami"
+                },
+                {
+                  "label": "Masło"
+                },
+                {
+                  "label": "Drożdże",
+                  "hint": "piernikom rosnąć nie trzeba"
+                },
+                {
+                  "label": "Cukier puder"
+                },
+                {
+                  "label": "Musztarda",
+                  "hint": "niech poczeka na kiełbaski"
+                },
+                {
+                  "label": "Jajko"
+                },
+                {
+                  "label": "Kapusta kiszona",
+                  "hint": "czeka na paszteciki z grzybami"
+                },
+                {
+                  "label": "Przyprawa do piernika"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "22": {
+      "gift": {
+        "title": "Opowieść roku",
+        "text": "Który wyjazd 2026 roku najbardziej zapadł Ci w pamięć? Krótka notatka — trzy akapity i jedno zdjęcie — stanie się częścią „Podsumowania roku” społeczności."
+      },
+      "task": {
+        "text": "Napisz krótką notatkę „Moja podróż 2026”.",
+        "ctaLabel": "Napisz notatkę"
+      },
+      "reward": {
+        "label": "Kandydat do rzadkiej nagrody"
+      }
+    },
+    "23": {
+      "gift": {
+        "title": "Plany na 2027",
+        "text": "Podróż, która ma datę, zdarza się częściej. Wybierz trasę na rok 2027 i ustaw jej datę — kalendarz przypomni."
+      },
+      "task": {
+        "text": "Zaplanuj wyjazd w 2027 roku z datą w kalendarzu.",
+        "ctaLabel": "Otwórz kalendarz"
+      }
+    },
+    "24": {
+      "gift": {
+        "title": "Podsumowanie roku podróżnika",
+        "text": "Twój rok 2026 w liczbach: odwiedzone kraje i miasta, wyjazdy, questy i odznaki.",
+        "linkLabel": "Otwórz profil"
+      },
+      "task": {
+        "text": "Otwórz ostatnie główne drzwiczki. Seria 24 dni „dzień w dzień” daje legendarną odznakę."
+      },
+      "reward": {
+        "label": "Złoto „Śnieżny Wędrowiec”"
+      }
+    },
+    "25": {
+      "gift": {
+        "title": "Boże Narodzenie: kartka i wróżba",
+        "text": "Wesołych Świąt! Zimowa grafika MeTravel — kartka, którą możesz się podzielić z tymi, z kim chcesz pojechać w nowym roku. A w tych drzwiczkach ukryta jest talia dobrych wróżb."
+      },
+      "task": {
+        "text": "Wylosuj świąteczną wróżbę — każdy ma swoją.",
+        "game": {
+          "items": [
+            "W nowym roku czeka Cię droga, o której jeszcze nawet nie marzysz.",
+            "Uśmiechnij się: ktoś już zbiera się, żeby zaprosić Cię w podróż.",
+            "Najpiękniejsze miejsce roku znajdziesz przypadkiem — skręcając nie tam, gdzie trzeba.",
+            "Wkrótce spróbujesz dania, którego potem będziesz szukać w każdym mieście.",
+            "W Twoim 2027 będzie wschód słońca, dla którego warto było wstać o piątej rano.",
+            "Ten, kto od dawna chciał pojechać z Tobą, w końcu się zdecyduje. Powiedz „tak”.",
+            "Twój plecak stanie się lżejszy, a wrażenia — cenniejsze.",
+            "Pociąg, na który prawie się spóźnisz, zawiezie Cię do dobrej historii.",
+            "W tym roku wrócisz tam, gdzie było Ci dobrze — a miejsce Cię pozna.",
+            "Rada na dziś: zadzwoń do tego, z kim podróżowało Ci się najlepiej.",
+            "Gwiazdy radzą odłożyć telefon i spojrzeć za okno: jest tam pięknie.",
+            "Wkrótce nieznajomy wskaże Ci drogę, a przy okazji świetną kawiarnię.",
+            "W nowym roku będziesz mieć dzień bez planu — i okaże się najlepszym.",
+            "Twoje następne zdjęcie z podróży będzie ulubionym wszystkich znajomych.",
+            "Pogoda będzie po Twojej stronie właśnie wtedy, gdy to najważniejsze.",
+            "Znajdziesz ścieżkę, na której nikogo nie spotkasz — tylko ciszę i śnieg.",
+            "Rada: załóż dziennik podróży — za rok sam sobie podziękujesz.",
+            "Miasto, które wydawało się nudne, jeszcze Cię zaskoczy.",
+            "Przed Tobą podróż, po której powiesz: „Trzeba było wcześniej”.",
+            "W 2027 zdecydujesz się na coś, czego od dawna się obawiasz. I spodoba Ci się.",
+            "Dziś dobry dzień, żeby wybrać terminy urlopu.",
+            "Czeka Cię spotkanie w drodze, z którego wyrośnie przyjaźń.",
+            "Uśmiechaj się częściej: w drodze uśmiech otwiera więcej drzwi niż mapa.",
+            "Przepowiednia jest prosta: będzie śnieg, gorąca herbata i bardzo dobre towarzystwo.",
+            "W nowym roku ułożysz trasę, którą zechcą powtórzyć inni.",
+            "Wkrótce zrozumiesz: najlepsze miejsce to to, w którym ktoś na Ciebie czeka.",
+            "Miła niespodzianka czeka Cię w najzwyklejszym miejscu.",
+            "Rada: w następnej podróży zajrzyj do małego muzeum, do którego nikt nie chodzi.",
+            "Tej zimy będzie Ci ciepło — od ludzi, nie tylko od szalika.",
+            "Wszystko, co zaplanowane, się spełni. Może inną drogą — ale jeszcze piękniej."
+          ]
+        }
+      },
+      "reward": {
+        "label": "Bonusowa odznaka"
+      }
+    },
+    "26": {
+      "gift": {
+        "title": "Nowy Rok: ruletka życzeń",
+        "text": "Niech w 2027 roku będzie więcej dróg niż planów i więcej planów niż wymówek. A pierwsze miejsce niech wybierze los.",
+        "linkLabel": "Zakręć ruletką"
+      },
+      "task": {
+        "text": "Zakręć ruletką i dodaj wylosowaną trasę do „Chcę pojechać”.",
+        "ctaLabel": "Do ruletki"
+      },
+      "reward": {
+        "label": "Bonusowa odznaka"
+      }
+    },
+    "27": {
+      "gift": {
+        "title": "Kolady: sekretne drzwiczki",
+        "text": "Wesołych Świąt! Kolady (białoruskie Kolędy) trwają do Chrztu Pańskiego: w te dni w białoruskich wsiach wciąż chodzą z gwiazdą. Dziękujemy, że byliście z nami przez cały grudzień."
+      },
+      "task": {
+        "text": "Sekretne drzwiczki: otwierają się tylko w swoim dniu."
+      },
+      "reward": {
+        "label": "Sekretna odznaka"
+      }
+    }
+  }
+}

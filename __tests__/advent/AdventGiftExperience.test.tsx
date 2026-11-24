@@ -16,6 +16,9 @@ jest.mock('@/hooks/useReduceMotion', () => ({
   ...jest.requireActual('@/hooks/useReduceMotion'),
   useReduceMotion: () => false,
 }))
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: (select: (auth: { userId: string }) => unknown) => select({ userId: 'u1' }),
+}))
 jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn(), queueAnalyticsEvent: jest.fn() }))
 jest.mock('@/components/ui/BottomSheet', () => {
   const React = require('react')
@@ -178,11 +181,13 @@ describe('door sheet as a gift (#3482)', () => {
     expect(view.queryByText('ПОДАРОК')).toBeNull()
   })
 
-  it('B5: door 25 gives a real postcard with «Поделиться открыткой», and no task contradiction', async () => {
-    const view = await renderSheet(doorOf(25, { state: 'done', doneAt: '2026-12-25' }))
+  it('B5: door 25 gives a real postcard with «Поделиться открыткой» and a fortune to draw (#3487)', async () => {
+    const view = await renderSheet(doorOf(25))
     expect(await view.findByTestId('advent-postcard')).toBeTruthy()
     expect(view.getByText('Поделиться открыткой')).toBeTruthy()
-    expect(view.queryByTestId('advent-task-section')).toBeNull()
+    // Гадание с запасным `open` — настоящее задание, а не «задания нет».
+    expect(view.getByTestId('advent-fortune-draw')).toBeTruthy()
+    expect(view.queryByTestId('advent-open-note')).toBeNull()
     expect(view.queryByText(/задание засчитано/i)).toBeNull()
   })
 

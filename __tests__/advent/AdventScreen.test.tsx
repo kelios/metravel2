@@ -169,29 +169,39 @@ describe('AdventScreen (#2861)', () => {
   })
 
   it('opens a door into the sheet, marks the task done and updates progress', async () => {
-    const screen = await renderAt(new Date(2026, 11, 11, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-11'))
-    expect(screen.getByTestId('advent-door-sheet-11')).toBeTruthy()
+    const screen = await renderAt(new Date(2026, 11, 18, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-18'))
+    expect(screen.getByTestId('advent-door-sheet-18')).toBeTruthy()
     expect(screen.getByText('Открыто 1 из 24 дверец')).toBeTruthy()
     expect(screen.queryByTestId('advent-task-server-credit-hint')).toBeNull()
     await fireEvent.press(screen.getByTestId('advent-task-done-button'))
     expect(screen.getByTestId('advent-task-done')).toBeTruthy()
     const progress = useAdventProgressStore.getState().byOwner.u7
-    expect(progress.opened['11']).toBe('2026-12-11')
-    expect(progress.tasksDone['11']).toBe('2026-12-11')
+    expect(progress.opened['18']).toBe('2026-12-18')
+    expect(progress.tasksDone['18']).toBe('2026-12-18')
     expect(screen.getByText('Заданий выполнено: 1')).toBeTruthy()
   })
 
   // #2940: статусы «Хочу/Планирую/Был», подписку, оценку, peer-значок и шаг
   // квеста засчитывает сервер — ручной отметки нет, вместо неё подсказка.
   it('shows the action link and a server-credit hint instead of the manual "done" button', async () => {
-    const screen = await renderAt(new Date(2026, 11, 3, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-2'))
-    expect(screen.getByText('Скрытые места Беларуси')).toBeTruthy()
+    const screen = await renderAt(new Date(2026, 11, 4, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-4'))
+    expect(screen.getByText('История автора о зиме')).toBeTruthy()
     expect(screen.getByTestId('advent-task-cta')).toBeTruthy()
     expect(screen.getByText('Засчитаем, когда вы это сделаете')).toBeTruthy()
     expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
-    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['2']).toBeUndefined()
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['4']).toBeUndefined()
+  })
+
+  // #3487: игра с запасным `type: open` засчитывается итогом игры, а не открытием.
+  it('does not credit an open door with a game on open; the game result credits it', async () => {
+    const screen = await renderAt(new Date(2026, 11, 5, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-5'))
+    expect(screen.getByTestId('advent-selfcheck')).toBeTruthy()
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['5']).toBeUndefined()
+    await fireEvent.press(screen.getByTestId('advent-selfcheck-submit'))
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['5']).toBe('2026-12-05')
   })
 
   it('checks a riddle answer in place: wrong shows a hint, right completes the task', async () => {

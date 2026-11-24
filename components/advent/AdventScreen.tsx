@@ -30,6 +30,7 @@ import AdventHouseFacade from './AdventHouseFacade'
 import AdventStage from './AdventStage'
 import { ADVENT_UNWRAP_MS } from './AdventWindowUnwrap'
 import { ADVENT_DOCK_MIN_WIDTH, ADVENT_DOCK_WIDTH, ADVENT_SCREEN_LAYOUT } from './adventScreenLayout'
+import { adventTaskCreditsOnOpen } from '@/utils/advent/adventGames'
 
 // Отдельным чанком: тост тянет весь контур значков, а статический импорт
 // перекраивал общие чанки сайта (бюджет начальных запросов `/search`).
@@ -105,7 +106,8 @@ export default function AdventScreen() {
         sendAnalyticsEvent('Advent_DoorOpen', { day: door.day, kind: door.kind, guest: !isAuthenticated })
         openDoor(door.day, campaign.now)
         // Дверца-подарок без действия засчитывается самим открытием — только аккаунту.
-        if (door.task.type === 'open' && isAuthenticated) completeTask(door.day, campaign.now)
+        // Игра (#3487) засчитывается своим итогом, даже если её запасной `type` — `open`.
+        if (adventTaskCreditsOnOpen(door.task) && isAuthenticated) completeTask(door.day, campaign.now)
       }
       revealDoor(door, setSelectedDay)
     },

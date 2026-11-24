@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { toLocalIsoDate } from '@/constants/advent'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
+import { adventTaskCreditsOnOpen } from '@/utils/advent/adventGames'
 
 export function useAdventAdminPreview(doors: AdventDoorView[], hydrated: boolean, now: Date) {
   const { authReady, isAuthenticated, isSuperuser, userId } = useAuth()
@@ -26,7 +27,8 @@ export function useAdventAdminPreview(doors: AdventDoorView[], hydrated: boolean
   } : null
 
   const selectDay = useCallback((day: number | null) => {
-    const done = doors.find((door) => door.day === day)?.task.type === 'open'
+    const task = doors.find((door) => door.day === day)?.task
+    const done = !!task && adventTaskCreditsOnOpen(task)
     setSession((current) => current && current.owner === owner
       ? { ...current, day, done }
       : current)

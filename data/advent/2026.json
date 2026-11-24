@@ -4,25 +4,197 @@
   "end": "2027-01-07",
   "doors": [
     {
-      "day": 1, "date": "2026-12-01", "kind": "content",
+      "day": 1,
+      "date": "2026-12-01",
+      "kind": "content",
       "gift": {
         "title": "Открытие: зимнее путешествие дня",
         "text": "Торунь — старый город из красного кирпича, где пахнет пряниками. Маршрут на один день: от Ратуши до Музея пряника.",
         "link": "/travels/torun-staryi-gorod-i-muzei-prianika-polsha",
         "linkLabel": "Читать маршрут"
       },
-      "task": { "type": "open", "text": "Открыть первую дверцу — и серия началась. Возвращайтесь завтра: следующая откроется в полночь." },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "open",
+        "text": "Открыть первую дверцу — и серия началась. Возвращайтесь завтра: следующая откроется в полночь."
+      },
+      "reward": {
+        "xp": 10
+      },
+      "region": "pl",
+      "variants": [
+        {
+          "region": "by",
+          "gift": {
+            "title": "Открытие: зимнее путешествие дня",
+            "text": "Брест — здесь есть фонарщик, который каждый вечер вручную зажигает керосиновые фонари на Советской. Маршрут на один день: крепость, музей паровозов и старый центр.",
+            "link": "/travels/brest-putevoditel-po-kreposti-fonarshchiku-i-staromu-gorodu",
+            "linkLabel": "Читать маршрут"
+          },
+          "task": {
+            "type": "open",
+            "text": "Открыть первую дверцу — и серия началась. Возвращайтесь завтра: следующая откроется в полночь."
+          }
+        }
+      ]
     },
     {
-      "day": 2, "date": "2026-12-02", "kind": "site-action",
+      "day": 2,
+      "date": "2026-12-02",
+      "kind": "site-action",
       "gift": {
-        "title": "Скрытые места Беларуси",
-        "text": "В каталоге мест есть точки, до которых не доезжают туристические автобусы: усадьбы, маяки на озёрах, заброшенные костёлы. Начните с подборки мест на карте.",
-        "link": "/places", "linkLabel": "Открыть места"
+        "title": "Вишлист на 2027 год",
+        "text": "Восемь мест, которые на сайте читают чаще всего. Какие из них уже были в вашей жизни, а какие ещё ждут? Отмечайте прямо в окне."
       },
-      "task": { "type": "route", "serverCredited": true, "text": "Добавьте три маршрута в «Хочу поехать» — это ваш зимний список желаний.", "ctaRoute": "/travelsby", "ctaLabel": "Выбрать маршруты" },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "route",
+        "text": "Отметьте три места «Хочу поехать» прямо здесь — они сохранятся в вашем списке поездок.",
+        "ctaRoute": "/travelsby",
+        "ctaLabel": "Ещё маршруты",
+        "game": {
+          "kind": "wishlist",
+          "goal": 3,
+          "places": [
+            {
+              "travelId": 186,
+              "title": "Смолевуд: натурная площадка «Беларусьфильма»",
+              "link": "/travels/smolevud-naturnaia-ploshchadka-belarusfilma-pod-minskom",
+              "image": "https://metravel.by/travel-image/824/conversions/nLt18uY8j7f5E0qEdn97gLvyeiIWcD1KHoR934vG-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 169,
+              "title": "Озеро Глубокое — одно из самых прозрачных",
+              "link": "/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+              "image": "https://metravel.by/travel-image/599/conversions/OG3aJU7K9zNF4FmPBrfk66yYpRcPvGxToRYBroZS-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 481,
+              "title": "Лысая гора, 342 метра",
+              "link": "/travels/lysaya-gora-342m",
+              "image": "https://metravel.by/travel-image/6570/conversions/bC6lpWGecJuSUMiSCQAeYWO7tKU4Bb8BOnNRuEsY-webpTravelMainImage_400.webp",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 203,
+              "title": "Экотропа Ельня и усадьбы за день",
+              "link": "/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+              "image": "https://metravel.by/travel-image/1045/conversions/TxtsdUUQdaXBCN6FfPY8zxHG0HJ8o4wDGj73VM5q-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 179,
+              "title": "Родники Святые Криницы под Минском",
+              "link": "/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+              "image": "https://metravel.by/travel-image/742/conversions/gLgahcQCRqEOt8063eOTAwLbYhOlYaPvV8hQnPAO-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 252,
+              "title": "Ошмяны: костёлы, синагога, усадьба",
+              "link": "/travels/chto-posmotret-v-oshmianakh-kostely-sinagoga-usadba",
+              "image": "https://metravel.by/travel-image/1600/conversions/EtyFj4AxZsKQ89X16G6Uvof75Ve5roTVPmMeWajm-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 236,
+              "title": "Озеро Хотомле и соседние озёра",
+              "link": "/travels/ozero-khotomle-i-ozera-ovsishcheskoe-srednee-belarus",
+              "image": "https://metravel.by/travel-image/1436/conversions/BHkLBG9kAYNouV1buuQHMWzMNdbYcOZ0oeE8hLit-thumb_200.jpg",
+              "country": "Беларусь"
+            },
+            {
+              "travelId": 219,
+              "title": "Усадьба Новицких в Совейках",
+              "link": "/travels/velomarshrut-k-usadbe-novitskikh-v-soveikakh",
+              "image": "https://metravel.by/travel-image/1238/conversions/T3puGThz39pmyucSbBXB3rwiyuIBKe4X5D3Bt4aY-thumb_200.jpg",
+              "country": "Беларусь"
+            }
+          ]
+        },
+        "serverCredited": true
+      },
+      "reward": {
+        "xp": 10
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Вишлист на 2027 год",
+            "text": "Восемь польских мест, которые на сайте читают чаще всего: от гор до бирюзовых карьеров. Какие уже были в вашей жизни, а какие ещё ждут?"
+          },
+          "task": {
+            "type": "route",
+            "text": "Отметьте три места «Хочу поехать» прямо здесь — они сохранятся в вашем списке поездок.",
+            "ctaRoute": "/travelsby",
+            "ctaLabel": "Ещё маршруты",
+            "game": {
+              "kind": "wishlist",
+              "goal": 3,
+              "places": [
+                {
+                  "travelId": 386,
+                  "title": "Энергиляндия — польский Диснейленд",
+                  "link": "/travels/energylandia-polskiy-disneylend",
+                  "image": "https://metravel.by/travel-image/5075/conversions/lioxMETlYN5Eoe5UkMry8LrAmvnMPMO2xom0Q9Ps-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 384,
+                  "title": "Закшувек: бирюзовый карьер в Кракове",
+                  "link": "/travels/zakshuvek-biriuzovyi-karer-dlia-kupaniia-v-krakove",
+                  "image": "https://metravel.by/travel-image/5051/conversions/qooKgUsA67iMjF9nrXC0A0oY2KlRd0aXJpr4fIg5-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 437,
+                  "title": "Бельско-Бяла: башня и Три Копце",
+                  "link": "/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+                  "image": "https://metravel.by/travel-image/5861/conversions/w8YqECLCa9pdEqqryXnD19tqVRAptALYIYHLuMf4-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 416,
+                  "title": "Закопане: Гевонт, Носаль и термы",
+                  "link": "/travels/zakopane-4-dnya-gevont-nosal-hoholovskie-termy",
+                  "image": "https://metravel.by/travel-image/5526/conversions/AyZfGur3vJxSs3wSTKT2nIV8x865gb7SiqNg94ma-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 362,
+                  "title": "Морское око — озеро в Татрах",
+                  "link": "/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
+                  "image": "https://metravel.by/travel-image/362/conversions/28160874221349509d697c8016c48464.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 442,
+                  "title": "Парк Грудек — «польские Мальдивы»",
+                  "link": "/travels/park-grudek-v-iavozhno-polskie-maldivy",
+                  "image": "https://metravel.by/travel-image/5962/conversions/j1nP7OvuSsgTEZOSIou3djqwAAcXhIC3aZmfSuCc-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 380,
+                  "title": "Краков: парк опытов Станислава Лема",
+                  "link": "/travels/krakov-park-opytov-stanislava-lema-i-park-svetovykh-figur",
+                  "image": "https://metravel.by/travel-image/5005/conversions/wuZMlrUupj41denHZLafgyU8OKQMIRsCzyHQ3O1G-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                },
+                {
+                  "travelId": 479,
+                  "title": "Каспровы Верх, 1987 метров",
+                  "link": "/travels/kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
+                  "image": "https://metravel.by/travel-image/6534/conversions/D4lB24xgjJ2UDTY3zhCgeYmxtoGyhb1Ss9PnqZjv-webpTravelMainImage_400.webp",
+                  "country": "Польша"
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "day": 3, "date": "2026-12-03", "kind": "riddle",
@@ -52,41 +224,247 @@
       "reward": { "xp": 10 }
     },
     {
-      "day": 5, "date": "2026-12-05", "kind": "site-action",
+      "day": 5,
+      "date": "2026-12-05",
+      "kind": "content",
       "gift": {
-        "title": "Зимняя рулетка идей",
-        "text": "Когда не знаете, куда ехать в выходные, пусть решит случай: рулетка выбирает маршрут из каталога.",
-        "link": "/roulette", "linkLabel": "Крутить рулетку"
-      },
-      "task": { "type": "route", "serverCredited": true, "text": "Крутаните рулетку и сохраните понравившийся маршрут в «Хочу поехать».", "ctaRoute": "/roulette", "ctaLabel": "К рулетке" },
-      "reward": { "xp": 10 }
-    },
-    {
-      "day": 6, "date": "2026-12-06", "kind": "riddle",
-      "gift": {
-        "title": "Коляды: факт дня",
-        "text": "Коляды в Беларуси идут от Рождества до Крещения. Колядовщики ходят по домам со звездой на шесте, поют и желают хозяевам добра, а в деревне Семежево под Копылем проходит обряд «Колядные цари», внесённый в список ЮНЕСКО."
+        "title": "Настоящий ли вы путешественник?",
+        "text": "Маленький тест без правильных ответов. Отметьте, что с вами уже было, — и получите звание. Плохих званий здесь не бывает: у каждого лучшие дороги ещё впереди."
       },
       "task": {
-        "type": "riddle", "text": "Викторина: три вопроса о Колядах.",
-        "riddle": { "questions": [
-          { "question": "Какого числа января православные христиане Беларуси празднуют Рождество?", "options": ["6", "7", "14"], "answer_pattern": { "type": "exact", "value": "7" } },
-          { "question": "Какой символ несут на шесте впереди колядной процессии?", "options": ["Звезда", "Солнце", "Колокол"], "answer_pattern": { "type": "exact_any", "value": ["Звезда", "Зорка", "Зьвязда", "Вифлеемская звезда", "Зірка", "Gwiazda", "Star"] } },
-          { "question": "Как называется колядный обряд из деревни Семежево, внесённый в список ЮНЕСКО?", "options": ["Колядные цари", "Гуканне вясны", "Купалле"], "answer_pattern": { "type": "exact_any", "value": ["Колядные цари", "Калядныя цары", "Цари", "Цары", "Колядні царі", "Царі", "Kolady Cary", "Kalyady Tsars", "Tsars"] } }
-        ] }
+        "type": "open",
+        "text": "Отметьте, что с вами уже случалось в дороге, и узнайте своё звание.",
+        "game": {
+          "kind": "selfcheck",
+          "items": [
+            "Ночь в палатке",
+            "Рассвет в горах",
+            "Ночной поезд или автобус",
+            "Заблудиться — и найти лучшее место поездки",
+            "Блюдо, о котором ничего не знали до заказа",
+            "Пять стран и больше",
+            "Больше 20 км пешком за день",
+            "Море зимой",
+            "Вернуться в одно место второй раз",
+            "Собраться в поездку за один вечер"
+          ],
+          "tiers": [
+            {
+              "min": 0,
+              "title": "Путешественник в начале пути",
+              "text": "Самые яркие поездки у вас впереди — и это лучшая новость дня. Начните с короткого маршрута на выходные.",
+              "link": "/travelsby",
+              "linkLabel": "Маршруты рядом"
+            },
+            {
+              "min": 3,
+              "title": "Любопытный странник",
+              "text": "Вы уже знаете вкус дороги. Следующий шаг — квест по старому городу: прогулка, в которой каждая улица что-то загадывает.",
+              "link": "/quests",
+              "linkLabel": "Выбрать квест"
+            },
+            {
+              "min": 6,
+              "title": "Бывалый путешественник",
+              "text": "Рюкзак у вас собирается сам. Расскажите о своей поездке — кому-то ваш маршрут сэкономит выходные.",
+              "link": "/travel/new",
+              "linkLabel": "Рассказать о поездке"
+            },
+            {
+              "min": 9,
+              "title": "Легенда дорог",
+              "text": "Про ваши поездки пора писать книгу. Буквально: соберите её из своих маршрутов.",
+              "link": "/export",
+              "linkLabel": "Собрать книгу"
+            }
+          ]
+        }
       },
-      "reward": { "xp": 15 }
+      "reward": {
+        "xp": 10
+      }
     },
     {
-      "day": 7, "date": "2026-12-07", "kind": "planning",
+      "day": 6,
+      "date": "2026-12-06",
+      "kind": "riddle",
       "gift": {
-        "title": "Рождественские ярмарки Польши",
-        "text": "Краков, Вроцлав, Катовице, Гданьск, Познань, Варшава: даты, адреса и советы, когда ехать, чтобы не стоять в очереди за облатками и глинтвейном.",
-        "link": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety",
-        "linkLabel": "Читать подборку"
+        "title": "Коляды: факт дня",
+        "text": "Коляды в Беларуси идут от Рождества до Крещения. Колядовщики ходят по домам со звездой на шесте, а в деревянном ящике-театре, батлейке, куклы разыгрывают историю Рождества."
       },
-      "task": { "type": "route", "serverCredited": true, "text": "Выберите ярмарку и отметьте поездку статусом «Планирую» с датой.", "ctaRoute": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety", "ctaLabel": "Запланировать" },
-      "reward": { "xp": 10, "badgeSlug": "advent_7", "label": "Значок «7 дверец»" }
+      "task": {
+        "type": "riddle",
+        "text": "Викторина: три вопроса о Колядах.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Какого числа января православные христиане Беларуси празднуют Рождество?",
+              "options": [
+                "6",
+                "7",
+                "14"
+              ],
+              "answer_pattern": {
+                "type": "exact",
+                "value": "7"
+              }
+            },
+            {
+              "question": "Какой символ несут на шесте впереди колядной процессии?",
+              "options": [
+                "Звезда",
+                "Солнце",
+                "Колокол"
+              ],
+              "answer_pattern": {
+                "type": "exact_any",
+                "value": [
+                  "Звезда",
+                  "Зорка",
+                  "Зьвязда",
+                  "Вифлеемская звезда",
+                  "Зірка",
+                  "Gwiazda",
+                  "Star"
+                ]
+              }
+            },
+            {
+              "question": "Как называется кукольный вертеп в деревянном ящике?",
+              "options": [
+                "Батлейка",
+                "Шопка",
+                "Лялька"
+              ],
+              "answer_pattern": {
+                "type": "exact_any",
+                "value": [
+                  "Батлейка",
+                  "Вертеп",
+                  "Batleyka",
+                  "Batleika",
+                  "Batlejka"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "reward": {
+        "xp": 15
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Шопки: факт дня",
+            "text": "Каждый год в первый четверг декабря на краковский Рынок несут шопки — рождественские вертепы в виде дворцов из картона, фольги и цветной бумаги. В 2018 году ЮНЕСКО внесло краковское шопкарство в список нематериального наследия.",
+            "link": "/quests/1/krakow-szopka",
+            "linkLabel": "Квест-тропа шопкарей"
+          },
+          "task": {
+            "type": "riddle",
+            "text": "Викторина: три вопроса о краковских шопках.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "В каком году ЮНЕСКО внесло краковское шопкарство в список нематериального наследия?",
+                  "options": [
+                    "2008",
+                    "2018",
+                    "2022"
+                  ],
+                  "answer_pattern": {
+                    "type": "exact",
+                    "value": "2018"
+                  }
+                },
+                {
+                  "question": "Когда в Кракове несут шопки на Рынок?",
+                  "options": [
+                    "В первый четверг декабря",
+                    "В сочельник",
+                    "В Новый год"
+                  ],
+                  "answer_pattern": {
+                    "type": "exact_any",
+                    "value": [
+                      "В первый четверг декабря",
+                      "Первый четверг декабря",
+                      "У першы чацвер снежня",
+                      "У перший четвер грудня",
+                      "W pierwszy czwartek grudnia",
+                      "On the first Thursday of December",
+                      "First Thursday of December"
+                    ]
+                  }
+                },
+                {
+                  "question": "Из чего строят шопку?",
+                  "options": [
+                    "Картон, фольга и цветная бумага",
+                    "Глина и дерево",
+                    "Лёд и снег"
+                  ],
+                  "answer_pattern": {
+                    "type": "exact_any",
+                    "value": [
+                      "Картон, фольга и цветная бумага",
+                      "Кардон, фальга і каляровая папера",
+                      "Картон, фольга і кольоровий папір",
+                      "Karton, folia i kolorowy papier",
+                      "Cardboard, foil and coloured paper",
+                      "Cardboard, foil and colored paper"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "day": 7,
+      "date": "2026-12-07",
+      "kind": "planning",
+      "gift": {
+        "title": "Ярмарки, ради которых стоит поехать",
+        "text": "Краков — Главная площадь и конкурс шопок, традиция из списка ЮНЕСКО.\nВроцлав — домики на нескольких площадях, «Сказочный лес» и бронзовые гномы.\nГданьск — ярмарка на Угольном рынке, вход свободный.\nДрезден — Striezelmarkt, одна из старейших в Германии, с 1434 года.\nСтрасбург — ярмарка с 1570 года, город зовёт себя «столицей Рождества».\nВена — ярмарка перед ратушей и каток до 6 января.\nТаллин — Ратушная площадь, где, по версии города, ёлку ставят с 1441 года.",
+        "link": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety",
+        "linkLabel": "Даты и адреса польских ярмарок"
+      },
+      "task": {
+        "type": "route",
+        "text": "Выберите ярмарку мечты и отметьте поездку статусом «Планирую» с датой.",
+        "ctaRoute": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety",
+        "ctaLabel": "Запланировать",
+        "serverCredited": true
+      },
+      "reward": {
+        "xp": 10,
+        "badgeSlug": "advent_7",
+        "label": "Значок «7 дверец»"
+      },
+      "region": "pl",
+      "variants": [
+        {
+          "region": "by",
+          "gift": {
+            "title": "Минск к Рождеству",
+            "text": "В декабре центр Минска украшают к Рождеству, а проспект Независимости красиво подсвечен. Путеводитель на выходные: Верхний город, площадь Свободы, тихие дворики.",
+            "link": "/travels/minsk-za-vykhodnye-putevoditel-po-stolitse-belarusi",
+            "linkLabel": "Читать путеводитель"
+          },
+          "task": {
+            "type": "route",
+            "text": "Выберите день и отметьте поездку в Минск статусом «Планирую» с датой.",
+            "ctaRoute": "/travels/minsk-za-vykhodnye-putevoditel-po-stolitse-belarusi",
+            "ctaLabel": "Запланировать"
+          }
+        }
+      ]
     },
     {
       "day": 8, "date": "2026-12-08", "kind": "geo",
@@ -99,36 +477,147 @@
       "reward": { "xp": 10 }
     },
     {
-      "day": 9, "date": "2026-12-09", "kind": "geo",
+      "day": 9,
+      "date": "2026-12-09",
+      "kind": "geo",
       "gift": {
         "title": "Где это? Карта",
-        "text": "Замок XVI века в посёлке Гродненской области, объект ЮНЕСКО: пять башен, внутренний двор и пруд, который зимой превращается в каток."
+        "text": "Замок XVI века в посёлке Гродненской области, объект ЮНЕСКО: пять башен, внутренний двор и пруд под стенами."
       },
       "task": {
-        "type": "geo", "text": "Нажмите на карте там, где стоит этот замок. Засчитывается попадание в радиусе 5 км.",
-        "geo": { "lat": 53.4513, "lng": 26.4730, "radiusMeters": 5000, "mapCenter": { "lat": 53.7, "lng": 27.5 }, "mapZoom": 7 }
+        "type": "geo",
+        "text": "Нажмите на карте там, где стоит этот замок. Засчитывается попадание в радиусе 5 км.",
+        "geo": {
+          "lat": 53.4513,
+          "lng": 26.473,
+          "radiusMeters": 5000,
+          "mapCenter": {
+            "lat": 53.7,
+            "lng": 27.5
+          },
+          "mapZoom": 7
+        }
       },
-      "reward": { "xp": 15 }
+      "reward": {
+        "xp": 15
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Где это? Карта",
+            "text": "Орденский замок из красного кирпича, крупнейший кирпичный замок мира, с 1997 года в списке ЮНЕСКО. От Гданьска до него около часа на машине."
+          },
+          "task": {
+            "type": "geo",
+            "text": "Нажмите на карте Польши там, где стоит этот замок. Засчитывается попадание в радиусе 5 км.",
+            "geo": {
+              "lat": 54.03936,
+              "lng": 19.02812,
+              "radiusMeters": 5000,
+              "mapCenter": {
+                "lat": 53.3,
+                "lng": 19.0
+              },
+              "mapZoom": 7
+            }
+          }
+        }
+      ]
     },
     {
-      "day": 10, "date": "2026-12-10", "kind": "site-action",
+      "day": 10,
+      "date": "2026-12-10",
+      "kind": "content",
       "gift": {
-        "title": "Статьи о зиме",
-        "text": "Как одеваться на зимний маршрут, где греться в старом городе и какие замки открыты в январе — подборка статей сообщества.",
-        "link": "/articles", "linkLabel": "К статьям"
+        "title": "Святочная история путешественника",
+        "text": "Под Рождество путник шёл через лес к станции и опоздал на последний поезд. Метель заметала рельсы, телефон сел. На краю посёлка горело одно окно, и на подоконнике стояла свеча: по старому обычаю её ставят в сочельник, чтобы любой, кто в пути, знал — его здесь ждут.\n\nДверь открыли сразу. Ему налили горячего чая, поставили лишнюю тарелку и ни о чём не спросили. Утром метель стихла. Уходя, путник оставил на подоконнике свою дорожную карту с отметкой «здесь меня ждали».\n\nГоворят, с тех пор в каждом его маршруте есть одна точка без названия. Туда он заезжает каждую зиму."
       },
-      "task": { "type": "route", "serverCredited": true, "text": "Прочитайте статью и поставьте ей оценку — авторы видят каждую.", "ctaRoute": "/articles", "ctaLabel": "Оценить статью" },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "riddle",
+        "text": "Дочитали? Один вопрос по истории.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Что стояло на подоконнике и показало путнику, что его ждут?",
+              "options": [
+                "Ёлка",
+                "Свеча",
+                "Фонарь"
+              ],
+              "answer_pattern": {
+                "type": "exact_any",
+                "value": [
+                  "Свеча",
+                  "Свечка",
+                  "Сьвечка",
+                  "Свечка",
+                  "Свяча",
+                  "Свічка",
+                  "Świeca",
+                  "Świeczka",
+                  "Candle"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "reward": {
+        "xp": 10
+      }
     },
     {
-      "day": 11, "date": "2026-12-11", "kind": "site-action",
+      "day": 11,
+      "date": "2026-12-11",
+      "kind": "riddle",
       "gift": {
-        "title": "Куда на выходные зимой",
-        "text": "Маршруты выходного дня по Беларуси: один день, без ночёвки, с тёплым кафе в конце. Поиск по регионам и расстоянию от дома.",
-        "link": "/search", "linkLabel": "Открыть поиск"
+        "title": "Чей это обычай?",
+        "text": "Рождество и Новый год встречают по-разному: где-то едят виноград под бой курантов, где-то дарят книги и в тот же вечер их читают. Соедините обычай со страной."
       },
-      "task": { "type": "route", "text": "Найдите маршрут на ближайшие выходные и откройте его страницу.", "ctaRoute": "/search", "ctaLabel": "Искать маршрут" },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "open",
+        "text": "Соберите шесть пар «обычай — страна».",
+        "game": {
+          "kind": "match",
+          "pairs": [
+            {
+              "left": "12 виноградин под 12 ударов курантов в новогоднюю полночь",
+              "right": "Испания",
+              "fact": "Каждая виноградина — месяц нового года. Успеть съесть все двенадцать — к удаче."
+            },
+            {
+              "left": "Дарят книги в сочельник и читают их в тот же вечер",
+              "right": "Исландия",
+              "fact": "Книжный сезон здесь зовут «потопом»: каталог новых книг с 1944 года приходит в каждый дом."
+            },
+            {
+              "left": "Звезда-фонарь парол на каждом доме",
+              "right": "Филиппины",
+              "fact": "В Сан-Фернандо проходит фестиваль гигантских фонарей: они бывают до 12 метров в поперечнике."
+            },
+            {
+              "left": "Ведьма Бефана приносит подарки в ночь на 6 января",
+              "right": "Италия",
+              "fact": "Хорошим детям — сладости, непослушным — уголёк. Обычно сахарный."
+            },
+            {
+              "left": "Ёлочный паучок-паутинка приносит счастье",
+              "right": "Украина",
+              "fact": "По легенде, у бедной вдовы ёлку за ночь оплёл паук, а утром солнце превратило паутину в золото и серебро."
+            },
+            {
+              "left": "Лишняя тарелка на Вигилию — для нежданного гостя",
+              "right": "Польша",
+              "fact": "Свободное место ждёт любого путника, который постучится в сочельник."
+            }
+          ]
+        }
+      },
+      "reward": {
+        "xp": 10
+      }
     },
     {
       "day": 12, "date": "2026-12-12", "kind": "creative",
@@ -140,13 +629,79 @@
       "reward": { "xp": 10, "label": "Кандидат на редкую награду" }
     },
     {
-      "day": 13, "date": "2026-12-13", "kind": "site-action",
+      "day": 13,
+      "date": "2026-12-13",
+      "kind": "riddle",
       "gift": {
-        "title": "Профиль путешественника",
-        "text": "Заполненный профиль — это ваша книга путешествий: страны, города, значки и ранг. Другие путешественники находят по нему попутчиков."
+        "title": "Собери рюкзак в зимний поход",
+        "text": "День короткий, мороз щиплет, до тёплого кафе ещё три часа. Что пригодится в зимней прогулке, а что лучше оставить дома?"
       },
-      "task": { "type": "route", "text": "Заполните профиль до 100%: имя, фото, о себе.", "ctaRoute": "/profile", "ctaLabel": "Открыть профиль" },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "open",
+        "text": "Выберите шесть вещей, без которых зимой в дорогу не выходят.",
+        "game": {
+          "kind": "pick",
+          "items": [
+            {
+              "label": "Термос с горячим чаем",
+              "correct": true
+            },
+            {
+              "label": "Шлёпки",
+              "correct": false,
+              "hint": "хороши для бани, но не для снега"
+            },
+            {
+              "label": "Налобный фонарик",
+              "correct": true
+            },
+            {
+              "label": "Зонт-трость",
+              "correct": false,
+              "hint": "в снегопад выручает капюшон"
+            },
+            {
+              "label": "Запасные шерстяные носки",
+              "correct": true
+            },
+            {
+              "label": "Фен",
+              "correct": false,
+              "hint": "розеток в лесу не бывает"
+            },
+            {
+              "label": "Пауэрбанк",
+              "correct": true
+            },
+            {
+              "label": "Надувной круг",
+              "correct": false,
+              "hint": "озёра зимой подо льдом"
+            },
+            {
+              "label": "Тёплая шапка",
+              "correct": true
+            },
+            {
+              "label": "Хрустальный бокал",
+              "correct": false,
+              "hint": "для чая в термосе есть крышка-кружка"
+            },
+            {
+              "label": "Маленькая аптечка",
+              "correct": true
+            },
+            {
+              "label": "Толстый бумажный атлас",
+              "correct": false,
+              "hint": "тяжёлый — офлайн-карта в телефоне легче"
+            }
+          ]
+        }
+      },
+      "reward": {
+        "xp": 10
+      }
     },
     {
       "day": 14, "date": "2026-12-14", "kind": "social",
@@ -158,14 +713,42 @@
       "reward": { "xp": 10, "badgeSlug": "advent_14", "label": "Значок «14 дверец»" }
     },
     {
-      "day": 15, "date": "2026-12-15", "kind": "site-action",
+      "day": 15,
+      "date": "2026-12-15",
+      "kind": "site-action",
       "gift": {
         "title": "Польские зимние квесты",
         "text": "Краков, Вроцлав, Гданьск и ещё пятнадцать городов Польши — рождественские квесты по старым городам с ярмарками и вертепами.",
-        "link": "/quests/krakow", "linkLabel": "Квест по Кракову"
+        "link": "/quests/krakow",
+        "linkLabel": "Квест по Кракову"
       },
-      "task": { "type": "route", "text": "Откройте лендинг города и сохраните маршрут квеста.", "ctaRoute": "/quests", "ctaLabel": "Города квестов" },
-      "reward": { "xp": 10 }
+      "task": {
+        "type": "route",
+        "text": "Откройте лендинг города и сохраните маршрут квеста.",
+        "ctaRoute": "/quests",
+        "ctaLabel": "Города квестов"
+      },
+      "reward": {
+        "xp": 10
+      },
+      "region": "pl",
+      "variants": [
+        {
+          "region": "by",
+          "gift": {
+            "title": "Зимние квесты Беларуси",
+            "text": "Минск, Витебск, Могилёв, Брест, Гомель и Гродно: рождественские квесты по старым городам со звездой на шесте, батлейкой и огнями. Начните с Минска — «Звезда над батлейкой».",
+            "link": "/quests/4/minsk-batleyka-star",
+            "linkLabel": "Квест по Минску"
+          },
+          "task": {
+            "type": "route",
+            "text": "Откройте лендинг города и сохраните маршрут квеста.",
+            "ctaRoute": "/quests",
+            "ctaLabel": "Города квестов"
+          }
+        }
+      ]
     },
     {
       "day": 16, "date": "2026-12-16", "kind": "riddle",
@@ -184,14 +767,43 @@
       "reward": { "xp": 15 }
     },
     {
-      "day": 17, "date": "2026-12-17", "kind": "site-action",
+      "day": 17,
+      "date": "2026-12-17",
+      "kind": "site-action",
       "gift": {
-        "title": "Книга воспоминаний",
-        "text": "Из своих поездок на MeTravel можно собрать PDF-книгу: фотографии, маршруты и заметки. В декабре книга бесплатна — подарок себе или близким.",
-        "link": "/export", "linkLabel": "Собрать книгу"
+        "title": "Книга в подарок",
+        "text": "«Беларусь. Книга квестов»: 41 квест в одной книге. После каждого — страница для фото и заметок, в конце — карта страны. PDF бесплатно и без регистрации.",
+        "link": "/books/belarus-quests-1",
+        "linkLabel": "Открыть книгу"
       },
-      "task": { "type": "route", "text": "Соберите PDF-книгу из своих поездок.", "ctaRoute": "/export", "ctaLabel": "К экспорту" },
-      "reward": { "xp": 10, "label": "PDF-книга бесплатно" }
+      "task": {
+        "type": "route",
+        "text": "Скачайте книгу — или соберите свою из собственных поездок.",
+        "ctaRoute": "/books/belarus-quests-1",
+        "ctaLabel": "Скачать книгу"
+      },
+      "reward": {
+        "xp": 10,
+        "label": "PDF-книга бесплатно"
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Книга в подарок",
+            "text": "«Польша. Книга квестов»: 37 квестов — от Вавельского дракона до гномов Вроцлава. После каждого — страница для фото и заметок. PDF бесплатно и без регистрации.",
+            "link": "/books/poland-quests-1",
+            "linkLabel": "Открыть книгу"
+          },
+          "task": {
+            "type": "route",
+            "text": "Скачайте книгу — или соберите свою из собственных поездок.",
+            "ctaRoute": "/books/poland-quests-1",
+            "ctaLabel": "Скачать книгу"
+          }
+        }
+      ]
     },
     {
       "day": 18, "date": "2026-12-18", "kind": "social",
@@ -213,30 +825,181 @@
       "reward": { "xp": 10 }
     },
     {
-      "day": 20, "date": "2026-12-20", "kind": "planning",
+      "day": 20,
+      "date": "2026-12-20",
+      "kind": "planning",
       "gift": {
         "title": "Зимние маршруты Беларуси",
-        "text": "Зимой в Беларуси работают все замки и музеи, а дороги к ним чистят в первую очередь. Мир, Несвиж, Лида, Новогрудок — классический зимний круг на два дня.",
-        "link": "/travelsby", "linkLabel": "Маршруты по Беларуси"
-      },
-      "task": { "type": "route", "serverCredited": true, "text": "Отметьте пять поездок статусом «Был» — они попадут в ваш календарь путешествий.", "ctaRoute": "/calendar", "ctaLabel": "Открыть календарь" },
-      "reward": { "xp": 10 }
-    },
-    {
-      "day": 21, "date": "2026-12-21", "kind": "riddle",
-      "gift": {
-        "title": "Самая длинная ночь",
-        "text": "21 декабря — зимнее солнцестояние: в Минске светло около семи часов. Лучшее время для вечерних маршрутов с подсветкой: ратуши, замки и ярмарки красивее всего после заката."
+        "text": "Лидский замок открыт для посещения круглый год. Несвиж и Мир — маршрут на два дня с ночёвкой в Несвиже.",
+        "link": "/travelsby",
+        "linkLabel": "Маршруты по Беларуси"
       },
       "task": {
-        "type": "riddle", "text": "Викторина: три вопроса о самой длинной ночи.",
-        "riddle": { "questions": [
-          { "question": "Сколько примерно часов длится световой день в Минске 21 декабря?", "options": ["7", "10", "12"], "answer_pattern": { "type": "exact", "value": "7" } },
-          { "question": "Как называется астрономическое событие, когда ночь самая длинная в году?", "answer_pattern": { "type": "exact_any", "value": ["Солнцестояние", "Зимнее солнцестояние", "Сонцастаянне", "Зімовае сонцастаянне", "Сонцестояння", "Зимове сонцестояння", "Przesilenie", "Przesilenie zimowe", "Solstice", "Winter solstice"] } },
-          { "question": "В какой стране находится самая северная столица Европы — Рейкьявик?", "options": ["Исландия", "Норвегия", "Финляндия"], "answer_pattern": { "type": "exact_any", "value": ["Исландия", "Ісландыя", "Ісландія", "Iceland", "Islandia"] } }
-        ] }
+        "type": "route",
+        "serverCredited": true,
+        "text": "Отметьте пять поездок статусом «Был» — они попадут в ваш календарь путешествий.",
+        "ctaRoute": "/calendar",
+        "ctaLabel": "Открыть календарь"
       },
-      "reward": { "xp": 15 }
+      "reward": {
+        "xp": 10
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Зимние маршруты Польши",
+            "text": "Зимой из Кракова — в горы: до Горцев и Бескидов полтора-два часа на машине. В подборке Турбач, перевал Брона, Щавница и Закопане.",
+            "link": "/travels/kuda-poekhat-zimoi-iz-krakova-turbach-krynitsa-zakopane-drezden",
+            "linkLabel": "Зимние маршруты"
+          },
+          "task": {
+            "type": "route",
+            "text": "Отметьте пять поездок статусом «Был» — они попадут в ваш календарь путешествий.",
+            "ctaRoute": "/calendar",
+            "ctaLabel": "Открыть календарь"
+          }
+        }
+      ]
+    },
+    {
+      "day": 21,
+      "date": "2026-12-21",
+      "kind": "content",
+      "gift": {
+        "title": "Куцця к рождественскому столу",
+        "text": "Куцця — каша из ячневой крупы с мёдом и маком. Так называют и само блюдо, и ужин накануне Рождества.\n\nПонадобится:\n— ячневая крупа — 200 г\n— вода — 700 мл\n— мак — 3 ст. ложки\n— мёд — 3 ст. ложки\n— изюм — 50 г\n— грецкие орехи — 50 г\n— соль — щепотка\n\nКак готовить:\n1. Мак залейте кипятком на час, слейте воду и разотрите.\n2. Крупу всыпьте в кипящую подсоленную воду и варите 10–15 минут на малом огне.\n3. Изюм запарьте кипятком, орехи подсушите и порубите.\n4. В тёплую кашу добавьте мак, мёд и изюм, перемешайте.\n5. Укутайте кастрюлю полотенцем на 30 минут, перед подачей посыпьте орехами."
+      },
+      "task": {
+        "type": "open",
+        "text": "Соберите ингредиенты для куцци — рецепт чуть выше.",
+        "game": {
+          "kind": "pick",
+          "items": [
+            {
+              "label": "Ячневая крупа",
+              "correct": true
+            },
+            {
+              "label": "Майонез",
+              "correct": false,
+              "hint": "его оставим для оливье"
+            },
+            {
+              "label": "Мак",
+              "correct": true
+            },
+            {
+              "label": "Лук репчатый",
+              "correct": false,
+              "hint": "пусть дождётся драников"
+            },
+            {
+              "label": "Мёд",
+              "correct": true
+            },
+            {
+              "label": "Солёные огурцы",
+              "correct": false,
+              "hint": "им место рядом с картошкой"
+            },
+            {
+              "label": "Изюм",
+              "correct": true
+            },
+            {
+              "label": "Кетчуп",
+              "correct": false,
+              "hint": "каша обойдётся без него"
+            },
+            {
+              "label": "Грецкие орехи",
+              "correct": true
+            },
+            {
+              "label": "Чеснок",
+              "correct": false,
+              "hint": "он к салу, а не к каше"
+            },
+            {
+              "label": "Вода",
+              "correct": true
+            }
+          ]
+        }
+      },
+      "reward": {
+        "xp": 15
+      },
+      "region": "by",
+      "variants": [
+        {
+          "region": "pl",
+          "gift": {
+            "title": "Пряники по мотивам торуньских",
+            "text": "Торуньские пряники известны с XIV века: первый пекарь упомянут в городе в 1380 году. Это домашние пряники по мотивам — не «те самые», но пахнут так же празднично.\n\nПонадобится:\n— пшеничная мука — 500 г\n— мёд — 200 г\n— сливочное масло — 150 г\n— сахарная пудра — 100 г\n— яйцо — 1 шт.\n— сода — 1 ч. ложка\n— пряности для пряников — 1 пакетик (или по щепотке корицы, имбиря и гвоздики)\n\nКак готовить:\n1. Мёд, масло, пудру и пряности прогрейте на малом огне, остудите до тёплого.\n2. Муку смешайте с содой, добавьте яйцо и медовую смесь, замесите тесто.\n3. Уберите тесто в холодильник на 2 часа.\n4. Раскатайте слоем 3–4 мм, вырежьте фигурки, выложите на пергамент.\n5. Пеките при 180 °C 8–10 минут, остудите и украсьте глазурью."
+          },
+          "task": {
+            "type": "open",
+            "text": "Соберите для пряников всё нужное — рецепт чуть выше.",
+            "game": {
+              "kind": "pick",
+              "items": [
+                {
+                  "label": "Пшеничная мука",
+                  "correct": true
+                },
+                {
+                  "label": "Свёкла",
+                  "correct": false,
+                  "hint": "она ждёт красного борща"
+                },
+                {
+                  "label": "Мёд",
+                  "correct": true
+                },
+                {
+                  "label": "Сельдь",
+                  "correct": false,
+                  "hint": "её место на закусочном столе"
+                },
+                {
+                  "label": "Сливочное масло",
+                  "correct": true
+                },
+                {
+                  "label": "Дрожжи",
+                  "correct": false,
+                  "hint": "пряникам подниматься не нужно"
+                },
+                {
+                  "label": "Сахарная пудра",
+                  "correct": true
+                },
+                {
+                  "label": "Горчица",
+                  "correct": false,
+                  "hint": "пусть дождётся колбасок"
+                },
+                {
+                  "label": "Яйцо",
+                  "correct": true
+                },
+                {
+                  "label": "Квашеная капуста",
+                  "correct": false,
+                  "hint": "она ждёт пирожков с грибами"
+                },
+                {
+                  "label": "Пряности для пряников",
+                  "correct": true
+                }
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "day": 22, "date": "2026-12-22", "kind": "creative",
@@ -267,22 +1030,82 @@
       "reward": { "xp": 20, "badgeSlug": "advent_24", "label": "Золото «Снежный странник»" }
     },
     {
-      "day": 25, "date": "2026-12-25", "bonus": true, "kind": "content",
+      "day": 25,
+      "date": "2026-12-25",
+      "bonus": true,
+      "kind": "content",
       "gift": {
-        "title": "Рождество: открытка-подарок",
-        "text": "С Рождеством! Зимний арт MeTravel — открытка, которой можно поделиться с теми, с кем вы хотите поехать в новом году."
+        "title": "Рождество: открытка и гадание",
+        "text": "С Рождеством! Зимний арт MeTravel — открытка, которой можно поделиться с теми, с кем вы хотите поехать в новом году. А ещё в этом окне спрятана колода добрых предсказаний."
       },
-      "task": { "type": "open", "text": "Бонусная дверца открывается подарком — задания нет." },
-      "reward": { "xp": 10, "badgeSlug": "advent_bonus", "label": "Бонусный значок" }
+      "task": {
+        "type": "open",
+        "text": "Вытяните рождественское предсказание — у каждого оно своё.",
+        "game": {
+          "kind": "fortune",
+          "items": [
+            "В новом году вас ждёт дорога, о которой вы пока даже не мечтаете.",
+            "Улыбнитесь: кто-то уже собирается позвать вас в поездку.",
+            "Самое красивое место года вы найдёте случайно — свернув не туда.",
+            "Скоро вы попробуете блюдо, которое потом будете искать в каждом городе.",
+            "В вашем 2027-м будет рассвет, ради которого стоило встать в пять утра.",
+            "Тот, кто давно хотел поехать с вами, наконец решится. Скажите «да».",
+            "Ваш рюкзак станет легче, а впечатления — весомее.",
+            "Поезд, на который вы чуть не опоздаете, привезёт вас к хорошей истории.",
+            "В этом году вы вернётесь туда, где вам было хорошо, — и место вас узнает.",
+            "Совет на сегодня: позвоните тому, с кем вам лучше всего путешествовалось.",
+            "Звёзды советуют отложить телефон и посмотреть в окно: там красиво.",
+            "Скоро незнакомец подскажет вам дорогу, а заодно и отличное кафе.",
+            "В новом году у вас будет день без плана — и он станет лучшим.",
+            "Ваша следующая фотография из поездки станет любимой у всех друзей.",
+            "Погода будет на вашей стороне именно тогда, когда это важнее всего.",
+            "Вы найдёте тропу, где не встретите никого, — только тишину и снег.",
+            "Совет: заведите блокнот поездок — через год вы скажете себе спасибо.",
+            "Город, который казался скучным, ещё удивит вас.",
+            "Впереди поездка, после которой вы скажете: «Надо было раньше».",
+            "В 2027-м вы решитесь на то, чего давно побаивались. И вам понравится.",
+            "Сегодня хороший день, чтобы выбрать даты отпуска.",
+            "Вас ждёт встреча в дороге, из которой вырастет дружба.",
+            "Улыбайтесь чаще: в дороге улыбка открывает больше дверей, чем карта.",
+            "Предсказание простое: будет снег, горячий чай и очень хорошая компания.",
+            "В новом году у вас сложится маршрут, который захотят повторить другие.",
+            "Скоро вы поймёте: лучшее место — то, где вас ждут.",
+            "Приятный сюрприз ждёт вас в самом обычном месте.",
+            "Совет: в следующей поездке загляните в маленький музей, куда никто не ходит.",
+            "Этой зимой вам будет тепло — от людей, а не только от шарфа.",
+            "Всё задуманное сбудется. Может быть, другой дорогой — но ещё красивее."
+          ]
+        }
+      },
+      "reward": {
+        "xp": 10,
+        "badgeSlug": "advent_bonus",
+        "label": "Бонусный значок"
+      }
     },
     {
-      "day": 26, "date": "2026-12-31", "bonus": true, "kind": "planning",
+      "day": 26,
+      "date": "2026-12-31",
+      "bonus": true,
+      "kind": "planning",
       "gift": {
-        "title": "Новый год: пожелание",
-        "text": "Пусть в 2027-м будет больше дорог, чем планов, и больше планов, чем отговорок. Соберите список желаний на год — хотя бы три места."
+        "title": "Новый год: рулетка желаний",
+        "text": "Пусть в 2027-м будет больше дорог, чем планов, и больше планов, чем отговорок. А первое место пусть выберет случай.",
+        "link": "/roulette",
+        "linkLabel": "Крутить рулетку"
       },
-      "task": { "type": "route", "serverCredited": true, "text": "Добавьте три маршрута в «Хочу поехать» на 2027 год.", "ctaRoute": "/favorites", "ctaLabel": "Мой список" },
-      "reward": { "xp": 10, "badgeSlug": "advent_bonus", "label": "Бонусный значок" }
+      "task": {
+        "type": "route",
+        "text": "Крутаните рулетку и добавьте выпавший маршрут в «Хочу поехать».",
+        "ctaRoute": "/roulette",
+        "ctaLabel": "К рулетке",
+        "serverCredited": true
+      },
+      "reward": {
+        "xp": 10,
+        "badgeSlug": "advent_bonus",
+        "label": "Бонусный значок"
+      }
     },
     {
       "day": 27, "date": "2027-01-07", "bonus": true, "secret": true, "kind": "content",

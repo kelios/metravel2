@@ -14,6 +14,9 @@ import { translate as i18nT } from '@/i18n'
 import { ADVENT_MAIN_DOORS, isoDateToLocalMidnight } from '@/constants/advent'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import { buildAdventDoorCtaHref, buildAdventReturnPath } from '@/utils/advent/adventTaskLinks'
+import { adventTaskCreditsOnOpen, adventTaskGame } from '@/utils/advent/adventGames'
+import { adventDoorRegions, resolveAdventDoor } from '@/utils/advent/adventVariants'
+import { useAdventRegion } from '@/hooks/useAdventRegion'
 import { buildLoginHref, buildRegistrationHref } from '@/utils/authNavigation'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -23,11 +26,11 @@ import AdventCelebration from './AdventCelebration'
 import AdventRiddleTask from './AdventRiddleTask'
 import AdventGeoTask from './AdventGeoTask'
 import AdventGiftMedia from './AdventGiftMedia'
-// Открытка дверцы 25 — в чанке маршрута: шеринг и кнопки уже там (AdventShareCard), а новая
-// точка import() сдвигала id модулей, на которые ссылается entry (бюджет entry, #3482).
 import AdventPostcard from './AdventPostcard'
 import AdventSparkles from './AdventSparkles'
 import AdventWindowCrop from './AdventWindowCrop'
+import AdventRegionSwitch from './AdventRegionSwitch'
+import AdventGameTask from './tasks/AdventGameTask'
 import { useAdventPaper } from './useAdventPaper'
 
 // Только для дверцы 24 — отдельным чанком, вместе с контуром шеринга.
@@ -51,17 +54,24 @@ const HEADER_ASPECT = 16 / 9
  * «бумага» с подарком, «маленькое задание на сегодня» и бирка награды.
  * Гостю вместо задания — вход с возвратом к этому окну (#2861).
  */
-function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaignYear, onClose, onCompleteTask }: Props) {
+function AdventDoorSheet({ door: rawDoor, isAuthenticated, preview, creditedDays, campaignYear, onClose, onCompleteTask }: Props) {
+  // Вариант «Беларусь / Польша» (#3486): подарок и задание выбранного региона, остальное общее.
+  const [region, setRegion] = useAdventRegion()
+  const door = useMemo(() => (rawDoor ? resolveAdventDoor(rawDoor, region) : null), [rawDoor, region])
+  const regions = useMemo(() => (rawDoor ? adventDoorRegions(rawDoor) : []), [rawDoor])
+  const gameShare = useMemo(() => ({ year: campaignYear, preview }), [campaignYear, preview])
   const router = useRouter()
   const colors = useThemedColors()
   const paper = useAdventPaper()
   const styles = useMemo(() => createStyles(colors, paper), [colors, paper])
-  // Дверца, задание которой решено в этом листе: отклик и ответ остаются на виду.
-  const [solvedDay, setSolvedDay] = useState<number | null>(null)
-  const day = door?.day ?? null
+  // Задание, решённое в этом листе: отклик и ответ остаются на виду. Ключ — дверца
+  // и вариант (#3486): смена региона перемонтирует секцию задания и теряет ответ,
+  // поэтому другой или возвращённый вариант решённой дверцы показывает «сделано», а не пустую игру.
+  const taskKey = door ? `${door.day}:${door.region ?? ''}` : null
+  const [solvedKey, setSolvedKey] = useState<string | null>(null)
   useEffect(() => {
-    setSolvedDay(null)
-  }, [day])
+    setSolvedKey(null)
+  }, [taskKey])
 
   const openInternalOrExternal = useCallback(
     (link: string) => {
@@ -91,9 +101,9 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
   const handleDone = useCallback(() => {
     if (!door) return
     if (!preview) sendAnalyticsEvent('Advent_TaskDone', { day: door.day, type: door.task.type })
-    setSolvedDay(door.day)
+    setSolvedKey(taskKey)
     onCompleteTask(door.day)
-  }, [door, onCompleteTask, preview])
+  }, [door, taskKey, onCompleteTask, preview])
 
   const handleLogin = useCallback(() => {
     if (!door) return
@@ -107,8 +117,9 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
 
   const title = door ? i18nT('adventStatic:sheet.titleGift', { value1: formatDoorDate(door.date) }) : ''
   const giftImage = door?.gift.image?.trim()
-  const isOpenGift = door?.task.type === 'open'
-  const solvedHere = !!door && solvedDay === door.day
+  const isOpenGift = !!door && adventTaskCreditsOnOpen(door.task)
+  const game = door ? adventTaskGame(door.task) : null
+  const solvedHere = taskKey !== null && solvedKey === taskKey
   const done = door?.state === 'done'
 
   const renderTask = () => {
@@ -126,7 +137,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
       )
     }
     // Решённая здесь загадка или карта не размонтируется: ответ и праздник остаются на месте.
-    const keepInteractive = solvedHere && (door.task.type === 'riddle' || door.task.type === 'geo')
+    const keepInteractive = solvedHere && (!!game || door.task.type === 'riddle' || door.task.type === 'geo')
     if (done && door.doneAt && !keepInteractive) {
       const doneDate = formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' })
       if (solvedHere) {
@@ -147,6 +158,10 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
           <Text style={styles.done}>{i18nT('adventStatic:sheet.taskDone', { value1: doneDate })}</Text>
         </View>
       )
+    }
+    // Игра (#3487) рисуется вместо задания по `type` — тот лишь запасной путь старых сборок.
+    if (game) {
+      return <AdventGameTask game={game} xp={door.reward.xp} onComplete={handleDone} onOpenLink={openInternalOrExternal} day={door.day} share={gameShare} />
     }
     switch (door.task.type) {
       case 'riddle':
@@ -202,6 +217,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
           </View>
 
           <View style={styles.paper}>
+            <AdventRegionSwitch regions={regions} value={door.region ?? region} onChange={setRegion} />
             {giftImage ? <AdventGiftMedia key={`${campaignYear}:${door.day}:${door.date}:${giftImage}`} src={giftImage} alt={door.gift.title} /> : null}
             <Text style={styles.giftTitle}>{door.gift.title}</Text>
             <Text style={styles.body}>{door.gift.text}</Text>
@@ -238,7 +254,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
           ) : null}
 
           {isOpenGift && isAuthenticated ? null : (
-            <View style={styles.task} testID="advent-task-section">
+            <View key={taskKey ?? undefined} style={styles.task} testID="advent-task-section">
               <View style={styles.taskTitleRow}>
                 <Feather name="star" size={16} color={paper.gold} />
                 <Text style={styles.taskTitle}>{i18nT('adventStatic:sheet.task')}</Text>

@@ -15,6 +15,14 @@ describe('advent config validator (#2862)', () => {
     expect(validateAdventConfig(campaign, { routeExists })).toEqual([])
   })
 
+  it('requires a variant to share the primary task credit-on-open rule (#3486, #3487)', () => {
+    const broken = clone() as unknown as { doors: Array<{ day: number; variants?: Array<{ task: Record<string, unknown> }> }> }
+    const door = broken.doors.find((candidate) => candidate.day === 1)!
+    door.variants![0]!.task.game = { kind: 'pick', items: [{ label: 'a', correct: true }, { label: 'b', correct: false }, { label: 'c', correct: true }, { label: 'd', correct: false }] }
+    const errors = validateAdventConfig(broken, { routeExists })
+    expect(errors).toEqual([expect.stringContaining('зачёт открытием')])
+  })
+
   it('reports a broken date in plain words', () => {
     const broken = clone()
     broken.doors[4].date = '2026-12-06'

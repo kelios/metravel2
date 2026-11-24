@@ -44,11 +44,13 @@ const EAGER_ROUTE_VARIANTS: Record<string, { whenEntry: string; whenHtml: string
     maxBrotliKB: 578.9,
   },
 }
-// #3362: full delivered bytes of eligible retained canonical source 39c7ab584e,
-// including loader metadata. Its failed report is measurement, not publication.
+// #3362: full delivered bytes of eligible retained canonical source, including
+// loader metadata. Its failed report is measurement, not publication. Since
+// #3486/#3487 (owner decision 24.11.2026, +10 B from chunk renumbering, no code
+// growth) the source is the retained probe 36533fbaf.
 // Historical #3374 provenance remains supported as a separate reference kind.
-const ENTRY_BROTLI_BYTES = 232602
-const HOME_BROTLI_BYTES = 480437
+const ENTRY_BROTLI_BYTES = 232612
+const HOME_BROTLI_BYTES = 478020
 const MAX_GLOBAL_REQUEST_SPARE_PCT = 5
 const EAGER_REQUEST_PIN_START = '// bundle-budget-sync:eager-requests:start'
 const EAGER_REQUEST_PIN_END = '// bundle-budget-sync:eager-requests:end'

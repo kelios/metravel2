@@ -54,6 +54,86 @@ export interface AdventGeoTarget {
   mapZoom?: number
 }
 
+/**
+ * Интерактивная механика задания (#3487): аддитивное поле поверх `type`.
+ * Клиент, который её знает, рисует игру и засчитывает дверцу по её итогу;
+ * старый клиент её не видит и ведёт задание по `type` (обычно `open`), поэтому
+ * игра не ломает выпущенные сборки приложения.
+ */
+export type AdventGameKind = 'selfcheck' | 'match' | 'pick' | 'wishlist' | 'fortune'
+
+/** Звание теста-самопроверки: выдаётся при числе отметок не меньше `min`. */
+export interface AdventSelfcheckTier {
+  min: number
+  title: string
+  text: string
+  link?: string
+  linkLabel?: string
+}
+
+/** «Со мной такое было»: человек отмечает карточки и получает звание. Засчитывается при любом итоге. */
+export interface AdventSelfcheckGame {
+  kind: 'selfcheck'
+  items: string[]
+  tiers: AdventSelfcheckTier[]
+}
+
+export interface AdventMatchPair {
+  left: string
+  right: string
+  /** Короткий факт, который показывается после верной пары. */
+  fact?: string
+}
+
+/** Игра «пары»: соединить левую карточку с правой. Засчитывается, когда собраны все пары. */
+export interface AdventMatchGame {
+  kind: 'match'
+  pairs: AdventMatchPair[]
+}
+
+export interface AdventPickItem {
+  label: string
+  correct: boolean
+  /** Мягкое пояснение, почему вещь лишняя или нужная. */
+  hint?: string
+}
+
+/** «Выбери нужное»: собрать все верные предметы без лишних. */
+export interface AdventPickGame {
+  kind: 'pick'
+  items: AdventPickItem[]
+}
+
+export interface AdventWishlistPlace {
+  travelId: number
+  title: string
+  /** Внутренний маршрут статьи. */
+  link: string
+  image?: string
+  country?: string
+}
+
+/**
+ * Вишлист: статус «Хочу поехать» ставится прямо в окне. Зачёт — серверный
+ * (`credit_rule` travel_status/wishlist), `goal` — сколько мест нужно для него.
+ */
+export interface AdventWishlistGame {
+  kind: 'wishlist'
+  places: AdventWishlistPlace[]
+  goal: number
+}
+
+/**
+ * Рождественское гадание: колода добрых предсказаний. Карточка своя у каждого
+ * аккаунта и не меняется при повторном открытии. Засчитывается, когда вытянута.
+ */
+export interface AdventFortuneGame {
+  kind: 'fortune'
+  items: string[]
+}
+
+export type AdventGame = AdventSelfcheckGame | AdventMatchGame | AdventPickGame | AdventWishlistGame | AdventFortuneGame
+
 export interface AdventTask {
   type: AdventTaskType
   text: string
@@ -68,6 +148,7 @@ export interface AdventTask {
   serverCredited?: boolean
   riddle?: { questions: AdventRiddleQuestion[] }
   geo?: AdventGeoTarget
+  game?: AdventGame
 }
 
 export interface AdventReward {
@@ -75,6 +156,19 @@ export interface AdventReward {
   /** Слаг значка достижений (поезд B, #2867); на этапе A только показывается. */
   badgeSlug?: string
   label?: string
+}
+
+/** Региональный вариант дверцы (#3486): «Беларусь» или «Польша». */
+export type AdventRegion = 'by' | 'pl'
+
+/**
+ * Второй подарок и задание той же дверцы. Прогресс, серия и награда общие:
+ * дверца засчитывается любым вариантом. Старый клиент вариант не видит.
+ */
+export interface AdventDoorVariant {
+  region: AdventRegion
+  gift: AdventGift
+  task: AdventTask
 }
 
 export interface AdventDoor {
@@ -89,6 +183,9 @@ export interface AdventDoor {
   gift: AdventGift
   task: AdventTask
   reward: AdventReward
+  /** Регион основного подарка и задания; задаётся вместе с `variants`. */
+  region?: AdventRegion
+  variants?: AdventDoorVariant[]
 }
 
 export interface AdventCampaignConfig {
@@ -121,10 +218,33 @@ export interface AdventRiddleQuestionOverlay {
   options?: string[]
 }
 
+/** Перевод текстов игры: те же длина и порядок, что в RU; ответы и флаги — в RU-конфиге. */
+export interface AdventGameOverlay {
+  items?: Array<string | { label?: string; hint?: string }>
+  tiers?: Array<{ title?: string; text?: string; linkLabel?: string }>
+  pairs?: Array<{ left?: string; right?: string; fact?: string }>
+  places?: Array<{ title?: string }>
+}
+
+export interface AdventGiftOverlay {
+  title?: string
+  text?: string
+  linkLabel?: string
+}
+
+export interface AdventTaskOverlay {
+  text?: string
+  ctaLabel?: string
+  riddle?: { questions: AdventRiddleQuestionOverlay[] }
+  game?: AdventGameOverlay
+}
+
 export interface AdventDoorOverlay {
-  gift?: { title?: string; text?: string; linkLabel?: string }
-  task?: { text?: string; ctaLabel?: string; riddle?: { questions: AdventRiddleQuestionOverlay[] } }
+  gift?: AdventGiftOverlay
+  task?: AdventTaskOverlay
   reward?: { label?: string }
+  /** Переводы вариантов по региону. */
+  variants?: Partial<Record<AdventRegion, { gift?: AdventGiftOverlay; task?: AdventTaskOverlay }>>
 }
 
 export interface AdventCampaignOverlay {

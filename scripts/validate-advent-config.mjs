@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Гейт конфига адвент-календаря (#2862) и накладок переводов (#2883):
-// `node scripts/validate-advent-config.mjs [data/advent/2026.json]` проверяет RU-конфиг
-// и все `data/advent/2026.<loc>.json` рядом с ним. Входит в `npm run lint` как
+// `node scripts/validate-advent-config.mjs [data/advent/2026.json] [--overlays <dir>]` проверяет
+// RU-конфиг и все `<dir>/2026.<loc>.json` (по умолчанию `public/assets/data/advent`: web
+// грузит накладки оттуда запросом, а не JS-чанком, #3487). Входит в `npm run lint` как
 // `guard:advent-config`. Логика — `scripts/lib/advent-config-validator.js`.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -12,7 +13,10 @@ const require = createRequire(import.meta.url)
 const { validateAdventConfig, validateAdventOverlay, defaultRouteExists } = require('./lib/advent-config-validator.js')
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const target = process.argv[2] || 'data/advent/2026.json'
+const args = process.argv.slice(2)
+const overlaysFlag = args.indexOf('--overlays')
+const overlayDirArg = overlaysFlag >= 0 ? args[overlaysFlag + 1] : 'public/assets/data/advent'
+const target = args.find((arg, index) => !arg.startsWith('--') && index !== overlaysFlag + 1) || 'data/advent/2026.json'
 const file = path.resolve(rootDir, target)
 
 const readJson = (absolutePath, label) => {
@@ -35,15 +39,16 @@ const config = readJson(file, target)
 let failed = report(target, validateAdventConfig(config, { routeExists: defaultRouteExists(rootDir) }))
 
 const base = path.basename(file, '.json')
+const overlayDir = path.resolve(rootDir, overlayDirArg)
 const overlayPattern = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.([a-z]{2})\\.json$`)
 const overlays = fs
-  .readdirSync(path.dirname(file))
+  .readdirSync(overlayDir)
   .map((name) => ({ name, match: name.match(overlayPattern) }))
   .filter((entry) => entry.match)
   .sort((a, b) => a.name.localeCompare(b.name))
 
 for (const { name, match } of overlays) {
-  const overlayPath = path.join(path.dirname(file), name)
+  const overlayPath = path.join(overlayDir, name)
   const label = path.relative(rootDir, overlayPath)
   const overlay = readJson(overlayPath, label)
   failed = report(label, validateAdventOverlay(overlay, config, { locale: match[1] })) || failed

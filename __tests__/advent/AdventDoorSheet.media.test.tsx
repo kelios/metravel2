@@ -16,7 +16,8 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   return (props: Record<string, unknown>) => React.createElement(View, props)
 })
 
-const doorWithImage = (image?: string, day = 1): AdventDoorView => {
+// Дверцы без вариантов «Беларусь / Польша» (#3486): лист показывает их подарок как есть.
+const doorWithImage = (image?: string, day = 3): AdventDoorView => {
   const door = getAdventCampaign().doors.find((candidate) => candidate.day === day)!
   return { ...door, state: 'opened', gift: { ...door.gift, image } }
 }
@@ -26,7 +27,7 @@ describe('optional gift media in the real door sheet', () => {
   it.each([undefined, '', '   '])('omits the entire media frame for image=%p', async (image) => {
     const screen = await render(sheet(doorWithImage(image)))
     expect(screen.queryByTestId('advent-gift-media')).toBeNull()
-    expect(screen.getByTestId('advent-door-sheet-1')).toBeTruthy()
+    expect(screen.getByTestId('advent-door-sheet-3')).toBeTruthy()
     expect(screen.getByTestId('advent-guest-block')).toBeTruthy()
   })
 
@@ -46,9 +47,9 @@ describe('optional gift media in the real door sheet', () => {
     await screen.rerender(sheet(doorWithImage('https://example.com/two.webp')))
     expect(screen.getByTestId('advent-gift-image').props.src).toBe('https://example.com/two.webp')
     await fireEvent(screen.getByTestId('advent-gift-image'), 'terminalError')
-    await screen.rerender(sheet(doorWithImage('https://example.com/two.webp', 2)))
+    await screen.rerender(sheet(doorWithImage('https://example.com/two.webp', 4)))
     expect(screen.getByTestId('advent-gift-image').props.src).toBe('https://example.com/two.webp')
-    expect(screen.getByTestId('advent-door-sheet-2')).toBeTruthy()
+    expect(screen.getByTestId('advent-door-sheet-4')).toBeTruthy()
     expect(screen.getByTestId('advent-gift-link')).toBeTruthy()
   })
 })

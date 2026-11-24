@@ -1,6 +1,7 @@
 /**
  * #2883 — переводы контента дверец: слияние накладки с RU-источником, валидатор
- * накладок, ответы загадок на всех языках, орфография BE/UK, web-загрузчик чанков.
+ * накладок, ответы загадок на всех языках, орфография BE/UK, web-загрузчик накладок
+ * (статические JSON в `public/assets/data/advent`, #3487).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -16,7 +17,7 @@ const { validateAdventOverlay } = require('../../scripts/lib/advent-config-valid
 
 const LOCALES = ['be', 'uk', 'pl', 'en'] as const
 const readOverlay = (locale: string): AdventCampaignOverlay =>
-  JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/advent', `2026.${locale}.json`), 'utf8'))
+  JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public/assets/data/advent', `2026.${locale}.json`), 'utf8'))
 
 const config = getAdventCampaign()
 
@@ -64,7 +65,7 @@ describe('validateAdventOverlay', () => {
     ;(overlay.doors['2'].gift as Record<string, unknown>).link = '/x'
     overlay.doors['4'].gift!.title = '  '
     overlay.doors['6'].task!.riddle!.questions[0].options = ['6', '7']
-    overlay.doors['21'].task!.riddle!.questions[2].options![0] = 'Greenland'
+    overlay.doors['10'].task!.riddle!.questions[0].options![1] = 'Greenland'
     const errors = validateAdventOverlay(overlay, config, { locale: 'en' })
     expect(errors).toEqual(
       expect.arrayContaining([
@@ -83,21 +84,27 @@ describe('ответы загадок на всех языках', () => {
   it.each(LOCALES)('верные варианты викторин накладки %s засчитываются RU-чекером', (locale) => {
     const merged = applyAdventOverlay(config, readOverlay(locale))
     let checked = 0
+    // Основные задания и варианты «Беларусь / Польша» (#3486) проверяются одинаково.
+    const tasksOf = (door: (typeof config.doors)[number]) => [door.task, ...(door.variants ?? []).map((variant) => variant.task)]
     merged.doors.forEach((door, doorIndex) => {
-      door.task.riddle?.questions.forEach((question, qIndex) => {
-        if (!question.options) return
-        const source = config.doors[doorIndex].task.riddle!.questions[qIndex]
-        const checker = buildAdventAnswerChecker(source.answer_pattern)
-        const correctIndex = source.options!.findIndex((option) => checker(option))
-        expect(correctIndex).toBeGreaterThanOrEqual(0)
-        expect(checker(question.options[correctIndex])).toBe(true)
-        question.options.forEach((option, index) => {
-          if (index !== correctIndex) expect(checker(option)).toBe(false)
+      const sourceTasks = tasksOf(config.doors[doorIndex])
+      tasksOf(door).forEach((task, taskIndex) => {
+        task.riddle?.questions.forEach((question, qIndex) => {
+          if (!question.options) return
+          const source = sourceTasks[taskIndex].riddle!.questions[qIndex]
+          const checker = buildAdventAnswerChecker(source.answer_pattern)
+          const correctIndex = source.options!.findIndex((option) => checker(option))
+          expect(correctIndex).toBeGreaterThanOrEqual(0)
+          expect(checker(question.options[correctIndex])).toBe(true)
+          question.options.forEach((option, index) => {
+            if (index !== correctIndex) expect(checker(option)).toBe(false)
+          })
+          checked += 1
         })
-        checked += 1
       })
     })
-    expect(checked).toBe(5)
+    // Коляды 3 + шопки 3 + святочная история 1 (#3487; викторину дверцы 21 сменил рецепт).
+    expect(checked).toBe(7)
   })
 
   it('свободные загадки принимают написания BE/UK/PL/EN и латиницу', () => {
@@ -107,11 +114,9 @@ describe('ответы загадок на всех языках', () => {
     const naroch = buildAdventAnswerChecker(config.doors[15].task.riddle!.questions[0].answer_pattern)
     ;['Нарочь', 'Нарач', 'Нароч', 'Narocz', 'Lake Naroch', 'jezioro Narocz', 'naroch'].forEach((answer) => expect(naroch(answer)).toBe(true))
     expect(naroch('Свитязь')).toBe(false)
-    const solstice = buildAdventAnswerChecker(config.doors[20].task.riddle!.questions[1].answer_pattern)
-    ;['Сонцестояння', 'Зимове сонцестояння', 'Przesilenie zimowe', 'Winter solstice', 'solstice', 'Сонцастаянне'].forEach((answer) =>
-      expect(solstice(answer)).toBe(true),
-    )
-    expect(solstice('Равноденствие')).toBe(false)
+    const candle = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
+    ;['Свеча', 'Свечка', 'Свяча', 'Свічка', 'Świeca', 'Candle'].forEach((answer) => expect(candle(answer)).toBe(true))
+    expect(candle('Ёлка')).toBe(false)
   })
 })
 
@@ -125,7 +130,19 @@ describe('орфография накладок', () => {
 })
 
 describe('web-загрузчик накладок', () => {
-  it('грузит чанк локали один раз, RU — без загрузки', async () => {
+  const realFetch = global.fetch
+  afterEach(() => {
+    global.fetch = realFetch
+  })
+
+  it('грузит JSON локали один раз, RU — без запроса', async () => {
+    const fetchMock = jest.fn(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', url), 'utf8')),
+    }))
+    global.fetch = fetchMock as unknown as typeof fetch
+    jest.resetModules()
     const web = require('@/services/advent/campaignOverlay.web') as typeof import('@/services/advent/campaignOverlay.web')
     expect(web.getLoadedAdventOverlay('ru')).toBeNull()
     expect(web.getLoadedAdventOverlay('pl')).toBeUndefined()
@@ -135,13 +152,22 @@ describe('web-загрузчик накладок', () => {
     expect(overlay?.locale).toBe('pl')
     expect(web.getLoadedAdventOverlay('pl')).toBe(overlay)
     await expect(web.loadAdventOverlay('ru')).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/assets/data/advent/2026.pl.json')
+  })
+
+  it('чужой или битый JSON не принимается за перевод', async () => {
+    global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ locale: 'en', year: 2026, doors: {} }) })) as unknown as typeof fetch
+    jest.resetModules()
+    const web = require('@/services/advent/campaignOverlay.web') as typeof import('@/services/advent/campaignOverlay.web')
+    await expect(web.loadAdventOverlay('be')).resolves.toBeNull()
   })
 })
 
 describe('правила языка интерфейса в чекере загадок (#2883, ревью-гейт)', () => {
   it('принимает написания, которых нет в списке, через нормализаторы языка', () => {
-    const solstice = buildAdventAnswerChecker(config.doors[20].task.riddle!.questions[1].answer_pattern)
-    expect(solstice('The winter solstice', 'en')).toBe(true)
+    const candle = buildAdventAnswerChecker(config.doors[9].task.riddle!.questions[0].answer_pattern)
+    expect(candle('The candle', 'en')).toBe(true)
     const naroch = buildAdventAnswerChecker(config.doors[15].task.riddle!.questions[0].answer_pattern)
     expect(naroch('the Lake Naroch', 'en')).toBe(true)
     const nesvizh = buildAdventAnswerChecker(config.doors[2].task.riddle!.questions[0].answer_pattern)
@@ -157,20 +183,21 @@ describe('правила языка интерфейса в чекере заг�
   })
 })
 
-describe('web-загрузчик: сбой чанка не запоминается', () => {
-  it('после ошибки import() локаль остаётся «ещё не загружена» и грузится повторно', async () => {
-    jest.resetModules()
+describe('web-загрузчик: сбой загрузки не запоминается', () => {
+  it('после ошибки сети локаль остаётся «ещё не загружена» и грузится повторно', async () => {
+    const realFetch = global.fetch
     let attempts = 0
-    jest.doMock('@/services/advent/overlays/advent-uk', () => {
+    global.fetch = jest.fn(async () => {
       attempts += 1
-      if (attempts === 1) throw new Error('chunk failed')
-      return { __esModule: true, default: { locale: 'uk', year: 2026, doors: {} } }
-    })
+      if (attempts === 1) return { ok: false, status: 503, json: async () => ({}) }
+      return { ok: true, status: 200, json: async () => ({ locale: 'uk', year: 2026, doors: {} }) }
+    }) as unknown as typeof fetch
+    jest.resetModules()
     const web = require('@/services/advent/campaignOverlay.web') as typeof import('@/services/advent/campaignOverlay.web')
     await expect(web.loadAdventOverlay('uk')).resolves.toBeNull()
     expect(web.getLoadedAdventOverlay('uk')).toBeUndefined()
     await expect(web.loadAdventOverlay('uk')).resolves.toEqual({ locale: 'uk', year: 2026, doors: {} })
     expect(attempts).toBe(2)
-    jest.dontMock('@/services/advent/overlays/advent-uk')
+    global.fetch = realFetch
   })
 })

@@ -1,0 +1,785 @@
+{
+  "locale": "en",
+  "year": 2026,
+  "doors": {
+    "1": {
+      "gift": {
+        "title": "Opening: the winter trip of the day",
+        "text": "Torun is an old town of red brick where the air smells of gingerbread. A one-day route: from the Town Hall to the Gingerbread Museum.",
+        "linkLabel": "Read the route"
+      },
+      "task": {
+        "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight."
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Opening: the winter trip of the day",
+            "text": "Brest — home to a lamplighter who lights the kerosene lamps on Sovetskaya Street by hand every evening. A one-day route: the fortress, the railway museum and the old center.",
+            "linkLabel": "Read the route"
+          },
+          "task": {
+            "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight."
+          }
+        }
+      }
+    },
+    "2": {
+      "gift": {
+        "title": "Wish list for 2027",
+        "text": "The eight places our readers open most often. Which ones have already been part of your life, and which are still waiting? Mark them right here in the window."
+      },
+      "task": {
+        "text": "Mark three places as \"I want to go\" right here — they will be saved to your trip list.",
+        "ctaLabel": "More routes",
+        "game": {
+          "places": [
+            {
+              "title": "Smolevud: the Belarusfilm outdoor film set"
+            },
+            {
+              "title": "Lake Glubokoe — one of the clearest"
+            },
+            {
+              "title": "Bald Mountain, 342 meters"
+            },
+            {
+              "title": "The Yelnya eco-trail and manor houses in a day"
+            },
+            {
+              "title": "The \"Holy Springs\" near Minsk"
+            },
+            {
+              "title": "Oshmyany: churches, a synagogue and a manor"
+            },
+            {
+              "title": "Lake Khotomle and the neighboring lakes"
+            },
+            {
+              "title": "The Novitsky manor in Soveyki"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Wish list for 2027",
+            "text": "Eight Polish places our readers open most often, from mountains to turquoise quarries. Which ones have already been part of your life, and which are still waiting?"
+          },
+          "task": {
+            "text": "Mark three places as \"I want to go\" right here — they will be saved to your trip list.",
+            "ctaLabel": "More routes",
+            "game": {
+              "places": [
+                {
+                  "title": "Energylandia — Poland's Disneyland"
+                },
+                {
+                  "title": "Zakrzowek: a turquoise quarry in Krakow"
+                },
+                {
+                  "title": "Bielsko-Biala: the tower and the Three Mounds"
+                },
+                {
+                  "title": "Zakopane: Giewont, Nosal and the thermal baths"
+                },
+                {
+                  "title": "Morskie Oko — a lake in the Tatras"
+                },
+                {
+                  "title": "Grodek Park — the \"Polish Maldives\""
+                },
+                {
+                  "title": "Krakow: the Stanislaw Lem Experience Park"
+                },
+                {
+                  "title": "Kasprowy Wierch, 1987 meters"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "3": {
+      "gift": {
+        "title": "Riddle: guess the town",
+        "text": "A town with a Radziwill family palace and a UNESCO-listed park. In winter the ponds freeze over and the palace is reflected in the snow.",
+        "linkLabel": "Open the map"
+      },
+      "task": {
+        "text": "Name this town.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Which town in Belarus is known for the Radziwiłł palace and park ensemble, a UNESCO World Heritage Site?",
+              "hint": "Minsk region, near Mir."
+            }
+          ]
+        }
+      }
+    },
+    "4": {
+      "gift": {
+        "title": "An author's story about winter",
+        "text": "MeTravel authors share how they travel in winter: short days, frost, empty castles with no lines. Read the community's articles and pick your favorite authors.",
+        "linkLabel": "Read articles"
+      },
+      "task": {
+        "text": "Follow an author whose route you liked — their new trips will show up in your feed.",
+        "ctaLabel": "Find an author"
+      }
+    },
+    "5": {
+      "gift": {
+        "title": "Are you a real traveler?",
+        "text": "A little test with no right answers. Tick what has already happened to you, and get a title. There are no bad titles here: everyone's best roads are still ahead."
+      },
+      "task": {
+        "text": "Tick what has already happened to you on the road and find out your title.",
+        "game": {
+          "items": [
+            "A night in a tent",
+            "Sunrise in the mountains",
+            "A night train or bus",
+            "Getting lost and finding the best place of the trip",
+            "A dish you knew nothing about until you ordered it",
+            "Five countries or more",
+            "More than 20 km on foot in a day",
+            "The sea in winter",
+            "Going back to the same place a second time",
+            "Packing for a trip in a single evening"
+          ],
+          "tiers": [
+            {
+              "title": "A traveler at the start of the road",
+              "text": "Your brightest trips are still ahead, and that is the best news of the day. Start with a short weekend route.",
+              "linkLabel": "Routes nearby"
+            },
+            {
+              "title": "Curious wanderer",
+              "text": "You already know the taste of the road. The next step is a quest through an old town: a walk where every street poses a riddle.",
+              "linkLabel": "Choose a quest"
+            },
+            {
+              "title": "Seasoned traveler",
+              "text": "Your backpack practically packs itself. Tell us about your trip: your route may save someone a weekend.",
+              "linkLabel": "Tell us about a trip"
+            },
+            {
+              "title": "Legend of the roads",
+              "text": "Your travels deserve a book. Literally: build one from your routes.",
+              "linkLabel": "Build a book"
+            }
+          ]
+        }
+      }
+    },
+    "6": {
+      "gift": {
+        "title": "Kalyady: fact of the day",
+        "text": "Kalyady in Belarus run from Christmas to Epiphany. Carolers go from house to house with a star on a pole, and in a wooden box theater, the batlejka, puppets act out the story of the Nativity."
+      },
+      "task": {
+        "text": "Quiz: three questions about Kalyady.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "On which day of January do Orthodox Christians in Belarus celebrate Christmas?",
+              "options": [
+                "6",
+                "7",
+                "14"
+              ]
+            },
+            {
+              "question": "Which symbol is carried on a pole at the head of a Kalyady procession?",
+              "options": [
+                "Star",
+                "Sun",
+                "Bell"
+              ]
+            },
+            {
+              "question": "What is a puppet nativity theater in a wooden box called?",
+              "options": [
+                "Batlejka",
+                "Szopka",
+                "Doll"
+              ]
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Szopki: fact of the day",
+            "text": "Every year on the first Thursday of December, szopki are carried to Krakow's Main Square: Christmas nativity scenes shaped like palaces of cardboard, foil and colored paper. In 2018 UNESCO added Krakow's szopka-making to its list of intangible heritage.",
+            "linkLabel": "The szopka makers' quest trail"
+          },
+          "task": {
+            "text": "Quiz: three questions about Krakow szopki.",
+            "riddle": {
+              "questions": [
+                {
+                  "question": "In which year did UNESCO add Krakow szopka-making to its intangible heritage list?",
+                  "options": [
+                    "2008",
+                    "2018",
+                    "2022"
+                  ]
+                },
+                {
+                  "question": "When are szopki carried to the Main Square in Krakow?",
+                  "options": [
+                    "On the first Thursday of December",
+                    "On Christmas Eve",
+                    "On New Year's Day"
+                  ]
+                },
+                {
+                  "question": "What is a szopka built from?",
+                  "options": [
+                    "Cardboard, foil and colored paper",
+                    "Clay and wood",
+                    "Ice and snow"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "7": {
+      "gift": {
+        "title": "Markets worth traveling for",
+        "text": "Krakow — the Main Square and the szopka contest, a tradition on the UNESCO list.\nWroclaw — little huts on several squares, the \"Fairy-Tale Forest\" and bronze gnomes.\nGdansk — a market at the Coal Market, free entry.\nDresden — Striezelmarkt, one of the oldest in Germany, since 1434.\nStrasbourg — a market since 1570; the city calls itself the \"capital of Christmas\".\nVienna — a market in front of the City Hall and an ice rink until 6 January.\nTallinn — Town Hall Square, where, according to the city, a tree has been put up since 1441.",
+        "linkLabel": "Dates and addresses of Polish Christmas markets"
+      },
+      "task": {
+        "text": "Choose your dream market and mark the trip with the \"I'm planning\" status and a date.",
+        "ctaLabel": "Plan a trip"
+      },
+      "reward": {
+        "label": "\"7 doors\" badge"
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Minsk at Christmas",
+            "text": "In December the center of Minsk is decorated for Christmas, and Independence Avenue is beautifully lit. A weekend guide: the Upper Town, Freedom Square, quiet courtyards.",
+            "linkLabel": "Read the guide"
+          },
+          "task": {
+            "text": "Pick a day and mark the trip to Minsk with the \"I'm planning\" status and a date.",
+            "ctaLabel": "Plan a trip"
+          }
+        }
+      }
+    },
+    "8": {
+      "gift": {
+        "title": "Winter quest in Grodno",
+        "text": "The quest “Two stars above the Neman”: Grodno celebrates Christmas twice, on 25 December and 7 January. The old town above the river, two hours on foot, with hints on your phone.",
+        "linkLabel": "Open the quest"
+      },
+      "task": {
+        "text": "Complete the first step of a winter quest in your city.",
+        "ctaLabel": "Choose a city"
+      }
+    },
+    "9": {
+      "gift": {
+        "title": "Where is this? Map",
+        "text": "A 16th-century castle in a settlement in the Grodno region, a UNESCO World Heritage Site: five towers, an inner courtyard and a pond beneath the walls."
+      },
+      "task": {
+        "text": "Tap the map where this castle stands. A hit within a 5 km radius counts."
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Where is this? Map",
+            "text": "A red-brick castle of the Teutonic Order, the largest brick castle in the world, on the UNESCO list since 1997. It is about an hour's drive from Gdansk."
+          },
+          "task": {
+            "text": "Tap the map of Poland where this castle stands. A hit within a 5 km radius counts."
+          }
+        }
+      }
+    },
+    "10": {
+      "gift": {
+        "title": "A traveler's Christmas story",
+        "text": "On the eve of Christmas a traveler was walking through the forest to the station and missed the last train. A blizzard was burying the rails, and his phone had died. At the edge of the village one window was lit, and a candle stood on the sill: by an old custom it is set out on Christmas Eve so that anyone on the road knows they are expected here.\n\nThe door opened at once. They poured him hot tea, set an extra plate and asked nothing. By morning the blizzard had died down. On leaving, the traveler left his road map on the sill, marked \"I was expected here\".\n\nThey say that since then every route of his has one point without a name. He stops there every winter."
+      },
+      "task": {
+        "text": "Finished reading? One question about the story.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "What stood on the sill to show the traveler he was expected?",
+              "options": [
+                "Tree",
+                "Candle",
+                "Lantern"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "11": {
+      "gift": {
+        "title": "Whose custom is this?",
+        "text": "Christmas and New Year are welcomed in different ways: somewhere people eat grapes as the clock strikes midnight, somewhere they give books and read them that same evening. Match the custom to the country."
+      },
+      "task": {
+        "text": "Make six \"custom — country\" pairs.",
+        "game": {
+          "pairs": [
+            {
+              "left": "12 grapes with the 12 strokes of the clock at New Year's midnight",
+              "right": "Spain",
+              "fact": "Each grape stands for a month of the new year. Managing to eat all twelve brings good luck."
+            },
+            {
+              "left": "Giving books on Christmas Eve and reading them that same evening",
+              "right": "Iceland",
+              "fact": "The book season here is called the \"book flood\": since 1944 a catalog of new books has arrived at every home."
+            },
+            {
+              "left": "A star lantern, the parol, on every house",
+              "right": "The Philippines",
+              "fact": "San Fernando hosts a festival of giant lanterns, up to 12 meters across."
+            },
+            {
+              "left": "The witch Befana brings gifts on the night of 6 January",
+              "right": "Italy",
+              "fact": "Sweets for good children, a lump of coal for naughty ones. Usually a sugar one."
+            },
+            {
+              "left": "A little spider on the Christmas tree brings happiness",
+              "right": "Ukraine",
+              "fact": "Legend has it that a spider wove a web around a poor widow's tree overnight, and in the morning the sun turned the web into gold and silver."
+            },
+            {
+              "left": "An extra plate at the Wigilia supper for an unexpected guest",
+              "right": "Poland",
+              "fact": "The empty seat awaits any traveler who knocks on Christmas Eve."
+            }
+          ]
+        }
+      }
+    },
+    "12": {
+      "gift": {
+        "title": "Photo of the day from the community",
+        "text": "Winter photos by travelers: snow-covered churches, frozen lakes, the lights of Christmas markets. The best shots of December will receive a rare award from the team."
+      },
+      "task": {
+        "text": "Upload your winter photo to a new trip or note.",
+        "ctaLabel": "Add a photo"
+      },
+      "reward": {
+        "label": "Rare award candidate"
+      }
+    },
+    "13": {
+      "gift": {
+        "title": "Pack your backpack for a winter hike",
+        "text": "The day is short, the frost nips, and the warm cafe is still three hours away. What will you need on a winter walk, and what is better left at home?"
+      },
+      "task": {
+        "text": "Choose the six things you never leave without in winter.",
+        "game": {
+          "items": [
+            {
+              "label": "Thermos of hot tea"
+            },
+            {
+              "label": "Flip-flops",
+              "hint": "fine for the sauna, not for snow"
+            },
+            {
+              "label": "Headlamp"
+            },
+            {
+              "label": "A long umbrella",
+              "hint": "in a snowfall a hood does the job"
+            },
+            {
+              "label": "Spare wool socks"
+            },
+            {
+              "label": "Hair dryer",
+              "hint": "there are no outlets in the forest"
+            },
+            {
+              "label": "Power bank"
+            },
+            {
+              "label": "Inflatable ring",
+              "hint": "lakes are under ice in winter"
+            },
+            {
+              "label": "Warm hat"
+            },
+            {
+              "label": "Crystal glass",
+              "hint": "a thermos has a lid that works as a cup"
+            },
+            {
+              "label": "Small first-aid kit"
+            },
+            {
+              "label": "Thick paper atlas",
+              "hint": "heavy; an offline map on your phone is lighter"
+            }
+          ]
+        }
+      }
+    },
+    "14": {
+      "gift": {
+        "title": "How to thank authors",
+        "text": "A peer award is a badge one traveler gives another for a helpful route. The author sees who thanked them and for what."
+      },
+      "task": {
+        "text": "Give a badge to the author of a route that helped you.",
+        "ctaLabel": "Find a route"
+      },
+      "reward": {
+        "label": "\"14 doors\" badge"
+      }
+    },
+    "15": {
+      "gift": {
+        "title": "Polish winter quests",
+        "text": "Krakow, Wroclaw, Gdansk and fifteen more Polish cities — Christmas quests through old towns with markets and nativity scenes.",
+        "linkLabel": "Krakow quest"
+      },
+      "task": {
+        "text": "Open a city landing page and save the quest route.",
+        "ctaLabel": "Quest cities"
+      },
+      "variants": {
+        "by": {
+          "gift": {
+            "title": "Winter quests of Belarus",
+            "text": "Minsk, Vitebsk, Mogilev, Brest, Gomel and Grodno: Christmas quests through old towns, with a star on a pole, a batlejka puppet theater and lights. Start with Minsk, \"Star over the Batlejka\".",
+            "linkLabel": "Minsk quest"
+          },
+          "task": {
+            "text": "Open a city landing page and save the quest route.",
+            "ctaLabel": "Quest cities"
+          }
+        }
+      }
+    },
+    "16": {
+      "gift": {
+        "title": "Riddle: guess the place",
+        "text": "The largest lake in Belarus: 80 square kilometers of water, a pine-covered shore and health resorts where winter is quieter than anywhere else."
+      },
+      "task": {
+        "text": "Name this lake.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Which lake is the largest in Belarus?",
+              "hint": "Minsk region, Myadel district."
+            }
+          ]
+        }
+      }
+    },
+    "17": {
+      "gift": {
+        "title": "A book as a gift",
+        "text": "\"Belarus. The Quest Book\": 41 quests in one book. After each one comes a page for photos and notes, and at the end a map of the country. The PDF is free, no registration needed.",
+        "linkLabel": "Open the book"
+      },
+      "task": {
+        "text": "Download the book, or build your own from your trips.",
+        "ctaLabel": "Download the book"
+      },
+      "reward": {
+        "label": "Free PDF book"
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "A book as a gift",
+            "text": "\"Poland. The Quest Book\": 37 quests, from the Wawel Dragon to the gnomes of Wroclaw. After each one comes a page for photos and notes. The PDF is free, no registration needed.",
+            "linkLabel": "Open the book"
+          },
+          "task": {
+            "text": "Download the book, or build your own from your trips.",
+            "ctaLabel": "Download the book"
+          }
+        }
+      }
+    },
+    "18": {
+      "gift": {
+        "title": "Group trips",
+        "text": "Travelers are looking for companions for winter trips: from one-day outings to New Year tours. Browse the plans or create your own.",
+        "linkLabel": "See trips"
+      },
+      "task": {
+        "text": "Apply to join a group trip or create a plan.",
+        "ctaLabel": "To trips"
+      }
+    },
+    "19": {
+      "gift": {
+        "title": "The article you never finished",
+        "text": "Many of us have a trip sitting in drafts that we never got around to telling about. December is the time to finish it: readers are looking for winter ideas right now."
+      },
+      "task": {
+        "text": "Publish a draft or start a new article.",
+        "ctaLabel": "To drafts"
+      }
+    },
+    "20": {
+      "gift": {
+        "title": "Winter routes of Belarus",
+        "text": "Lida Castle is open to visitors all year round. Nesvizh and Mir make a two-day route with an overnight stay in Nesvizh.",
+        "linkLabel": "Routes in Belarus"
+      },
+      "task": {
+        "text": "Mark five trips with the \"Was\" status — they will appear in your travel calendar.",
+        "ctaLabel": "Open calendar"
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Winter routes of Poland",
+            "text": "In winter from Krakow, head for the mountains: the Gorce and the Beskids are an hour and a half to two hours away by car. The selection covers Turbacz, the Brona pass, Szczawnica and Zakopane.",
+            "linkLabel": "Winter routes"
+          },
+          "task": {
+            "text": "Mark five trips with the \"Was\" status — they will appear in your travel calendar.",
+            "ctaLabel": "Open calendar"
+          }
+        }
+      }
+    },
+    "21": {
+      "gift": {
+        "title": "Kutia (kuccia) for the Christmas table",
+        "text": "Kutia (kuccia in Belarusian) is a barley porridge with honey and poppy seeds. The name covers both the dish and the supper on Christmas Eve.\n\nYou will need:\n— barley groats — 200 g\n— water — 700 ml\n— poppy seeds — 3 tbsp\n— honey — 3 tbsp\n— raisins — 50 g\n— walnuts — 50 g\n— salt — a pinch\n\nHow to make it:\n1. Pour boiling water over the poppy seeds, leave for an hour, drain and crush.\n2. Add the groats to boiling salted water and simmer for 10–15 minutes on low heat.\n3. Steep the raisins in boiling water; toast and chop the walnuts.\n4. Stir the poppy seeds, honey and raisins into the warm porridge.\n5. Wrap the pot in a towel for 30 minutes and sprinkle with walnuts before serving."
+      },
+      "task": {
+        "text": "Gather the ingredients for kutia — the recipe is just above.",
+        "game": {
+          "items": [
+            {
+              "label": "Barley groats"
+            },
+            {
+              "label": "Mayonnaise",
+              "hint": "we'll save it for Olivier salad"
+            },
+            {
+              "label": "Poppy seeds"
+            },
+            {
+              "label": "Onion",
+              "hint": "let it wait for draniki, the potato pancakes"
+            },
+            {
+              "label": "Honey"
+            },
+            {
+              "label": "Pickled cucumbers",
+              "hint": "they belong next to the potatoes"
+            },
+            {
+              "label": "Raisins"
+            },
+            {
+              "label": "Ketchup",
+              "hint": "the porridge will manage without it"
+            },
+            {
+              "label": "Walnuts"
+            },
+            {
+              "label": "Garlic",
+              "hint": "it goes with salo, not porridge"
+            },
+            {
+              "label": "Water"
+            }
+          ]
+        }
+      },
+      "variants": {
+        "pl": {
+          "gift": {
+            "title": "Toruń-style gingerbread (homemade take)",
+            "text": "Toruń gingerbread has been known since the 14th century: the first baker is mentioned in the city in 1380. This is a homemade take on it — not \"the real thing\", but it smells just as festive.\n\nYou will need:\n— wheat flour — 500 g\n— honey — 200 g\n— butter — 150 g\n— icing sugar — 100 g\n— egg — 1\n— baking soda — 1 tsp\n— gingerbread spice mix — 1 sachet (or a pinch each of cinnamon, ginger and cloves)\n\nHow to make it:\n1. Warm the honey, butter, icing sugar and spices on low heat, then cool to lukewarm.\n2. Mix the flour with the soda, add the egg and the honey mixture, and knead a dough.\n3. Chill the dough in the fridge for 2 hours.\n4. Roll it out 3–4 mm thick, cut out shapes and place them on baking paper.\n5. Bake at 180 °C for 8–10 minutes, cool and decorate with icing."
+          },
+          "task": {
+            "text": "Gather everything the gingerbread needs — the recipe is just above.",
+            "game": {
+              "items": [
+                {
+                  "label": "Wheat flour"
+                },
+                {
+                  "label": "Beetroot",
+                  "hint": "it's waiting for red borscht"
+                },
+                {
+                  "label": "Honey"
+                },
+                {
+                  "label": "Herring",
+                  "hint": "it belongs on the appetizer table"
+                },
+                {
+                  "label": "Butter"
+                },
+                {
+                  "label": "Yeast",
+                  "hint": "gingerbread doesn't need to rise"
+                },
+                {
+                  "label": "Icing sugar"
+                },
+                {
+                  "label": "Mustard",
+                  "hint": "let it wait for sausages"
+                },
+                {
+                  "label": "Egg"
+                },
+                {
+                  "label": "Sauerkraut",
+                  "hint": "it's waiting for mushroom pies"
+                },
+                {
+                  "label": "Gingerbread spice mix"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "22": {
+      "gift": {
+        "title": "Story of the year",
+        "text": "Which trip of 2026 do you remember most? A short note — three paragraphs and one photo — will become part of the community's \"Year in Review\"."
+      },
+      "task": {
+        "text": "Write a short note \"My trip of 2026\".",
+        "ctaLabel": "Write a note"
+      },
+      "reward": {
+        "label": "Rare award candidate"
+      }
+    },
+    "23": {
+      "gift": {
+        "title": "Plans for 2027",
+        "text": "A trip with a date happens more often. Choose a route for 2027 and give it a date — the calendar will remind you."
+      },
+      "task": {
+        "text": "Plan a 2027 trip with a date in the calendar.",
+        "ctaLabel": "Open calendar"
+      }
+    },
+    "24": {
+      "gift": {
+        "title": "Traveler's year in review",
+        "text": "Your 2026 in numbers: the countries and cities you visited, trips, quests and badges.",
+        "linkLabel": "Open profile"
+      },
+      "task": {
+        "text": "Open the last main door. A 24-day streak of opening every door on its day earns a legendary badge."
+      },
+      "reward": {
+        "label": "Gold \"Snow Wanderer\""
+      }
+    },
+    "25": {
+      "gift": {
+        "title": "Christmas: a card and a fortune",
+        "text": "Merry Christmas! MeTravel winter art — a card to share with the people you want to travel with in the new year. This door also hides a deck of kind fortunes."
+      },
+      "task": {
+        "text": "Draw a Christmas fortune — everyone gets their own.",
+        "game": {
+          "items": [
+            "A road awaits you in the new year — one you haven't even dreamed of yet.",
+            "Smile: someone is already about to invite you on a trip.",
+            "You'll find the most beautiful place of the year by accident, after a wrong turn.",
+            "Soon you'll taste a dish you'll then look for in every city.",
+            "Your 2027 holds a sunrise worth getting up at five in the morning for.",
+            "Someone who has long wanted to travel with you will finally decide to. Say yes.",
+            "Your backpack will get lighter, and your memories heavier.",
+            "The train you almost miss will carry you to a good story.",
+            "This year you'll return to a place where you felt good — and it will recognize you.",
+            "Tip for today: call the person you travelled best with.",
+            "The stars suggest putting the phone down and looking out the window: it's beautiful out there.",
+            "Soon a stranger will point you the way — and to a great café, too.",
+            "The new year brings a day without a plan — and it will be the best one.",
+            "Your next trip photo will become everyone's favourite.",
+            "The weather will be on your side exactly when it matters most.",
+            "You'll find a trail where you meet no one — only silence and snow.",
+            "Tip: start a travel notebook — a year from now you'll thank yourself.",
+            "A city that seemed boring will surprise you yet.",
+            "Ahead lies a trip after which you'll say: \"Should have done this sooner.\"",
+            "In 2027 you'll take on something you've long been wary of. And you'll love it.",
+            "Today is a good day to pick your holiday dates.",
+            "A meeting on the road awaits you, and a friendship will grow out of it.",
+            "Smile more: on the road a smile opens more doors than a map.",
+            "The prediction is simple: snow, hot tea and very good company.",
+            "This year you'll build a route that others will want to repeat.",
+            "Soon you'll realise: the best place is where someone is waiting for you.",
+            "A pleasant surprise awaits you in the most ordinary place.",
+            "Tip: on your next trip, drop into a small museum nobody visits.",
+            "This winter you'll feel warm — from people, not just from a scarf.",
+            "Everything you've planned will come true. Perhaps by another road — but even more beautiful."
+          ]
+        }
+      },
+      "reward": {
+        "label": "Bonus badge"
+      }
+    },
+    "26": {
+      "gift": {
+        "title": "New Year: the wish roulette",
+        "text": "May 2027 bring more roads than plans, and more plans than excuses. And let chance pick the first place.",
+        "linkLabel": "Spin the roulette"
+      },
+      "task": {
+        "text": "Spin the roulette and add the route you get to \"I want to go\".",
+        "ctaLabel": "To the roulette"
+      },
+      "reward": {
+        "label": "Bonus badge"
+      }
+    },
+    "27": {
+      "gift": {
+        "title": "Kalyady: the secret door",
+        "text": "Merry Christmas! Kalyady continues until Epiphany: on these days people in Belarusian villages still walk with the star. Thank you for being with us all December."
+      },
+      "task": {
+        "text": "A secret door: it opens only on its own day."
+      },
+      "reward": {
+        "label": "Secret badge"
+      }
+    }
+  }
+}
