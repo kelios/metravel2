@@ -128,7 +128,7 @@ function parseRange(header, size) {
   return start <= end && start < size ? { start, end } : null
 }
 
-const MEDIA_TYPES = { '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' }
+const MEDIA_TYPES = { '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.m4v': 'video/mp4', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' }
 
 /** Random unguessable route per file, keeping the extension so the fetcher sees a media URL. */
 function publicRoutes(files) {
