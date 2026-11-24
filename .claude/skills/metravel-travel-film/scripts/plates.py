@@ -11,7 +11,8 @@ copy  — <файл>: то, что сейчас стоит в плане (исх
         Кадр 1920×1080: YOLOX-S → машины (шире 4 %) и люди. Номер — строка ≥ 4 знаков одной высоты в ряд (MSER, тёмные на светлом
         и наоборот) внутри машины, рамка строки расширяется до таблички. По дорожке машины (IoU ≥ 0,3, пропуск до 5 кадров) номер
         переносится на кадры, где знаки не нашлись; крупная машина (шире 7 %) или машина у края кадра без номера на всей дорожке — полоса 30–97 % высоты
-        (не полоса бампера: на высоких машинах номер на двери багажника — Tucson, s3). Минус люди (рамка ужата на 8 %), рамки ±3 кадра.
+        (не полоса бампера: на высоких машинах номер на двери багажника — Tucson, s3). Полосы и ручные рамки — минус люди (рамка ужата на 8 %);
+        номер, найденный знаками, размывается и поверх человека (человек у камеры снимал размытие с номеров за ним). Рамки ±3 кадра.
         --box — ручная полоса в долях кадра на отрезке секунд копии (детектор не видит машину). Седьмое поле 1 — рамка-лицо
         (посторонний, которого не взял faces.py): из неё люди не вычитаются, иначе от рамки на голове остаётся полоска над ней.
         Сборка: maskedmerge с сильно размытой копией, 10 бит, HEVC 100 Мбит/с, звук AAC 320k. Окно — trim по меткам времени
@@ -77,7 +78,7 @@ def _blobs(roi):
     return out
 
 
-def plate_boxes(img, car, cap=2):
+def plate_boxes(img, car, cap=2, blobs=True):
     """Где номер внутри машины: [(x, y, w, h)] в пикселях кадра. Рамка машины растягивается до ширины ≥ 480 px (мелкие знаки — 3–5 px);
     строка знаков (центр на 35–97 % высоты машины) расширяется до таблички (≥ 7 высот знака и ×2,6 строки, ×2,8 по высоте);
     строка шире 60 % машины — надпись/решётка."""
@@ -96,7 +97,7 @@ def plate_boxes(img, car, cap=2):
         # найдена часть номера (4 из 7 знаков — T-Roc «…34-ZZ» открыт): табличка ≥ 7 высот знака и ×2,6 строки, не шире 60 % машины
         pw = min(max(cw * 2.6, chh * 7.0), 0.6 * g.shape[1]); ph = chh * 2.8
         res.append((int(x0 + (cx - pw / 2) / s), int(y0 + (cy - ph / 2) / s), int(pw / s), int(ph / s)))
-    if not res:                                              # знаки не нашлись — табличка целиком (тот же фильтр положения)
+    if not res and blobs:                                    # знаки не нашлись — табличка целиком (тот же фильтр положения)
         for _, (a, b, cw, chh) in sorted(_blobs(cv2.resize(roi, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)), reverse=True)[:2]:
             cx, cy = a + cw / 2, b + chh / 2
             ry = (y0 + cy / s - y) / max(1, h); rx = (x0 + cx / s - x) / max(1, w)
@@ -142,7 +143,7 @@ def yolox_path(start):
 
 
 # ---------------------------------------------------------------- копия с размытыми номерами
-def copy(src, a, b, out, yp, boxes=()):
+def copy(src, a, b, out, yp, boxes=(), extra=()):
     # рамка «x0,y0,x1,y1,с,по» — номер (минус люди); седьмое поле «головы» — головы людей, чей центр в рамке, по детектору людей
     # кадр за кадром (профили посторонних: детектор лиц их не видит — s1 v23d_blur 23.11, официантка 3:08, мужчина с телефоном 6:25)
     MAN, HEADS = [], []
@@ -181,7 +182,10 @@ def copy(src, a, b, out, yp, boxes=()):
             best = max((t_ for t_ in tracks if 0 < i - t_[-1][0] <= 5), key=lambda t_: iou(CARS[t_[-1][0]][t_[-1][1]], c), default=None)
             if best is not None and iou(CARS[best[-1][0]][best[-1][1]], c) >= 0.3: best.append((i, j))
             else: tracks.append([(i, j)])
-    RECT = [[] for _ in range(N)]; found = fall = 0
+    RECT = [[] for _ in range(N)]; PLATE = [[] for _ in range(N)]; found = fall = 0
+    for te, ex_, ey_, ew_, eh_ in extra:                     # номера, найденные проверкой в прошлой сборке этой копии (jobs)
+        ie = int(round(te * fps))
+        if 0 <= ie < N: PLATE[ie].append((ex_ - 0.15 * ew_, ey_ - 0.2 * eh_, ew_ * 1.3, eh_ * 1.4))
     for t_ in tracks:
         rel = []
         for i, j in t_:
@@ -191,7 +195,7 @@ def copy(src, a, b, out, yp, boxes=()):
         for i, j in t_:
             x, y, w, h = CARS[i][j]
             if PL[i][j]:
-                RECT[i] += [(px - 0.15 * pw, py - 0.2 * ph, pw * 1.3, ph * 1.4) for px, py, pw, ph in PL[i][j]]; found += 1
+                PLATE[i] += [(px - 0.15 * pw, py - 0.2 * ph, pw * 1.3, ph * 1.4) for px, py, pw, ph in PL[i][j]]; found += 1
             elif rel:
                 r_ = np.median(np.array(rel), 0); RECT[i].append((x + (r_[0] - 0.1 * r_[2]) * w, y + (r_[1] - 0.15 * r_[3]) * h, r_[2] * 1.2 * w, r_[3] * 1.3 * h)); found += 1
             elif wmax >= 0.07 * DW or ((x <= 2 or x + w >= DW - 2) and w >= 0.04 * DW):   # 7 %: передний номер под углом (Peugeot 3008, Ford — s3 v20) знаками не ловится
@@ -200,7 +204,7 @@ def copy(src, a, b, out, yp, boxes=()):
                 RECT[i].append((x + 0.03 * w, y + 0.30 * h, 0.94 * w, 0.67 * h)); fall += 1
     print(f"кадров {N} (ожидалось ≈{exp}), с машинами {sum(1 for c in CARS if c)}, дорожек {len(tracks)}, "
           f"номер по знакам/дорожке {found}, запасная полоса {fall}", flush=True)
-    D = 3; m_path = os.path.splitext(out)[0] + "_маска.mkv"   # маска: рамки ±3 кадра, минус люди (рамка ужата на 8 %)
+    D = 3; m_path = os.path.splitext(out)[0] + "_маска.mkv"   # маска: рамки ±3 кадра; полосы и ручные рамки — минус люди (ужата на 8 %), найденные номера — нет
     enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "gray", "-s", f"{W}x{H}", "-r", pr["r_frame_rate"],
                             "-i", "-", "-c:v", "ffv1", m_path], stdin=subprocess.PIPE)
     covered = 0
@@ -215,6 +219,11 @@ def copy(src, a, b, out, yp, boxes=()):
         for x, y, w, h in PPL[i]:
             x, y, w, h = x * SX, y * SX, w * SX, h * SX
             m[int(y + 0.08 * h):int(y + 0.92 * h), int(x + 0.08 * w):int(x + 0.92 * w)] = 0
+        # номер, найденный знаками в этом кадре, виден — его люди не заслоняют: рамка после вычета людей. Иначе человек у камеры
+        # (рамка на полкадра) снимал размытие с номеров за ним: s1 v23d/v23e_blur 0074 «BN-714-EL», 0122 «AA-109-SC» (23–24.11)
+        for j in range(max(0, i - D), min(N, i + D + 1)):
+            for x, y, w, h in PLATE[j]:
+                m[max(0, int(y * SX)):max(0, int((y + h) * SX)), max(0, int(x * SX)):max(0, int((x + w) * SX))] = 255
         for x0, y0, x1, y1, ta, tb in HEADS:                 # головы — после вычета людей: это и есть люди
             if not (ta <= t <= tb): continue
             for j in range(max(0, i - D), min(N, i + D + 1)):
@@ -252,6 +261,29 @@ def copy(src, a, b, out, yp, boxes=()):
     os.replace(out + ".part.mp4", out)
 
 
+def scan_copy(path, yp, step=2):
+    """Строки знаков на месте номера в готовой копии: [(с от начала копии, x, y, w, h)] в пикселях 1920×1080, каждый step-й кадр."""
+    det = Det(yp); fps = _fps(path); out = []; DW, DH = 1920, 1080
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", path, "-vf", f"scale={DW}:{DH}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
+                         stdout=subprocess.PIPE, stdin=subprocess.DEVNULL); i = 0
+    while True:
+        buf = p.stdout.read(DW * DH * 3)
+        if len(buf) < DW * DH * 3: break
+        if i % step == 0:
+            img = np.frombuffer(buf, np.uint8).reshape(DH, DW, 3); cars, _ = det(img)
+            for car in cars:
+                for bx in plate_boxes(img, car, cap=4, blobs=False): out.append((i / fps,) + tuple(bx))
+        i += 1
+    p.wait()
+    return out
+
+
+def _fps(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", path],
+                       capture_output=True, text=True).stdout.strip().split("/")
+    return float(r[0]) / float(r[1] if len(r) > 1 else 1)
+
+
 # ---------------------------------------------------------------- список копий серии → карта и alias
 def jobs(path, film_dir, series, only=None, yp=None):
     NF = lambda x: unicodedata.normalize("NFC", x)
@@ -278,6 +310,14 @@ def jobs(path, film_dir, series, only=None, yp=None):
         if (only is None or k in only) and not os.path.exists(out):
             print(f"{k}: {os.path.basename(base)} {a:.2f}–{b:.2f} — {j.get('note', '')}", flush=True)
             copy(base, a, float(b), out, yp, j.get("boxes", ()))
+            # проверка готовой копии тем же признаком, что check: детектор на копии видит машину иначе, чем на исходнике, и номер,
+            # пропущенный на исходнике, находится на копии (s1 v23e_blur 24.11: 0074 «BN-714-EL», 0122 «AA-109-SC») — до 2 досборок
+            ext = []
+            for _ in range(2):
+                more = scan_copy(out, yp)
+                print(f"  проверка копии: строк знаков {len(more)}", flush=True)
+                if not more: break
+                ext += more; copy(base, a, float(b), out, yp, j.get("boxes", ()), ext)
         if not os.path.exists(out): continue
         lo, hi = a + sh, float(b) + sh                       # окно в секундах исходника
         prev = MAN.get(orig, AUTO.get(orig, []))
