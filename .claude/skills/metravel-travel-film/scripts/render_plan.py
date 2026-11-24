@@ -24,7 +24,7 @@ render_plan.py <plan.json> <out.mp4> [--workdir DIR] [--only i,j,...] [--size 38
 Чужие смонтированные ролики (FOREIGN: /Собраны/, /НАШИ ФОТКИ/, metravel-film-work; копии — через --alias или alias*.json
 рядом с планом) по умолчанию без звука: там чужая озвучка и музыка. Свой звук — только ключом отрезка "own_audio": true.
 Рядом с фильмом: <out>.segments.json (таймкоды отрезков), <out>_без_музыки.mov, _музыка.wav, _голос.wav."""
-import glob as _glob_mod, json, os, re, subprocess, sys, time as _time
+import glob as _glob_mod, json, os, re, subprocess, sys, time as _time, unicodedata
 _T0 = _time.time(); _TM = []            # замеры этапов сборки: печатаются в конце строкой «время:»
 def _mark(name):
     global _T0
@@ -380,6 +380,23 @@ for i, s in enumerate(SEG):
         if old_sig is None: open(sigf, "w").write(isig)
         elif old_sig != isig:
             print(f"плашка изменилась — кусок {i} заново: {s.get('note', '')[:50]}", flush=True); force = True
+    # видео куска (исходник и видео-перекрытия) пересобрано под тем же именем — копия размытия номеров/лиц: ключ по пути не меняется,
+    # и кусок брался из кеша со старой копией (s1 v23e_blur 24.11: 0074 «GG-624-…» в фильме открыт, в копии закрыт — рецензент).
+    # Отпечаток (размер, время) лежит рядом с куском; не совпал — кусок заново. Нет отпечатка — входы новее куска → заново.
+    vin = sorted({src} | {o["file"] for o in s.get("broll", []) + s.get("cards", []) if not o["file"].lower().endswith((".png", ".jpg", ".jpeg"))})
+    vsig = KEY([[f_, os.path.getsize(f_), int(os.path.getmtime(f_))] if os.path.exists(f_) else [f_] for f_ in vin])
+    vsf = os.path.join(wd, f"v_{vk}.src"); USED.add(vsf)
+    if have_v and not force:
+        try: old_v = open(vsf).read().strip()
+        except OSError: old_v = None
+        if old_v is None:                         # куски до отпечатков: копия размытия могла смениться после — один раз заново
+            pm = min(os.path.getmtime(v_[0]) for v_ in vfs.values())
+            if any("/размытие/" in unicodedata.normalize("NFC", f_) for f_ in vin) or \
+                    any(os.path.exists(f_) and os.path.getmtime(f_) > pm + 2 for f_ in vin):
+                print(f"видео куска без отпечатка (копия размытия или новее кеша) — кусок {i} заново: {s.get('note', '')[:50]}", flush=True); force = True
+        elif old_v != vsig:
+            print(f"видео куска изменилось — кусок {i} заново: {s.get('note', '')[:50]}", flush=True); force = True
+    if not (force or not have_v): open(vsf, "w").write(vsig)   # кусок из кеша годен; пересобранному — после записи (after)
     if force or not have_v:
         inputs = hwdec(src) + src_in
         fc = [f"[0:v]fps={FPS},scale={W}:{H}:force_original_aspect_ratio=decrease{G(s)},pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1{TP(dL, dR)}[base0]"]
@@ -439,7 +456,7 @@ for i, s in enumerate(SEG):
         for n_, (p_, f0, f1) in enumerate(vfs.values()):
             cmd += ["-map", f"[vout{n_}]"] + VENC + [p_ + ".part.mov"]
         vjobs.append({"cmd": cmd, "outs": [(p_ + ".part.mov", p_, f1 - f0) for p_, f0, f1 in vfs.values()], "say": True,
-                      "label": f"{i} {s.get('note', '')[:50]}", "after": (lambda sigf=sigf, isig=isig: open(sigf, "w").write(isig)) if isig else None})
+                      "label": f"{i} {s.get('note', '')[:50]}", "after": (lambda sigf=sigf, isig=isig, vsf=vsf, vsig=vsig: (open(sigf, "w").write(isig) if isig else None, open(vsf, "w").write(vsig)))})
     if force or not os.path.exists(af):
         # PCM: у AAC в каждом куске ~20 мс разгона, на 179 кусках звук уезжал на 4 с
         mute = (s.get("gain_db", 0) or 0) <= -40 or not has_audio(src)
@@ -822,7 +839,7 @@ json.dump(rows, open(os.path.splitext(out)[0] + ".segments.json", "w"), ensure_a
 _now = _time.time()
 for p_ in USED | set(_glob.glob(_tc + "*")):   # одно время на все файлы кеша: зависимые не «старше» своих кусков (см. stale)
     if os.path.exists(p_): os.utime(p_, (_now, _now))
-_CACHE = _re.compile(r"^(?:v_[0-9a-f]{12}\.img|v[hmtfx]_[0-9a-f]{12}\.mov|(?:a|ab)_[0-9a-f]{12}\.wav)(?:\.part\.(?:mov|wav))?$|^list\.txt$")
+_CACHE = _re.compile(r"^(?:v_[0-9a-f]{12}\.(?:img|src)|v[hmtfx]_[0-9a-f]{12}\.mov|(?:a|ab)_[0-9a-f]{12}\.wav)(?:\.part\.(?:mov|wav))?$|^list\.txt$")
 # куски прежних форматов (кусок одним файлом, блоки склейки): нынешняя сборка их не читает — удаляются сразу, место нужно под 4K
 _OLD = _re.compile(r"^(?:(?:v|vb)_[0-9a-f]{12}\.mov|\d{3}_[0-9a-f]{8}\.mov|block_\d+\.mov)(?:\.part\.mov)?$")
 for p_ in _glob.glob(os.path.join(wd, "*")):
