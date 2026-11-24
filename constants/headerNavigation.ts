@@ -49,7 +49,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
  */
 export const SUPPLEMENTARY_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/games', get label() { return i18nT('gamesStatic:title') }, icon: 'compass', priority: 'secondary' },
-  // #2866: виден только в окне кампании — отсекает общая политика `isNavRouteAvailable`.
+  // #2866, #3481: виден в анонсе и окне кампании — отсекает общая политика `isNavRouteAvailable`.
   { path: '/advent', get label() { return i18nT('adventStatic:nav.label') }, get hint() { return i18nT('adventStatic:nav.hint') }, icon: 'gift', priority: 'secondary' },
   { path: '/articles', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.stati_ad8e46b8') }, get hint() { return i18nT('navigationStatic:constants.headerNavigation.hint.articles') }, icon: 'file-text', priority: 'secondary' },
   { path: '/favorites', get label() { return i18nT('navigationStatic:components.layout.AccountMenu.hochu_poehat_fa6b46d5') }, icon: 'heart', priority: 'secondary' },

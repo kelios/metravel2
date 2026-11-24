@@ -31,9 +31,19 @@ describe('HomeAdventPromoSection visibility window (#2866)', () => {
     jest.useRealTimers()
   })
 
-  it('is hidden on 30.11 and 08.01', async () => {
-    expect((await renderAt(new Date(2026, 10, 30, 12))).queryByTestId('home-advent-promo')).toBeNull()
+  it('is hidden before the announce (23.11) and after the campaign (08.01)', async () => {
+    expect((await renderAt(new Date(2026, 10, 23, 12))).queryByTestId('home-advent-promo')).toBeNull()
     expect((await renderAt(new Date(2027, 0, 8, 12))).queryByTestId('home-advent-promo')).toBeNull()
+  })
+
+  it('announces the first door before the start without progress (#3481)', async () => {
+    const screen = await renderAt(new Date(2026, 10, 24, 12))
+    expect(screen.getByTestId('home-advent-promo')).toBeTruthy()
+    expect(screen.getByText('Первая дверца откроется 1 декабря — загляните заранее')).toBeTruthy()
+    expect(screen.queryByText(/Открыто \d+ из 24/)).toBeNull()
+    expect(screen.getByText('Заглянуть в календарь')).toBeTruthy()
+    await fireEvent.press(screen.getByTestId('home-advent-cta'))
+    expect(mockPush).toHaveBeenCalledWith('/advent')
   })
 
   it('shows door 1 on 01.12 and navigates to /advent', async () => {

@@ -5,7 +5,7 @@ import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import { formatDate } from '@/i18n/format';
 import type { SeasonalThemePeriod } from '@/constants/seasonalThemes';
-import { ADVENT_ROUTE, isAdventCampaignWindow } from '@/constants/advent';
+import { ADVENT_ROUTE, isAdventAnnounceWindow, isAdventEntryVisible } from '@/constants/advent';
 import { getSeasonalThemeOptions } from '@/components/layout/seasonalThemeOptions';
 
 const formatPeriod = (period: SeasonalThemePeriod): string => {
@@ -16,7 +16,8 @@ const formatPeriod = (period: SeasonalThemePeriod): string => {
 
 type Props = {
   /**
-   * Ссылка «Открыть дверцу дня» в окне адвента (#2866). Включается только там, где
+   * Ссылка на адвент (#2866): «Открыть дверцу дня» в окне кампании, приглашение
+   * заглянуть в календарь в анонсе (#3481). Включается только там, где
    * навигация не живёт в Modal меню (настройки): пункт `/advent` в меню аккаунта и
    * листе «Ещё» идёт через `SUPPLEMENTARY_NAV_ITEMS` и закрывает меню штатно.
    */
@@ -38,7 +39,8 @@ export default function SeasonalThemeStatus({ showAdventLink = false }: Props) {
   );
   const { t } = useTranslation();
   const showStatus = seasonalTheme === 'auto' && !!seasonalCalendar;
-  const showAdvent = showAdventLink && isAdventCampaignWindow();
+  const showAdvent = showAdventLink && isAdventEntryVisible();
+  const adventAnnounce = showAdvent && isAdventAnnounceWindow();
   if (!showStatus && !showAdvent) return null;
 
   let status: string | null = null;
@@ -67,7 +69,7 @@ export default function SeasonalThemeStatus({ showAdventLink = false }: Props) {
       {showAdvent ? (
         <Link href={ADVENT_ROUTE as never} asChild>
           <Text testID="seasonal-theme-advent-link" accessibilityRole="link" style={linkStyle}>
-            {t('adventStatic:status.link')}
+            {t(adventAnnounce ? 'adventStatic:status.linkAnnounce' : 'adventStatic:status.link')}
           </Text>
         </Link>
       ) : null}

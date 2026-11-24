@@ -1,6 +1,6 @@
 # Фича: advent-calendar — «Адвент-календарь путешественника»
 
-**Последняя актуализация:** 2026-11-02
+**Последняя актуализация:** 2026-11-24
 **Ответственный:** владелец продукта (постановка), frontend — агент фичи после назначения
 **Статус:** этап A (#2861, #2862, #2866), утверждённый RU-контент (#2863) и переводы
 (#2883) реализованы. Серверная интеграция и итоги года реализованы; оставшиеся живые
@@ -35,6 +35,7 @@
 
 | Правило | Решение | Почему |
 | --- | --- | --- |
+| Анонс (#3481) | с 24.11 до старта точки входа (баннер главной, меню, «Ещё», ссылка у статуса оформления) видны и зовут на `/advent`: «Первая дверца откроется 1 декабря», без прогресса; карточка профиля — только в окне кампании | рекламировать календарь заранее и вести на него из Instagram |
 | Окно кампании | 01.12 — 07.01, 24 основные дверцы + 3 бонусные | тема `christmas` начинается одновременно, но оформление действует до 14.01 (`constants/seasonalThemes.ts`) |
 | Когда открывается дверца | в свой календарный день по местной полуночи клиента | переиспользуется `utils/seasonalThemeClock.ts` и подход boot-скрипта темы: без мигания и без зависимости от TZ сервера |
 | Пропущенная дверца | открывается позже без ограничения срока, но без бонуса серии | не наказываем, но поощряем «день в день» |
@@ -119,13 +120,15 @@
 | Путь | Назначение |
 | --- | --- |
 | `app/(tabs)/advent.tsx` → `components/advent/AdventScreen.tsx` | экран календаря; SEO — запись `/advent` в `utils/seoRoutes/staticRoutes.js` (`seoStatic:root.advent.*`), `generateMetadata` через `staticRouteMetadata`; в sitemap не добавлен |
-| `components/home/HomeAdventPromoSection.tsx` | баннер на главной в отложенной секции (`homeDeferredSections*`), рисует `null` вне окна кампании; не зависит от настройки оформления |
+| `components/home/HomeAdventPromoSection.tsx` | баннер на главной в отложенной секции (`homeDeferredSections*`), рисует `null` вне анонса и окна кампании; в анонсе — дата первой дверцы без прогресса (#3481); не зависит от настройки оформления |
 | `components/profile/AdventProgressCard.tsx` в `ProfileOverviewTab` | прогресс N/24, серия, ссылка на `/advent`; вне окна не рендерится |
-| `constants/headerNavigation.ts` → `SUPPLEMENTARY_NAV_ITEMS` (`/advent`, иконка `gift`) | пункт меню аккаунта desktop и листа «Ещё» телефона; окно кампании отсекает общая политика `isNavRouteAvailable` (`constants/platformNavRoutes.ts`) |
-| `components/layout/SeasonalThemeStatus.tsx` | ссылка «Открыть дверцу дня» рядом со статусом темы (и при выключенной теме) |
+| `constants/headerNavigation.ts` → `SUPPLEMENTARY_NAV_ITEMS` (`/advent`, иконка `gift`) | пункт меню аккаунта desktop и листа «Ещё» телефона; вне анонса и окна кампании отсекает общая политика `isNavRouteAvailable` (`constants/platformNavRoutes.ts`) |
+| `components/layout/SeasonalThemeStatus.tsx` | ссылка «Открыть дверцу дня» (в анонсе — «Заглянуть в адвент-календарь») рядом со статусом темы (и при выключенной теме) |
 
-Окно кампании и маршрут — `constants/advent.ts` (`ADVENT_CAMPAIGN_WINDOW`, `isAdventCampaignWindow`,
-`toLocalIsoDate`): модуль без зависимостей, его читает навигация.
+Окно кампании и маршрут — `constants/advent.ts` (`ADVENT_CAMPAIGN_WINDOW` с `announceFrom`,
+`isAdventCampaignWindow`, `isAdventAnnounceWindow`, `isAdventEntryVisible`, `toLocalIsoDate`): модуль без
+зависимостей, его читает навигация. Точки входа (меню, «Ещё», баннер, ссылка у статуса) решают по
+`isAdventEntryVisible` — анонс или кампания (#3481); дверцы, прогресс и карточка профиля — по окну кампании.
 
 ## Ключевые компоненты (факт, #2861)
 

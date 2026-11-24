@@ -16,8 +16,18 @@ export const ADVENT_MAIN_DOORS = 24
 
 export type AdventCivilDate = { year: number; month: number; day: number }
 
-/** Окно кампании по местному календарю клиента, обе границы включительно. */
-export const ADVENT_CAMPAIGN_WINDOW: { readonly from: AdventCivilDate; readonly to: AdventCivilDate } = {
+/**
+ * Окно кампании по местному календарю клиента, обе границы включительно.
+ * `announceFrom` — начало анонса (#3481): до `from` точки входа (баннер главной,
+ * пункт меню, «Ещё», ссылка у статуса оформления) уже видны и зовут на `/advent`
+ * с обратным отсчётом; дверцы, прогресс и карточка профиля живут только в `from…to`.
+ */
+export const ADVENT_CAMPAIGN_WINDOW: {
+  readonly announceFrom: AdventCivilDate
+  readonly from: AdventCivilDate
+  readonly to: AdventCivilDate
+} = {
+  announceFrom: { year: 2026, month: 11, day: 24 },
   from: { year: 2026, month: 12, day: 1 },
   to: { year: 2027, month: 1, day: 7 },
 }
@@ -39,6 +49,7 @@ export const isoDateToLocalMidnight = (iso: string): Date => {
 
 export const ADVENT_CAMPAIGN_START_ISO = civilDateToIso(ADVENT_CAMPAIGN_WINDOW.from)
 export const ADVENT_CAMPAIGN_END_ISO = civilDateToIso(ADVENT_CAMPAIGN_WINDOW.to)
+export const ADVENT_ANNOUNCE_START_ISO = civilDateToIso(ADVENT_CAMPAIGN_WINDOW.announceFrom)
 
 /**
  * DEV-переопределение «сегодня» для проверки дверец до 1 декабря:
@@ -58,8 +69,22 @@ export const readDevTodayOverride = (): Date | null => {
 /** Местное «сейчас» кампании: системные часы клиента или DEV-переопределение. */
 export const getAdventNow = (): Date => readDevTodayOverride() ?? new Date()
 
-/** Кампания идёт в этот местный день: баннер, пункт меню и карточка профиля видны. */
+/** Кампания идёт в этот местный день: дверцы открываются, карточка профиля видна. */
 export const isAdventCampaignWindow = (date: Date = getAdventNow()): boolean => {
   const today = toLocalIsoDate(date)
   return today >= ADVENT_CAMPAIGN_START_ISO && today <= ADVENT_CAMPAIGN_END_ISO
 }
+
+/** Местный день анонса: кампания ещё не началась, но о ней уже рассказываем (#3481). */
+export const isAdventAnnounceWindow = (date: Date = getAdventNow()): boolean => {
+  const today = toLocalIsoDate(date)
+  return today >= ADVENT_ANNOUNCE_START_ISO && today < ADVENT_CAMPAIGN_START_ISO
+}
+
+/**
+ * Видны ли точки входа в календарь (баннер главной, пункт меню, «Ещё», ссылка у
+ * статуса оформления): анонс или сама кампания. Единственный предикат для навигации —
+ * экраны не сравнивают даты сами.
+ */
+export const isAdventEntryVisible = (date: Date = getAdventNow()): boolean =>
+  isAdventAnnounceWindow(date) || isAdventCampaignWindow(date)

@@ -20,7 +20,7 @@ import { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } from './homeScroll
 import { buildCanonicalUrl } from '@/utils/seo'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 import { webDataSetProps } from '@/utils/webProps'
-import { getAdventNow, isAdventCampaignWindow } from '@/constants/advent'
+import { getAdventNow, isAdventEntryVisible } from '@/constants/advent'
 import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate'
 import {
   EmailSubscriptionForm,
@@ -200,13 +200,13 @@ function Home() {
   const discovery = useQuestDiscovery()
   const responsiveHome = IS_WEB && discovery?.view === 'home'
   const isFocused = useIsFocused()
-  // #2866: окно адвента — после гидратации, чтобы статический HTML и первый клиентский рендер совпали.
+  // #2866, #3481: анонс и окно адвента — после гидратации, чтобы статический HTML и первый клиентский рендер совпали.
   const [homeMounted, setHomeMounted] = useState(false)
   useEffect(() => {
     setHomeMounted(true)
   }, [])
   const adventNow = useLocalCalendarDate({ readNow: getAdventNow })
-  const adventActive = homeMounted && isAdventCampaignWindow(adventNow)
+  const adventActive = homeMounted && isAdventEntryVisible(adventNow)
   const { isAuthenticated, userId } = useAuth()
   const colors = useThemedColors()
   const queryClient = useQueryClient()
@@ -324,7 +324,7 @@ function Home() {
         <HomeQuestsPromoSection enabled={isFocused} />
       </DeferredSection>
 
-      {/* #2866: адвент-календарь — только в окне кампании 01.12–07.01. Окно читается
+      {/* #2866, #3481: адвент-календарь — в анонсе с 24.11 и в окне кампании 01.12–07.01. Окно читается
           после гидратации (статический HTML один на весь год), вне окна ни обёртки,
           ни чанка нет; внутри — lazy-чанк за Suspense, без отложенной секции. */}
       {adventActive ? (

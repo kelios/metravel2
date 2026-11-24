@@ -5,19 +5,20 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
-import { ADVENT_MAIN_DOORS, ADVENT_ROUTE } from '@/constants/advent'
+import { ADVENT_MAIN_DOORS, ADVENT_ROUTE, isoDateToLocalMidnight } from '@/constants/advent'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAdventCampaign } from '@/hooks/useAdventCampaign'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { formatInteger } from '@/i18n/format'
+import { formatDate, formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { isPhoneLayout } from '@/utils/phoneLayout'
 
 /**
- * Баннер адвент-календаря на главной (#2866): виден только в окне кампании
+ * Баннер адвент-календаря на главной (#2866): виден в окне кампании
  * 01.12–07.01 по местной дате клиента и независимо от выбранного оформления.
+ * В анонсе до старта (#3481) зовёт заглянуть в календарь: дата первой дверцы, без прогресса.
  * Живёт в отложенных секциях главной — на LCP не влияет.
  */
 function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean; topGap?: number | string }) {
@@ -26,22 +27,28 @@ function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean;
   const { width, isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhoneLayout({ width, isPhone, isLargePhone })
   const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile])
-  const { isInWindow, todayDoor, nextDoor, openedCount } = useAdventCampaign()
+  const { isInWindow, isAnnounce, todayDoor, nextDoor, openedCount } = useAdventCampaign()
 
   const handleOpen = useCallback(() => {
-    sendAnalyticsEvent('HomeClick_Advent', { day: todayDoor?.day ?? null })
+    sendAnalyticsEvent('HomeClick_Advent', { day: todayDoor?.day ?? null, announce: isAnnounce })
     router.push(ADVENT_ROUTE as never)
-  }, [router, todayDoor?.day])
+  }, [router, todayDoor?.day, isAnnounce])
 
-  if (!enabled || !isInWindow) return null
+  if (!enabled || (!isInWindow && !isAnnounce)) return null
 
   const door = todayDoor ?? nextDoor
-  const doorLine = door
-    ? i18nT('adventStatic:home.today', {
-        value1: door.day,
-        value2: door.secret && door.state === 'locked' ? i18nT('adventStatic:tile.secret') : door.gift.title,
-      })
-    : null
+  const doorLine = isAnnounce
+    ? nextDoor
+      ? i18nT('adventStatic:home.announce', {
+          value1: formatDate(isoDateToLocalMidnight(nextDoor.date), { day: 'numeric', month: 'long' }),
+        })
+      : null
+    : door
+      ? i18nT('adventStatic:home.today', {
+          value1: door.day,
+          value2: door.secret && door.state === 'locked' ? i18nT('adventStatic:tile.secret') : door.gift.title,
+        })
+      : null
 
   return (
     <View style={[styles.band, topGap !== undefined ? { marginTop: topGap as number } : null]} testID="home-advent-promo">
@@ -54,13 +61,15 @@ function HomeAdventPromoSection({ enabled = true, topGap }: { enabled?: boolean;
             <Text style={styles.title}>{i18nT('adventStatic:page.title')}</Text>
             {doorLine ? <Text style={styles.doorLine}>{doorLine}</Text> : null}
             <Text style={styles.subtitle}>{i18nT('adventStatic:home.subtitle')}</Text>
-            <Text style={styles.progress}>
-              {i18nT('adventStatic:home.progress', { value1: formatInteger(openedCount), value2: formatInteger(ADVENT_MAIN_DOORS) })}
-            </Text>
+            {isAnnounce ? null : (
+              <Text style={styles.progress}>
+                {i18nT('adventStatic:home.progress', { value1: formatInteger(openedCount), value2: formatInteger(ADVENT_MAIN_DOORS) })}
+              </Text>
+            )}
           </View>
           <View style={styles.ctaCol}>
             <Button
-              label={i18nT('adventStatic:home.cta')}
+              label={i18nT(isAnnounce ? 'adventStatic:home.ctaAnnounce' : 'adventStatic:home.cta')}
               onPress={handleOpen}
               size={isMobile ? 'sm' : 'md'}
               fullWidth={isMobile}

@@ -6,17 +6,23 @@ import { fakeToday } from './fakeToday'
 
 jest.mock('@/context/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: false, userId: null, authReady: true }) }))
 
-describe('More page lists the advent link only inside the campaign window (#2866)', () => {
+describe('More page lists the advent link from the announce day through the campaign (#2866, #3481)', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('ru')
   })
   afterEach(() => jest.useRealTimers())
 
-  it('hides /advent on 30.11', async () => {
-    fakeToday(new Date(2026, 10, 30, 12))
+  it('hides /advent before the announce (23.11)', async () => {
+    fakeToday(new Date(2026, 10, 23, 12))
     const screen = await render(<MoreScreen />)
     expect(screen.queryByText('Адвент-календарь')).toBeNull()
     expect(screen.getByText('Случайный маршрут')).toBeTruthy()
+  })
+
+  it('shows /advent during the announce (30.11) after mount', async () => {
+    fakeToday(new Date(2026, 10, 30, 12))
+    const screen = await render(<MoreScreen />)
+    expect(await screen.findByText('Адвент-календарь')).toBeTruthy()
   })
 
   it('shows /advent on 01.12 after mount', async () => {

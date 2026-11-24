@@ -11,7 +11,7 @@ import { BOTTOM_DOCK_ITEM_DEFS } from '@/components/layout/bottomDockItemDefs'
 import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import { webAccessibilityProps } from '@/utils/webProps'
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
-import { ADVENT_ROUTE, isAdventCampaignWindow } from '@/constants/advent'
+import { ADVENT_ROUTE, isAdventEntryVisible } from '@/constants/advent'
 
 // Real prerendered destination for More before the optional sheet controller loads.
 // Only ordinary existing public routes/labels; no role-specific actions/auth/menu model.
@@ -24,11 +24,11 @@ export default function MoreScreen() {
   const title = BOTTOM_DOCK_ITEM_DEFS.find(item => item.isMore)!.label
   useScreenHeader({ title })
   const bottom = useScrollBottomPadding(DESIGN_TOKENS.spacing.lg)
-  // #2866: «Адвент-календарь» — только в окне кампании; окно читается после
+  // #2866, #3481: «Адвент-календарь» — в анонсе и окне кампании; окно читается после
   // гидратации, чтобы статический HTML (один на весь год) совпал с первым рендером.
   const [adventVisible, setAdventVisible] = useState(false)
   useEffect(() => {
-    setAdventVisible(isAdventCampaignWindow())
+    setAdventVisible(isAdventEntryVisible())
   }, [])
   const links: { route: Href; label: string }[] = [
     ...BOTTOM_DOCK_ITEM_DEFS.filter(item => !item.isMore).map(item => ({ route: localizeHref(item.route), label: item.label })),

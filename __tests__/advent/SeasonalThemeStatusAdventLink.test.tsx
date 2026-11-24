@@ -38,6 +38,12 @@ describe('SeasonalThemeStatus advent link (#2866)', () => {
     expect(screen.getByTestId('seasonal-theme-advent-link').props.children).toBe('Открыть дверцу дня')
   })
 
+  it('invites to peek into the calendar during the announce (#3481)', async () => {
+    install(new Date(2026, 10, 27, 12))
+    const screen = await render(<SeasonalThemeStatus showAdventLink />)
+    expect(screen.getByTestId('seasonal-theme-advent-link').props.children).toBe('Заглянуть в адвент-календарь')
+  })
+
   it('keeps the link when the seasonal theme is switched off', async () => {
     install(new Date(2026, 11, 10, 12), 'off')
     const screen = await render(<SeasonalThemeStatus showAdventLink />)

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Platform } from 'react-native'
 
-import { getAdventNow } from '@/constants/advent'
+import { getAdventNow, isAdventAnnounceWindow } from '@/constants/advent'
 import { useAdventContentOverlay } from '@/hooks/useAdventContentOverlay'
 import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate'
 import { applyAdventOverlay } from '@/services/advent/applyOverlay'
@@ -40,8 +40,10 @@ export type AdventCampaignView = AdventProgressApi & {
   /** Местная календарная дата клиента `YYYY-MM-DD`; обновляется по местной полуночи. */
   today: string
   now: Date
-  /** Сегодня внутри окна кампании (баннер, меню, карточка профиля). */
+  /** Сегодня внутри окна кампании: дверцы, прогресс, карточка профиля. */
   isInWindow: boolean
+  /** Анонс до старта (#3481): точки входа видны, дверцы ещё закрыты. */
+  isAnnounce: boolean
   doors: AdventDoorView[]
   todayDoor: AdventDoorView | null
   nextDoor: AdventDoorView | null
@@ -110,6 +112,7 @@ export function useAdventCampaign(options: UseAdventCampaignOptions = {}): Adven
     today,
     now,
     isInWindow: isCampaignDay(campaign, today),
+    isAnnounce: hydrated && isAdventAnnounceWindow(now),
     doors,
     todayDoor,
     nextDoor,
