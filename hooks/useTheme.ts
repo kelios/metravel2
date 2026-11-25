@@ -333,7 +333,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  */
 export function useThemedColors() {
   const { isDark, activeSeasonalTheme } = useTheme();
-  return useMemo(() => getThemedColors(isDark, activeSeasonalTheme), [isDark, activeSeasonalTheme]);
+  // На web `getThemedColors` сезон не читает: цвета сезона живут в CSS-переменных
+  // (`data-season`). Ключ мемо от сезона тоже не зависит, иначе его появление
+  // после гидратации пересоздаёт цвета у всех потребителей (#3491).
+  const colorSeason = Platform.OS === 'web' ? null : activeSeasonalTheme;
+  return useMemo(() => getThemedColors(isDark, colorSeason), [isDark, colorSeason]);
 }
 
 // Экспорт типа возвращаемого значения useThemedColors для использования в компонентах

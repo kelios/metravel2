@@ -141,6 +141,24 @@ describe('useTheme web contract', () => {
     }
   })
 
+  it('keeps the themed colors object when the season appears after mount on web (#3491)', async () => {
+    // На web цвета сезона живут в CSS-переменных: смена null → christmas после
+    // гидратации не должна пересоздавать объект цветов у всех потребителей.
+    jest.useFakeTimers({ now: new Date(2026, 11, 5, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'queueMicrotask', 'nextTick', 'requestAnimationFrame', 'cancelAnimationFrame'] })
+    try {
+      const colorObjects = new Set<object>()
+      const { result } = renderHook(() => {
+        const colors = useThemedColors()
+        colorObjects.add(colors)
+        return { season: useTheme().activeSeasonalTheme }
+      }, { wrapper })
+      await waitFor(() => expect(result.current.season).toBe('christmas'))
+      expect(colorObjects.size).toBe(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('keeps the boot-script data-theme="dark" until the stored theme is read (no hydration flash, #2381)', async () => {
     localStorage.setItem('theme', 'dark')
     document.documentElement.setAttribute('data-theme', 'dark')

@@ -5,7 +5,7 @@
 uv run --with "opencv-python-headless<5" --with numpy python plates.py copy <файл> <от> <до> <копия.mp4> [--yolox M.onnx]
                                                                     [--box x0,y0,x1,y1,с,по[,1] …]
 uv run … plates.py jobs <задания.json> --dir <папка filmora> --series sN [--only ключ,…]
-uv run … plates.py check <план_blur.json> <папка> [--only /номера/] [--per 5]   — после подстановки: «НОМЕР ВИДЕН?» по ≥ 5 моментам куска
+uv run … plates.py check <план_blur.json> <папка> [--only /номера/] [--per 5] [--every 3] [--full]   — после подстановки: «НОМЕР ВИДЕН?» по ≥ 5 моментам куска (--every N — каждый N-й кадр)
 
 copy  — <файл>: то, что сейчас стоит в плане (исходник или копия с размытыми лицами); <от>/<до> — секунды в нём.
         Кадр 1920×1080: YOLOX-S → машины (шире 4 %) и люди. Номер — строка ≥ 4 знаков одной высоты в ряд (MSER, тёмные на светлом
@@ -161,7 +161,7 @@ def copy(src, a, b, out, yp, boxes=(), extra=()):
     TRIM = f"trim=start={a:.4f}:end={b:.4f},setpts=PTS-STARTPTS"      # по меткам времени, не -ss: при -ss копия ушла на 2 кадра (s3, 0167)
     p = subprocess.Popen(["ffmpeg", "-v", "error"] + HW + ["-i", src, "-vf", f"{TRIM},scale={DW}:{DH}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"],
                          stdout=subprocess.PIPE, stdin=subprocess.DEVNULL)
-    CARS, PPL, PL = [], [], []
+    CARS, PPL, PL, SH = [], [], [], []; g_prev = None
     while True:
         buf = p.stdout.read(DW * DH * 3)
         if len(buf) < DW * DH * 3: break
@@ -170,6 +170,9 @@ def copy(src, a, b, out, yp, boxes=(), extra=()):
         # знаки — на каждом кадре, у машин от 4 %, до 4 строк на машину: на каждом 3-м кадре, от 5 % и по 2 строки номер «BN-714-EL»
         # уступал надписи/наклейке и оставался читаемым (s1 v23d_blur 23.11, 0074 — рецензент; plates.py check ловил его на копии)
         PL.append([plate_boxes(img, x, cap=4) if x[2] >= 0.04 * DW else [] for x in c])
+        # сдвиг картинки от прошлого кадра (поворот камеры): рамки номера переносятся им на кадры, где смазанную машину не видно
+        g_ = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), (480, 270)).astype(np.float32)
+        SH.append((0.0, 0.0) if g_prev is None else tuple(v * 4 for v in cv2.phaseCorrelate(g_prev, g_)[0])); g_prev = g_
     p.wait()
     N = len(CARS); exp = round((b - a) * fps)
 
@@ -204,6 +207,18 @@ def copy(src, a, b, out, yp, boxes=(), extra=()):
                 RECT[i].append((x + 0.03 * w, y + 0.30 * h, 0.94 * w, 0.67 * h)); fall += 1
     print(f"кадров {N} (ожидалось ≈{exp}), с машинами {sum(1 for c in CARS if c)}, дорожек {len(tracks)}, "
           f"номер по знакам/дорожке {found}, запасная полоса {fall}", flush=True)
+    # перенос найденных номеров по сдвигу кадров на ±8 кадров: при быстром повороте детектор теряет смазанную машину, и рамка
+    # оставалась там, где машина была (s1 v23e_blur 24.11, 0074 22:27 «EQ-634-…» — рецензент). Рамка ×1,3 — запас на смаз.
+    PROP = [[] for _ in range(N)]; K = 8
+    for i0 in range(N):
+        for x, y, w, h in PLATE[i0]:
+            for sgn in (1, -1):
+                cx, cy = x + w / 2, y + h / 2
+                for k_ in range(0, K + 1):
+                    j_ = i0 + sgn * k_
+                    if not (0 <= j_ < N): break
+                    if k_: dx, dy = SH[j_] if sgn > 0 else SH[j_ + 1]; cx, cy = cx + sgn * dx, cy + sgn * dy
+                    PROP[j_].append((cx - 0.65 * w, cy - 0.65 * h, 1.3 * w, 1.3 * h))
     D = 3; m_path = os.path.splitext(out)[0] + "_маска.mkv"   # маска: рамки ±3 кадра; полосы и ручные рамки — минус люди (ужата на 8 %), найденные номера — нет
     enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "gray", "-s", f"{W}x{H}", "-r", pr["r_frame_rate"],
                             "-i", "-", "-c:v", "ffv1", m_path], stdin=subprocess.PIPE)
@@ -221,8 +236,7 @@ def copy(src, a, b, out, yp, boxes=(), extra=()):
             m[int(y + 0.08 * h):int(y + 0.92 * h), int(x + 0.08 * w):int(x + 0.92 * w)] = 0
         # номер, найденный знаками в этом кадре, виден — его люди не заслоняют: рамка после вычета людей. Иначе человек у камеры
         # (рамка на полкадра) снимал размытие с номеров за ним: s1 v23d/v23e_blur 0074 «BN-714-EL», 0122 «AA-109-SC» (23–24.11)
-        for j in range(max(0, i - D), min(N, i + D + 1)):
-            for x, y, w, h in PLATE[j]:
+        for x, y, w, h in PROP[i]:                           # номер, перенесённый по движению камеры (см. ниже)
                 m[max(0, int(y * SX)):max(0, int((y + h) * SX)), max(0, int(x * SX)):max(0, int((x + w) * SX))] = 255
         for x0, y0, x1, y1, ta, tb in HEADS:                 # головы — после вычета людей: это и есть люди
             if not (ta <= t <= tb): continue
@@ -329,7 +343,7 @@ def jobs(path, film_dir, series, only=None, yp=None):
     print("карта номеров:", manp, "—", len(MAN), "исходников")
 
 
-def check(plan_path, out_dir, only="/номера/", per=5, yp=None):
+def check(plan_path, out_dir, only="/номера/", per=5, yp=None, every=None, full=False):
     """Остались ли знаки номера в готовых копиях: каждый кусок плана, чей файл содержит only (пусто — все), ≥ per моментов
     (и ≥ 1 к/с), кадр 1920×1080, машины шире 4 %, строка ≥ 4 знаков на месте номера — находка «НОМЕР ВИДЕН?» с вырезом машины
     в лист. Размытый номер строки знаков не даёт. Лист по одному кадру куска пропустил отставшую рамку (s1 v23d_blur 23.11, 0074 22:27)."""
@@ -345,26 +359,30 @@ def check(plan_path, out_dir, only="/номера/", per=5, yp=None):
     jobs = [j for j in jobs if (not only or only in unicodedata.normalize("NFC", j[2])) and not j[2].lower().endswith((".png", ".jpg", ".jpeg"))]
     os.makedirs(out_dir, exist_ok=True); hits, n_fr, n_car = [], 0, 0
     for ft, note, f, a0, d in jobs:
-        n = max(per, int(d + 0.999))
+        n = max(per, int(d + 0.999)) if not every else max(per, int(d * _fps(f) / every))   # --every N: каждый N-й кадр
         for i in range(n):
             st = a0 + d * (i + 0.5) / n
-            buf = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{st:.3f}", "-i", f, "-frames:v", "1", "-vf", "scale=1920:1080",
+            # --full: строки знаков — на кадре 3840×2160 (финал в 4K: номер, мелкий в 1080p, там читается — сборщица s2, 24.11);
+            # машины — на 1920×1080, как в jobs. Высота знака в отчёте — в пикселях кадра поиска.
+            FWc, FHc = (3840, 2160) if full else (1920, 1080); kx = FWc / 1920
+            buf = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{st:.3f}", "-i", f, "-frames:v", "1", "-vf", f"scale={FWc}:{FHc}",
                                   "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, stdin=subprocess.DEVNULL).stdout
-            if len(buf) < 1920 * 1080 * 3: continue
-            img = np.frombuffer(buf, np.uint8).reshape(1080, 1920, 3); n_fr += 1
-            cars, _ = det(img)
+            if len(buf) < FWc * FHc * 3: continue
+            img = np.frombuffer(buf, np.uint8).reshape(FHc, FWc, 3); n_fr += 1
+            cars, _ = det(cv2.resize(img, (1920, 1080), interpolation=cv2.INTER_AREA) if full else img)
             for car in cars:
-                n_car += 1; x, y, w, h = [int(round(v)) for v in car]
-                x0_, y0_, x1_, y1_ = max(0, x), max(0, y + int(0.15 * h)), min(1920, x + w), min(1080, y + h)
+                n_car += 1; x, y, w, h = [int(round(v * kx)) for v in car]
+                x0_, y0_, x1_, y1_ = max(0, x), max(0, y + int(0.15 * h)), min(FWc, x + w), min(FHc, y + h)
                 if x1_ - x0_ < 24 or y1_ - y0_ < 12: continue
-                s = max(1.0, 480 / (x1_ - x0_))
+                s = max(1.0, 480 * kx / (x1_ - x0_))
                 g = cv2.createCLAHE(2.0, (8, 8)).apply(cv2.cvtColor(cv2.resize(img[y0_:y1_, x0_:x1_], None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2GRAY))
                 ok = []
                 for nn, (a_, b_, cw, chh) in sorted(_lines(g) + _lines(255 - g), reverse=True)[:4]:
                     ry = (y0_ + (b_ + chh / 2) / s - y) / max(1, h); rx = (x0_ + (a_ + cw / 2) / s - x) / max(1, w)
-                    if cw <= 0.6 * g.shape[1] and 0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96: ok.append(nn)
+                    if cw <= 0.6 * g.shape[1] and 0.35 <= ry <= 0.97 and 0.04 <= rx <= 0.96: ok.append((nn, chh / s))
                 if ok:
-                    hits.append((ft + st - a0, note, f, st, max(ok), img[max(0, y - h // 6):min(1080, y + h + h // 6), max(0, x - w // 6):min(1920, x + w + w // 6)].copy()))
+                    hits.append((ft + st - a0, note, f, st, f"{max(o_[0] for o_ in ok)}, высота знака {max(o_[1] for o_ in ok):.0f} px {'4K' if full else '1080p'}",
+                                 img[max(0, y - h // 6):min(FHc, y + h + h // 6), max(0, x - w // 6):min(FWc, x + w + w // 6)].copy()))
     tc = lambda s_: f"{int(s_ // 60)}:{s_ % 60:04.1f}"
     L = [f"# НОМЕР ВИДЕН? — {os.path.basename(plan_path)}: кусков {len(jobs)}, кадров {n_fr}, машин {n_car}, находок {len(hits)}", "",
          "Строка знаков на месте номера в готовой копии. Проверить глазами по листу; читается — рамка в задание plates.py jobs.", ""]
@@ -372,11 +390,12 @@ def check(plan_path, out_dir, only="/номера/", per=5, yp=None):
     open(os.path.join(out_dir, "номер виден.md"), "w").write("\n".join(L) + "\n")
     tiles = []
     for k, (ft, note, f, st, nn, cr) in enumerate(hits):
-        im = Image.fromarray(cr[:, :, ::-1]); im.thumbnail((480, 300)); tl = Image.new("RGB", (480, 324), "black"); tl.paste(im, (0, 24))
+        TW, TH = (720, 450) if full else (480, 300)
+        im = Image.fromarray(cr[:, :, ::-1]); im.thumbnail((TW, TH)); tl = Image.new("RGB", (TW, TH + 24), "black"); tl.paste(im, (0, 24))
         ImageDraw.Draw(tl).text((4, 4), f"[{k + 1}] {tc(ft)} {os.path.basename(f)[-24:]} {st:.1f}s", fill="white"); tiles.append(tl)
     for n_ in range(0, len(tiles), 16):
-        part = tiles[n_:n_ + 16]; sh = Image.new("RGB", (4 * 484, ((len(part) + 3) // 4) * 328), "black")
-        for i, tl in enumerate(part): sh.paste(tl, ((i % 4) * 484, (i // 4) * 328))
+        part = tiles[n_:n_ + 16]; tw, th = part[0].size; sh = Image.new("RGB", (4 * (tw + 4), ((len(part) + 3) // 4) * (th + 4)), "black")
+        for i, tl in enumerate(part): sh.paste(tl, ((i % 4) * (tw + 4), (i // 4) * (th + 4)))
         sh.save(os.path.join(out_dir, f"номер виден {n_ // 16 + 1:02d}.jpg"), quality=88)
     print(f"НОМЕР ВИДЕН?: кусков {len(jobs)}, кадров {n_fr}, машин {n_car}, находок {len(hits)} → {out_dir}")
 
@@ -385,7 +404,8 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     if len(a) >= 3 and a[0] == "check":
         opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
-        check(a[1], a[2], opt("--only", "/номера/"), int(opt("--per", "5")), opt("--yolox")); sys.exit(0)
+        check(a[1], a[2], opt("--only", "/номера/"), int(opt("--per", "5")), opt("--yolox"), int(opt("--every")) if "--every" in a else None,
+              "--full" in a); sys.exit(0)
     if len(a) < 2 or a[0] not in ("copy", "jobs"): print(__doc__); sys.exit(2)
     opt = lambda k, d=None: a[a.index(k) + 1] if k in a else d
     heavy_lock.acquire(f"plates {a[0]} {os.path.basename(a[1])}", wait="--no-wait" not in a)
