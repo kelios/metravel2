@@ -746,6 +746,7 @@ export default function PlacesScreen() {
       {compactFixedBar}
       <PlacesCatalogScrollView
         testID="places-catalog-scroll"
+        active={isFocused}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

@@ -232,7 +232,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await expect(page).toHaveURL(/\/map\?.*focusPlace=1/);
       await page.goBack();
       await expect(card).toBeInViewport();
-      await expect.poll(() => scroller.evaluate(el => el.scrollTop)).toBeCloseTo(beforeNavigation, -2);
+      await expect.poll(() => scroller.evaluate(el => el.scrollTop)).toBeCloseTo(beforeNavigation, 0);
 
       await setOffset(0);
       await page.getByLabel('Найти место').fill('Музей');

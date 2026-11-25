@@ -1,6 +1,9 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import React, {
+  createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState,
+} from 'react'
 import {
-  Platform, ScrollView, StyleSheet, View, type LayoutChangeEvent, type ScrollViewProps,
+  Platform, ScrollView, StyleSheet, View,
+  type LayoutChangeEvent, type ScrollViewInstance, type ScrollViewProps,
 } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -11,29 +14,154 @@ const gap = DESIGN_TOKENS.spacing.md
 const overscanRows = 2
 const initialViewport = { y: 0, height: 800 }
 const ScrollViewport = createContext(initialViewport)
+const anchorStyleId = 'places-catalog-scroll-anchor'
+// Long enough for the browser to restore focus after Back, short enough that a
+// later programmatic scroll in the same visit is not pinned.
+const returnScrollHoldMs = 800
+const returnScrollCorrections = 8
+
+type ScrollHost = ScrollViewInstance & { getScrollableNode?: () => unknown }
+
+function scrollableNode(host: ScrollHost | null): HTMLElement | null {
+  const node = host?.getScrollableNode?.() ?? host
+  return node && typeof (node as HTMLElement).scrollTop === 'number' ? node as HTMLElement : null
+}
+
+function ensureScrollAnchorOptOut() {
+  if (typeof document === 'undefined' || document.getElementById(anchorStyleId)) return
+  const style = document.createElement('style')
+  style.id = anchorStyleId
+  // Descendants stay eligible anchors unless the opt-out covers them too.
+  // A virtual spacer resize must not drag scrollTop.
+  style.textContent = '[data-testid="places-catalog-scroll"],[data-testid="places-catalog-scroll"] *{overflow-anchor:none}'
+  document.head.appendChild(style)
+}
 
 // Only the grid consumes scroll ticks. The sidebar, controls and banners stay
 // in the original single scroll container and need no scroll-driven renders.
-export function PlacesCatalogScrollView({ children, onScroll, ...props }: ScrollViewProps) {
+export function PlacesCatalogScrollView({
+  active = true, children, onScroll, ...props
+}: ScrollViewProps & { active?: boolean }) {
+  const scrollRef = useRef<ScrollHost | null>(null)
+  const offsetRef = useRef(0)
+  const savedOffsetRef = useRef<number | null>(null)
+  const holdOffsetRef = useRef<number | null>(null)
+  const holdCorrectionsRef = useRef(0)
+  const activeRef = useRef(active)
+  activeRef.current = active
   const [viewport, setViewport] = useState(initialViewport)
   const measure = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout
     if (height > 0) setViewport(prev => prev.height === height ? prev : { ...prev, height })
   }, [])
   const scroll: NonNullable<ScrollViewProps['onScroll']> = event => {
+    // display:none on the inactive screen can emit a zero offset before the
+    // return hold is armed. Keep the last offset from the visible visit.
+    if (!activeRef.current) return
     const { contentOffset, layoutMeasurement } = event.nativeEvent
-    if (layoutMeasurement.height > 0) setViewport({ y: contentOffset.y, height: layoutMeasurement.height })
+    const y = contentOffset.y
+    const held = holdOffsetRef.current
+    if (held != null && Math.abs(y - held) > 1) {
+      holdCorrectionsRef.current += 1
+      if (holdCorrectionsRef.current > returnScrollCorrections) {
+        holdOffsetRef.current = null
+      } else {
+        const node = scrollableNode(scrollRef.current)
+        if (node) node.scrollTop = held
+        return
+      }
+    }
+    offsetRef.current = y
+    if (layoutMeasurement.height > 0) setViewport({ y, height: layoutMeasurement.height })
     onScroll?.(event)
   }
+  useEffect(() => {
+    if (Platform.OS === 'web') ensureScrollAnchorOptOut()
+  }, [])
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!active) {
+      savedOffsetRef.current = offsetRef.current
+      holdOffsetRef.current = null
+      return
+    }
+    const saved = savedOffsetRef.current
+    if (saved == null) return
+    holdOffsetRef.current = saved
+    holdCorrectionsRef.current = 0
+    const node = scrollableNode(scrollRef.current)
+    const restore = () => {
+      const held = holdOffsetRef.current
+      const current = scrollableNode(scrollRef.current)
+      if (held == null || !current || Math.abs(current.scrollTop - held) <= 1) return
+      holdCorrectionsRef.current += 1
+      if (holdCorrectionsRef.current > returnScrollCorrections) {
+        holdOffsetRef.current = null
+        return
+      }
+      current.scrollTop = held
+      requestAnimationFrame(() => {
+        const latest = scrollableNode(scrollRef.current)
+        if (holdOffsetRef.current === held && latest && Math.abs(latest.scrollTop - held) <= 1) {
+          holdOffsetRef.current = null
+        }
+      })
+    }
+    restore()
+    const release = () => { holdOffsetRef.current = null }
+    node?.addEventListener('scroll', restore)
+    node?.addEventListener('wheel', release, { passive: true })
+    node?.addEventListener('touchmove', release, { passive: true })
+    node?.addEventListener('pointerdown', release)
+    node?.addEventListener('keydown', release)
+    const timer = setTimeout(release, returnScrollHoldMs)
+    return () => {
+      clearTimeout(timer)
+      release()
+      node?.removeEventListener('scroll', restore)
+      node?.removeEventListener('wheel', release)
+      node?.removeEventListener('touchmove', release)
+      node?.removeEventListener('pointerdown', release)
+      node?.removeEventListener('keydown', release)
+    }
+  }, [active])
   return (
-    <ScrollView {...props} onLayout={measure} onScroll={scroll} scrollEventThrottle={32}>
+    <ScrollView
+      {...props}
+      ref={scrollRef}
+      onLayout={measure}
+      onScroll={scroll}
+      scrollEventThrottle={32}
+    >
       <ScrollViewport.Provider value={viewport}>{children}</ScrollViewport.Provider>
     </ScrollView>
   )
 }
 
+function focusRowKey(relatedTarget: unknown): string | null {
+  const node = relatedTarget as { closest?: (selector: string) => { getAttribute(name: string): string | null } | null } | null
+  return node?.closest?.('[data-places-row]')?.getAttribute('data-places-row') ?? null
+}
+
 const placeKey = (place: CatalogPlace) =>
   place.placeId == null ? `point:${place.id}` : `place:${place.placeId}`
+
+type RowMeasurements = { width: number; columns: number; heights: Map<string, number> }
+
+// A one-pixel width change (scrollbar, sticky sidebar, display:none → contents)
+// must not throw away measured rows. Those rows are unmounted above the
+// viewport, so the next frame would substitute the 550px estimate and scroll
+// anchoring would move the catalog (desktop 6500 → 5821, #3460).
+export function rememberRowHeight(
+  prev: RowMeasurements,
+  row: { width: number; columns: number; key: string; height: number },
+): RowMeasurements {
+  const cached = prev.columns === row.columns ? prev.heights : undefined
+  if (cached?.get(row.key) === row.height && prev.width === row.width) return prev
+  const heights = new Map(cached)
+  heights.set(row.key, row.height)
+  return { width: row.width, columns: row.columns, heights }
+}
 
 // offsets includes a final sentinel for the bottom of the last row.
 function rowAt(offsets: number[], y: number) {
@@ -78,19 +206,14 @@ export function PlacesWindowedGrid({ places, columns, parentTop, firstScreenCoun
     return result
   }, [places, perRow])
 
-  const [measurements, setMeasurements] = useState(() => ({
+  const [measurements, setMeasurements] = useState<RowMeasurements>(() => ({
     width: layout.width, columns: perRow, heights: new Map<string, number>(),
   }))
-  const heights = measurements.width === layout.width && measurements.columns === perRow
-    ? measurements.heights : undefined
+  const heights = measurements.columns === perRow ? measurements.heights : undefined
   const measureRow = (key: string, event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout
     if (height <= 0 || width <= 0) return
-    setMeasurements(prev => {
-      const cached = prev.width === width && prev.columns === perRow ? prev.heights : undefined
-      if (cached?.get(key) === height) return prev
-      return { width, columns: perRow, heights: new Map(cached).set(key, height) }
-    })
+    setMeasurements(prev => rememberRowHeight(prev, { width, columns: perRow, key, height }))
   }
   const hasFooter = footer != null
   const offsets = useMemo(() => {
@@ -107,6 +230,26 @@ export function PlacesWindowedGrid({ places, columns, parentTop, firstScreenCoun
   const first = Math.max(0, rowAt(offsets, top) - overscanRows)
   const last = Math.min(rows.length - 1, rowAt(offsets, top + viewport.height) + overscanRows)
   const [focused, setFocused] = useState<string | null>(null)
+  const clearFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rememberFocus = (key: string) => {
+    if (clearFocusTimer.current != null) {
+      clearTimeout(clearFocusTimer.current)
+      clearFocusTimer.current = null
+    }
+    setFocused(current => current === key ? current : key)
+  }
+  // Blur flushes before the next control is focused. Dropping the off-screen
+  // row in that handler unmounts the Tab target and focus falls through to body.
+  const scheduleFocusClear = () => {
+    if (clearFocusTimer.current != null) clearTimeout(clearFocusTimer.current)
+    clearFocusTimer.current = setTimeout(() => {
+      clearFocusTimer.current = null
+      setFocused(null)
+    }, 0)
+  }
+  useEffect(() => () => {
+    if (clearFocusTimer.current != null) clearTimeout(clearFocusTimer.current)
+  }, [])
   const focusIndex = useMemo(() => focused === null ? -1 : rows.findIndex(row => row.key === focused), [focused, rows])
   const indexes = new Set<number>()
   for (let i = first; i <= last; i++) indexes.add(i)
@@ -132,7 +275,15 @@ export function PlacesWindowedGrid({ places, columns, parentTop, firstScreenCoun
         key={row.key}
         style={[styles.cardsGrid, (index < rows.length - 1 || hasFooter) && { marginBottom: gap }]}
         onLayout={event => measureRow(row.measurementKey, event)}
-        {...(Platform.OS === 'web' ? { onFocus: () => setFocused(row.key), onBlur: () => setFocused(null) } : {})}
+        {...(Platform.OS === 'web' ? {
+          dataSet: { placesRow: row.key },
+          onFocus: () => rememberFocus(row.key),
+          onBlur: (event: { nativeEvent?: { relatedTarget?: unknown } }) => {
+            const next = focusRowKey(event.nativeEvent?.relatedTarget)
+            if (next) rememberFocus(next)
+            else scheduleFocusClear()
+          },
+        } : {})}
       >
         {row.items.map((place, i) => (
           <PlaceCard key={placeKey(place)} {...cardProps} place={place} priority={index * perRow + i < firstScreenCount} />
