@@ -19,10 +19,12 @@ type Props = {
   onOpenLink: (link: string) => void
 }
 
+type PlaceStatus = 'wishlist' | 'visited'
+
 /**
- * Вишлист (#3487): популярные места сайта, «Хочу поехать» ставится прямо в окне
- * обычным статусом поездки. Зачёт делает сервер по `credit_rule` дверцы, поэтому
- * здесь только счётчик до цели и тёплая строка, когда цель набрана.
+ * Вишлист (#3487): «Был здесь» и «Хочу поехать» ставятся прямо в окне обычным
+ * статусом поездки. Зачёт дверцы — только «Хочу поехать», его делает сервер
+ * по `credit_rule`, поэтому здесь счётчик до цели и строка, когда цель набрана.
  */
 function AdventWishlistTask({ game, onOpenLink }: Props) {
   const paper = useAdventPaper()
@@ -30,7 +32,7 @@ function AdventWishlistTask({ game, onOpenLink }: Props) {
   const own = useMemo(() => createStyles(paper), [paper])
   const { userId } = useAuth((auth) => ({ userId: auth.userId }))
   const statuses = useTravelStatus()
-  const [pending, setPending] = useState<number | null>(null)
+  const [pending, setPending] = useState<{ id: number; status: PlaceStatus } | null>(null)
   const [failed, setFailed] = useState(false)
   // Статусы живут в кэше, который грузят профиль и календарь. Без догрузки окно
   // не видит «Был» или «Хочу» с сервера, и кнопка перезаписала бы «Был» на «Хочу».
@@ -61,16 +63,16 @@ function AdventWishlistTask({ game, onOpenLink }: Props) {
   const wished = game.places.filter((place) => statusOf(place.travelId) === 'wishlist').length
   const reached = wished >= game.goal
 
-  const toggle = useCallback(
-    async (place: AdventWishlistPlace) => {
+  const choose = useCallback(
+    async (place: AdventWishlistPlace, next: PlaceStatus) => {
       const current = statusOf(place.travelId)
-      setPending(place.travelId)
+      setPending({ id: place.travelId, status: next })
       setFailed(false)
       try {
-        if (current === 'wishlist') await removeTravelStatus(place.travelId, userId ?? null)
+        if (current === next) await removeTravelStatus(place.travelId, userId ?? null)
         else
           await setTravelStatus(
-            { id: place.travelId, type: 'travel', title: place.title, url: place.link, imageUrl: place.image, country: place.country, status: 'wishlist' },
+            { id: place.travelId, type: 'travel', title: place.title, url: place.link, imageUrl: place.image, country: place.country, status: next },
             userId ?? null,
           )
       } catch {
@@ -90,40 +92,62 @@ function AdventWishlistTask({ game, onOpenLink }: Props) {
           const status = statusOf(place.travelId)
           const isWished = status === 'wishlist'
           const isVisited = status === 'visited'
+          const visitedLabel = isVisited ? i18nT('adventStatic:game.wishlist.visited') : i18nT('adventStatic:game.wishlist.markVisited')
+          const wishlistLabel = isWished ? i18nT('adventStatic:game.wishlist.added') : i18nT('adventStatic:game.wishlist.add')
+          const rowPending = pending?.id === place.travelId
           return (
-            <View key={place.travelId} style={[own.row, isWished && { borderColor: paper.gold, backgroundColor: paper.tag }]} testID={`advent-wishlist-place-${place.travelId}`}>
-              <Pressable onPress={() => onOpenLink(place.link)} accessibilityRole="link" accessibilityLabel={place.title} style={own.thumb}>
-                {place.image ? (
-                  <ImageCardMedia src={place.image} alt={place.title} fit="cover" borderRadius={DESIGN_TOKENS.radii.sm} style={own.image} />
-                ) : (
-                  <Feather name="map-pin" size={20} color={paper.inkMuted} />
-                )}
-              </Pressable>
-              <View style={own.body}>
-                <Text style={styles.cardText} numberOfLines={2}>
-                  {place.title}
-                </Text>
-                {place.country ? <Text style={styles.meta}>{place.country}</Text> : null}
-              </View>
-              {isVisited ? (
-                <View style={own.badge} testID={`advent-wishlist-visited-${place.travelId}`}>
-                  <Feather name="flag" size={14} color={paper.success} />
-                  <Text style={[styles.meta, { color: paper.success }]}>{i18nT('adventStatic:game.wishlist.visited')}</Text>
+            <View
+              key={place.travelId}
+              style={[
+                own.card,
+                isWished && { borderColor: paper.gold, backgroundColor: paper.tag },
+                isVisited && { borderColor: paper.success },
+              ]}
+              testID={`advent-wishlist-place-${place.travelId}`}
+            >
+              <View style={own.row}>
+                <Pressable onPress={() => onOpenLink(place.link)} accessibilityRole="link" accessibilityLabel={place.title} style={own.thumb}>
+                  {place.image ? (
+                    <ImageCardMedia src={place.image} alt={place.title} fit="cover" borderRadius={DESIGN_TOKENS.radii.sm} style={own.image} />
+                  ) : (
+                    <Feather name="map-pin" size={20} color={paper.inkMuted} />
+                  )}
+                </Pressable>
+                <View style={own.body}>
+                  <Text style={styles.cardText} numberOfLines={2}>
+                    {place.title}
+                  </Text>
+                  {place.country ? <Text style={styles.meta}>{place.country}</Text> : null}
                 </View>
-              ) : (
+              </View>
+              <View style={own.actions}>
                 <Button
                   labelNumberOfLines={2}
-                  style={own.toggle}
-                  label={isWished ? i18nT('adventStatic:game.wishlist.added') : i18nT('adventStatic:game.wishlist.add')}
+                  style={own.action}
+                  label={visitedLabel}
+                  accessibilityLabel={i18nT('adventStatic:game.wishlist.a11y', { value1: place.title, value2: visitedLabel })}
+                  variant={isVisited ? 'soft' : 'outline'}
+                  size="sm"
+                  icon={<Feather name={isVisited ? 'flag' : 'plus'} size={14} color={paper.success} />}
+                  loading={rowPending && pending.status === 'visited'}
+                  disabled={pending !== null || !synced}
+                  onPress={() => void choose(place, 'visited')}
+                  testID={`advent-wishlist-visited-${place.travelId}`}
+                />
+                <Button
+                  labelNumberOfLines={2}
+                  style={own.action}
+                  label={wishlistLabel}
+                  accessibilityLabel={i18nT('adventStatic:game.wishlist.a11y', { value1: place.title, value2: wishlistLabel })}
                   variant={isWished ? 'soft' : 'outline'}
                   size="sm"
                   icon={<Feather name={isWished ? 'heart' : 'plus'} size={14} color={paper.gold} />}
-                  loading={pending === place.travelId}
+                  loading={rowPending && pending.status === 'wishlist'}
                   disabled={pending !== null || !synced}
-                  onPress={() => void toggle(place)}
+                  onPress={() => void choose(place, 'wishlist')}
                   testID={`advent-wishlist-toggle-${place.travelId}`}
                 />
-              )}
+              </View>
             </View>
           )
         })}
@@ -159,15 +183,18 @@ function AdventWishlistTask({ game, onOpenLink }: Props) {
 const createStyles = (paper: AdventPaperPalette) =>
   StyleSheet.create({
     list: { gap: DESIGN_TOKENS.spacing.xs },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
+    card: {
+      gap: DESIGN_TOKENS.spacing.xs,
       padding: DESIGN_TOKENS.spacing.xs,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: paper.edge,
       backgroundColor: paper.paper,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
     },
     thumb: {
       width: 56,
@@ -180,8 +207,8 @@ const createStyles = (paper: AdventPaperPalette) =>
     },
     image: { width: '100%', height: '100%' },
     body: { flex: 1, minWidth: 0, gap: 2 },
-    badge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    toggle: { flexShrink: 1, maxWidth: '45%' },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
+    action: { flexGrow: 1, flexShrink: 1, flexBasis: 140, maxWidth: '100%' },
     rowButton: { maxWidth: '100%' },
   })
 

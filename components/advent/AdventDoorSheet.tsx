@@ -137,7 +137,22 @@ function AdventDoorSheet({ door: rawDoor, isAuthenticated, preview, creditedDays
       )
     }
     // Решённая здесь загадка или карта не размонтируется: ответ и праздник остаются на месте.
+    // Вишлист остаётся и после зачёта: «Был здесь» и «Хочу поехать» ставятся в этом окне.
     const keepInteractive = solvedHere && (!!game || door.task.type === 'riddle' || door.task.type === 'geo')
+    if (game?.kind === 'wishlist') {
+      const doneDate = done && door.doneAt ? formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' }) : null
+      return (
+        <View style={styles.wishlistBlock}>
+          {doneDate ? (
+            <View style={styles.doneRow} testID="advent-task-credited">
+              <Feather name="check-circle" size={18} color={paper.success} />
+              <Text style={styles.done}>{i18nT('adventStatic:sheet.taskCredited', { value1: doneDate })}</Text>
+            </View>
+          ) : null}
+          <AdventGameTask game={game} xp={door.reward.xp} onComplete={handleDone} onOpenLink={openInternalOrExternal} day={door.day} share={gameShare} />
+        </View>
+      )
+    }
     if (done && door.doneAt && !keepInteractive) {
       const doneDate = formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' })
       if (solvedHere) {
@@ -335,6 +350,7 @@ const createStyles = (colors: ThemedColors, paper: AdventPaperPalette) =>
     rowButton: { maxWidth: '100%' },
     giftLink: { alignSelf: 'flex-start', maxWidth: '100%' },
     ctaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    wishlistBlock: { gap: DESIGN_TOKENS.spacing.sm },
     hint: { flexShrink: 1, fontSize: 14, lineHeight: 20, color: paper.inkMuted },
     doneRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
     done: { flexShrink: 1, fontSize: 15, lineHeight: 22, color: paper.success, fontWeight: '700' },

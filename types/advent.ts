@@ -114,7 +114,7 @@ export interface AdventWishlistPlace {
 }
 
 /**
- * Вишлист: статус «Хочу поехать» ставится прямо в окне. Зачёт — серверный
+ * Вишлист: «Был здесь» и «Хочу поехать» ставятся прямо в окне. Зачёт — серверный
  * (`credit_rule` travel_status/wishlist), `goal` — сколько мест нужно для него.
  */
 export interface AdventWishlistGame {
