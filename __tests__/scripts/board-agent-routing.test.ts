@@ -3,8 +3,15 @@ import path from 'node:path';
 import { makeTempDir, removeDir } from './cli-test-utils';
 
 const { spawnSyncWithStdin } = require('../../scripts/lib/runSyncWithStdin');
-// A hook or IDE may export Git's own worktree/index. Use only the runtime path in this fixture.
-const fixtureEnv = { PATH: process.env.PATH, REVIEW_GATE_BYPASS: '0', BOARD_COMPACT: '1' };
+// A hook or IDE may export Git's own worktree/index. Keep PATH only, plus the
+// flags this fixture sets. Ignore the system gitconfig: it can include
+// ~/.gitcinclude, which is fatal when HOME is intentionally absent.
+const fixtureEnv = {
+  PATH: process.env.PATH,
+  GIT_CONFIG_NOSYSTEM: '1',
+  REVIEW_GATE_BYPASS: '0',
+  BOARD_COMPACT: '1',
+};
 
 type Group = { matcher: string; hooks: { command: string }[] };
 type Event = 'PreToolUse' | 'PostToolUse';

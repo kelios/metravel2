@@ -57,6 +57,10 @@ it('keeps measured row heights when the grid width changes by a pixel', () => {
 it('keeps an off-screen web row mounted until Tab focus has moved', async () => {
   const original = Platform.OS
   Platform.OS = 'web'
+  // React's awaited act continues on setImmediate. A real setTimeout(0) from
+  // blur can run before that continuation, so the deferred clear must be faked
+  // or the row unmounts inside fireEvent.
+  jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
   try {
     const { places } = mapPlacesCatalogResponse({
       results: Array.from({ length: 200 }, (_, i) => ({
@@ -81,12 +85,13 @@ it('keeps an off-screen web row mounted until Tab focus has moved', async () => 
     await fireEvent(row(), 'blur', { nativeEvent: { relatedTarget: null } })
     expect(view.getByTestId('place-100')).toBeTruthy()
     await fireEvent(row(), 'focus')
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
+    await act(async () => { jest.runOnlyPendingTimers() })
     expect(view.getByTestId('place-100')).toBeTruthy()
     await fireEvent(row(), 'blur', { nativeEvent: { relatedTarget: null } })
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
+    await act(async () => { jest.runOnlyPendingTimers() })
     expect(view.queryByTestId('place-100')).toBeNull()
   } finally {
+    jest.useRealTimers()
     Platform.OS = original
   }
 })

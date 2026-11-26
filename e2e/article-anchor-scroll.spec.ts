@@ -19,8 +19,9 @@ test.describe('Article anchors (TOC -> section)', () => {
         pathname = url;
       }
 
-      // API is normalized as .../api/articles/{id}
-      if (!pathname.endsWith(`/api/articles/${id}`) && !pathname.endsWith(`/articles/${id}`)) {
+      // Detail reads are /api/articles/{id}/ with the trailing slash fetchArticle uses.
+      const normalizedPath = pathname.replace(/\/+$/, '');
+      if (!normalizedPath.endsWith(`/api/articles/${id}`) && !normalizedPath.endsWith(`/articles/${id}`)) {
         await route.continue();
         return;
       }

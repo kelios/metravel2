@@ -1,4 +1,5 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test'
+import { ensureCurrentTermsAccepted } from './helpers/auth'
 import { mobileProfile } from './helpers/mobileProfile'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
@@ -9,8 +10,47 @@ const profiles = [
   { name: 'desktop', options: { viewport: { width: 1440, height: 900 } } },
 ]
 const cardSelector = '[data-testid^="travel-card-pagination-3441-"]:not([data-testid$="-safety-menu"])'
+const ACCOUNT_AVATAR_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+)
 
 type ListProbe = { page2Requests: number; allowPage2: boolean; failFirstPage: boolean; page1Requests: number }
+
+// The default suite is a guest. This list is the signed-in author's, so the
+// spec opens its own cookie session instead of depending on storageState.
+async function ensureAuthorSession(page: Page) {
+  const email = process.env.E2E_EMAIL?.trim()
+  const password = process.env.E2E_PASSWORD?.trim()
+  expect(Boolean(email && password), 'author pagination needs E2E_EMAIL and E2E_PASSWORD').toBe(true)
+  const response = await page.request.post('/api/user/login/', { data: { email, password } })
+  expect(response.ok(), `local author login HTTP ${response.status()}`).toBe(true)
+  const json = await response.json() as { id?: unknown; name?: unknown; email?: unknown; is_superuser?: unknown }
+  const userId = json.id != null ? String(json.id) : ''
+  expect(userId, 'login payload includes id').not.toBe('')
+  await page.addInitScript((metadata: { userId: string; userName: string; isSuperuser: string }) => {
+    window.localStorage.removeItem('secure_userToken')
+    window.localStorage.removeItem('secure_refreshToken')
+    window.localStorage.setItem('userId', metadata.userId)
+    window.localStorage.setItem('userName', metadata.userName)
+    window.localStorage.setItem('isSuperuser', metadata.isSuperuser)
+  }, {
+    userId,
+    userName: String(json.name ?? json.email ?? '').trim(),
+    isSuperuser: json.is_superuser ? 'true' : 'false',
+  })
+  await ensureCurrentTermsAccepted(page.request, { allowWrite: true })
+}
+
+// The signed-in account points at an avatar file the local media store does
+// not have. The profile header requests that file at the 96 and 160 slots.
+// Pagination does not own the file, so the browser gets a placeholder.
+async function stubMissingAccountAvatar(page: Page) {
+  await page.route(url => url.pathname.startsWith('/avatar/'), async route => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    return route.fulfill({ status: 200, contentType: 'image/png', body: ACCOUNT_AVATAR_PNG })
+  })
+}
 
 async function interceptAuthorList(page: Page, probe: ListProbe) {
   let template: Record<string, unknown> | undefined
@@ -46,6 +86,12 @@ async function interceptAuthorList(page: Page, probe: ListProbe) {
         slug: `pagination-3441-${number}`,
         url: `/travels/pagination-3441-${number}`,
         name: `Pagination route ${number}`,
+        // Local S3 does not have the real cover. Leave the slot empty so the
+        // fixture does not log a 404 for media that was never part of the case.
+        media: null,
+        travel_image_thumb_url: null,
+        travel_image: null,
+        gallery: [],
       }
     })
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, total: 45, count: 45 }) })
@@ -88,11 +134,13 @@ for (const profile of profiles) {
       expect(apiUrl.protocol).toBe('http:')
       expect(apiUrl.port).toBe('8000')
       await preacceptCookies(page)
+      await ensureAuthorSession(page)
     })
 
     test('persistent footer, repeated 503, same-page retry appends 20 → 40 cards', async ({ page }, info) => {
       const probe: ListProbe = { page2Requests: 0, allowPage2: false, failFirstPage: false, page1Requests: 0 }
       const errors = captureErrors(page)
+      await stubMissingAccountAvatar(page)
       await interceptAuthorList(page, probe)
       await gotoWithRetry(page, '/profile')
       const cards = page.locator(cardSelector)
@@ -132,6 +180,7 @@ for (const profile of profiles) {
     test('empty first-page error keeps its existing retry and no next-page footer', async ({ page }, info) => {
       const probe: ListProbe = { page2Requests: 0, allowPage2: false, failFirstPage: true, page1Requests: 0 }
       const errors = captureErrors(page)
+      await stubMissingAccountAvatar(page)
       await interceptAuthorList(page, probe)
       await gotoWithRetry(page, '/profile')
       const retry = page.getByRole('button', { name: 'Повторить', exact: true })
