@@ -142,6 +142,7 @@ const QUEST_COVERS = [
   { quest_id: 'kaliningrad-kant-bridges', assetsDir: 'kaliningradKantBridges', cover: 'cover.png' },
   { quest_id: 'munich-devils-footstep', assetsDir: 'munichDevilsFootstep', cover: 'cover.png' },
   { quest_id: 'bremen-town-musicians', assetsDir: 'bremenTownMusicians', cover: 'cover.png' },
+  { quest_id: 'krakow-nothing-twice', assetsDir: 'krakowNothingTwice', cover: 'cover.png' },
 ];
 
 function getMime(filePath) {

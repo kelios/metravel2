@@ -396,6 +396,7 @@ const QUESTS = [
     { questId: 'bydgoszcz-winter-hejnal', dir: 'bydgoszczWinterHejnal', finaleId: 284 },
     { questId: 'vyborg-viipuri-modern', dir: 'vyborgViipuriModern', finaleId: 289 },
     { questId: 'vyborg-castle-legends', dir: 'vyborgCastleLegends', finaleId: 290 },
+    { questId: 'krakow-nothing-twice', dir: 'krakowNothingTwice', finaleId: 362 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
