@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act, cleanup } from '@testing-library/react-native';
+import { render, renderHook, waitFor, act, cleanup } from '@testing-library/react-native';
 import React from 'react';
 import { QueryClientContext } from '@tanstack/react-query';
 
@@ -63,6 +63,46 @@ describe('useTravelFormData', () => {
       );
     };
   };
+
+  it('keeps loaded travel fields when the first visible step fills the visit date on mount', async () => {
+    let storedTravel = {
+      id: 123, userIds: '42', name: 'Existing trip', description: '<p>Original</p>',
+      categories: [3], transports: [7], year: 2025,
+    };
+    (fetchTravel as jest.Mock).mockImplementation(async () => storedTravel);
+    (saveFormData as jest.Mock).mockImplementation(async data => {
+      storedTravel = { ...storedTravel, ...data };
+      return storedTravel;
+    });
+    type Editor = ReturnType<typeof useTravelFormData>;
+    let editor!: Editor;
+    function Step({ form: { formData, setFormData } }: { form: Editor }) {
+      React.useEffect(() => {
+        if (!formData.visitedDate) {
+          setFormData(current => ({ ...current, visitedDate: '2025-06-12' }));
+        }
+      }, [formData.visitedDate, setFormData]);
+      return null;
+    }
+    function EditorScreen() {
+      editor = useTravelFormData(baseOptions);
+      return editor.isInitialLoading ? null : React.createElement(Step, { form: editor });
+    }
+
+    const screen = await render(React.createElement(EditorScreen));
+    await waitFor(() => expect(editor.formData.visitedDate).toBe('2025-06-12'));
+    const expected = {
+      name: 'Existing trip', description: '<p>Original</p>', categories: ['3'],
+      transports: ['7'], year: '2025', visitedDate: '2025-06-12',
+    };
+    expect(editor.formData).toMatchObject(expected);
+    await act(async () => { await editor.handleManualSave(); });
+    expect((saveFormData as jest.Mock).mock.calls[0][0]).toMatchObject(expected);
+    await screen.unmount();
+    await render(React.createElement(EditorScreen));
+    await waitFor(() => expect(editor.isInitialLoading).toBe(false));
+    expect(editor.formData).toMatchObject(expected);
+  });
 
   it('sets loadError when travel does not exist', async () => {
     (fetchTravel as jest.Mock).mockRejectedValue(new ApiError(404, 'Not found'));

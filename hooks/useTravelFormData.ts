@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useContext } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useContext } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { QueryClientContext } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
@@ -119,7 +119,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [authReady, formState, hasUserInteracted, initialFormData, initialPrefill,
     isNew, isPrefillInitialized, prefillPending]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     formDataRef.current = formState.data;
     // Запоминаем id, присвоенный сервером при создании нового travel, пока URL
     // ещё в режиме "new" — по нему load-эффект пропустит лишнюю перезагрузку,
@@ -230,6 +230,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         };
 
         setTravelDataOld(travelData);
+        // A step can fill a field as soon as it mounts (e.g. the visit date).
+        formDataRef.current = finalData;
         formState.reset(finalData);
         setMarkers(markersFromData);
         // Данные поездки в форме — с этого момента автосейв безопасен.
