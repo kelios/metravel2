@@ -21,10 +21,12 @@ const returnScrollHoldMs = 800
 const returnScrollCorrections = 8
 
 type ScrollHost = ScrollViewInstance & { getScrollableNode?: () => unknown }
+type ViewBlurEvent = Parameters<NonNullable<React.ComponentProps<typeof View>['onBlur']>>[0]
 
 function scrollableNode(host: ScrollHost | null): HTMLElement | null {
-  const node = host?.getScrollableNode?.() ?? host
-  return node && typeof (node as HTMLElement).scrollTop === 'number' ? node as HTMLElement : null
+  const node: unknown = host?.getScrollableNode?.() ?? host
+  if (!node || typeof (node as { scrollTop?: unknown }).scrollTop !== 'number') return null
+  return node as HTMLElement
 }
 
 function ensureScrollAnchorOptOut() {
@@ -278,8 +280,8 @@ export function PlacesWindowedGrid({ places, columns, parentTop, firstScreenCoun
         {...(Platform.OS === 'web' ? {
           dataSet: { placesRow: row.key },
           onFocus: () => rememberFocus(row.key),
-          onBlur: (event: { nativeEvent?: { relatedTarget?: unknown } }) => {
-            const next = focusRowKey(event.nativeEvent?.relatedTarget)
+          onBlur: (event: ViewBlurEvent) => {
+            const next = focusRowKey((event.nativeEvent as { relatedTarget?: unknown }).relatedTarget)
             if (next) rememberFocus(next)
             else scheduleFocusClear()
           },
