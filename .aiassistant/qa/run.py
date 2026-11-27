@@ -1,4 +1,4 @@
-"""Run one guest-only local Gemma browser QA batch; every result needs teacher review."""
+"""Run one guest-only local visual-model QA batch; every result needs teacher review."""
 import argparse
 import contextlib
 from datetime import datetime, timezone
@@ -19,6 +19,7 @@ MCP = Path.home() / 'metravel-ai/tools/playwright-mcp/node_modules/@playwright/m
 MCP_VERSION = '0.0.86'
 STEPS = 24
 SECONDS = 600
+QA_BACKENDS = ('gemma', 'qwen-vl')
 REFERENCE = ROOT / '.codex/skills/metravel-local-apprentice/references/browser-qa.md'
 
 
@@ -77,9 +78,11 @@ def require_quality_owner(root=ROOT, parent_pid=None):
         raise RuntimeError('Use the canonical quality-gate wrapper with name local-browser-qa; do not run a second gate.')
 
 
-def build_configs(original, output, viewport, executable, *, root=ROOT, node=NODE):
+def build_configs(original, output, viewport, executable, *, backend='gemma', root=ROOT, node=NODE):
+    if backend not in QA_BACKENDS:
+        raise ValueError('Choose an explicitly supported local visual QA backend.')
     output = output.resolve()
-    config = student.build_profile(original, 'gemma', 'code')
+    config = student.build_profile(original, backend, 'code')
     model = config['provider']['local-qwen']['models']['metravel-local']
     model.update({'attachment': True, 'reasoning': False,
                   'modalities': {'input': ['text', 'image'], 'output': ['text']}})
@@ -158,7 +161,7 @@ def execute(args):
         raise RuntimeError('The installed local OpenCode runtime is missing.')
     output = new_output()
     (output / 'browser').mkdir()
-    config, browser = build_configs(launcher.profile(), output, args.viewport, browser_executable())
+    config, browser = build_configs(launcher.profile(), output, args.viewport, browser_executable(), backend=args.backend)
     prompt = prompt_text(args.scope, args.viewport, read_assignment(args.prompt) if args.prompt else None)
     for name, value in (('browser.json', browser), ('opencode.json', config)):
         (output / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -167,10 +170,11 @@ def execute(args):
     if args.config_only:
         print(output / 'opencode.json')
         return 0
-    if not student.is_ready('gemma'):
-        raise RuntimeError('Local Gemma at 127.0.0.1:18091 is not ready; the teacher must start it. No fallback was used.')
+    port, label = student.BACKENDS[args.backend]
+    if not student.is_ready(args.backend):
+        raise RuntimeError(f'{label} at 127.0.0.1:{port} is not ready; the teacher must start it. No fallback was used.')
     command = [str(launcher.CLI), 'run', '--format', 'json', '--agent', 'local-web-qa',
-               '--model', student.MODEL, '--title', 'Gemma guest QA ' + args.viewport]
+               '--model', student.MODEL, '--title', args.backend + ' guest QA ' + args.viewport]
     inventory = receipts.EvidenceInventory()
     code = 1
     started = time.monotonic()
@@ -192,7 +196,7 @@ def execute(args):
         raise
     finally:
         receipt, final_text = inventory.finish(output, code)
-        receipt.update({'backend': 'gemma', 'endpoint': 'http://127.0.0.1:18091/v1',
+        receipt.update({'backend': args.backend, 'endpoint': f'http://127.0.0.1:{port}/v1',
                         'playwright_mcp_version': MCP_VERSION, 'viewport': args.viewport,
                         'started_utc': started_utc, 'elapsed_seconds': round(time.monotonic() - started, 3),
                         'scope': args.scope, 'output': str(output)})
@@ -204,6 +208,7 @@ def execute(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--backend', choices=QA_BACKENDS, default='gemma')
     parser.add_argument('--viewport', choices=('mobile', 'desktop'), default='mobile')
     parser.add_argument('--scope', default='Гостевая навигация, поиск и одно интерактивное состояние.')
     parser.add_argument('--prompt', help='Optional teacher assignment in ignored .codex-temp; never credentials.')

@@ -98,6 +98,24 @@ class ConfigTests(unittest.TestCase):
                 qa.new_output(root)
             self.assertEqual(list(Path(elsewhere).iterdir()), [])
 
+    def test_candidate_keeps_browser_authority_and_selects_only_its_local_endpoint(self):
+        output = qa.ROOT / '.codex-temp/local-web-qa/unit-fixture'
+        original = original_profile()
+        baseline, browser = qa.build_configs(original, output, 'mobile', Path('/installed/chromium'))
+        candidate, candidate_browser = qa.build_configs(original, output, 'mobile', Path('/installed/chromium'),
+                                                        backend='qwen-vl')
+        self.assertEqual(candidate_browser, browser)
+        for key in ('permission', 'mcp', 'agent', 'instructions'):
+            self.assertEqual(candidate[key], baseline[key])
+        provider = candidate['provider']['local-qwen']
+        self.assertEqual(provider['options']['baseURL'], 'http://127.0.0.1:18092/v1')
+        self.assertEqual(candidate['enabled_providers'], ['local-qwen'])
+        self.assertEqual(provider['models']['metravel-local']['limit'],
+                         baseline['provider']['local-qwen']['models']['metravel-local']['limit'])
+        for unsupported in ('current', 'coder', 'cloud', 'unknown'):
+            with self.assertRaises(ValueError):
+                qa.build_configs(original, output, 'mobile', Path('/installed/chromium'), backend=unsupported)
+
     def test_output_cannot_follow_a_symlink_into_tracked_paths_even_inside_the_root(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -154,7 +172,7 @@ class ConfigTests(unittest.TestCase):
             cli = output / 'opencode'
             cli.touch()
             launcher = SimpleNamespace(CLI=cli, profile=original_profile)
-            args = SimpleNamespace(config_only=True, viewport='mobile', scope='Navigation', prompt=None)
+            args = SimpleNamespace(config_only=True, backend='gemma', viewport='mobile', scope='Navigation', prompt=None)
             with patch.object(qa, 'runtime_dependencies'), patch.object(qa, 'REFERENCE', reference), \
                  patch.object(qa, 'new_output', return_value=output), \
                  patch.object(qa, 'browser_executable', return_value=Path('/installed/chromium')), \
@@ -175,7 +193,7 @@ class ConfigTests(unittest.TestCase):
             cli.touch()
             (output / 'state.yml').write_text('Observed page')
             launcher = SimpleNamespace(CLI=cli, profile=original_profile)
-            args = SimpleNamespace(config_only=False, viewport='mobile', scope='Navigation', prompt=None)
+            args = SimpleNamespace(config_only=False, backend='qwen-vl', viewport='mobile', scope='Navigation', prompt=None)
             def fake_run(command, prompt, env, cwd, **limits):
                 self.assertEqual(env['LOCAL_QA_OUTPUT'], str(output))
                 self.assertEqual(limits, {'max_steps':24, 'deadline_seconds':600, 'grace_seconds':16})
@@ -199,6 +217,8 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(receipt['site_verdict'], 'NOT_EVALUATED')
             self.assertTrue(receipt['teacher_review_required'])
             self.assertEqual(receipt['completion'], 'report_ready_for_review')
+            self.assertEqual(receipt['backend'], 'qwen-vl')
+            self.assertEqual(receipt['endpoint'], 'http://127.0.0.1:18092/v1')
 
 
 class ReceiptTests(unittest.TestCase):

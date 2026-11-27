@@ -20,6 +20,7 @@ BACKENDS = {
     'current': (18088, 'Qwen3.8-27B Q3_K_XL local'),
     'coder': (18089, 'Qwen3-Coder-30B-A3B Q3_K_M local'),
     'gemma': (18091, 'Gemma4-12B QAT local'),
+    'qwen-vl': (18092, 'Qwen3-VL-8B Instruct Q8 local'),
 }
 WRITES = tuple(f'metravel_task_board_metravel_{kind}_{action}'
                for kind in ('task', 'sprint') for action in ('create', 'update', 'delete'))
@@ -139,7 +140,7 @@ def run_supervised(command, prompt, env, cwd, *, deadline_seconds=600, grace_sec
 def build_profile(original, backend='current', kind='code'):
     """Pure selection: no source mutation, service startup, file writes or inference."""
     if backend not in BACKENDS or kind not in ('code', 'cover'):
-        raise ValueError('Choose backend current/coder/gemma and kind code/cover.')
+        raise ValueError('Choose backend ' + '/'.join(BACKENDS) + ' and kind code/cover.')
     config = copy.deepcopy(original)
     try:
         provider = config['provider']['local-qwen']
