@@ -64,9 +64,9 @@ class EventBudget:
         return {'steps': self.steps, 'tools': self.tools, 'same_lookup': self.same_lookup}
 
 
-def run_supervised(command, prompt, env, cwd, *, deadline_seconds=600, grace_seconds=5):
+def run_supervised(command, prompt, env, cwd, *, deadline_seconds=600, grace_seconds=5, max_steps=16):
     """Supervise only this CLI process group; never signal the shared model service."""
-    budget = EventBudget()
+    budget = EventBudget(max_steps=max_steps)
     stopped = []
     state_lock, termination_lock = threading.Lock(), threading.Lock()
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

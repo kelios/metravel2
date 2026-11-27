@@ -71,6 +71,12 @@ Stay within the measured context budget: read the chosen files and instructions
 on demand, not all skills or the whole repository. A denied/unavailable tool is
 an explicit limitation, not permission to bypass a hook or invent its result.
 
+## Browser QA assignments
+
+Load [the browser QA reference](references/browser-qa.md) for a website-testing
+assignment. Use its separate browser profile, actual action/image evidence and
+coverage limits; the ordinary coding profile does not acquire browser tools.
+
 ## Inspect, teach and deliver
 
 1. Preserve the student's first complete output and diff before teacher edits.

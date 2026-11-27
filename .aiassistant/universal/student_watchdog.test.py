@@ -94,6 +94,19 @@ class WatchdogTests(unittest.TestCase):
         self.assertEqual(rows[-1]['reason'], 'step_limit')
         self.assertEqual(rows[-1]['counts']['steps'], 17)
 
+    def test_qa_can_allow_twenty_four_steps_but_still_hard_stops_the_twenty_fifth(self):
+        event = json.dumps({'type':'step_start','part':{'type':'step-start'}})
+        source = f'import sys\nsys.stdin.read()\nfor _ in range(24): print({event!r},flush=True)\n'
+        code, output, _ = self.run_fake(source, max_steps=24)
+        self.assertEqual(code, 0)
+        self.assertNotIn('budget_stop', output)
+        source = source.replace('range(24)', 'range(25)')
+        code, output, _ = self.run_fake(source, max_steps=24)
+        self.assertEqual(code, 124)
+        receipt = json.loads(output.splitlines()[-1])
+        self.assertEqual(receipt['reason'], 'step_limit')
+        self.assertEqual(receipt['counts']['steps'], 25)
+
     def test_deadline_kills_its_term_ignoring_descendant_but_not_an_unrelated_process(self):
         with tempfile.TemporaryDirectory() as directory:
             marker = Path(directory) / 'orphan-was-alive'
