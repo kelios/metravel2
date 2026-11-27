@@ -70,10 +70,13 @@ llama-server -m ~/metravel-ai/models/downloads/qwen3-vl-8b/Qwen3VL-8B-Instruct-Q
   --mmproj ~/metravel-ai/models/downloads/qwen3-vl-8b/mmproj-Qwen3VL-8B-Instruct-F16.gguf \
   --host 127.0.0.1 --port 18092 --alias metravel-local -c 32768 -np 1 -ngl 99 \
   --reasoning off --cache-ram 0 --sleep-idle-seconds 1 \
+  --image-min-tokens 1024 \
   --temp 0.7 --top-p 0.8 --top-k 20 --presence-penalty 1.5 --repeat-penalty 1.0
 ```
 
 Для сравнения сначала заморозь одинаковые задания, версии обвязки и ревизию сайта.
+`--image-min-tokens 1024` следует предупреждению llama.cpp для Qwen-VL grounding;
+смену параметров после первой попытки отмечай отдельно и сохраняй исходный результат.
 Запускай обе модели по очереди без индивидуальных подсказок; сравнивай фактические
 действия и ошибки с отчётом. CLI0 и самоприсвоенный PASS не доказывают превосходство.
 
