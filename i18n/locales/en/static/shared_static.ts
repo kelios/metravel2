@@ -241,7 +241,7 @@ export const sharedStaticResources = {
   "appDownload.appStore.a11y": "Download the MeTravel app on the App Store",
   "appDownload.googlePlay.label": "Get it on Google Play",
   "appDownload.googlePlay.a11y": "Get the MeTravel app on Google Play",
-  "appDownload.page.seoTitle": "MeTravel app for iPhone and Android | Download",
+  "appDownload.page.seoTitle": "App for iPhone and Android | MeTravel",
   "appDownload.page.seoDescription": "Download the MeTravel mobile app for iPhone and Android: a map of places and routes, city quests and offline guides. Free on the App Store and Google Play.",
   "appDownload.page.heroSubtitle": "Places map, city quests and guides — offline, with saved favorites. The app is available for iPhone, iPad and Android.",
   "appDownload.page.platformNote": "iOS 16.4+ · Android 8.0+ · free",

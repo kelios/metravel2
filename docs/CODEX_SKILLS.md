@@ -30,6 +30,7 @@ catalog по frontmatter `description`.
 - Board/backend/docs: `problem-memory`, `task-contract`, `ticket-board`,
   `sprint-reviewer`, `backend-diagnostician`, `docs-maintainer`,
   `prompt-maintainer`.
+- Supervised local development: `local-apprentice`.
 - Local LLM: `llm-training`, `llm-evaluation` — общие навыки: исходник лежит в
   `.claude/skills/metravel-llm-*` (виден Claude-сессиям через Skill), Codex и
   Grok читают зеркало `.agents/skills/` от `npm run sync:agent-skills` (#3269).
@@ -61,7 +62,7 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-ios-architect`, `$metravel-ios-designer`,
 `$metravel-ios-developer`, `$metravel-ios-release-operator`,
 `$metravel-ios-reviewer`, `$metravel-ios-tester`, `$metravel-map-expert`,
-`$metravel-llm-training`, `$metravel-llm-evaluation`,
+`$metravel-llm-training`, `$metravel-llm-evaluation`, `$metravel-local-apprentice`,
 `$metravel-mobile-tester`, `$metravel-performance-analyst`,
 `$metravel-play-campaign-tester`, `$metravel-problem-memory`,
 `$metravel-production-smoke`, `$metravel-profile-expert`,

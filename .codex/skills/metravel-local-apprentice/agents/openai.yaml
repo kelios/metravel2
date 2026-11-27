@@ -1,0 +1,4 @@
+interface:
+  display_name: "MeTravel Local Apprentice"
+  short_description: "Supervise useful local model work and grade its actual result."
+  default_prompt: "Use $metravel-local-apprentice to assign bounded real work to a selected local model, inspect its evidence, grade the first result and finish useful work under supervision."

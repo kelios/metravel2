@@ -1,0 +1,446 @@
+{
+  "agent": {
+    "achievements-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Фича achievements/badges: значки, ранги, XP, peer-награды. `api/achievements*.ts`, `hooks/useAchievementsApi.ts`, `components/achievements/**`, встройки в profile/user/AuthorCard. Триггеры: «почини бейдж», «ранг не считается», «peer-награда не тогглится». Контент нового значка — скилл metravel-badge, QA в браузере — metravel-achievements-audit.",
+      "prompt": "Read the full canonical role contract `.claude/agents/achievements-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "android-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Реализация Android-части MeTravel: Platform-ветвление, карта WebView+Leaflet, expo-модули, push, native-навигация и web-only код в native-бандле. Device QA передаёт tester после review.",
+      "prompt": "Read the full canonical role contract `.claude/agents/android-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "android-publisher": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Оператор Android release: local signed Gradle AAB, versionCode, dry-run и Google Play API без EAS. Для «собери/залей версию»; production и closed-testing tracks разделены.",
+      "prompt": "Read the full canonical role contract `.claude/agents/android-publisher.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "app-review-director": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Готовит сценарии и снимает видео для Apple App Review на подключённых физическом iPhone и iPad по точному TestFlight-кандидату: регистрация одноразового аккаунта, вход reviewer, жалоба/блокировка, удаление аккаунта, гостевые и основные сцены. Для «сними видео для Apple», «подготовь сцены App Review». Монтаж, Reply/Notes и ASC не трогает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/app-review-director.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "app-review-packager": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Собирает и проверяет пакет для Apple App Review по точному iOS-кандидату: покрытие сцен демо-видео, scene manifest, готовность вложения/ссылки, согласованность Reply/Notes с доказательствами. Для «хватит ли материалов Apple», «что не снято», «проверь пакет перед submit». Не записывает, не монтирует, ASC не трогает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/app-review-packager.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "backend-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Бэкенд MeTravel (Django/DRF/PostGIS): диагностирует API и выполняет порученные area=back задачи в каноническом backend-репозитории. Для багов API, моделей, миграций и серверной части спринта.",
+      "prompt": "Read the full canonical role contract `.claude/agents/backend-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "backend-status-sync": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only сверка area=back тикетов с backend origin/master и production probes: verified fixes и разблокировки frontend. Для «что сделал бэкенд»/«сверь очередь»; board writes передаёт ticket-board.",
+      "prompt": "Read the full canonical role contract `.claude/agents/backend-status-sync.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "board-reviewer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Принимает задачи в testing по Task Contract и runtime evidence. Обновляет статус карточки по результату, закрывает спринт по отдельному запросу.",
+      "prompt": "Read the full canonical role contract `.claude/agents/board-reviewer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "browser-reviewer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Testing-only browser QA для уже отревьюенного UI: real flow, screenshot, console и network evidence; feature code не правит.",
+      "prompt": "Read the full canonical role contract `.claude/agents/browser-reviewer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "code-review-gate": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Проверяет полный frontend diff перед QA. Без тикета возвращает вердикт в чат; в цикле карточки фиксирует вердикт и выполняет переход review → testing после commit/push.",
+      "prompt": "Read the full canonical role contract `.claude/agents/code-review-gate.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "db-backup": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Оператор production DB backup: dump, integrity/freshness и restore в отдельную test DB через project script. Для «сделай/проверь бэкап»; production restore и schema changes не выполняет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/db-backup.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "dev-deployer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Деплой web frontend на dev 192.168.50.36 только через build-dev.sh. Для «задеплой/обнови dev» или dev 404/502; production, native builds и владельческую инфру не трогает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/dev-deployer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "dev-loop": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Автономный прогон цикла разработка→code-level test→багфикс до зелёного baseline. Runtime/e2e/device QA передаёт testing после review.",
+      "prompt": "Read the full canonical role contract `.claude/agents/dev-loop.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "evidence-editor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Монтирует существующие UI-записи через ffmpeg: cuts, таймкоды, privacy masks, source hashes и проверенный экспорт; приложение не управляет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/evidence-editor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "film-editor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Пересобирает travel-фильм MeTravel по плану правок: вырезки, перебивки из исходников, сведение и громкость звука, экспорт и его проверка. Для «отредактируй видео», «исправь монтаж», «почини звук в ролике».",
+      "prompt": "Read the full canonical role contract `.claude/agents/film-editor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "film-narrator": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Автор закадрового текста travel-фильмов MeTravel: пишет плавную и осмысленную озвучку голосом владельца — доозвучку немых моментов, связки между сценами, «ранее», крючки и итог дня, — так, чтобы фраза продолжала живую речь, а не подписывала картинку. Для «напиши озвучку», «перепиши доозвучку», «сделай связки»; сцены, монтаж и запись голоса не делает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/film-narrator.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "film-reviewer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Независимая рецензия сценария, изменённого плана монтажа или экспорта travel-фильма MeTravel. Проверяет очередь черновиков и записывает оценки в журнал допуска к сборке.",
+      "prompt": "Read the full canonical role contract `.claude/agents/film-reviewer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "film-screenwriter": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Сценарист-режиссёр travel-фильмов MeTravel: по исходникам дня, расшифровке и листам кадров пишет полный сценарий серии — какая сцена, какой файл и отрезок, зачем, — и файл фраз для голоса владельца. Для «напиши сценарий серии», «расставь сцены», «собери историю фильма»; монтаж и рендер не делает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/film-screenwriter.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "frontend-deployer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Деплой web-фронтенда на прод metravel.by одной командой `scripts/deploy-prod.sh <sha>` (изолированный worktree → `build-prod.sh prod`: SSR-экспорт → guard’ы → `web-ssr-publication.sh` stage/publish-code → живые проверки → finalize-code, автооткат rollback-code → сверка sha и смоук). Откат — `rollback-code` или `ALLOW_DOWNGRADE=1`, recovery-скрипта нет. Бэкенд не деплоит.",
+      "prompt": "Read the full canonical role contract `.claude/agents/frontend-deployer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "growth-analyst": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Еженедельный «Дайджест роста» и месячное ревью metravel.by. Дайджест содержит 5 подтверждённых метрик, 3 находки и 3 вопроса владельцу. Триггеры: «дайджест роста», «проанализируй рост», «месячный ревью».",
+      "prompt": "Read the full canonical role contract `.claude/agents/growth-analyst.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "guard-enforcer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Проверяет назначенный guard и чинит доказанный механизм в его scope. Для конкретного guard failure; полный аудит — только по соответствующему запросу.",
+      "prompt": "Read the full canonical role contract `.claude/agents/guard-enforcer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "index-doctor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Диагностика и исправление Google indexing для статей автора 1: GSC URL Inspection, thin/meta/noindex/404. Для «почему статья не в индексе»; фото не трогает, slug только с 301.",
+      "prompt": "Read the full canonical role contract `.claude/agents/index-doctor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-creator": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Готовит связные истории, карусели и Reels @metravelby по проверенным источникам: личный дневник, приглашение в квест или реальный сценарий сайта. Используй для «напиши пост», «собери карусель», «перепиши пакет»; публикацией не занимается.",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-creator.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-editor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Оператор @metravelby: репетиция загрузки, постановка в расписание и публикация принятого пакета, недельные метрики и чистка подписчиков. Публикация или изменение слота — по команде владельца на конкретный пост и день.",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-editor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-planner": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Content Planner Instagram @metravelby: выбирает тему под слот недельной сетки, сезон, праздники и повторы; подбирает кандидатов из статей автора 1 и квестов; пишет brief.md и строку календаря. Факты, фото, подпись и ревью не делает. Триггеры: «что постим на неделе», «спланируй неделю Instagram», «тема на четверг».",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-planner.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-researcher": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Research & Article Editor Instagram @metravelby: читает статью автора 1 или квест целиком, выписывает факты с цитатой-источником в sources.md, проверяет внешние факты по авторитетным источникам, предлагает фактические правки статьи без переписывания личной истории. Фото, подпись, слайды не делает. Триггеры: «собери факты для поста», «проверь статью перед постом».",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-researcher.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-text-editor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Литературный редактор постов @metravelby: читает подпись, слайды, титры и кадры истории и ставит восемь оценок текста, каждая не ниже 8. Используй между instagram-creator и instagram-visual-qa, для «проверь текст поста», «текст звучит как ИИ», «вычитай подпись». Пишет text-review.md, пакет не правит.",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-text-editor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "instagram-visual-qa": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Независимый ревьюер постов @metravelby: сначала оценивает пост как посторонний читатель (есть ли смысл, кому полезен, какие ассоциации, визуал, раскладка и читаемость, последовательность, единство шаблона), потом проверяет факты, голос, права и правила ТЗ. Используй для «проверь пост», «QA поста», «отредактируй пакет»; пишет вердикт, не публикует.",
+      "prompt": "Read the full canonical role contract `.claude/agents/instagram-visual-qa.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-analyst": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only аналитик iPhone/App Store scope, acceptance, compliance, metadata и owner actions. Для требований релиза, App Review риска или разбиения iOS-эпика.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-analyst.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-architect": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only iPhone architect: shared/iOS boundaries, Apple capabilities, dependencies, task slices, risks and simulator/device/TestFlight validation. Для design и release planning.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-architect.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-deployer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Оператор iPhone build/TestFlight/App Store: environment, signed build, upload, review и release. Каждый mutating stage требует отдельной точной авторизации; продуктовый код не пишет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-deployer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-designer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Code/design-only iPhone UI/HIG audit: safe area, touch targets, Dynamic Type, themes, accessibility и assets; simulator/device visual QA передаёт testing.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-designer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Разработчик iPhone/shared source: iOS files, Xcode contracts, Keychain, Apple auth, APNs, links, permissions, maps/media и safe area. Simulator/device QA передаёт testing.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-reviewer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Независимый code-only review-and-fix iOS/shared diff: Expo/Xcode contracts, privacy, auth/storage, links/APNs, i18n/a11y и regressions. Runtime QA выполняет ios-tester в testing.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-reviewer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ios-tester": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only iPhone QA на simulator, physical device или exact TestFlight build. Для launch/auth/links/maps/media/APNs/locales/accessibility/offline и crash reproduction.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ios-tester.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "llm-judge": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Независимая смысловая оценка ответов metravel-llm: условия запроса, факты карточек, язык и регрессии версий. Для приёмки модели и разбора сырых/показанных ответов.",
+      "prompt": "Read the full canonical role contract `.claude/agents/llm-judge.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "llm-trainer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Подготовка наборов, локальное MLX-обучение и GGUF-кандидаты metravel-llm. Для смесей, replay, утечек оценки, памяти обучения и продолжения версии модели.",
+      "prompt": "Read the full canonical role contract `.claude/agents/llm-trainer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "local-model-apprentice": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Ученик на выбранной локальной модели: выполняет небольшое задание MeTravel с файлами, тестами или FLUX и передаёт исходный результат учителю для независимой оценки и доведения до приёмки.",
+      "prompt": "Read the full canonical role contract `.claude/agents/local-model-apprentice.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "map-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Карта и places: MapPage, Leaflet/WebView, markers, clusters, routes и PlacePopupCard. Для серой карты, маркеров, попапов и route UI; travel/quest/backend остаются у владельцев.",
+      "prompt": "Read the full canonical role contract `.claude/agents/map-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "metravel-seo-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "SEO-аудит и SEO-слой статей автора 1: title/meta, лид-сниппет, internal links, FAQ-разметка, traffic priority. Для «SEO-аудит статей», «почини сниппет»; новую прозу в теле передаёт travel-writer; guest content, slug и фото не меняет, факты не выдумывает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/metravel-seo-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "play-tester": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Ежедневный USB Android pass приложений closed-testing из campaign config: interaction, screenshots, crashes, community assignments и LOG. Только пока кампания активна.",
+      "prompt": "Read the full canonical role contract `.claude/agents/play-tester.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "play-update-watcher": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Страж обновлений active Google Play closed-testing campaign: versionCode, Play Store update, launch и LOG. Для «проверь обновления» на USB Android; после закрытия кампании ничего не меняет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/play-update-watcher.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "problem-memory": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only history preflight перед create/reopen/split: сверяет Problem Memory и весь board, возвращает reuse/reopen/create-linked/create-new. Карточки не мутирует.",
+      "prompt": "Read the full canonical role contract `.claude/agents/problem-memory.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "prod-job-supervisor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Супервизор долгих production jobs: chunks, cursor checkpoint, resume, watchdog и completion marker. Для backfill/миграций, которые должны пережить SSH/restart; код фич и deploy не владеет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/prod-job-supervisor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "prod-smoke": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only production smoke metravel.by: pages, API shape, static assets и sitemap. Для post-deploy check, 502/white-screen и «сайт упал?»; production не мутирует.",
+      "prompt": "Read the full canonical role contract `.claude/agents/prod-smoke.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "profile-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Эксперт profile/settings: private/public profile, tabs, counters, forms и feature embeds. Для редизайна/багов профиля, settings split и новых profile sections.",
+      "prompt": "Read the full canonical role contract `.claude/agents/profile-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "qa-ux-reviewer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Исследует MeTravel как пользователь на web, Android Emulator или iOS Simulator. Воспроизводит дефекты, фиксирует UX-препятствия и по запросу ведёт находки на MCP-борд.",
+      "prompt": "Read the full canonical role contract `.claude/agents/qa-ux-reviewer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "quest-editor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Редактор контента существующих квестов: точки, задания, hints и answer_pattern. Для аудита/улучшения вопросов; quest UI не правит и новые квесты не создаёт.",
+      "prompt": "Read the full canonical role contract `.claude/agents/quest-editor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "quest-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Код и инструменты квестов: интерфейс, движок проверки ответа, прогресс, offline, печать, SSG, сканы и миграции. Отказы конкретного ответа по попыткам игрока разбирает quest-friction-analyst, координаты проверяет quest-geo-verifier.",
+      "prompt": "Read the full canonical role contract `.claude/agents/quest-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "quest-friction-analyst": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Разбирает трение квестов по попыткам и данным шагов. Проверяет, почему верный ответ отклонён или игрок остановился. При поручении исправить ведёт answer_pattern, рискованный шаг и варианты перевода по регламенту квеста.",
+      "prompt": "Read the full canonical role contract `.claude/agents/quest-friction-analyst.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "quest-geo-verifier": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Read-only гео-сверка quest points и геометрии маршрута через OSM/Nominatim: объект, distance, порядок, крюк. Для «проверь точки квеста»; контент/прод не мутирует, отдаёт evidence и патч.",
+      "prompt": "Read the full canonical role contract `.claude/agents/quest-geo-verifier.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "quest-translator": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Перевод одного квеста на одну локаль по заданию `quest:translate prepare` либо независимая смысловая проверка готового перевода по `*.review-task.json`. Русский источник, код и базу не трогает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/quest-translator.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "reel-animator": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Ставит сюжетные мультфильмы @metravelby: реплики Юли и Сергея, действия, реакции, отдельные видеоклипы и монтаж. Для «мультяшный рилс», «Наш день», «промпт для Grok Imagine» и проверки готового эпизода.",
+      "prompt": "Read the full canonical role contract `.claude/agents/reel-animator.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "refactor-surgeon": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Behavior-preserving split god-файлов >800 LOC на компоненты/модули. Только по явному запросу; не меняет бизнес-логику, UI, API и не выполняет попутный bugfix.",
+      "prompt": "Read the full canonical role contract `.claude/agents/refactor-surgeon.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "review-auditor": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Независимый code-only review-and-fix перед code-review-gate для изменений вне малого diff по критериям AGENTS.md. Проверяет полный task diff и повторяет static/unit/guard checks. Малый diff сразу идёт в code-review-gate.",
+      "prompt": "Read the full canonical role contract `.claude/agents/review-auditor.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "scenario-recorder": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Записывает заранее заданный UI/device-сценарий на точном build: видео, checkpoint-скрины и компактный resume checkpoint; сценарии и код не придумывает.",
+      "prompt": "Read the full canonical role contract `.claude/agents/scenario-recorder.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "seo-daily": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Ежедневная SEO-рутина metravel.by: GSC-статистика (запросы на грани топа, топ-страницы), подача 10 приоритетных URL через «Запросить индексирование» в Search Console браузером, бэкап-подача в IndexNow (Bing/Yandex). Код не правит. Триггеры: «запусти SEO-рутину», «дневной SEO-дайджест».",
+      "prompt": "Read the full canonical role contract `.claude/agents/seo-daily.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "task-author": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Legacy/fallback редактор local tasks/*.md по шаблону. Только при недоступном board или explicit migration; обычное create/update задачи идёт через ticket-board.",
+      "prompt": "Read the full canonical role contract `.claude/agents/task-author.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "test-author": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Автор Jest, Playwright и native regression tests: business assertions, deterministic fixtures, Maestro Android/iOS simulator и XCTest physical Apple-device scenarios; диагностика failing/flaky tests.",
+      "prompt": "Read the full canonical role contract `.claude/agents/test-author.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "ticket-board": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Оператор общего MCP task board: list/create/update/sync тикетов и спринтов. Для «заведи тикет», «покажи борд» или «обнови статус»; feature code не пишет.",
+      "prompt": "Read the full canonical role contract `.claude/agents/ticket-board.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "travel-book-builder": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Сборка готовых книг-фотодневников MeTravel из выбранных мест и утверждённого дизайна: страницы, фотографии, QR, печатные PDF и совпадающий предпросмотр.",
+      "prompt": "Read the full canonical role contract `.claude/agents/travel-book-builder.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "travel-book-designer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Дизайн готовых книг-фотодневников MeTravel: сравнение графики, акварели, авторского фото и фэнтези, иллюстрации мест и образцы печатных страниц для согласования.",
+      "prompt": "Read the full canonical role contract `.claude/agents/travel-book-designer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "travel-expert": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Фича travel: каталог, карточки, детали, wizard, media и export. Для travel UI/data/save bugs; общая карта, authored content и SEO принадлежат профильным агентам.",
+      "prompt": "Read the full canonical role contract `.claude/agents/travel-expert.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    },
+    "travel-writer": {
+      "mode": "subagent",
+      "model": "local-qwen/metravel-local",
+      "description": "Для делегирования: статья-путешествие автора 1 целиком — новая из папки фото или правка живой (дневник, впечатления, км/высоты, советы, фото), приём article-edits.md от instagram-researcher. Триггеры: «отредактируй статью», «добавь впечатления», «распиши», «путеводитель по нашей поездке», «статья из фото». Гостевые не правит; title/meta — metravel-seo-expert.",
+      "prompt": "Read the full canonical role contract `.claude/agents/travel-writer.md` and follow it. Follow inherited AGENTS.md; platform and localization impact are task-specific. Keep the current local model and use only tools actually available in this runtime; the source frontmatter model/tools fields describe its original runtime. Reading a role does not grant additional authority."
+    }
+  },
+  "command": {
+    "auto-dev": {
+      "description": "Одна итерация code-level разработка → проверка → фикс",
+      "template": "Read and execute the canonical command `.claude/commands/auto-dev.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "bugfix": {
+      "description": "Минимальный фикс одного подтверждённого бага с review и проверкой",
+      "template": "Read and execute the canonical command `.claude/commands/bugfix.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "changed-summary": {
+      "description": "Сводка изменений текущей ветки и их scope",
+      "template": "Read and execute the canonical command `.claude/commands/changed-summary.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "check-fast": {
+      "description": "Selective static/unit checks текущего task scope",
+      "template": "Read and execute the canonical command `.claude/commands/check-fast.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "db-backup": {
+      "description": "Снять дамп production-базы metravel.by в backup/ в корне репозитория с проверкой целостности",
+      "template": "Read and execute the canonical command `.claude/commands/db-backup.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "growth-review": {
+      "description": "Месячное ревью роста metravel.by по завершённому окну, Decision record и маршрутизация готовых задач с борда",
+      "template": "Read and execute the canonical command `.claude/commands/growth-review.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "guard-all": {
+      "description": "Guard-проверки проекта и устранение подтверждённых нарушений",
+      "template": "Read and execute the canonical command `.claude/commands/guard-all.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "instagram": {
+      "description": "Instagram @metravelby — цепочка planner → researcher → creator → visual-qa для поста или недели, постановка/публикация принятого пакета по команде владельца, недельный разбор статистики или порция чистки подписчиков (только статьи автора 1 и квесты площадки)",
+      "template": "Read and execute the canonical command `.claude/commands/instagram.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "preflight": {
+      "description": "Preflight с operation gate и правильной стадией QA",
+      "template": "Read and execute the canonical command `.claude/commands/preflight.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "review-gate": {
+      "description": "Независимое код-ревью frontend-задачи перед testing или чтение текущего diff без тикета.",
+      "template": "Read and execute the canonical command `.claude/commands/review-gate.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "seo-daily": {
+      "description": "Ежедневная SEO-рутина metravel.by либо запрошенная часть — проверки выдачи, сводка GSC и подача URL по разрешённой очереди",
+      "template": "Read and execute the canonical command `.claude/commands/seo-daily.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "split-component": {
+      "description": "Распил указанного компонента без изменения поведения",
+      "template": "Read and execute the canonical command `.claude/commands/split-component.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "task-new": {
+      "description": "Fallback при недоступном MCP-борде — локальная задача в tasks/ по шаблону 000-template.md (через агента task-author); обычная постановка — скилл metravel-issue",
+      "template": "Read and execute the canonical command `.claude/commands/task-new.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    },
+    "ticket": {
+      "description": "Прогнать frontend/backend тикет через общий MCP task board (от выбора до приёмки по правилам своей области). Аргумент — id задачи, `next`, или описание новой.",
+      "template": "Read and execute the canonical command `.claude/commands/ticket.md`. Follow its referenced instructions and inherited AGENTS.md. Use only available tools and the current local model; preserve the current user scope and applicable operation gates. Substitute the following task arguments for the canonical command arguments:\n$ARGUMENTS"
+    }
+  }
+}

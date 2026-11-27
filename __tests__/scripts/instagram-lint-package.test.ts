@@ -286,11 +286,17 @@ describe('instagram lint-package', () => {
 
   const hasFfmpeg = runCli('sh', ['-c', 'command -v ffmpeg && command -v ffprobe']).status === 0
   ;(hasFfmpeg ? it : it.skip)('flags a silent Reel unless the owner-ordered silence is recorded (F11)', () => {
-    const encode = (dir: string, audio: boolean) => runCli('ffmpeg', [
-      '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:d=16',
-      ...(audio ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-shortest', '-c:a', 'aac'] : []),
-      '-c:v', 'mpeg4', path.join(dir, 'reel.mp4'),
-    ])
+    const encode = (dir: string, audio: boolean) => {
+      const result = runCli('ffmpeg', [
+        '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:d=16',
+        ...(audio ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-shortest', '-c:a', 'aac'] : []),
+        '-c:v', 'mpeg4', path.join(dir, 'reel.mp4'),
+      ])
+      if (result.status !== 0) {
+        throw new Error(`ffmpeg fixture generation failed (${result.status}): ${result.stderr}`)
+      }
+      expect(fs.statSync(path.join(dir, 'reel.mp4')).size).toBeGreaterThan(0)
+    }
     const titles = JSON.stringify({ format: 'reel', segments: [{ text: 'Касина-Велька: круг 11,5 км', dur: 3 }] })
     const f11 = (dir: string) => lint(dir).hits.filter((h: { rule: string }) => h.rule === 'F11')
       .map((h: { message: string }) => h.message)

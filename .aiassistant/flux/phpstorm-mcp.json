@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "local-flux": {
+      "command": "/Users/juliasavran/metravel-ai/tools/flux-mcp-venv/bin/python",
+      "args": [
+        "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/flux/server.py"
+      ]
+    }
+  }
+}

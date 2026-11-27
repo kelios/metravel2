@@ -241,7 +241,7 @@ export const sharedStaticResources = {
   "appDownload.appStore.a11y": "Завантажити застосунок MeTravel з App Store",
   "appDownload.googlePlay.label": "Завантажити з Google Play",
   "appDownload.googlePlay.a11y": "Завантажити застосунок MeTravel з Google Play",
-  "appDownload.page.seoTitle": "Застосунок MeTravel для iPhone і Android | Завантажити",
+  "appDownload.page.seoTitle": "Застосунок для iPhone і Android | MeTravel",
   "appDownload.page.seoDescription": "Завантажте мобільний застосунок MeTravel для iPhone і Android: карта місць і маршрутів, міські квести та путівники офлайн. Безкоштовно в App Store і Google Play.",
   "appDownload.page.heroSubtitle": "Карта місць, міські квести та путівники — офлайн, зі збереженням обраного. Застосунок доступний для iPhone, iPad і Android.",
   "appDownload.page.platformNote": "iOS 16.4+ · Android 8.0+ · безкоштовно",

@@ -1,0 +1,12 @@
+{
+  "agent_servers": {
+    "MeTravel Local (Qwen + FLUX)": {
+      "command": "/usr/bin/python3",
+      "args": [
+        "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/universal/run.py"
+      ],
+      "use_idea_mcp": false,
+      "use_custom_mcp": false
+    }
+  }
+}

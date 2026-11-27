@@ -241,7 +241,7 @@ export const sharedStaticResources = {
   "appDownload.appStore.a11y": "Скачаць дадатак MeTravel у App Store",
   "appDownload.googlePlay.label": "Скачаць у Google Play",
   "appDownload.googlePlay.a11y": "Скачаць дадатак MeTravel у Google Play",
-  "appDownload.page.seoTitle": "Дадатак MeTravel для iPhone і Android | Скачаць",
+  "appDownload.page.seoTitle": "Дадатак для iPhone і Android | MeTravel",
   "appDownload.page.seoDescription": "Скачайце мабільны дадатак MeTravel для iPhone і Android: карта месцаў і маршрутаў, гарадскія квэсты і даведнікі афлайн. Бясплатна ў App Store і Google Play.",
   "appDownload.page.heroSubtitle": "Карта месцаў, гарадскія квэсты і даведнікі — афлайн, з захаваннем абранага. Дадатак даступны для iPhone, iPad і Android.",
   "appDownload.page.platformNote": "iOS 16.4+ · Android 8.0+ · бясплатна",

@@ -241,7 +241,7 @@ export const sharedStaticResources = {
   "appDownload.appStore.a11y": "Pobierz aplikację MeTravel z App Store",
   "appDownload.googlePlay.label": "Pobierz z Google Play",
   "appDownload.googlePlay.a11y": "Pobierz aplikację MeTravel z Google Play",
-  "appDownload.page.seoTitle": "Aplikacja MeTravel na iPhone’a i Androida | Pobierz",
+  "appDownload.page.seoTitle": "Aplikacja na iPhone’a i Androida | MeTravel",
   "appDownload.page.seoDescription": "Pobierz aplikację mobilną MeTravel na iPhone’a i Androida: mapa miejsc i tras, questy miejskie i przewodniki offline. Za darmo w App Store i Google Play.",
   "appDownload.page.heroSubtitle": "Mapa miejsc, questy miejskie i przewodniki — offline, z zapisywaniem ulubionych. Aplikacja jest dostępna na iPhone’a, iPada i Androida.",
   "appDownload.page.platformNote": "iOS 16.4+ · Android 8.0+ · bezpłatna",

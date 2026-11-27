@@ -1,0 +1,191 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": [
+    "local-qwen"
+  ],
+  "model": "local-qwen/metravel-local",
+  "small_model": "local-qwen/metravel-local",
+  "default_agent": "metravel",
+  "share": "disabled",
+  "autoupdate": false,
+  "snapshot": false,
+  "provider": {
+    "local-qwen": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Qwen local on this Mac",
+      "options": {
+        "baseURL": "http://127.0.0.1:18088/v1",
+        "apiKey": "local-not-required",
+        "timeout": 300000
+      },
+      "models": {
+        "metravel-local": {
+          "name": "Qwen3.8-27B local",
+          "tool_call": true,
+          "reasoning": false,
+          "attachment": false,
+          "limit": {
+            "context": 32768,
+            "output": 6144
+          },
+          "options": {
+            "temperature": 0.2
+          }
+        }
+      }
+    }
+  },
+  "instructions": [
+    "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/universal/instructions.md"
+  ],
+  "skills": {
+    "paths": [
+      "/Users/juliasavran/PhpstormProjects/metravel2/.codex/skills",
+      "/Users/juliasavran/PhpstormProjects/metravel2/.claude/skills"
+    ]
+  },
+  "plugin": [
+    "file:///Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/universal/hooks.mjs"
+  ],
+  "agent": {
+    "metravel": {
+      "description": "Local MeTravel development, task workflows, translations and image drafts.",
+      "mode": "primary",
+      "model": "local-qwen/metravel-local",
+      "steps": 30
+    }
+  },
+  "mcp": {
+    "metravel_task_board": {
+      "type": "local",
+      "command": [
+        "sh",
+        "/Users/juliasavran/PhpstormProjects/metravel2/scripts/launch-task-board-mcp.sh",
+        "/Users/juliasavran/PhpstormProjects/metravel2"
+      ],
+      "enabled": true,
+      "timeout": 30000
+    },
+    "metravel_knowledge": {
+      "type": "local",
+      "command": [
+        "/opt/homebrew/opt/node@22/bin/node",
+        "--experimental-strip-types",
+        "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+        "/Users/juliasavran/PhpstormProjects/metravel2/scripts/ai-index/mcp.ts"
+      ],
+      "enabled": true,
+      "timeout": 30000
+    },
+    "local_flux": {
+      "type": "local",
+      "command": [
+        "/Users/juliasavran/metravel-ai/tools/flux-mcp-venv/bin/python",
+        "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/flux/server.py"
+      ],
+      "environment": {
+        "METRAVEL_FLUX_TEXT_ONLY": "1"
+      },
+      "enabled": true,
+      "timeout": 210000
+    },
+    "project_instructions": {
+      "type": "local",
+      "command": [
+        "/Users/juliasavran/metravel-ai/tools/flux-mcp-venv/bin/python",
+        "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/universal/context_server.py"
+      ],
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+  "permission": {
+    "*": "allow",
+    "read": {
+      "*": "allow",
+      "**/.env*": "deny",
+      "**/.secrets/**": "deny",
+      "**/.ssh/**": "deny",
+      "**/.mcp.json": "deny",
+      "**/*service-account*.json": "deny"
+    },
+    "edit": {
+      "*": "allow",
+      "**/.env*": "deny",
+      "**/.secrets/**": "deny",
+      "**/.ssh/**": "deny",
+      "**/.mcp.json": "deny",
+      "**/*service-account*.json": "deny",
+      "**/.claude/hooks/**": "ask",
+      "**/githooks/**": "ask",
+      "**/eas.json": "ask",
+      "**/app.json": "ask",
+      "**/.github/workflows/**": "ask",
+      "**/nginx/**": "ask",
+      "**/plugins/**": "ask",
+      "**/public/robots.txt": "ask",
+      "**/public/sitemap.xml": "ask",
+      "**/entry.js": "ask"
+    },
+    "bash": {
+      "*": "ask",
+      "pwd": "allow",
+      "rg *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "sed -n *": "allow",
+      "wc *": "allow",
+      "ls": "allow",
+      "ls *": "allow",
+      "npm exec --no -- jest *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git remote -v": "allow",
+      "git remote get-url*": "allow",
+      "git ls-files*": "allow",
+      "git rev-parse*": "allow",
+      "git add *": "allow",
+      "git commit *": "allow",
+      "git push origin main": "allow",
+      "git push origin master": "allow",
+      "npm run *": "allow",
+      "npx --no-install *": "allow",
+      "node *": "allow",
+      "python3 *": "allow",
+      "bash -n *": "allow",
+      "scripts/deploy-prod.sh *": "allow",
+      "DEPLOY_QUIET=1 scripts/deploy-prod.sh *": "allow",
+      "git add .": "deny",
+      "git add -A*": "deny",
+      "git add --all*": "deny",
+      "git push --force*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -f*": "deny",
+      "rm -rf *": "ask",
+      "env": "deny",
+      "printenv*": "deny",
+      "grep *": "allow",
+      "cat *": "allow"
+    },
+    "external_directory": {
+      "*": "ask",
+      "/Users/juliasavran/PhpstormProjects/metravel-backend/**": "allow"
+    },
+    "metravel_task_board_metravel_task_delete": "ask",
+    "metravel_task_board_metravel_sprint_delete": "ask",
+    "metravel_task_board_metravel_sprint_create": "ask",
+    "metravel_task_board_metravel_sprint_update": "ask",
+    "skill": "deny",
+    "doom_loop": "ask"
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 8192,
+    "tail_turns": 1,
+    "preserve_recent_tokens": 2048
+  }
+}

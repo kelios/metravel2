@@ -1,0 +1,12 @@
+{
+  "agent_servers": {
+    "Qwen + FLUX (local)": {
+      "command": "/Users/juliasavran/metravel-ai/tools/flux-mcp-venv/bin/python",
+      "args": [
+        "/Users/juliasavran/PhpstormProjects/metravel2/.aiassistant/flux/agent.py"
+      ],
+      "use_idea_mcp": false,
+      "use_custom_mcp": false
+    }
+  }
+}
