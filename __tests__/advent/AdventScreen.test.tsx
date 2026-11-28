@@ -47,9 +47,8 @@ jest.mock('@/hooks/useResponsive', () => ({
   useBreakpoints: () => ({ width: mockWidth }),
 }))
 
-const renderAt = async (date: Date) => {
+const renderAt = async (date: Date, client = createTestQueryClient()) => {
   fakeToday(date)
-  const client = createTestQueryClient()
   return await render(
     <QueryClientProvider client={client}>
       <AdventScreen />
@@ -197,6 +196,20 @@ describe('AdventScreen (#2861)', () => {
     expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['14']).toBeUndefined()
   })
 
+  it('opens the new story editor from door 4 and waits for server credit', async () => {
+    const screen = await renderAt(new Date(2026, 11, 4, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-4'))
+    expect(screen.getByText('Первая страница вашей книги путешествий')).toBeTruthy()
+    expect(screen.queryByTestId('advent-region-switch')).toBeNull()
+    expect(screen.queryByTestId('advent-gift-media')).toBeNull()
+    expect(screen.queryByTestId('advent-gift-link')).toBeNull()
+    expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
+    await fireEvent.press(screen.getByText('Начать свою историю'))
+    const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } }
+    expect(router.push).toHaveBeenCalledWith('/travel/new?from=advent&day=4')
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['4']).toBeUndefined()
+  })
+
   // #3487: игра с запасным `type: open` засчитывается итогом игры, а не открытием.
   it('does not credit an open door with a game on open; the game result credits it', async () => {
     const screen = await renderAt(new Date(2026, 11, 5, 12))
@@ -318,6 +331,30 @@ describe('AdventScreen (#2861)', () => {
       await fireEvent.press(screen.getByTestId('advent-door-2'))
       expect(screen.getByTestId('advent-task-credited')).toBeTruthy()
       expect(screen.queryByTestId('advent-task-server-credit-hint')).toBeNull()
+    })
+
+    it('hides the gift over the editor and shows server credit on a quick return to the same tab', async () => {
+      const router = jest.requireMock('expo-router')
+      const focus = jest.spyOn(router, 'useIsFocused').mockReturnValue(true)
+      try {
+        const client = createTestQueryClient()
+        const opened = { '4': '2026-12-04' }
+        mockFetchAdventProgress.mockResolvedValue({ opened, tasksDone: {}, streak: 1 })
+        const screen = await renderAt(new Date(2026, 11, 4, 12), client)
+        const refresh = () => screen.rerender(<QueryClientProvider client={client}><AdventScreen /></QueryClientProvider>)
+        await screen.findByTestId('advent-sync-synced')
+        await fireEvent.press(screen.getByTestId('advent-door-4'))
+        await fireEvent.press(screen.getByTestId('advent-task-cta'))
+        focus.mockReturnValue(false)
+        await refresh()
+        expect(screen.queryByTestId('advent-door-sheet-4')).toBeNull()
+        mockFetchAdventProgress.mockResolvedValue({ opened, tasksDone: opened, streak: 1 })
+        focus.mockReturnValue(true)
+        await refresh()
+        expect(await screen.findByTestId('advent-task-credited')).toBeTruthy()
+      } finally {
+        focus.mockRestore()
+      }
     })
 
     it('a manual mark on a server-credited door is not pushed and does not stick at "this device only" (#2940)', async () => {

@@ -166,48 +166,12 @@
     },
     "4": {
       "gift": {
-        "title": "Winter story: Viazynka",
-        "text": "In February 2025 we came to Viazynka and found it completely empty: a grey sky, snow on the paths, not a single tour group. By the entrance is a bronze bust of the poet, with snow lying along his shoulders in an even stripe. In the clearing there is a well with a sweep, and on the wall of the house a carved board: \"25 чэрвеня 1882 у гэтай хаце нарадзіўся…\"\n\nEnjoyed the story? Subscribe to the author — new trips will arrive in your feed.",
-        "linkLabel": "Read the story"
+        "title": "The first page of your travel book",
+        "text": "What has stayed with you from a favourite trip? Maybe it’s the smell of bread near the station or the first snow on the trail. Write that detail down today. In time, you can collect stories like this in a travel book of your own."
       },
       "task": {
-        "text": "Finished reading? One question about the story.",
-        "riddle": {
-          "questions": [
-            {
-              "question": "Who was born in this house on 25 June 1882?",
-              "options": [
-                "Yanka Kupala",
-                "Yakub Kolas",
-                "Maksim Bahdanovich"
-              ]
-            }
-          ]
-        }
-      },
-      "variants": {
-        "pl": {
-          "gift": {
-            "title": "Winter story: the hut on Maciejowa",
-            "text": "On 7 December 2025 we climbed from Rabka-Zdroj in the Gorce Mountains to the wooden hut on Maciejowa: about 5 km one way, 340 meters of ascent and ice on the trail — we were right to bring crampons. At the top is the Przyslop clearing, on a clear day you can see the Tatras and Babia Gora, and inside it is warm and there is something hot waiting after the climb.\n\nThe hut has a story of its own. Its first manager insisted that guests take off their street shoes and change into slippers: there was even a shoe crate by the entrance. The local press wrote about it.\n\nEnjoyed the story? Subscribe to the author — new trips will arrive in your feed.",
-            "linkLabel": "Read the story"
-          },
-          "task": {
-            "text": "Finished reading? One question about the story.",
-            "riddle": {
-              "questions": [
-                {
-                  "question": "What did the hut's first manager require of guests?",
-                  "options": [
-                    "To change into slippers",
-                    "To sing a carol at the entrance",
-                    "To bring a log with them"
-                  ]
-                }
-              ]
-            }
-          }
-        }
+        "text": "Start a story about one trip and save a draft. That’s enough to earn today’s gift. You can publish your story whenever you like.",
+        "ctaLabel": "Start my story"
       }
     },
     "5": {

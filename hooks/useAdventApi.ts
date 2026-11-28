@@ -43,8 +43,9 @@ export function useAdventProgressQuery(enabled: boolean) {
     queryKey: queryKeys.adventProgress(owner),
     queryFn: ({ signal }) => fetchAdventProgress(signal),
     enabled: enabled && owner !== null,
-    staleTime: 30 * 1000,
-    // Возврат с действия сайта (`?from=advent`) должен подтянуть свежий зачёт.
+    // Таб остаётся смонтированным. Даже быстрый возврат из редактора должен
+    // перечитать серверный зачёт, когда запрос снова включится по фокусу.
+    staleTime: 0,
     refetchOnMount: 'always',
     retry: readRetryTwice,
   })
@@ -88,6 +89,7 @@ export function useAdventServerSync(params: {
   ownerKey: string | null
   localProgress: AdventProgressMaps
   enabled: boolean
+  isFocused: boolean
   /** Дверцы с серверным зачётом: их ручная отметка не отправляется и не считается несинхронизированной. */
   serverCreditedDays?: ReadonlySet<number>
 }): AdventServerSync {
@@ -95,7 +97,7 @@ export function useAdventServerSync(params: {
   const queryClient = useQueryClient()
   const owner = useQueryOwner()
   const isAccount = enabled && !!ownerKey && ownerKey !== ADVENT_GUEST_OWNER
-  const query = useAdventProgressQuery(isAccount)
+  const query = useAdventProgressQuery(isAccount && params.isFocused)
   const mergeOwner = useAdventProgressStore((state) => state.mergeOwner)
   const [creditedDays, setCreditedDays] = useState<ReadonlySet<number>>(EMPTY_DAYS)
   const attemptedSignature = useRef<string | null>(null)

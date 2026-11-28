@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { useIsFocused, useLocalSearchParams } from 'expo-router'
 
 import Button from '@/components/ui/Button'
 import { useAdventAdminPreview } from '@/hooks/useAdventAdminPreview'
@@ -42,6 +42,7 @@ export default function AdventScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const serverCampaign = useAdventCampaignQuery()
+  const isFocused = useIsFocused()
   const campaign = useAdventCampaign({ serverCampaign })
   const { doors, ready, isAuthenticated, openDoor, completeTask } = campaign
   const preview = useAdventAdminPreview(doors, campaign.hydrated, campaign.now)
@@ -50,6 +51,7 @@ export default function AdventScreen() {
     ownerKey: campaign.ownerKey,
     localProgress: campaign.progress,
     enabled: campaign.hydrated && !preview.active,
+    isFocused,
     serverCreditedDays,
   })
   // Серия считается сервером по датам открытия (#2864); до синхронизации — локальная.
@@ -220,15 +222,17 @@ export default function AdventScreen() {
           </View>
         )}
       </View>
-      <AdventDoorSheet
-        door={preview.active ? preview.selectedDoor : selectedDoor}
-        preview={preview.active}
-        isAuthenticated={isAuthenticated}
-        creditedDays={preview.active ? undefined : sync.creditedDays}
-        campaignYear={campaign.campaign.year}
-        onClose={closeSheet}
-        onCompleteTask={preview.active ? preview.completeTask : handleCompleteTask}
-      />
+      {isFocused && (
+        <AdventDoorSheet
+          door={preview.active ? preview.selectedDoor : selectedDoor}
+          preview={preview.active}
+          isAuthenticated={isAuthenticated}
+          creditedDays={preview.active ? undefined : sync.creditedDays}
+          campaignYear={campaign.campaign.year}
+          onClose={closeSheet}
+          onCompleteTask={preview.active ? preview.completeTask : handleCompleteTask}
+        />
+      )}
       {/* Значки адвента выдаёт сервер после синхронизации (#2864) — тост как в квестах. */}
       {isAuthenticated && !preview.active ? (
         <Suspense fallback={null}>

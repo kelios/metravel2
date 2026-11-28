@@ -166,48 +166,12 @@
     },
     "4": {
       "gift": {
-        "title": "Zimowa opowieść: Wiązynka",
-        "text": "W lutym 2025 roku przyjechaliśmy do Wiązynki i zastaliśmy ją zupełnie pustą: szare niebo, śnieg na ścieżkach, ani jednej wycieczki. Przy wejściu stoi brązowe popiersie poety, a śnieg leży mu na ramionach równym pasem. Na polanie studnia z żurawiem, a na ścianie chaty — rzeźbiona tablica: „25 чэрвеня 1882 у гэтай хаце нарадзіўся…”\n\nPodobała Ci się ta historia? Zasubskrybuj autora — nowe wyjazdy trafią do Twojego kanału.",
-        "linkLabel": "Czytaj historię"
+        "title": "Pierwsza strona twojej książki podróżniczej",
+        "text": "Co szczególnie pamiętasz z ulubionej podróży? Może zapach chleba przy dworcu albo pierwszy śnieg na szlaku. Zapisz dziś ten szczegół. Z czasem możesz zebrać takie wspomnienia we własnej książce podróżniczej."
       },
       "task": {
-        "text": "Doczytane? Jedno pytanie do historii.",
-        "riddle": {
-          "questions": [
-            {
-              "question": "Kto urodził się w tej chacie 25 czerwca 1882 roku?",
-              "options": [
-                "Janka Kupała",
-                "Jakub Kołas",
-                "Maksim Bahdanowicz"
-              ]
-            }
-          ]
-        }
-      },
-      "variants": {
-        "pl": {
-          "gift": {
-            "title": "Zimowa opowieść: chata na Maciejowej",
-            "text": "7 grudnia 2025 roku wspięliśmy się z Rabki-Zdroju w Gorcach do drewnianej chaty na Maciejowej: około 5 km w jedną stronę, 340 metrów przewyższenia i lód na szlaku — raki wzięliśmy nie bez powodu. Na górze polana Przysłop, w pogodny dzień widać Tatry i Babią Górę, a w środku jest ciepło i czeka coś gorącego po podejściu.\n\nChata ma własną historię. Jej pierwszy gospodarz wymagał, by goście zdejmowali obuwie z ulicy i zmieniali je na kapcie: przy wejściu stała nawet skrzynia na buty. Pisała o tym lokalna prasa.\n\nPodobała Ci się ta historia? Zasubskrybuj autora — nowe wyjazdy trafią do Twojego kanału.",
-            "linkLabel": "Czytaj historię"
-          },
-          "task": {
-            "text": "Doczytane? Jedno pytanie do historii.",
-            "riddle": {
-              "questions": [
-                {
-                  "question": "Czego wymagał od gości pierwszy gospodarz chaty?",
-                  "options": [
-                    "Zmieniać buty na kapcie",
-                    "Śpiewać przy wejściu kolędę",
-                    "Przynosić ze sobą polano"
-                  ]
-                }
-              ]
-            }
-          }
-        }
+        "text": "Zacznij opowieść o jednej podróży i zapisz szkic. To wystarczy, by otrzymać prezent. Możesz opublikować swoją historię, kiedy zechcesz.",
+        "ctaLabel": "Zacznij swoją opowieść"
       }
     },
     "5": {

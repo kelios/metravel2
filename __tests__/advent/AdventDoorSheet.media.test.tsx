@@ -19,7 +19,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 // Дверцы без вариантов «Беларусь / Польша» (#3486): лист показывает их подарок как есть.
 const doorWithImage = (image?: string, day = 3): AdventDoorView => {
   const door = getAdventCampaign().doors.find((candidate) => candidate.day === day)!
-  return { ...door, state: 'opened', gift: { ...door.gift, image } }
+  return { ...door, state: 'opened', gift: { ...door.gift, image, link: '/travels' } }
 }
 const sheet = (door: AdventDoorView) => <AdventDoorSheet door={door} isAuthenticated={false} campaignYear={2026} onClose={jest.fn()} onCompleteTask={jest.fn()} />
 
