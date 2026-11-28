@@ -20,8 +20,19 @@ const FONT = '"Helvetica Neue", Arial, sans-serif'
 const PAD = 88
 const CONTENT_BOTTOM = ADVENT_CARD_HEIGHT - PAD - 64
 
-const wrapLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] => {
-  const words = text.split(/\s+/).filter(Boolean)
+const wrapLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = Infinity): string[] => {
+  const words = text.split(/\s+/).filter(Boolean).flatMap((word) => {
+    const pieces: string[] = []
+    let piece = ''
+    for (const character of word) {
+      if (piece && ctx.measureText(piece + character).width > maxWidth) {
+        pieces.push(piece)
+        piece = character
+      } else piece += character
+    }
+    if (piece) pieces.push(piece)
+    return pieces
+  })
   const lines: string[] = []
   let current = ''
   words.forEach((word) => {
@@ -37,6 +48,20 @@ const wrapLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number
   const kept = lines.slice(0, maxLines)
   kept[maxLines - 1] = `${kept[maxLines - 1].replace(/[.,;:!?]?$/, '')}…`
   return kept
+}
+
+/** Selects the largest readable size that preserves the entire paragraph in its text box. */
+const fitParagraph = (
+  ctx: CanvasRenderingContext2D, text: string, width: number, height: number,
+  font: (size: number) => string, maximumSize: number, minimumSize: number,
+) => {
+  for (let size = maximumSize; size >= minimumSize; size -= 1) {
+    ctx.font = font(size)
+    const lines = wrapLines(ctx, text, width)
+    const lineHeight = size * 1.1
+    if (lines.length * lineHeight <= height) return { lines, lineHeight }
+  }
+  return null
 }
 
 /** Exports require a prepared illustration, so a failed load cannot produce an old placeholder. */
@@ -72,10 +97,11 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec, 
 
   y += 16
   ctx.fillStyle = '#ffffff'
-  ctx.font = `bold ${compact ? 64 : 85}px Georgia, serif`
-  wrapLines(ctx, spec.title, width, 3).forEach((line) => {
+  const title = fitParagraph(ctx, spec.title, width, compact ? 222 : 320, (size) => `bold ${size}px Georgia, serif`, compact ? 64 : 85, 44)
+  if (!title) return false
+  title.lines.forEach((line) => {
     ctx.fillText(line, PAD, y)
-    y += compact ? 74 : 90
+    y += title.lineHeight
   })
 
   if (spec.hero) {
@@ -87,11 +113,12 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec, 
 
   if (spec.subtitle) {
     y += 12
-    ctx.font = `400 ${compact ? 30 : 40}px ${FONT}`
+    const subtitle = fitParagraph(ctx, spec.subtitle, width, compact ? 80 : 162, (size) => `400 ${size}px ${FONT}`, compact ? 30 : 40, compact ? 24 : 28)
+    if (!subtitle) return false
     ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
-    wrapLines(ctx, spec.subtitle, width, compact ? 2 : 3).forEach((line) => {
+    subtitle.lines.forEach((line) => {
       ctx.fillText(line, PAD, y)
-      y += compact ? 40 : 54
+      y += subtitle.lineHeight
     })
   }
 

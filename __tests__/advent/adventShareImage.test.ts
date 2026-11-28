@@ -1,3 +1,8 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { getAdventCampaign } from '@/services/advent/loadCampaign'
+import { applyAdventOverlay } from '@/services/advent/applyOverlay'
+import type { AdventCampaignOverlay } from '@/types/advent'
 import { ADVENT_CARD_HEIGHT, ADVENT_CARD_WIDTH, drawAdventCard, type AdventCardSpec } from '@/utils/advent/adventShareImage'
 
 const artwork = {} as HTMLImageElement
@@ -70,4 +75,39 @@ it.each([
   expect(footer.text).toBe('metravel.by/advent')
   expect(footer.baseline).toBe('bottom')
   expect(texts.slice(0, -1).every(({ y, size }) => y + size < footer.y - footer.size)).toBe(true)
+})
+
+it.each(['ru', 'be', 'uk', 'pl', 'en'])('preserves every character of the longest actual fortune in %s', (locale) => {
+  const overlay: AdventCampaignOverlay | undefined = locale === 'ru' ? undefined : JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), 'public/assets/data/advent', `2026.${locale}.json`), 'utf8'),
+  )
+  const campaign = applyAdventOverlay(getAdventCampaign(), overlay)
+  const fortunes = campaign.doors.flatMap((door) => [door.task, ...(door.variants ?? []).map(({ task }) => task)])
+    .flatMap((task) => task.game?.kind === 'fortune' ? task.game.items : [])
+  const fortune = fortunes.reduce((longest, candidate) => candidate.length > longest.length ? candidate : longest, '')
+  expect(fortune.length).toBeGreaterThan(100)
+  const resources = require(`@/i18n/locales/${locale}/static/advent_static`).adventStaticResources
+  const subtitle = resources['game.fortune.shareSubtitle']
+  const { canvas, texts } = createRecordingCanvas()
+  expect(drawAdventCard(canvas, { eyebrow: 'ADVENT', title: fortune, subtitle, stats: [] }, artwork)).toBe(true)
+  const content = texts.slice(1, -1)
+  expect(content.map(({ text }) => text).join(' ').replace(/\s/g, '')).toBe((fortune + subtitle).replace(/\s/g, ''))
+  expect(content.every(({ text, x, size }) => x + text.length * size * 0.55 <= ADVENT_CARD_WIDTH - 88)).toBe(true)
+  const lastTitleCharacter = fortune.replace(/\s/g, '').length
+  let drawn = 0
+  const titleLines = content.filter(({ text }) => {
+    const inTitle = drawn < lastTitleCharacter
+    drawn += text.replace(/\s/g, '').length
+    return inTitle
+  })
+  expect(titleLines.at(-1)!.y + titleLines.at(-1)!.size).toBeLessThanOrEqual(88 + 40 + 16 + 320)
+  expect(titleLines[0].size).toBeGreaterThanOrEqual(44)
+})
+
+it('wraps an unusually long unbroken title without clipping characters', () => {
+  const title = 'W'.repeat(80)
+  const { canvas, texts } = createRecordingCanvas()
+  expect(drawAdventCard(canvas, { eyebrow: 'ADVENT', title, stats: [] }, artwork)).toBe(true)
+  expect(texts.slice(1, -1).map(({ text }) => text).join('')).toBe(title)
+  expect(texts.slice(1, -1).every(({ text, x, size }) => x + text.length * size * 0.55 <= ADVENT_CARD_WIDTH - 88)).toBe(true)
 })
