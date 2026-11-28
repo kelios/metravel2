@@ -31,6 +31,8 @@ const PUBLIC_FILES = Object.freeze({
   'assets/icons/marker.ico': 'Map marker',
   'assets/icons/start.ico': 'Route start marker',
   'assets/icons/user_location.ico': 'User location marker',
+  'assets/images/advent-titles/christmas.webp': 'Illustrated Christmas postcard for the advent calendar',
+  'assets/images/advent-titles/fortune.webp': 'Illustrated winter fortune postcard for the advent calendar',
   'assets/images/advent-titles/departure.webp': 'Advent traveller title postcard, departure tier',
   'assets/images/advent-titles/lanterns.webp': 'Advent traveller title postcard, curious traveller tier',
   'assets/images/advent-titles/rail.webp': 'Advent traveller title postcard, road legend tier',

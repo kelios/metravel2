@@ -19,13 +19,13 @@ it.each(['departure', 'lanterns', 'trail', 'rail'])('selects %s by earned tier r
   const titleRank = ['departure', 'lanterns', 'trail', 'rail'].indexOf(art)
   await render(<AdventGameShare {...props} title="Legenda dróg" kind="title" titleRank={titleRank} />)
   const params = mockUseShare.mock.calls.at(-1)![0]
-  expect(params.titleArtwork).toBe(art)
-  expect(params.buildSpec()).toMatchObject({ title: 'Legenda dróg', subtitle: 'Моё звание', house: undefined })
+  expect(params.artwork).toBe(art)
+  expect(params.buildSpec()).toMatchObject({ title: 'Legenda dróg', subtitle: 'Моё звание' })
 })
 
-it('keeps fortune postcards on their existing house illustration', async () => {
+it('uses the common fortune artwork default', async () => {
   await render(<AdventGameShare {...props} kind="fortune" />)
   const params = mockUseShare.mock.calls.at(-1)![0]
-  expect(params.titleArtwork).toBeUndefined()
-  expect(params.buildSpec().house).toEqual({ lit: 24 })
+  expect(params.artwork).toBeUndefined()
+  expect(params.buildSpec()).toEqual({ eyebrow: expect.any(String), title: props.title, subtitle: props.subtitle, stats: [] })
 })

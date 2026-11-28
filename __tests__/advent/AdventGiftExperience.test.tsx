@@ -8,7 +8,6 @@ import { resolveAdventWindowCrop } from '@/components/advent/AdventWindowCrop'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import { i18n } from '@/i18n'
 import { getAdventCampaign } from '@/services/advent/loadCampaign'
-import { drawAdventCard } from '@/utils/advent/adventShareImage'
 
 // Дверца как подарок (#3482): регрессии обхода «подарок или форма».
 
@@ -219,33 +218,5 @@ describe('facade crop (#3482)', () => {
     // Правый край области не дальше правого края картинки.
     expect(width + left).toBeGreaterThanOrEqual(100 - 0.01)
     expect(resolveAdventWindowCrop(null, 4 / 3).top).toBe('0%')
-  })
-})
-
-describe('share image house (#3482)', () => {
-  it('draws the night house with lit windows when the spec asks for it', () => {
-    const fillRect = jest.fn()
-    const ctx = {
-      fillStyle: '',
-      font: '',
-      textBaseline: 'top',
-      textAlign: 'left',
-      createLinearGradient: () => ({ addColorStop: jest.fn() }),
-      fillRect,
-      beginPath: jest.fn(),
-      moveTo: jest.fn(),
-      lineTo: jest.fn(),
-      closePath: jest.fn(),
-      arc: jest.fn(),
-      fill: jest.fn(),
-      rect: jest.fn(),
-      fillText: jest.fn(),
-      measureText: (text: string) => ({ width: text.length * 20 }),
-    }
-    const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement
-    const before = fillRect.mock.calls.length
-    expect(drawAdventCard(canvas, { eyebrow: 'Адвент', title: 'С Рождеством!', stats: [], house: { lit: 24 } })).toBe(true)
-    // Фон, лента, труба, стена и 24 окна.
-    expect(fillRect.mock.calls.length - before).toBeGreaterThanOrEqual(24 + 3)
   })
 })

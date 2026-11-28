@@ -29,7 +29,7 @@ const finish = async (image: TestImage, succeeds = true) => {
   await act(async () => { if (succeeds) image.onload?.(); else image.onerror?.() })
 }
 
-describe('title illustration preparation', () => {
+describe('advent illustration preparation', () => {
   const OriginalImage = global.Image
   beforeEach(() => {
     jest.replaceProperty(Platform, 'OS', 'web')
@@ -40,12 +40,16 @@ describe('title illustration preparation', () => {
   afterEach(() => { global.Image = OriginalImage; jest.restoreAllMocks() })
 
   it('prepares the earned illustration before sharing and uses it in the downloaded PNG', async () => {
-    const { result } = await renderHook(() => useAdventCardShare({ ...params, titleArtwork: 'rail' }))
+    const { result } = await renderHook(() => useAdventCardShare({ ...params, artwork: 'rail' }))
     expect(result.current.status).toBe('busy')
     expect(images[0].src).toBe('/assets/images/advent-titles/rail.webp')
     await finish(images[0])
     await waitFor(() => expect(result.current.status).toBe('idle'))
-    await act(async () => { await result.current.share() })
+    await act(async () => {
+      const task = result.current.share()
+      expect(mockShare).toHaveBeenCalled()
+      await task
+    })
     expect(mockRender).toHaveBeenCalledWith(params.buildSpec(), images[0])
     expect(mockShare).toHaveBeenCalledWith(expect.objectContaining({ image: expect.any(Blob), filename: 'title.png' }))
     await act(async () => { await result.current.download() })
@@ -54,7 +58,7 @@ describe('title illustration preparation', () => {
   })
 
   it('can still share a link after an image failure and retries the image for download', async () => {
-    const { result } = await renderHook(() => useAdventCardShare({ ...params, titleArtwork: 'rail' }))
+    const { result } = await renderHook(() => useAdventCardShare({ ...params, artwork: 'rail' }))
     await finish(images[0], false)
     await waitFor(() => expect(result.current.status).toBe('idle'))
     await act(async () => { await result.current.share() })
@@ -70,8 +74,20 @@ describe('title illustration preparation', () => {
     expect(images).toHaveLength(2)
   })
 
+  it('shows failure when retry also cannot load the illustration', async () => {
+    const { result } = await renderHook(() => useAdventCardShare({ ...params, artwork: 'rail' }))
+    await finish(images[0], false)
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+    let download: Promise<void>
+    await act(async () => { download = result.current.download() })
+    await act(async () => { images[1].onerror?.(); await download! })
+    expect(result.current.status).toBe('failed')
+    expect(mockDownload).not.toHaveBeenCalled()
+    expect(mockRender).not.toHaveBeenCalled()
+  })
+
   it('ignores a previous level loading late and exports the current level', async () => {
-    const { result, rerender } = await renderHook(({ name }) => useAdventCardShare({ ...params, titleArtwork: name }), { initialProps: { name: 'departure' } })
+    const { result, rerender } = await renderHook(({ name }) => useAdventCardShare({ ...params, artwork: name }), { initialProps: { name: 'departure' as 'departure' | 'rail' } })
     await rerender({ name: 'rail' })
     await finish(images[0])
     expect(result.current.status).toBe('busy')
@@ -81,9 +97,20 @@ describe('title illustration preparation', () => {
     expect(mockRender).toHaveBeenCalledWith(params.buildSpec(), images[1])
   })
 
+  it.each([
+    ['progress', 'trail'], ['year', 'rail'], ['postcard', 'christmas'], ['fortune', 'fortune'], ['title', 'departure'],
+  ] as const)('prepares the default illustration for %s cards', async (kind, name) => {
+    const { result } = await renderHook(() => useAdventCardShare({ ...params, kind }))
+    expect(images[0].src).toBe(`/assets/images/advent-titles/${name}.webp`)
+    await finish(images[0])
+    await waitFor(() => expect(result.current.status).toBe('idle'))
+    await act(async () => { await result.current.download() })
+    expect(mockRender).toHaveBeenCalledWith(params.buildSpec(), images[0])
+  })
+
   it('keeps native sharing as a link without starting browser image loading', async () => {
     jest.replaceProperty(Platform, 'OS', 'ios')
-    const { result } = await renderHook(() => useAdventCardShare({ ...params, titleArtwork: 'rail' }))
+    const { result } = await renderHook(() => useAdventCardShare({ ...params, artwork: 'rail' }))
     await act(async () => { await result.current.share() })
     expect(images).toHaveLength(0)
     expect(mockRender).not.toHaveBeenCalled()

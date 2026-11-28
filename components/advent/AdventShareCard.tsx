@@ -30,9 +30,8 @@ function AdventShareCard({ openedCount, streak, year }: Props) {
       hero: `${opened}/${total}`,
       subtitle: streakText,
       stats: [],
-      progress: { done: openedCount, total: ADVENT_MAIN_DOORS },
     }),
-    [opened, total, streakText, openedCount],
+    [opened, total, streakText],
   )
 
   const { status, share, download, canDownload } = useAdventCardShare({

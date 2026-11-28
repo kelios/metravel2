@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import type { AdventShareKind } from '@/utils/advent/adventShare'
+import { ADVENT_CARD_ARTWORK, type AdventCardArtwork } from '@/utils/advent/adventCardArtwork'
 import type { AdventCardSpec } from '@/utils/advent/adventShareImage'
 
 type AdventShareKit = typeof import('@/utils/advent/adventShareKit')
@@ -19,7 +20,7 @@ const loadAdventShareKit = (): Promise<AdventShareKit> => {
   return kitPromise
 }
 
-function loadTitleArtwork(name: string): Promise<HTMLImageElement> {
+function loadCardArtwork(name: AdventCardArtwork): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
@@ -36,7 +37,7 @@ export type AdventCardShareStatus = 'idle' | 'busy' | 'copied' | 'failed'
  */
 export function useAdventCardShare(params: {
   preview?: boolean
-  titleArtwork?: string
+  artwork?: AdventCardArtwork
   kind: AdventShareKind
   year: number
   filename: string
@@ -44,19 +45,19 @@ export function useAdventCardShare(params: {
   shareTitle: string
   shareText: string
 }) {
-  const { preview, kind, titleArtwork, year, filename, buildSpec, shareTitle, shareText } = params
+  const { preview, kind, artwork, year, filename, buildSpec, shareTitle, shareText } = params
   const [status, setStatus] = useState<AdventCardShareStatus>('idle')
   const busyRef = useRef(false)
   const kitRef = useRef<AdventShareKit | null>(null)
   const canDownload = Platform.OS === 'web'
 
-  const artName = canDownload ? titleArtwork : undefined
+  const artName = canDownload ? (artwork ?? ADVENT_CARD_ARTWORK[kind]) : undefined
   const [prepared, setPrepared] = useState<{ name: string; image: HTMLImageElement | null } | null>(null)
 
   // Подготавливаем картинку до клика: Safari требует синхронный вызов navigator.share.
   useEffect(() => {
     let alive = true
-    const loaded = artName ? loadTitleArtwork(artName) : null
+    const loaded = artName ? loadCardArtwork(artName) : null
     const kitReady = loadAdventShareKit().then((kit) => {
       if (alive) kitRef.current = kit
     })
@@ -91,21 +92,21 @@ export function useAdventCardShare(params: {
         // Без `await` до шеринга, если модуль уже загружен: жест должен дожить до `navigator.share`.
         const kit = kitRef.current ?? (await loadAdventShareKit())
         // Если иллюстрация не загрузилась, системный лист всё равно может отправить ссылку.
-        const image = canDownload && (!artName || readyArt) ? kit.renderAdventCardPng(buildSpec(), readyArt ?? undefined) : null
+        const image = canDownload && readyArt ? kit.renderAdventCardPng(buildSpec(), readyArt ?? undefined) : null
         const result = await kit.shareAdventCard({ title: shareTitle, text: shareText, year, kind, image, filename })
         if (!preview) sendAnalyticsEvent('Advent_Share', { kind, result, withImage: !!image })
         if (result === 'copied') return 'copied'
         if (result === 'failed') return 'failed'
         return 'idle'
       }),
-    [run, buildSpec, shareTitle, shareText, year, kind, filename, preview, readyArt, artName, canDownload],
+    [run, buildSpec, shareTitle, shareText, year, kind, filename, preview, readyArt, canDownload],
   )
 
   const download = useCallback(
     () =>
       run(async () => {
         const kit = kitRef.current ?? (await loadAdventShareKit())
-        const art = readyArt ?? (artName ? await loadTitleArtwork(artName) : undefined)
+        const art = readyArt ?? (artName ? await loadCardArtwork(artName) : undefined)
         if (artName && art) setPrepared({ name: artName, image: art })
         const image = kit.renderAdventCardPng(buildSpec(), art)
         const ok = !!image && kit.downloadAdventCard(image, filename)

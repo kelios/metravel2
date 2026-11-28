@@ -76,7 +76,6 @@ function AdventYearInReviewCard({ year, preview }: Props) {
       title,
       subtitle: data?.countries.names.slice(0, 4).join(' · ') || undefined,
       stats: stats.map(({ value, label }) => ({ value, label })),
-      house: { lit: data?.advent.opened ?? 0 },
     }),
     [title, data, stats],
   )

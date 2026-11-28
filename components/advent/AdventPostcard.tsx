@@ -2,7 +2,6 @@ import { memo, useCallback } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 import { ADVENT_ART_COLORS } from '@/constants/adventVisuals'
-import { ADVENT_MAIN_DOORS } from '@/constants/advent'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
 import type { AdventCardSpec } from '@/utils/advent/adventShareImage'
@@ -26,7 +25,6 @@ function AdventPostcard({ year, preview }: Props) {
       title,
       subtitle: wish,
       stats: [],
-      house: { lit: ADVENT_MAIN_DOORS },
     }),
     [title, wish],
   )

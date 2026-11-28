@@ -1,6 +1,5 @@
 import { memo, useCallback } from 'react'
 
-import { ADVENT_MAIN_DOORS } from '@/constants/advent'
 import { translate as i18nT } from '@/i18n'
 import type { AdventShareKind } from '@/utils/advent/adventShare'
 import type { AdventCardSpec } from '@/utils/advent/adventShareImage'
@@ -35,14 +34,13 @@ function AdventGameShare({ year, preview, kind, title, titleRank, subtitle, shar
       title,
       subtitle,
       stats: [],
-      house: kind === 'fortune' ? { lit: ADVENT_MAIN_DOORS } : undefined,
     }),
-    [kind, title, subtitle],
+    [title, subtitle],
   )
 
   const { status, share, download, canDownload } = useAdventCardShare({
     kind,
-    titleArtwork: kind === 'title' ? TITLE_ART[Math.min(titleRank ?? 0, TITLE_ART.length - 1)] : undefined,
+    artwork: kind === 'title' ? TITLE_ART[Math.min(titleRank ?? 0, TITLE_ART.length - 1)] : undefined,
     preview,
     year,
     filename,
