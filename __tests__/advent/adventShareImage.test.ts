@@ -19,6 +19,7 @@ const createRecordingCanvas = () => {
     textBaseline: 'top',
     textAlign: 'left',
     createLinearGradient: () => ({ addColorStop: jest.fn() }),
+    drawImage: jest.fn(),
     fillRect: jest.fn(),
     beginPath: jest.fn(),
     arc: jest.fn(),
@@ -27,11 +28,11 @@ const createRecordingCanvas = () => {
     roundRect: (x: number, y: number, w: number, h: number) => {
       if (w === h) cells.push({ x, y, size: w, fill: fillStyle })
     },
-    fillText: jest.fn(),
+    fillText: jest.fn((_text: string, _x: number, _y: number) => undefined),
     measureText: (text: string) => ({ width: text.length * 20 }),
   }
   const canvas = { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement
-  return { canvas, cells }
+  return { canvas, cells, ctx }
 }
 
 describe('drawAdventCard progress grid', () => {
@@ -69,4 +70,15 @@ describe('drawAdventCard progress grid', () => {
     drawAdventCard(plain.canvas, { eyebrow: 'e', title: 't', stats: [] })
     expect(plain.cells).toHaveLength(0)
   })
+})
+
+it('exports a title over the full illustration with its localized text and address', () => {
+  const { canvas, ctx } = createRecordingCanvas()
+  const artwork = {} as HTMLImageElement
+  expect(drawAdventCard(canvas, {
+    eyebrow: 'Adwent', title: 'Legenda dróg', subtitle: 'Mój tytuł', stats: [], footer: 'metravel.by/advent',
+  }, artwork)).toBe(true)
+  expect(ctx.drawImage).toHaveBeenCalledWith(artwork, 0, 0, ADVENT_CARD_WIDTH, ADVENT_CARD_HEIGHT)
+  expect(ctx.fillText.mock.calls.map(([text]) => text)).toEqual(['ADWENT', 'Legenda dróg', 'Mój tytuł', 'metravel.by/advent'])
+  expect(ctx.arc).not.toHaveBeenCalled()
 })

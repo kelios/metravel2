@@ -67,6 +67,7 @@ function AdventSelfcheckTask({ game, xp, onComplete, onOpenLink, share }: Props)
         <AdventGameShare
           {...share}
           kind="title"
+          titleRank={game.tiers.filter((candidate) => candidate.min < tier.min).length}
           title={tier.title}
           subtitle={i18nT('adventStatic:game.selfcheck.shareSubtitle')}
           shareLabel={i18nT('adventStatic:game.selfcheck.share')}

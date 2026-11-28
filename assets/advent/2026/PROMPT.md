@@ -33,3 +33,23 @@ One transparent texture atlas, exactly 2×2 equal square cells, edge to edge. Fo
 - `frost-1.webp`–`frost-4.webp`: the four original atlas quadrants, technically sliced and encoded at 400×400 with alpha retained. No repainting or new narrative content.
 - Glass coordinates and number/button placement are defined by the approved facade contract, not inferred from image loading.
 - The image pack is imported only by advent components. The global seasonal logo must not import this module.
+
+## Traveller title postcards
+
+Four portrait illustrations for the web share and download actions. Each is an original ImageGen background. The canvas renderer adds the localized title, subtitle and calendar address. The WebP exports in `public/assets/images/advent-titles/` are 1080 × 1350. Only the earned tier's image is loaded.
+
+### departure
+
+Portrait 4:5, full bleed original vintage European winter travel poster, matte gouache and silkscreen print, touchable ink grain, layered illustrated snow and cold blue shadows, evergreen and petrol teal, warm apricot and vermilion highlights. Upper 35% calm dark teal twilight sky with sparse stars for white text later; subject concentrated in lower half. Bottom corners deep shadows, no lettering, numbers, logos or borders. A small honey-lit wayside station by a snowy woodland town at dusk. One traveler in a red winter coat carrying an old suitcase sets out on a freshly snowy platform, warmly lit clockless station canopy, snowflakes, an intimate cinematic sense of setting out. View from slightly above, careful architecture and delicate pines.
+
+### lanterns
+
+Portrait 4:5, full bleed original vintage European winter travel poster, matte gouache and silkscreen print, touchable ink grain, layered illustrated snow and cold blue shadows, evergreen and petrol teal, warm apricot and vermilion highlights. Upper 35% calm dark teal twilight sky with sparse stars for white text later; subject concentrated in lower half. Bottom corners deep shadows, no lettering, numbers, logos or borders. An intimate curving cobblestone lane in an old central European hill town in snow. Tall ochre and muted coral gabled houses with amber windows, an arched stone gate halfway down, a tiny bundled pedestrian carrying a lantern, deep blue shadows, picturesque composition with a view beyond the arch.
+
+### trail
+
+Portrait 4:5, full bleed original vintage European winter travel poster, matte gouache and silkscreen print, touchable ink grain, layered illustrated snow and cold blue shadows, evergreen and petrol teal, warm apricot and vermilion highlights. Upper 35% calm dark teal twilight sky with sparse stars for white text later; subject concentrated in lower half. Bottom corners deep shadows, no lettering, numbers, logos or borders. A pair of tiny red-coated hikers follow an elegant S-shaped trail of fresh footprints through a white forest clearing toward serrated snowy mountain peaks at dawn, mature dark blue spruce framing the lower corners, soft peach alpenglow and delicate pale winter light. Strong travel-poster perspective and serene scale.
+
+### rail
+
+Vertical 4:5 full-bleed vintage illustrated winter railway travel poster, no lettering anywhere. Beautiful original European mid-century railway lithograph meets hand-painted gouache on fine matte paper. The upper third is a calm deep petroleum teal twilight sky, clear low-contrast negative space especially to the left for later typography. Below it a dramatic indigo Carpathian mountain ridge recedes in lilac and pale peach dusk light. In the middle-to-lower two thirds, a small elegant vermilion vintage passenger train with amber windows follows a wide sinuous curve on a snow-covered hillside above fir forests, crossing a short stone-arch viaduct, its headlamp gold against blue snow. A few precise golden lights in a tiny distant town. In the foreground delicate detailed spruce branches and crosshatched midnight shadows at the bottom and left. Luminous snow, layered silhouettes, visible ink grain, graceful graphic composition, carefully crafted collectible postcard. Rich warm/cool palette, sophisticated, atmospheric, distinctive. No border, no text, no numbers, no logos, no ornaments in the sky, no mockup.

@@ -19,6 +19,15 @@ const loadAdventShareKit = (): Promise<AdventShareKit> => {
   return kitPromise
 }
 
+function loadTitleArtwork(name: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('Advent artwork unavailable'))
+    image.src = `/assets/images/advent-titles/${name}.webp`
+  })
+}
+
 export type AdventCardShareStatus = 'idle' | 'busy' | 'copied' | 'failed'
 
 /**
@@ -27,6 +36,7 @@ export type AdventCardShareStatus = 'idle' | 'busy' | 'copied' | 'failed'
  */
 export function useAdventCardShare(params: {
   preview?: boolean
+  titleArtwork?: string
   kind: AdventShareKind
   year: number
   filename: string
@@ -34,26 +44,31 @@ export function useAdventCardShare(params: {
   shareTitle: string
   shareText: string
 }) {
-  const { preview, kind, year, filename, buildSpec, shareTitle, shareText } = params
+  const { preview, kind, titleArtwork, year, filename, buildSpec, shareTitle, shareText } = params
   const [status, setStatus] = useState<AdventCardShareStatus>('idle')
   const busyRef = useRef(false)
   const kitRef = useRef<AdventShareKit | null>(null)
   const canDownload = Platform.OS === 'web'
 
-  // Предзагрузка при показе карточки: к нажатию модуль уже есть, и до
-  // `navigator.share` не встаёт `await` — iOS Safari иначе теряет жест.
+  const artName = canDownload ? titleArtwork : undefined
+  const [prepared, setPrepared] = useState<{ name: string; image: HTMLImageElement | null } | null>(null)
+
+  // Подготавливаем картинку до клика: Safari требует синхронный вызов navigator.share.
   useEffect(() => {
     let alive = true
-    loadAdventShareKit()
-      .then((kit) => {
-        if (alive) kitRef.current = kit
-      })
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [])
+    const loaded = artName ? loadTitleArtwork(artName) : null
+    const kitReady = loadAdventShareKit().then((kit) => {
+      if (alive) kitRef.current = kit
+    })
+    Promise.all([kitReady, loaded]).then(([, image]) => {
+      if (alive && artName) setPrepared({ name: artName, image })
+    }).catch(() => {
+      if (alive && artName) setPrepared({ name: artName, image: null })
+    })
+    return () => { alive = false }
+  }, [artName])
 
+  const readyArt = prepared?.name === artName ? prepared?.image : undefined
   const run = useCallback(
     async (action: () => Promise<AdventCardShareStatus>) => {
       if (busyRef.current) return
@@ -75,27 +90,31 @@ export function useAdventCardShare(params: {
       run(async () => {
         // Без `await` до шеринга, если модуль уже загружен: жест должен дожить до `navigator.share`.
         const kit = kitRef.current ?? (await loadAdventShareKit())
-        const image = Platform.OS === 'web' ? kit.renderAdventCardPng(buildSpec()) : null
+        // Если иллюстрация не загрузилась, системный лист всё равно может отправить ссылку.
+        const image = canDownload && (!artName || readyArt) ? kit.renderAdventCardPng(buildSpec(), readyArt ?? undefined) : null
         const result = await kit.shareAdventCard({ title: shareTitle, text: shareText, year, kind, image, filename })
         if (!preview) sendAnalyticsEvent('Advent_Share', { kind, result, withImage: !!image })
         if (result === 'copied') return 'copied'
         if (result === 'failed') return 'failed'
         return 'idle'
       }),
-    [run, buildSpec, shareTitle, shareText, year, kind, filename, preview],
+    [run, buildSpec, shareTitle, shareText, year, kind, filename, preview, readyArt, artName, canDownload],
   )
 
   const download = useCallback(
     () =>
       run(async () => {
         const kit = kitRef.current ?? (await loadAdventShareKit())
-        const image = kit.renderAdventCardPng(buildSpec())
+        const art = readyArt ?? (artName ? await loadTitleArtwork(artName) : undefined)
+        if (artName && art) setPrepared({ name: artName, image: art })
+        const image = kit.renderAdventCardPng(buildSpec(), art)
         const ok = !!image && kit.downloadAdventCard(image, filename)
         if (!preview) sendAnalyticsEvent('Advent_Download', { kind, ok })
         return ok ? 'idle' : 'failed'
       }),
-    [run, buildSpec, filename, kind, preview],
+    [run, buildSpec, filename, kind, preview, readyArt, artName],
   )
 
-  return { status, share, download, canDownload }
+  const actionStatus: AdventCardShareStatus = artName && readyArt === undefined ? 'busy' : status
+  return { status: actionStatus, share, download, canDownload }
 }

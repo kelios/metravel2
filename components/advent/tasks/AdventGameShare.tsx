@@ -15,30 +15,34 @@ type Props = AdventGameShareContext & {
   /** Крупная строка карточки: звание или предсказание. */
   title: string
   subtitle: string
+  titleRank?: number
   shareLabel: string
   shareText: string
   filename: string
   testIDPrefix: string
 }
 
+const TITLE_ART = ['departure', 'lanterns', 'trail', 'rail'] as const
+
 /**
  * Шеринг итога игры (#3487): звание теста или рождественское предсказание —
- * та же карточка с ночным домом, что у открытки 25.12 и итогов года.
+ * звание получает иллюстрацию своего уровня независимо от языка.
  */
-function AdventGameShare({ year, preview, kind, title, subtitle, shareLabel, shareText, filename, testIDPrefix }: Props) {
+function AdventGameShare({ year, preview, kind, title, titleRank, subtitle, shareLabel, shareText, filename, testIDPrefix }: Props) {
   const buildSpec = useCallback(
     (): AdventCardSpec => ({
       eyebrow: i18nT('adventStatic:page.title'),
       title,
       subtitle,
       stats: [],
-      house: { lit: ADVENT_MAIN_DOORS },
+      house: kind === 'fortune' ? { lit: ADVENT_MAIN_DOORS } : undefined,
     }),
-    [title, subtitle],
+    [kind, title, subtitle],
   )
 
   const { status, share, download, canDownload } = useAdventCardShare({
     kind,
+    titleArtwork: kind === 'title' ? TITLE_ART[Math.min(titleRank ?? 0, TITLE_ART.length - 1)] : undefined,
     preview,
     year,
     filename,

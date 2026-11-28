@@ -177,7 +177,7 @@ const drawHouse = (
 }
 
 /** Рисует карточку на переданном canvas; вынесено для тестов без DOM. */
-export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec): boolean => {
+export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec, artwork?: HTMLImageElement): boolean => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return false
   const palette = getSeasonalThemePalette('christmas', false)
@@ -192,21 +192,33 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec):
   canvas.width = W
   canvas.height = H
 
-  const gradient = ctx.createLinearGradient(0, 0, W, H)
-  gradient.addColorStop(0, '#173326')
-  gradient.addColorStop(1, deep)
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, W, H)
-  drawSnow(ctx)
+  if (artwork) {
+    ctx.drawImage(artwork, 0, 0, W, H)
+    const shade = ctx.createLinearGradient(0, 0, 0, H)
+    shade.addColorStop(0, 'rgba(3, 22, 35, 0.62)')
+    shade.addColorStop(0.42, 'rgba(3, 22, 35, 0.18)')
+    shade.addColorStop(0.56, 'rgba(3, 22, 35, 0)')
+    shade.addColorStop(0.84, 'rgba(3, 22, 35, 0)')
+    shade.addColorStop(1, 'rgba(3, 22, 35, 0.80)')
+    ctx.fillStyle = shade
+    ctx.fillRect(0, 0, W, H)
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, W, H)
+    gradient.addColorStop(0, '#173326')
+    gradient.addColorStop(1, deep)
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, W, H)
+    drawSnow(ctx)
 
-  // Лента сверху — акцент темы.
-  ctx.fillStyle = accent
-  ctx.fillRect(0, 0, W, 18)
+    // Лента сверху — акцент темы.
+    ctx.fillStyle = accent
+    ctx.fillRect(0, 0, W, 18)
+  }
 
   ctx.textBaseline = 'top'
   ctx.textAlign = 'left'
-  ctx.fillStyle = gold
-  ctx.font = `600 34px ${FONT}`
+  ctx.fillStyle = artwork ? '#ffdf9e' : gold
+  ctx.font = `600 ${artwork ? 29 : 34}px ${FONT}`
   let y = pad
   wrapLines(ctx, spec.eyebrow.toUpperCase(), W - pad * 2, 2).forEach((line) => {
     ctx.fillText(line, pad, y)
@@ -215,7 +227,7 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec):
 
   y += 16
   ctx.fillStyle = '#ffffff'
-  ctx.font = `700 76px ${FONT}`
+  ctx.font = artwork ? 'bold 85px Georgia, serif' : `700 76px ${FONT}`
   wrapLines(ctx, spec.title, W - pad * 2, 3).forEach((line) => {
     ctx.fillText(line, pad, y)
     y += 90
@@ -294,7 +306,7 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec):
     )
   }
 
-  ctx.fillStyle = gold
+  ctx.fillStyle = artwork ? '#fff4d9' : gold
   ctx.font = `700 38px ${FONT}`
   ctx.textBaseline = 'bottom'
   ctx.fillText(spec.footer ?? adventFooterUrl(), pad, H - pad + 20)
@@ -316,10 +328,10 @@ const dataUrlToPngBlob = (dataUrl: string): Blob | null => {
  * пользователя, а асинхронное кодирование между кликом и вызовом шеринга в
  * Safari его теряет (`NotAllowedError`).
  */
-export function renderAdventCardPng(spec: AdventCardSpec): Blob | null {
+export function renderAdventCardPng(spec: AdventCardSpec, artwork?: HTMLImageElement): Blob | null {
   if (typeof document === 'undefined') return null
   const canvas = document.createElement('canvas')
-  if (!drawAdventCard(canvas, spec)) return null
+  if (!drawAdventCard(canvas, spec, artwork)) return null
   try {
     return dataUrlToPngBlob(canvas.toDataURL('image/png'))
   } catch {
