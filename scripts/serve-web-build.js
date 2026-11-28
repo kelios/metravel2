@@ -231,10 +231,12 @@ const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLo
 // По той же причине в наборе есть `/travel-description-image/`: `/travel-image/`
 // его префиксом НЕ является, а с #1204 conversion-ключи этого семейства перестали
 // уходить на проксируемый `/media-resize/legacy/` и остаются на своём роуте.
+// `/quest-poster/` — тот же family-роут, что `/quest-cover/`: без прокси финал
+// квеста получает index.html вместо кадра.
 // `/ai/` — служба metravel-assist (#2459); отдельный target, по умолчанию локальный `npm run ai:assist:dev`.
 const aiProxyTarget = String(process.env.E2E_AI_PROXY_TARGET || 'http://127.0.0.1:8787').replace(/\/+$/, '')
 const aiProxyPaths = ['/ai/']
-const proxyPaths = ['/api/', '/api', '/travel-image/', '/travel-description-image/', '/address-image/', '/quest-cover/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
+const proxyPaths = ['/api/', '/api', '/travel-image/', '/travel-description-image/', '/address-image/', '/quest-cover/', '/quest-poster/', '/avatar/', '/gallery/', '/uploads/', '/media/', '/media-resize/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
 // and we prefer test stability over aggressively failing long requests.
 const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '60000')

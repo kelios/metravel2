@@ -39,8 +39,9 @@ function collectAssets(manifests) {
   for (const manifest of manifests) {
     if (manifest.schemaVersion !== 1 || manifest.releaseId !== 'travel-books-v1' || !Array.isArray(manifest.books)) throw new Error('Invalid publication manifest');
     if (manifest.miniDiaries !== undefined && !Array.isArray(manifest.miniDiaries)) throw new Error('Invalid mini diary catalogue');
-    const identities = [...manifest.books, ...(manifest.miniDiaries ?? [])];
-    if (manifest.miniDiaries && ['id','slug'].some(field => new Set(identities.map(edition => edition[field])).size !== identities.length)) throw new Error('Mini diary catalogue identity overlaps');
+    if (manifest.museumPassports !== undefined && !Array.isArray(manifest.museumPassports)) throw new Error('Invalid museum passport catalogue');
+    const identities = [...manifest.books, ...(manifest.miniDiaries ?? []), ...(manifest.museumPassports ?? [])];
+    if ((manifest.miniDiaries || manifest.museumPassports) && ['id','slug'].some(field => new Set(identities.map(edition => edition[field])).size !== identities.length)) throw new Error('Publication catalogue identity overlaps');
     for (const diary of manifest.miniDiaries ?? []) {
       if (typeof diary.id !== 'string' || typeof diary.revision !== 'string' || typeof diary.slug !== 'string' ||
           !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(diary.id) || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(diary.revision) ||
@@ -51,6 +52,19 @@ function collectAssets(manifests) {
         const prior = assets.get(relative);
         if (prior && (prior.bytes !== file.bytes || prior.sha256 !== file.sha256)) throw new Error('Immutable mini diary asset changed: ' + relative);
         assets.set(relative,{uri:file.uri,relative,bytes:file.bytes,sha256:file.sha256,kind:'mini-diary',bookId:diary.id,revision:diary.revision});
+      }
+    }
+    for (const passport of manifest.museumPassports ?? []) {
+      if (typeof passport.id !== 'string' || typeof passport.revision !== 'string' || typeof passport.slug !== 'string' ||
+          !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(passport.id) || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(passport.revision) ||
+          !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(passport.slug)) throw new Error('Invalid museum passport identity');
+      for (const [key, name, mime] of [['read','read.pdf','application/pdf'],['booklet','booklet-a3.pdf','application/pdf'],['wrapCover','cover-a3.pdf','application/pdf'],['stickers','stickers-a4.pdf','application/pdf'],['cover','cover.webp','image/webp'],['preview','preview.webp','image/webp']]) {
+        const file = passport[key], relative = `${passport.id}/${passport.revision}/${name}`;
+        const cap = mime === 'image/webp' ? 2*1024*1024 : 100*1024*1024;
+        if (!file || file.uri !== BASE + relative || file.mime !== mime || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > cap || !/^[a-f0-9]{64}$/.test(file.sha256)) throw new Error('Invalid museum passport resource: ' + relative);
+        const prior = assets.get(relative);
+        if (prior && (prior.bytes !== file.bytes || prior.sha256 !== file.sha256)) throw new Error('Immutable museum passport asset changed: ' + relative);
+        assets.set(relative, {uri:file.uri,relative,bytes:file.bytes,sha256:file.sha256,kind:'museum-passport',bookId:passport.id,revision:passport.revision});
       }
     }
     const metadata=manifest.bookMetadata;
@@ -145,8 +159,9 @@ async function publicationManifests(root) {
     const contents = await readJson(path.join(root, 'data/travelBooks/contents.json'));
     if (JSON.stringify(contents) !== JSON.stringify(bookContentsIndex(current))) throw new Error('Book contents index differs from the current publication');
   }
-  if (current.bookMetadata || current.miniDiaries?.length) {
+  if (current.bookMetadata || current.miniDiaries?.length || current.museumPassports?.length) {
     const catalogue = await readJson(path.join(root, 'data/travelBooks/catalog.json'));
+    if (JSON.stringify(catalogue.museumPassports ?? []) !== JSON.stringify(current.museumPassports ?? [])) throw new Error('Museum passport catalogue differs from the current publication');
     if (JSON.stringify(catalogue.miniDiaries ?? []) !== JSON.stringify(current.miniDiaries ?? [])) {
       throw new Error('Mini diary catalogue differs from the current publication');
     }

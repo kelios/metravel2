@@ -1,6 +1,7 @@
 import React,{useState} from 'react';
 import {bookStyleKey} from '@/services/book/readyBooks/publicationState';
-import {miniDiaries,readyBooks} from '@/services/book/readyBooks/catalog';
+import {miniDiaries,museumPassports,readyBooks} from '@/services/book/readyBooks/catalog';
+import {selectMuseumPassports} from '@/services/book/readyBooks/museumPassports';
 import {selectMiniDiaries} from '@/services/book/readyBooks/miniDiaries';
 import {bookSeries,catalogueTheme,groupCatalogue,selectCatalogue,type CatalogueCountry,type CatalogueTheme} from '@/services/book/readyBooks/seriesCatalog';
 import {formatNumber} from '@/i18n';
@@ -9,7 +10,7 @@ import {EditionIcon,useEditionLink} from '../edition/EditionParts.web';
 import {pageCountPhrase,promiseText,stopCountPhrase} from '../edition/editionModel';
 type CatalogBook=(typeof readyBooks)[number];
 const STYLE_BENEFIT={styleWatercolor:'styleBenefitWatercolor',stylePhoto:'styleBenefitPhoto',stylePhotoSources:'styleBenefitPhotoSources',styleGraphic:'styleBenefitGraphic',styleFantasy:'styleBenefitFantasy'} as const;
-const THEMES={all:'themeAll',mixed:'themeMixed',castles:'themeCastles',mountains:'themeMountains',quests:'themeQuests'} as const;
+const THEMES={all:'themeAll',mixed:'themeMixed',castles:'themeCastles',mountains:'themeMountains',quests:'themeQuests',museums:'themeMuseums'} as const;
 const COUNTRIES={all:'countryAll',BY:'countryBY',PL:'countryPL'} as const;
 
 /**
@@ -32,6 +33,7 @@ export default function ReadyBooksCatalogContent(){
   const [country,setCountry]=useState<CatalogueCountry>('all');
   const {available,planned}=selectCatalogue(readyBooks,bookSeries,theme,country);
   const compact=selectMiniDiaries(miniDiaries,theme,country);
+  const passports=selectMuseumPassports(museumPassports,theme,country);
   return <>
     <fieldset className="rbc-themes"><legend className="rbe-small">{bookT('theme')}</legend>
       {(Object.keys(THEMES) as CatalogueTheme[]).map(value=><label key={value} className="rbc-theme"><input type="radio" name="book-theme" value={value} checked={theme===value} onChange={()=>setTheme(value)}/><span>{bookT(THEMES[value])}</span></label>)}
@@ -39,7 +41,24 @@ export default function ReadyBooksCatalogContent(){
     <fieldset className="rbc-themes"><legend className="rbe-small">{bookT('catalogCountry')}</legend>
       {(Object.keys(COUNTRIES) as CatalogueCountry[]).map(value=><label key={value} className="rbc-theme"><input type="radio" name="book-country" value={value} checked={country===value} onChange={()=>setCountry(value)}/><span>{bookT(COUNTRIES[value])}</span></label>)}
     </fieldset>
-    {available.length===0&&planned.length===0&&compact.length===0&&<p className="rbe-h3" role="status">{bookT(readyBooks.length===0&&miniDiaries.length===0?'preparing':'noBooks')}</p>}
+    {available.length===0&&planned.length===0&&compact.length===0&&passports.length===0&&<p className="rbe-h3" role="status">{bookT(readyBooks.length===0&&miniDiaries.length===0&&museumPassports.length===0?'preparing':'noBooks')}</p>}
+    {passports.length>0&&<section className="rbc-format" aria-labelledby="museum-passports-title">
+      <h3 id="museum-passports-title">{bookT('museumCatalogTitle')}</h3>
+      <p className="rbe-lead">{bookT('museumCatalogLead')}</p>
+      <ul className="rbc-grid rbc-mini-grid">{passports.map(passport=>{
+        const href=`/books/${passport.slug}`;
+        return <li key={passport.id}><article className="rbc-card rbc-card-mini">
+          <div className="rbc-card-thumb"><img src={passport.cover.uri} alt="" loading="lazy" decoding="async"/></div>
+          <div className="rbc-card-body">
+            <p className="rbe-eyebrow">{bookT('museumPassport')}</p>
+            <h4 lang={passport.contentLocale}>{passport.title}</h4>
+            <p className="rbe-small" lang={passport.contentLocale}>{passport.summary}</p>
+            <p className="rbe-small">{bookT('museumCount',{count:formatNumber(passport.museumCount)})} · A4 · {bookT('language')}</p>
+            <a className="rbc-card-link" href={href} onClick={link(href)}>{bookT('explore')}<EditionIcon name="arrow-right" size={16}/></a>
+          </div>
+        </article></li>;
+      })}</ul>
+    </section>}
     {compact.length>0&&<section className="rbc-format" aria-labelledby="mini-diaries-title">
       <h3 id="mini-diaries-title">{bookT('miniCatalogTitle')}</h3>
       <p className="rbe-lead">{bookT('miniCatalogLead')}</p>

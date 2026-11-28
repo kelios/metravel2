@@ -9,12 +9,13 @@ jest.mock('@/i18n',()=>({...jest.requireActual('@/i18n'),translate:(key:string)=
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,description,heading=true}:any)=><main data-description={description}>{heading&&<h1>{title}</h1>}{children}</main>}));
 jest.mock('expo-router',()=>({useRouter:()=>({push:jest.fn()})}));
-jest.mock('@/services/book/readyBooks/catalog',()=>({readyBooks:[],miniDiaries:[]}));
+jest.mock('@/services/book/readyBooks/catalog',()=>({readyBooks:[],miniDiaries:[],museumPassports:[]}));
 jest.mock('@/services/book/readyBooks/seriesCatalog',()=>({...jest.requireActual('@/services/book/readyBooks/seriesCatalog'),bookSeries:[]}));
 const books=require('@/services/book/readyBooks/catalog').readyBooks;
 const series=require('@/services/book/readyBooks/seriesCatalog').bookSeries;
 const miniDiaries=require('@/services/book/readyBooks/catalog').miniDiaries;
-afterEach(()=>{books.splice(0);series.splice(0);miniDiaries.splice(0);});
+const museumPassports=require('@/services/book/readyBooks/catalog').museumPassports;
+afterEach(()=>{books.splice(0);series.splice(0);miniDiaries.splice(0);museumPassports.splice(0);});
 describe('book catalogue',()=>{
   it('never offers fake downloads while publication is not ready',()=>{
     render(<Catalog/>);expect(screen.getByText('preparing')).toBeTruthy();expect(screen.queryByRole('link')).toBeNull();
@@ -156,4 +157,17 @@ it('offers a published short diary even when no full book is available',()=>{
   render(<Catalog/>);
   expect(screen.queryByRole('status')).toBeNull();
   expect(screen.getByRole('link',{name:/miniChooseTrip/}).getAttribute('href')).toBe('/books/belarus-by-the-water');
+});
+
+it('keeps museum passports distinct and combines their theme with the country filter',()=>{
+  const passport=require('../../services/book/readyBooks/museumPassportFixture').museumPassportFixture();
+  museumPassports.push(passport);books.push(publishedFixture());
+  render(<Catalog/>);
+  expect(screen.getByRole('region',{name:'museumCatalogTitle'})).toBeTruthy();
+  fireEvent.click(screen.getByRole('radio',{name:'themeMuseums'}));
+  expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual([`/books/${passport.slug}`]);
+  expect(screen.queryByRole('region',{name:'fullCatalogTitle'})).toBeNull();
+  fireEvent.click(screen.getByRole('radio',{name:'countryBY'}));
+  expect(screen.getByRole('status').textContent).toBe('noBooks');
+  expect(screen.queryByRole('link')).toBeNull();
 });

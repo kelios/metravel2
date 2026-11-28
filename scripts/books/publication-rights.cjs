@@ -113,7 +113,7 @@ async function assertEditionRights({root, bookId, revision, artifacts, proof, ar
 }
 
 function targets(manifest, assets) {
-  const published = [...manifest.books, ...(manifest.miniDiaries ?? [])];
+  const published = [...manifest.books, ...(manifest.miniDiaries ?? []), ...(manifest.museumPassports ?? [])];
   const editions = new Map(published.map(({id, revision}) => [`${id}/${revision}`, {bookId: id, revision, artifacts: []}]));
   if (editions.size !== published.length) throw new Error('Duplicate publication rights edition');
   for (const asset of assets) {

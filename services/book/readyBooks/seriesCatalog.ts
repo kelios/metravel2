@@ -3,7 +3,7 @@ import type {BookSeries} from '@/types/readyBook';
 import type {ReadyBookSummary} from './bookMetadata';
 import {editionFamily} from './editionFamily';
 
-export type CatalogueTheme = 'all' | 'mixed' | 'castles' | 'mountains' | 'quests';
+export type CatalogueTheme = 'all' | 'mixed' | 'castles' | 'mountains' | 'quests' | 'museums';
 export type CatalogueCountry = 'all' | ReadyBookSummary['country'];
 // The kits and their full source evidence never enter the initial catalogue bundle.
 export const bookSeries = catalogue.series as BookSeries[];

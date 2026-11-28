@@ -115,9 +115,11 @@ for (const profile of [
       const health = () => ({ errors, consoleErrors, failedRequests, httpFailures, unexpectedWrites, allowedComputes, routing })
       const expectHealthy = () => {
         expect(errors).toEqual([])
-        expect(consoleErrors).toEqual([])
-        expect(failedRequests).toEqual([])
-        expect(httpFailures).toEqual([])
+        expect({ consoleErrors, failedRequests, httpFailures }).toEqual({
+          consoleErrors: [],
+          failedRequests: [],
+          httpFailures: [],
+        })
         expect(unexpectedWrites).toEqual([])
         expect(allowedComputes).toBe(1)
         expect(routing).toEqual([{ status: 200, provider: 'ors', optimal: true }])

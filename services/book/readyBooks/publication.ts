@@ -10,6 +10,7 @@ import type {PrintProfile} from '../../../types/readyBook';
 import {buildQuestBookPagePlan} from './questBooks/composition';
 import {bookVisualStyle, type BookVisualStyle} from '../../../data/travelBooks/schema/editorial';
 import {miniDiarySchema} from '../../../data/travelBooks/schema/miniDiaries';
+import {museumPassportSchema} from '../../../data/travelBooks/schema/museumPassports';
 
 const page = z.strictObject({number:z.number().int().positive(),uri:assetUri,sha256,bytes:z.number().int().positive(),alt:z.string().min(1)});
 const identifier=z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
@@ -205,8 +206,8 @@ export const bookMetadataSchema=z.strictObject({
   if(asset.uri!==`https://metravel.by/travel-books/${asset.bookId}/${asset.revision}/book.json`)ctx.addIssue({code:'custom',message:'Book metadata must identify its exact immutable book revision'});
 });
 
-export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2),bookMetadata:z.array(bookMetadataSchema).optional(),miniDiaries:z.array(miniDiarySchema).optional()}).superRefine((value,ctx)=>{
-  const editions=[...value.books,...value.miniDiaries??[]];
+export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2),bookMetadata:z.array(bookMetadataSchema).optional(),miniDiaries:z.array(miniDiarySchema).optional(),museumPassports:z.array(museumPassportSchema).optional()}).superRefine((value,ctx)=>{
+  const editions=[...value.books,...value.miniDiaries??[],...value.museumPassports??[]];
   for(const field of ['id','slug'] as const)if(new Set(editions.map(book=>book[field])).size!==editions.length)ctx.addIssue({code:'custom',message:'Duplicate '+field});
   const identities=value.books.map(editionIdentity);
   if(new Set(identities).size!==identities.length)ctx.addIssue({code:'custom',message:'Duplicate country series volume'});

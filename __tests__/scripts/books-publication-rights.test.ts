@@ -65,9 +65,9 @@ describe('book publication rights', () => {
     await expect(rights.assertFullPublicationRights({root, manifest, assets, source: root})).rejects.toThrow('Missing rights proof');
   });
 
-  it('requires the same exact rights evidence for mini diary files', async () => {
+  it.each(['miniDiaries','museumPassports'])('requires the same exact rights evidence for %s files', async collection => {
     const diary = {id: target.bookId, revision: target.revision};
-    const manifest = {books: [], miniDiaries: [diary]};
+    const manifest = {books: [], [collection]: [diary]};
     const directory = path.join(root, diary.id, diary.revision);
     const assets = target.artifacts.map(artifact => ({relative: `${diary.id}/${diary.revision}/${artifact.id}`, sha256: artifact.sha256}));
     await fs.mkdir(directory, {recursive: true});

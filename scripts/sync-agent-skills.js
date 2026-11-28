@@ -35,11 +35,12 @@ const VENDOR_OWNED_SKILLS = ['openspec-']
 
 // `source-command-*` — обёртки слэш-команд для харнессов без `.claude/commands`.
 // Список явный, а не «все команды»: сюда входят только команды, состоящие из
-// `npm run`/git-шагов. Остальные восемь (`ticket`, `seo-daily`, `review-gate`,
-// `task-new`, `growth-review`, `bugfix`, `db-backup`, `split-component`) ведут
-// работу через Claude-агентов и Claude-MCP, которых на другом харнессе нет, —
-// обёртка предлагала бы workflow, который там не выполняется.
-const MIRRORED_COMMANDS = ['auto-dev', 'changed-summary', 'check-fast', 'guard-all', 'preflight']
+// `npm run`/git/bash-шагов. `db-backup` такой и есть: тело — `npm run db:backup:prod`
+// и `scripts/backup-prod-db.sh`, без вызова Claude-агента. Остальные семь
+// (`ticket`, `seo-daily`, `review-gate`, `task-new`, `growth-review`, `bugfix`,
+// `split-component`) ведут работу через Claude-агентов и Claude-MCP, которых на
+// другом харнессе нет, — обёртка предлагала бы workflow, который там не выполняется.
+const MIRRORED_COMMANDS = ['auto-dev', 'changed-summary', 'check-fast', 'db-backup', 'guard-all', 'preflight']
 
 const COMMAND_SKILL_PREFIX = 'source-command-'
 

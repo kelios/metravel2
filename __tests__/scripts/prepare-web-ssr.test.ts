@@ -46,14 +46,15 @@ describe('one-export SSR transition', () => {
       notFoundRoutes: [{ file: 'missing.js', page: '/[...missing]', generated: true }],
       assets: { js: ['/entry.js'], css: ['/base.css'], favicon: '/favicon.ico' },
     }
-    // #3300: с #3040/#3041 оболочку получают и книги, и бесплатные мини-дневники
-    // (`publicationShells` читает оба списка). Состав берётся из манифеста, а не
-    // константой; новый список страниц со `slug` в манифесте обязан появиться и здесь.
+    // Every publication family needs a concrete SSR document, including a museum
+    // passport even before the first real museum edition is activated.
     const catalogue = require('@/data/travelBooks/manifest.json') as Record<string, unknown>
+    const priorMuseumPassports = catalogue.museumPassports
+    catalogue.museumPassports = [...(Array.isArray(priorMuseumPassports) ? priorMuseumPassports : []), {slug:'test-ssr-museum-passport'}]
     const editionLists = Object.keys(catalogue).filter((key) =>
       Array.isArray(catalogue[key]) && (catalogue[key] as { slug?: string }[]).some((item) => item?.slug))
-    expect(editionLists.sort()).toEqual(['books', 'miniDiaries'])
-    const books = [...catalogue.books as { slug: string }[], ...catalogue.miniDiaries as { slug: string }[]]
+    expect(editionLists.sort()).toEqual(['books', 'miniDiaries', 'museumPassports'])
+    const books = [...catalogue.books as { slug: string }[], ...catalogue.miniDiaries as { slug: string }[], ...catalogue.museumPassports as { slug: string }[]]
     expect((catalogue.miniDiaries as unknown[]).length).toBeGreaterThan(0)
     try {
       expect(await renderLegacyShells(renderer, { manifest, staticDir: root })).toBe(4 + books.length)
@@ -75,6 +76,8 @@ describe('one-export SSR transition', () => {
       expect(recorded.filter((call: any) => call.kind === 'metadata')).toHaveLength(3 + books.length)
       expect(fs.existsSync(path.join(root, 'books', 'unknown.html'))).toBe(false)
     } finally {
+      if (priorMuseumPassports === undefined) delete catalogue.museumPassports
+      else catalogue.museumPassports = priorMuseumPassports
       fs.rmSync(root, { recursive: true, force: true })
     }
   })

@@ -3,7 +3,7 @@ import {act,render,fireEvent,screen,within} from '@testing-library/react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {formatNumber,translate} from '@/i18n';
 import BookRoute,{generateMetadata} from '@/app/(tabs)/books/[slug]';
-import {findReadyBook} from '@/services/book/readyBooks/catalog';
+import {findReadyBook,findMuseumPassport} from '@/services/book/readyBooks/catalog';
 import {loadReadyBookMetadata} from '@/services/book/readyBooks/bookMetadata';
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
@@ -12,8 +12,9 @@ import {describeArtifact,formatArtifactSize,visibleArtifacts} from '@/components
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 
+jest.mock('@/components/books/MuseumPassportDetails',()=>jest.requireActual('@/components/books/MuseumPassportDetails.web'));
 jest.mock('@/components/books/ReadyBookDetails',()=>jest.requireActual('@/components/books/ReadyBookDetails.web'));
-jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),findMiniDiary:jest.fn(),readyBooks:[],miniDiaries:[]}));
+jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),findMiniDiary:jest.fn(),findMuseumPassport:jest.fn(),readyBooks:[],miniDiaries:[],museumPassports:[]}));
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:jest.requireActual('@/i18n').translate,ready:true})}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,headingLang,heading=true}:any)=><main>{heading&&<h1 lang={headingLang}>{title}</h1>}{children}</main>}));
@@ -41,6 +42,7 @@ beforeAll(()=>document.addEventListener('click',stayOnPage));
 afterAll(()=>document.removeEventListener('click',stayOnPage));
 const sizeRadio=(name:'sizePocketTitle'|'sizeAlbumTitle')=>screen.getByRole('radio',{name}) as HTMLInputElement;
 beforeEach(()=>{
+  jest.mocked(findMuseumPassport).mockReset();
   jest.mocked(loadReadyBookMetadata).mockReset();
   jest.mocked(trackReadyBookEvent).mockClear();
   mockPush.mockClear();
@@ -336,4 +338,17 @@ it('keeps the mobile quick actions after the hero without a scroll observer and 
   fireEvent.click(screen.getByRole('button',{name:'close'}));
   expect(document.activeElement).toBe(document.querySelector('.rbe-cta button'));
   expect(screen.getByRole('region',{name:'stickyLabel'})).toBeTruthy();
+});
+
+it('renders a museum passport and its exact downloads in first HTML with its own metadata',()=>{
+  const passport=require('../../services/book/readyBooks/museumPassportFixture').museumPassportFixture();
+  jest.mocked(findMuseumPassport).mockReturnValue(passport);
+  const html=renderToStaticMarkup(<BookRoute/>),host=document.createElement('div');host.innerHTML=html;
+  expect(host.querySelector('h1')?.textContent).toBe(passport.title);
+  expect(Array.from(host.querySelectorAll('a[download]')).map(anchor=>anchor.getAttribute('href'))).toEqual([passport.read.uri,passport.booklet.uri,passport.wrapCover.uri,passport.stickers.uri]);
+  expect(host.textContent).toContain('Muzeum 1');
+  const metadata=generateMetadata(undefined,{slug:passport.slug});
+  expect(metadata.title).toContain(passport.title);
+  expect(metadata.description).toBe(passport.summary);
+  expect(metadata.alternates?.canonical).toBe(`https://metravel.by/books/${passport.slug}`);
 });

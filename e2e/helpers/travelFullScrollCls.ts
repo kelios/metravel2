@@ -1,5 +1,6 @@
 import { test, expect, type Browser, type TestInfo } from '@playwright/test';
 import { installReadOnlyTravelApi } from './readOnlyTravelApi';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './storage';
 
 const ARTICLE = '/travels/tropa-vedm-v-gartse-kak-proiti-hexenstieg';
 
@@ -105,7 +106,8 @@ export async function assertTravelFullScrollCls(
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     const { handledViews, unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: 544 });
     // Keep the same fresh-guest storage as the original production probe.
-    await page.addInitScript(() => localStorage.setItem('consent_v1', '1'));
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
     await page.addInitScript(() => {
       const state: Observation = {
         supported: typeof PerformanceObserver !== 'undefined' && PerformanceObserver.supportedEntryTypes.includes('layout-shift'),

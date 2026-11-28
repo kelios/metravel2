@@ -1,5 +1,6 @@
 import { test, expect, type Browser, type TestInfo } from '@playwright/test';
 import { installReadOnlyTravelApi } from './readOnlyTravelApi';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './storage';
 
 // #3419: статья с десятью GPX-файлами — профили высот приходят после показа
 // секции карты и растят её блок на тысячи пикселей, когда читатель уже ниже.
@@ -70,7 +71,8 @@ export async function assertTravelFastScrollCls(
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(`${error.name}: ${error.message}`));
     const { unexpectedWrites: writes } = await installReadOnlyTravelApi(context, { baseURL, travelId: article.id });
-    await page.addInitScript(() => localStorage.setItem('consent_v1', '1'));
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
     await page.addInitScript(() => {
       const state: Observation = {
         supported: typeof PerformanceObserver !== 'undefined' && PerformanceObserver.supportedEntryTypes.includes('layout-shift'),

@@ -95,6 +95,14 @@ function nearAboveCommentsFixture(nearTop: number) {
     runtimeHeight = EMPTY
     act(() => observerCallback?.())
   }
+  // Same frame as a reader scroll, but the runtime grew. The follower is already
+  // on screen, so the published height stays until a frame that did not scroll.
+  const resolveGrowthWhileScrolling = (nextHeight: number) => {
+    Object.defineProperty(document, 'timeline', { configurable: true, value: { currentTime: performance.now() } })
+    owner.dispatchEvent(new Event('scroll'))
+    runtimeHeight = nextHeight
+    act(() => observerCallback?.())
+  }
   // The reader's step is written by a task earlier in this painted frame: its
   // scroll event comes only with the frame's scroll steps, after the resize.
   const resolveEmptyAfterPendingStep = () => {
@@ -128,8 +136,25 @@ function nearAboveCommentsFixture(nearTop: number) {
     window.requestAnimationFrame = originalFrame
     delete (document as { timeline?: unknown }).timeline
   }
-  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveEmptyAfterPendingStep, resolveEmptyInCommit, quietFrame, resizeOwner, pendingFrames: () => frames.length, cleanup, scrollTop: () => top }
+  return { owner, comments, transition, writes, resolveEmptyWhileScrolling, resolveGrowthWhileScrolling, resolveEmptyAfterPendingStep, resolveEmptyInCommit, quietFrame, resizeOwner, pendingFrames: () => frames.length, cleanup, scrollTop: () => top }
 }
+
+it('holds a visible growth that arrives in a frame with an owner scroll', () => {
+  const f = nearAboveCommentsFixture(400 - FULL)
+  const grown = FULL + 400
+  try {
+    const before = f.comments.getBoundingClientRect().top
+    f.resolveGrowthWhileScrolling(grown)
+    expect(f.transition().style.height).toBe(`${FULL}px`)
+    expect(f.comments.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([])
+    f.quietFrame()
+    expect(f.transition().style.height).toBe(`${grown}px`)
+    expect(f.comments.getBoundingClientRect().top).toBe(before)
+  } finally {
+    f.cleanup()
+  }
+})
 
 it('holds a visible anchored shrink that arrives in a frame with an owner scroll', () => {
   const f = nearAboveCommentsFixture(400 - FULL)

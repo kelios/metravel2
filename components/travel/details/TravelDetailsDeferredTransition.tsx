@@ -403,6 +403,22 @@ export function TravelDetailsDeferredTransition({
       const flowHeight = Math.max(height, heldFlowRef.current ?? 0) + (node.dataset.reserveReleaseState === 'reserved' ? reserveSlackRef.current?.height ?? 0 : 0)
       measuredWidthRef.current = width
       if (measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX && Math.abs(Number.parseFloat(node.style.height) - flowHeight) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) return false
+      // #3430: Chrome scores a height change in any frame that also scrolls, and
+      // a same-frame anchor write does not cancel it. Fast scroll on article 470
+      // at 1280 brought the sidebar's top into the scrollport (visible slice
+      // 290px) and the route block grew in that frame, so the slice left
+      // (CLS 0.255) even though the border box itself stayed 1838px. A reserved
+      // section absorbs growth inside its own reserve. An unreserved growth with
+      // a visible follower keeps the published height until a quiet frame.
+      const publishedHeight = measuredHeightRef.current
+      const owner = findMeasuredScrollOwner(node)
+      if (!publishingHeldGrowth && publishedHeight != null && sameWidth && height > publishedHeight + RUNTIME_SETTLE_HEIGHT_EPSILON_PX && shrinkAnchor &&
+          node.dataset.reserveReleaseState !== 'reserved' && owner &&
+          (ownerScrolledInCurrentFrame(owner) || (inTask && ownerFrameKnown(owner)))) {
+        growthHeld = true
+        return false
+      }
+      growthHeld = false
       // This imperative geometry owner deliberately runs within ResizeObserver's
       // pre-paint callback, rather than awaiting RNW onLayout's async UIManager.
       node.style.height = `${flowHeight}px`
@@ -477,6 +493,14 @@ export function TravelDetailsDeferredTransition({
     }
     const heldReleaseView = node?.ownerDocument.defaultView ?? null
     let heldReleaseFrame: number | null = null
+    let growthHeld = false
+    let growthFrame: number | null = null
+    // The quiet-frame callback already proved this frame did not scroll. The
+    // timeline stamp can still look current, so the publish must not hold again.
+    let publishingHeldGrowth = false
+    // Assigned after `commitMeasuredHeight`. A growth that would move a visible
+    // follower waits for the same quiet frame as a held shrink.
+    let scheduleHeldGrowth = () => {}
     const scheduleHeldRelease = () => {
       if (heldReleaseFrame != null || !heldReleaseView || heldFlowRef.current == null || generationRef.current !== generation) return
       heldReleaseFrame = heldReleaseView.requestAnimationFrame((frameTime) => {
@@ -487,12 +511,16 @@ export function TravelDetailsDeferredTransition({
       })
     }
     const heldReleaseOwner = node ? findMeasuredScrollOwner(node) : null
+    const wakeHeldGeometry = () => {
+      scheduleHeldRelease()
+      scheduleHeldGrowth()
+    }
     if (heldReleaseOwner) {
       watchOwnerScroll(heldReleaseOwner)
-      heldReleaseOwner.addEventListener('scroll', scheduleHeldRelease, { passive: true })
+      heldReleaseOwner.addEventListener('scroll', wakeHeldGeometry, { passive: true })
     }
-    heldReleaseView?.addEventListener('resize', scheduleHeldRelease, { passive: true })
-    heldReleaseView?.addEventListener('orientationchange', scheduleHeldRelease, { passive: true })
+    heldReleaseView?.addEventListener('resize', wakeHeldGeometry, { passive: true })
+    heldReleaseView?.addEventListener('orientationchange', wakeHeldGeometry, { passive: true })
     const commitMeasuredHeight = (inTask = false) => {
       if (!node || generationRef.current !== generation) return
       const nextFrame = node.isConnected && runtime?.isConnected && node.contains(runtime) ? runtime.getBoundingClientRect() : null
@@ -518,6 +546,7 @@ export function TravelDetailsDeferredTransition({
       const capture = obsoleteSlack ? null : findMeasuredTransactionAnchor(node, measuredHeightRef.current == null)
       const measured = measureRuntimeHeight(generation, capture, inTask)
       if (heldFlowRef.current != null) scheduleHeldRelease()
+      if (growthHeld) scheduleHeldGrowth()
       if (!measured) return
       measureAncestorTransitions(node)
       recordCorrection(correctMeasuredAnchor(capture, node))
@@ -528,6 +557,19 @@ export function TravelDetailsDeferredTransition({
     currentMeasureRef.current = () => {
       const owner = node ? findMeasuredScrollOwner(node) : null
       return owner && runtime && isDrawnWithinOwner(runtime, owner) ? measureRuntimeHeight(generationRef.current) : false
+    }
+    scheduleHeldGrowth = () => {
+      if (growthFrame != null || !heldReleaseView || !growthHeld || generationRef.current !== generation || !node?.isConnected) return
+      growthFrame = heldReleaseView.requestAnimationFrame((frameTime) => {
+        growthFrame = null
+        if (generationRef.current !== generation || !growthHeld) return
+        const owner = findMeasuredScrollOwner(node)
+        if (owner && ownerScrolledInFrame(owner, frameTime)) scheduleHeldGrowth()
+        else {
+          publishingHeldGrowth = true
+          try { commitMeasuredHeight(false) } finally { publishingHeldGrowth = false }
+        }
+      })
     }
     commitMeasuredHeight(true)
     // A section that has just settled takes its held change in a quiet animation
@@ -540,10 +582,11 @@ export function TravelDetailsDeferredTransition({
     return () => {
       generationRef.current++
       observer?.disconnect()
-      heldReleaseOwner?.removeEventListener('scroll', scheduleHeldRelease)
-      heldReleaseView?.removeEventListener('resize', scheduleHeldRelease)
-      heldReleaseView?.removeEventListener('orientationchange', scheduleHeldRelease)
+      heldReleaseOwner?.removeEventListener('scroll', wakeHeldGeometry)
+      heldReleaseView?.removeEventListener('resize', wakeHeldGeometry)
+      heldReleaseView?.removeEventListener('orientationchange', wakeHeldGeometry)
       if (heldReleaseFrame != null) heldReleaseView?.cancelAnimationFrame(heldReleaseFrame)
+      if (growthFrame != null) heldReleaseView?.cancelAnimationFrame(growthFrame)
     }
   }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
